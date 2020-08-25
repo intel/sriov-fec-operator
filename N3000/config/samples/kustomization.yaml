@@ -1,0 +1,4 @@
+## Append samples you want in your CSV to this file as resources ##
+resources:
+- fpga_v1_n3000.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

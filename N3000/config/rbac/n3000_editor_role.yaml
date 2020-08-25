@@ -1,0 +1,24 @@
+# permissions for end users to edit n3000s.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: n3000-editor-role
+rules:
+- apiGroups:
+  - fpga.intel.com
+  resources:
+  - n3000s
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - fpga.intel.com
+  resources:
+  - n3000s/status
+  verbs:
+  - get

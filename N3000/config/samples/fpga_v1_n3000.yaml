@@ -1,0 +1,7 @@
+apiVersion: fpga.intel.com/v1
+kind: N3000
+metadata:
+  name: n3000-sample
+spec:
+  # Add fields here
+  foo: bar
