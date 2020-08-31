@@ -23,19 +23,37 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type N3000Fpga struct {
+	// +kubebuilder:validation:Pattern=[a-zA-Z0-9\.\-\/]+
+	UserImageURL string `json:"userImageURL"`
+	// +kubebuilder:validation:Pattern=`[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]`
+	PCIAddr string `json:"PCIAddr"`
+}
+
+type N3000Fortville struct {
+	// +kubebuilder:validation:Pattern=[a-zA-Z0-9\.\-\/]+
+	FirmwareURL string `json:"firmwareURL"`
+}
+
+type N3000Node struct {
+	// +kubebuilder:validation:Pattern=[a-z0-9\.\-]+
+	NodeName  string         `json:"nodeName"`
+	FPGA      N3000Fpga      `json:"fpga,omitempty"`
+	Fortville N3000Fortville `json:"fortville,omitempty"`
+}
+
 // N3000Spec defines the desired state of N3000
 type N3000Spec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of N3000. Edit N3000_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Nodes []N3000Node `json:"nodes"`
 }
 
 // N3000Status defines the observed state of N3000
 type N3000Status struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	State string `json:"state"`
 }
 
 // +kubebuilder:object:root=true
