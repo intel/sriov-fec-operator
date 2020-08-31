@@ -33,12 +33,20 @@ type N3000Fpga struct {
 type N3000Fortville struct {
 	// +kubebuilder:validation:Pattern=[a-zA-Z0-9\.\-\/]+
 	FirmwareURL string `json:"firmwareURL"`
+	// +kubebuilder:validation:Enum=inventory;update
+	Command string         `json:"command"`
+	MACs    []FortvilleMAC `json:"macs"`
+}
+
+type FortvilleMAC struct {
+	// +kubebuilder:validation:Pattern=`[A-F0-9]{12}`
+	MAC string `json:"mac"`
 }
 
 type N3000Node struct {
 	// +kubebuilder:validation:Pattern=[a-z0-9\.\-]+
 	NodeName  string         `json:"nodeName"`
-	FPGA      N3000Fpga      `json:"fpga,omitempty"`
+	FPGA      []N3000Fpga    `json:"fpga,omitempty"`
 	Fortville N3000Fortville `json:"fortville,omitempty"`
 }
 

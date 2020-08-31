@@ -43,24 +43,43 @@ spec:
                 properties:
                   fortville:
                     properties:
+                      command:
+                        enum:
+                        - inventory
+                        - update
+                        type: string
                       firmwareURL:
                         pattern: '[a-zA-Z0-9\.\-\/]+'
                         type: string
+                      macs:
+                        items:
+                          properties:
+                            mac:
+                              pattern: '[A-F0-9]{12}'
+                              type: string
+                          required:
+                          - mac
+                          type: object
+                        type: array
                     required:
+                    - command
                     - firmwareURL
+                    - macs
                     type: object
                   fpga:
-                    properties:
-                      PCIAddr:
-                        pattern: '[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]'
-                        type: string
-                      userImageURL:
-                        pattern: '[a-zA-Z0-9\.\-\/]+'
-                        type: string
-                    required:
-                    - PCIAddr
-                    - userImageURL
-                    type: object
+                    items:
+                      properties:
+                        PCIAddr:
+                          pattern: '[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]'
+                          type: string
+                        userImageURL:
+                          pattern: '[a-zA-Z0-9\.\-\/]+'
+                          type: string
+                      required:
+                      - PCIAddr
+                      - userImageURL
+                      type: object
+                    type: array
                   nodeName:
                     pattern: '[a-z0-9\.\-]+'
                     type: string
