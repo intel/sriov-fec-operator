@@ -1,0 +1,7 @@
+domain: intel.com
+layout: go.kubebuilder.io/v2
+projectName: sriov-fec
+repo: github.com/otcshare/operator/sriov-fec
+version: 3-alpha
+plugins:
+  go.sdk.operatorframework.io/v2-alpha: {}
