@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
+
+apiVersion: fpga.intel.com/v1
+kind: N3000Node
+metadata:
+  name: n3000node-sample
+spec:
+  # Add fields here
+  foo: bar

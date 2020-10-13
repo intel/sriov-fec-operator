@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2020 Intel Corporation
+
 /*
 
 
@@ -30,7 +33,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	fpgav1 "github.com/otcshare/operator/N3000/api/v1"
+	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
 	// +kubebuilder:scaffold:imports
 )
 

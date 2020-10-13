@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2020 Intel Corporation
+
 /*
 
 
@@ -23,68 +26,82 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type N3000ClusterSyncStatus string
+
+var (
+	// InprogressSync indicates that the Cluster in the progress of sync
+	InprogressSync N3000ClusterSyncStatus = "InProgress"
+	// SucceededSync indicates that the Cluster succeeded to sync
+	SucceededSync N3000ClusterSyncStatus = "Succeeded"
+	// FailedSync indicated that the Cluster failed to sync
+	FailedSync N3000ClusterSyncStatus = "Failed"
+)
+
 type N3000Fpga struct {
 	// +kubebuilder:validation:Pattern=[a-zA-Z0-9\.\-\/]+
-	UserImageURL string `json:"userImageURL"`
+	UserImageURL string `json:"userImageURL,omitempty"`
 	// +kubebuilder:validation:Pattern=`[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]`
-	PCIAddr string `json:"PCIAddr"`
+	PCIAddr string `json:"PCIAddr,omitempty"`
 }
 
 type N3000Fortville struct {
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Pattern=[a-zA-Z0-9\.\-\/]+
-	FirmwareURL string `json:"firmwareURL"`
+	FirmwareURL string `json:"firmwareURL,omitempty"`
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Enum=inventory;update
-	Command string         `json:"command"`
-	MACs    []FortvilleMAC `json:"macs"`
+	Command string `json:"command,omitempty"`
+	// +kubebuilder:validation:Optional
+	MACs []FortvilleMAC `json:"macs,omitempty"`
 }
 
 type FortvilleMAC struct {
 	// +kubebuilder:validation:Pattern=`[A-F0-9]{12}`
-	MAC string `json:"mac"`
+	MAC string `json:"mac,omitempty"`
 }
 
-type N3000Node struct {
+type N3000ClusterNode struct {
 	// +kubebuilder:validation:Pattern=[a-z0-9\.\-]+
 	NodeName  string         `json:"nodeName"`
 	FPGA      []N3000Fpga    `json:"fpga,omitempty"`
 	Fortville N3000Fortville `json:"fortville,omitempty"`
 }
 
-// N3000Spec defines the desired state of N3000
-type N3000Spec struct {
+// N3000ClusterSpec defines the desired state of N3000Cluster
+type N3000ClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Nodes []N3000Node `json:"nodes"`
+
+	Nodes []N3000ClusterNode `json:"nodes"`
 }
 
-// N3000Status defines the observed state of N3000
-type N3000Status struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	State string `json:"state"`
+// N3000ClusterStatus defines the observed state of N3000Cluster
+type N3000ClusterStatus struct {
+	SyncStatus    N3000ClusterSyncStatus `json:"syncStatus,omitempty"`
+	LastSyncError string                 `json:"lastSyncError,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// N3000 is the Schema for the n3000s API
-type N3000 struct {
+// N3000Cluster is the Schema for the n3000clusters API
+type N3000Cluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   N3000Spec   `json:"spec,omitempty"`
-	Status N3000Status `json:"status,omitempty"`
+	Spec   N3000ClusterSpec   `json:"spec,omitempty"`
+	Status N3000ClusterStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// N3000List contains a list of N3000
-type N3000List struct {
+// N3000ClusterList contains a list of N3000Cluster
+type N3000ClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []N3000 `json:"items"`
+	Items           []N3000Cluster `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&N3000{}, &N3000List{})
+	SchemeBuilder.Register(&N3000Cluster{}, &N3000ClusterList{})
 }

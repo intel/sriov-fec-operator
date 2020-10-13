@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2020 Intel Corporation
+
 /*
 
 
@@ -27,8 +30,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	fpgav1 "github.com/otcshare/operator/N3000/api/v1"
-	"github.com/otcshare/operator/N3000/controllers"
+	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
+	"github.com/otcshare/openshift-operator/N3000/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -47,7 +50,7 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&metricsAddr, "metrics-addr", ":8088", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -67,12 +70,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.N3000Reconciler{
+	if err = (&controllers.N3000ClusterReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("N3000"),
+		Log:    ctrl.Log.WithName("controllers").WithName("N3000Cluster"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "N3000")
+		setupLog.Error(err, "unable to create controller", "controller", "N3000Cluster")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

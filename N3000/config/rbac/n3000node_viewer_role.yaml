@@ -1,28 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
 
----
+# permissions for end users to view n3000nodes.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
-  name: manager-role
+  name: n3000node-viewer-role
 rules:
 - apiGroups:
   - fpga.intel.com
   resources:
-  - n3000clusters
+  - n3000nodes
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - fpga.intel.com
   resources:
-  - n3000clusters/status
+  - n3000nodes/status
   verbs:
   - get
-  - patch
-  - update

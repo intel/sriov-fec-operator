@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: n3000s.fpga.intel.com
+  name: n3000clusters.fpga.intel.com
 spec:
   group: fpga.intel.com
   names:
-    kind: N3000
-    listKind: N3000List
-    plural: n3000s
-    singular: n3000
+    kind: N3000Cluster
+    listKind: N3000ClusterList
+    plural: n3000clusters
+    singular: n3000cluster
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: N3000 is the Schema for the n3000s API
+      description: N3000Cluster is the Schema for the n3000clusters API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -34,11 +34,9 @@ spec:
         metadata:
           type: object
         spec:
-          description: N3000Spec defines the desired state of N3000
+          description: N3000ClusterSpec defines the desired state of N3000Cluster
           properties:
             nodes:
-              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                Important: Run "make" to regenerate code after modifying this file'
               items:
                 properties:
                   fortville:
@@ -57,14 +55,8 @@ spec:
                             mac:
                               pattern: '[A-F0-9]{12}'
                               type: string
-                          required:
-                          - mac
                           type: object
                         type: array
-                    required:
-                    - command
-                    - firmwareURL
-                    - macs
                     type: object
                   fpga:
                     items:
@@ -75,9 +67,6 @@ spec:
                         userImageURL:
                           pattern: '[a-zA-Z0-9\.\-\/]+'
                           type: string
-                      required:
-                      - PCIAddr
-                      - userImageURL
                       type: object
                     type: array
                   nodeName:
@@ -91,15 +80,12 @@ spec:
           - nodes
           type: object
         status:
-          description: N3000Status defines the observed state of N3000
+          description: N3000ClusterStatus defines the observed state of N3000Cluster
           properties:
-            state:
-              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                of cluster Important: Run "make" to regenerate code after modifying
-                this file'
+            lastSyncError:
               type: string
-          required:
-          - state
+            syncStatus:
+              type: string
           type: object
       type: object
   version: v1

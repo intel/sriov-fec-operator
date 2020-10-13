@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
+
 # Current Operator version
 VERSION ?= 0.0.1
 # Default bundle image tag
@@ -23,15 +26,21 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-all: manager
+all: manager daemon
 
 # Run tests
+ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 test: generate fmt vet manifests
-	go test ./... -coverprofile cover.out
+	mkdir -p ${ENVTEST_ASSETS_DIR}
+	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/master/hack/setup-envtest.sh
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); NAMESPACE=default go test ./... -coverprofile cover.out
 
 # Build manager binary
 manager: generate fmt vet
 	go build -o bin/manager main.go
+
+daemon: generate fmt vet
+	go build -o bin/daemon cmd/daemon/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
