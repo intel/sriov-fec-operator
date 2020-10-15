@@ -1,0 +1,132 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: n3000-operator-resources
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fpga-driver
+  namespace: n3000-operator-resources
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fpga-driver
+  namespace: n3000-operator-resources
+rules:
+- apiGroups:
+  - security.openshift.io
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
+  resourceNames:
+  - privileged
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fpga-driver
+  namespace: n3000-operator-resources
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fpga-driver
+  namespace: n3000-operator-resources
+subjects:
+- kind: ServiceAccount
+  name: nvidia-driver
+  namespace: n3000-operator-resources
+userNames:
+- system:serviceaccount:n3000-operator-resources:fpga-driver
+---
+# Please edit the object below. Lines beginning with a '#' will be ignored,
+# and an empty file will abort the edit. If an error occurs while saving this file will be
+# reopened with the relevant failures.
+#
+allowHostDirVolumePlugin: true
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: true
+allowHostPorts: false
+allowPrivilegeEscalation: true
+allowPrivilegedContainer: true
+allowedCapabilities:
+- '*'
+allowedUnsafeSysctls:
+- '*'
+apiVersion: security.openshift.io/v1
+defaultAddCapabilities: null
+fsGroup:
+  type: RunAsAny
+groups:
+- system:cluster-admins
+- system:nodes
+- system:masters
+kind: SecurityContextConstraints
+metadata:
+  annotations:
+    kubernetes.io/description: 'privileged allows access to all privileged and host
+      features and the ability to run as any user, any group, any fsGroup, and with
+      any SELinux context.  WARNING: this is the most relaxed SCC and should be used
+      only for cluster administration. Grant with caution.'
+
+  name: fpga-driver
+priority: null
+readOnlyRootFilesystem: false
+requiredDropCapabilities: null
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+seccompProfiles:
+- '*'
+supplementalGroups:
+  type: RunAsAny
+users:
+- system:serviceaccount:n3000-operator-resources:fpga-driver
+volumes:
+- '*'
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: fpga-driver-daemonset
+  name: fpga-driver-daemonset
+  namespace: n3000-operator-resources
+  annotations:
+    openshift.io/scc: fpga-driver
+spec:
+  selector:
+    matchLabels:
+      app: fpga-driver-daemonset
+  template:
+    metadata:
+      # Mark this pod as a critical add-on; when enabled, the critical add-on scheduler
+      # reserves resources for critical add-on pods so that they can be rescheduled after
+      # a failure.  This annotation works in tandem with the toleration below.
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        app: fpga-driver-daemonset
+    spec:
+      tolerations:
+      - key: intel.com/fpga
+        operator: Exists
+        effect: NoSchedule
+      serviceAccount: fpga-driver
+      serviceAccountName: fpga-driver
+      hostPID: true
+      containers:
+      - image: "IMAGE_URL"
+        imagePullPolicy: Always
+        name: fpga-driver
+        command: ["/entrypoint.sh"]
+        securityContext:
+          privileged: true
+          seLinuxOptions:
+            level: "s0"
+      nodeSelector:
+        feature.node.kubernetes.io/pci-8086.present: "true"
