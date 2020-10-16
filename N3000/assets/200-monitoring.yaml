@@ -1,0 +1,142 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fpgainfo-exporter
+  namespace: n3000-operator-resources
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fpgainfo-exporter
+  namespace: n3000-operator-resources
+rules:
+- apiGroups:
+  - security.openshift.io
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fpgainfo-exporter
+  namespace: n3000-operator-resources
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fpgainfo-exporter
+  namespace: n3000-operator-resources
+subjects:
+- kind: ServiceAccount
+  name: fpgainfo-exporter
+  namespace: n3000-operator-resources
+userNames:
+- system:serviceaccount:n3000-operator-resources:fpgainfo-exporter
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus-k8s
+  namespace: n3000-operator-resources
+rules:
+ - apiGroups:
+   - ""
+   resources:
+   - services
+   - endpoints
+   - pods
+   verbs:
+   - get
+   - list
+   - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-k8s
+  namespace: n3000-operator-resources
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prometheus-k8s
+subjects:
+- kind: ServiceAccount
+  name: prometheus-k8s
+  namespace: openshift-monitoring
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: n3000-operator-resources
+  name: fpgainfo-exporter
+  labels:
+    app: fpgainfo-exporter
+  annotations:
+    prometheus.io/scrape: "true"
+spec:
+  selector:
+    app: fpgainfo-exporter
+  type: ClusterIP
+  ports:
+  - name: fpgainfo
+    port: 42222
+    targetPort: 42222
+    protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  namespace: n3000-operator-resources
+  name: fpgainfo-exporter
+  labels:
+    app: fpgainfo-exporter
+spec:
+  endpoints:
+  - port: fpgainfo
+    path: "/metrics"
+    interval: 10s
+  jobLabel: app
+  namespaceSelector:
+    matchNames:
+    - n3000-operator-resources
+  selector:
+    matchLabels:
+      app: fpgainfo-exporter
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: fpgainfo-exporter
+  name: fpgainfo-exporter
+  namespace: n3000-operator-resources
+spec:
+  selector:
+    matchLabels:
+      app: fpgainfo-exporter
+  template:
+    metadata:
+      labels:
+        app: fpgainfo-exporter
+      name: fpgainfo-exporter
+    spec:
+      serviceAccount: fpgainfo-exporter
+      serviceAccountName: fpgainfo-exporter
+      containers:
+      - image: "IMAGE_URL"
+        imagePullPolicy: Always
+        name: fpgainfo-exporter
+        ports:
+        - name: metrics
+          containerPort: 42222
+          hostPort: 42222
+        resources:
+         requests:
+           memory: 100Mi
+           cpu: 100m
+         limits:
+           memory: 200Mi
+           cpu: 200m
+      nodeSelector:
+        feature.node.kubernetes.io/pci-8086.present: "true"
