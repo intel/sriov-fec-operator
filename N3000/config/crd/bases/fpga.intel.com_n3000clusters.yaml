@@ -36,11 +36,16 @@ spec:
         spec:
           description: N3000ClusterSpec defines the desired state of N3000Cluster
           properties:
+            dryrun:
+              type: bool
             nodes:
               items:
                 properties:
                   fortville:
                     properties:
+                      checksum:
+                        pattern: '[a-z0-9]+'
+                        type: string
                       command:
                         enum:
                         - inventory
@@ -63,6 +68,9 @@ spec:
                       properties:
                         PCIAddr:
                           pattern: '[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]'
+                          type: string
+                        checksum:
+                          pattern: '[a-z0-9]+'
                           type: string
                         userImageURL:
                           pattern: '[a-zA-Z0-9\.\-\/]+'

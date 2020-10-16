@@ -42,6 +42,9 @@ type N3000Fpga struct {
 	UserImageURL string `json:"userImageURL,omitempty"`
 	// +kubebuilder:validation:Pattern=`[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]`
 	PCIAddr string `json:"PCIAddr,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=[a-z0-9]+
+	CheckSum string `json:"checksum,omitempty"`
 }
 
 type N3000Fortville struct {
@@ -53,6 +56,9 @@ type N3000Fortville struct {
 	Command string `json:"command,omitempty"`
 	// +kubebuilder:validation:Optional
 	MACs []FortvilleMAC `json:"macs,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=[a-z0-9]+
+	CheckSum string `json:"checksum,omitempty"`
 }
 
 type FortvilleMAC struct {
@@ -73,6 +79,9 @@ type N3000ClusterSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Nodes []N3000ClusterNode `json:"nodes"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Type:=bool
+	DryRun bool `json:"dryrun,omitempty"`
 }
 
 // N3000ClusterStatus defines the observed state of N3000Cluster
