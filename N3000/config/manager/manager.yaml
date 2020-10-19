@@ -39,4 +39,13 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+        env:
+        - name: N3000_DAEMON_IMAGE
+          value: $N3000_DAEMON_IMAGE
+        - name: N3000_DRIVER_CONTAINER_IMAGE
+          value: $N3000_DRIVER_CONTAINER_IMAGE
+        - name: N3000_OPAE_VERSION
+          value: $N3000_OPAE_VERSION
+        - name: N3000_MONITORING_IMAGE
+          value: $N3000_MONITORING_IMAGE
       terminationGracePeriodSeconds: 10

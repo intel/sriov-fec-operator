@@ -124,7 +124,7 @@ spec:
       serviceAccount: fpgainfo-exporter
       serviceAccountName: fpgainfo-exporter
       containers:
-      - image: "IMAGE_URL"
+      - image: "{{ .N3000_MONITORING_IMAGE }}:{{ .N3000_OPAE_VERSION }}"
         imagePullPolicy: Always
         name: fpgainfo-exporter
         ports:
