@@ -67,11 +67,10 @@ func getFPGAInventory() ([]fpgav1.N3000FpgaStatus, error) {
 
 type FPGAManager struct {
 	Log logr.Logger
-	d   *Daemon
 }
 
 func (fpgaM *FPGAManager) getFPGAStatus() ([]fpgav1.N3000FpgaStatus, error) {
-	//log := dc.Log.WithName("getFPGAStatus")
+	//log := fpgaM.Log.WithName("getFPGAStatus")
 
 	//TODO fpga get status data
 	devs := make([]fpgav1.N3000FpgaStatus, 0)

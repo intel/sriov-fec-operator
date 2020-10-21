@@ -26,15 +26,17 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-type N3000ClusterSyncStatus string
+type SyncStatus string
 
 var (
-	// InprogressSync indicates that the Cluster in the progress of sync
-	InprogressSync N3000ClusterSyncStatus = "InProgress"
-	// SucceededSync indicates that the Cluster succeeded to sync
-	SucceededSync N3000ClusterSyncStatus = "Succeeded"
-	// FailedSync indicated that the Cluster failed to sync
-	FailedSync N3000ClusterSyncStatus = "Failed"
+	// InProgressSync indicates that the synchronization of the CR is in progress
+	InProgressSync SyncStatus = "InProgress"
+	// SucceededSync indicates that the synchronization of the CR succeeded
+	SucceededSync SyncStatus = "Succeeded"
+	// FailedSync indicates that the synchronization of the CR failed
+	FailedSync SyncStatus = "Failed"
+	// IgnoredSync indicates that the CR is ignored
+	IgnoredSync SyncStatus = "Ignored"
 )
 
 type N3000Fpga struct {
@@ -86,8 +88,8 @@ type N3000ClusterSpec struct {
 
 // N3000ClusterStatus defines the observed state of N3000Cluster
 type N3000ClusterStatus struct {
-	SyncStatus    N3000ClusterSyncStatus `json:"syncStatus,omitempty"`
-	LastSyncError string                 `json:"lastSyncError,omitempty"`
+	SyncStatus    SyncStatus `json:"syncStatus,omitempty"`
+	LastSyncError string     `json:"lastSyncError,omitempty"`
 }
 
 // +kubebuilder:object:root=true

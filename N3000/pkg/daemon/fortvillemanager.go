@@ -30,7 +30,6 @@ var (
 
 type FortvilleManager struct {
 	Log           logr.Logger
-	d             *Daemon
 	nvmupdatePath string
 }
 
@@ -75,34 +74,29 @@ func (fm *FortvilleManager) getNetworkDevices() ([]fpgav1.N3000FortvilleStatus, 
 	return devs, nil
 }
 
-func (fm *FortvilleManager) installNvmupdate() (string, error) {
+func (fm *FortvilleManager) installNvmupdate(firmwareURL string) (string, error) {
 	log := fm.Log.WithName("installNvmupdate")
+
 	_, err := os.Stat(nvmInstallDest + "700Series/Linux_x64/nvmupdate64e")
 	if os.IsNotExist(err) {
-		eb := fm.d.GetEventBuffer()
-		if eb.newObj == nil {
-			return "", errors.New("No new Object in event")
-		}
-
-		if eb.newObj.Spec.Fortville.FirmwareURL == "" {
+		if firmwareURL == "" {
 			return "", errors.New("Unable to install nvmupdate - empty .Spec.Fortville.FirmwareURL")
 		}
 
-		log.Info("nvmupdate tool not found - downloading", "url", eb.newObj.Spec.Fortville.FirmwareURL)
+		log.Info("nvmupdate tool not found - downloading", "url", firmwareURL)
 		f, err := os.Create(nvmInstallDest + "/nvmupdate.tar.gz")
 		if err != nil {
 			return "", err
 		}
 		defer f.Close()
 
-		r, err := http.Get(eb.newObj.Spec.Fortville.FirmwareURL)
+		r, err := http.Get(firmwareURL)
 		if err != nil {
 			return "", err
 		}
 
 		if r.StatusCode != http.StatusOK {
-			return "", fmt.Errorf("Unable to download nvmupdate package from: %s err: %s",
-				eb.newObj.Spec.Fortville.FirmwareURL, r.Status)
+			return "", fmt.Errorf("Unable to download nvmupdate package from: %s err: %s", firmwareURL, r.Status)
 		}
 		defer r.Body.Close()
 
@@ -121,12 +115,12 @@ func (fm *FortvilleManager) installNvmupdate() (string, error) {
 	return nvmInstallDest + "700Series/Linux_x64/nvmupdate64e", nil
 }
 
-func (fm *FortvilleManager) getNvmupdatePath() (string, error) {
+func (fm *FortvilleManager) getNvmupdatePath(firmwareURL string) (string, error) {
 	if fm.nvmupdatePath != "" {
 		return fm.nvmupdatePath, nil
 	}
 
-	p, err := fm.installNvmupdate()
+	p, err := fm.installNvmupdate(firmwareURL)
 	if err != nil {
 		return "", err
 	}
@@ -135,9 +129,9 @@ func (fm *FortvilleManager) getNvmupdatePath() (string, error) {
 	return p, nil
 }
 
-func (fm *FortvilleManager) getInventory() (DeviceInventory, error) {
+func (fm *FortvilleManager) getInventory(firmwareURL string) (DeviceInventory, error) {
 	log := fm.Log.WithName("getInventory")
-	nvmPath, err := fm.getNvmupdatePath()
+	nvmPath, err := fm.getNvmupdatePath(firmwareURL)
 	if err != nil {
 		log.Error(err, "Unable to get nvmupdate")
 		return DeviceInventory{}, err

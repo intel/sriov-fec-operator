@@ -45,7 +45,7 @@ var log = ctrl.Log.WithName("N3000ClusterController")
 var namespace = os.Getenv("NAMESPACE")
 
 func (r *N3000ClusterReconciler) updateStatus(n3000cluster *fpgav1.N3000Cluster,
-	status fpgav1.N3000ClusterSyncStatus, reason string) {
+	status fpgav1.SyncStatus, reason string) {
 	n3000cluster.Status.SyncStatus = status
 	n3000cluster.Status.LastSyncError = reason
 	if err := r.Status().Update(context.Background(), n3000cluster, &client.UpdateOptions{}); err != nil {
@@ -84,7 +84,7 @@ func (r *N3000ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		log.Info("received N3000Cluster, but it not an expected one - it'll be ignored",
 			"expectedNamespace", namespace, "expectedName", DEFAULT_N3000_CONFIG_NAME)
 
-		r.updateStatus(clusterConfig, fpgav1.FailedSync, fmt.Sprintf(
+		r.updateStatus(clusterConfig, fpgav1.IgnoredSync, fmt.Sprintf(
 			"Only N3000Cluster with name '%s' and namespace '%s' are handled",
 			DEFAULT_N3000_CONFIG_NAME, namespace))
 
@@ -112,8 +112,11 @@ func (r *N3000ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	for _, node := range n3000nodes {
+		nodeCopy := node.DeepCopy()
 		result, err := ctrl.CreateOrUpdate(ctx, r, node, func() error {
 			// no SetControllerReference because n3000Node are managed by the n3000 daemons
+
+			node.Spec = nodeCopy.Spec
 			return nil
 		})
 

@@ -25,18 +25,16 @@ import (
 
 // N3000NodeSpec defines the desired state of N3000Node
 type N3000NodeSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 	FPGA      []N3000Fpga    `json:"fpga,omitempty"`
 	Fortville N3000Fortville `json:"fortville,omitempty"`
 }
 
 // N3000NodeStatus defines the observed state of N3000Node
 type N3000NodeStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	FPGA      []N3000FpgaStatus      `json:"fpga,omitempty"`
-	Fortville []N3000FortvilleStatus `json:"fortville,omitempty"`
+	SyncStatus    SyncStatus             `json:"syncStatus,omitempty"`
+	LastSyncError string                 `json:"lastSyncError,omitempty"`
+	FPGA          []N3000FpgaStatus      `json:"fpga,omitempty"`
+	Fortville     []N3000FortvilleStatus `json:"fortville,omitempty"`
 }
 
 type N3000FpgaStatus struct {

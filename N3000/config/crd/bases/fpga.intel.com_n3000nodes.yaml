@@ -101,9 +101,6 @@ spec:
                 type: object
               type: array
             fpga:
-              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                of cluster Important: Run "make" to regenerate code after modifying
-                this file'
               items:
                 properties:
                   bitstreamId:
@@ -120,6 +117,10 @@ spec:
                     type: string
                 type: object
               type: array
+            lastSyncError:
+              type: string
+            syncStatus:
+              type: string
           type: object
       type: object
   version: v1

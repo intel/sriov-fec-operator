@@ -4,200 +4,167 @@
 package daemon
 
 import (
-	"os"
-	"sync"
-	"time"
+	"context"
+	"fmt"
 
-	//"github.com/go-logr/logr"
 	"github.com/go-logr/logr"
 	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/dynamic/dynamicinformer"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-type Daemon struct {
-	Log            logr.Logger
-	nodeName       string
-	namespace      string
-	kubeconfig     string
-	n3000node      *fpgav1.N3000Node
-	client         dynamic.Interface
-	stopCh         <-chan struct{}
-	eventBuffer    NodeEvent
-	eventBufferMtx sync.Mutex
-}
-
-func NewDaemon(sCh <-chan struct{}, log logr.Logger) *Daemon {
-	d := &Daemon{
-		Log:       log,
-		stopCh:    sCh,
-		nodeName:  nodeName,
-		namespace: namespace,
-	}
-
-	d.initDynamicClient()
-	fpgav1.AddToScheme(scheme.Scheme)
-	return d
-}
-
-var (
-	nodeGVR = schema.GroupVersionResource{
-		Group:    "fpga.intel.com",
-		Version:  "v1",
-		Resource: "n3000nodes",
-	}
-	informerResync = time.Second * 10
-	namespace      = os.Getenv("NAMESPACE")
-	nodeName       = os.Getenv("NODENAME")
-)
-
-type NodeEvent struct {
-	eventType NodeEventType
-	oldObj    *fpgav1.N3000Node
-	newObj    *fpgav1.N3000Node
-}
-type NodeEventType string
 
 const (
-	Add    NodeEventType = "add"
-	Update NodeEventType = "update"
-	Delete NodeEventType = "delete"
+	crNameTemplate = "n3000node-%s"
 )
 
-func (d *Daemon) Start() error {
-	log := d.Log.WithName("Start")
-	go d.startDynamicInformer()
+type N3000NodeReconciler struct {
+	client.Client
+	log       logr.Logger
+	nodeName  string
+	namespace string
 
-	dc := newDaemonController(d)
-	dc.start()
+	fortville FortvilleManager
+	fpga      FPGAManager
+}
 
-	for {
-		select {
-		case <-d.stopCh:
-			log.Info("Stopping daemon")
-			return nil
+func NewN3000NodeReconciler(c client.Client, log logr.Logger,
+	nodename, namespace string) *N3000NodeReconciler {
+
+	return &N3000NodeReconciler{
+		Client:    c,
+		log:       log,
+		nodeName:  nodename,
+		namespace: namespace,
+		fortville: FortvilleManager{
+			Log: log.WithName("fortvilleManager"),
+		},
+		fpga: FPGAManager{
+			Log: log.WithName("fpgaManager"),
+		},
+	}
+}
+
+func (r *N3000NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&fpgav1.N3000Node{}).
+		Complete(r)
+}
+
+// CreateEmptyN3000NodeIfNeeded creates empty CR to be Reconciled in near future and filled with Status.
+// If invoked before manager's Start, it'll need a direct API client
+// (Manager's/Controller's client is cached and cache is not initialized yet).
+func (r *N3000NodeReconciler) CreateEmptyN3000NodeIfNeeded(c client.Client) error {
+	name := fmt.Sprintf(crNameTemplate, r.nodeName)
+	log := r.log.WithName("CreateEmptyN3000NodeIfNeeded").WithValues("name", name, "namespace", r.namespace)
+
+	n3000node := &fpgav1.N3000Node{}
+	err := c.Get(context.Background(),
+		client.ObjectKey{
+			Name:      name,
+			Namespace: r.namespace,
+		},
+		n3000node)
+
+	if err == nil {
+		log.Info("already exists")
+		return nil
+	}
+
+	if k8serrors.IsNotFound(err) {
+		log.Info("not found - creating")
+
+		n3000node = &fpgav1.N3000Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: r.namespace,
+			},
+			Status: fpgav1.N3000NodeStatus{
+				SyncStatus:    fpgav1.InProgressSync,
+				LastSyncError: "Initial, empty N3000Node. Waiting for inventory refresh",
+			},
 		}
+
+		if createErr := c.Create(context.Background(), n3000node); createErr != nil {
+			log.Error(createErr, "failed to create")
+			return createErr
+		}
+
+		updateErr := c.Status().Update(context.Background(), n3000node)
+		if updateErr != nil {
+			log.Error(updateErr, "failed to update status")
+		}
+		return updateErr
 	}
 
+	return err
 }
 
-func (d *Daemon) initDynamicClient() {
-	log := d.Log.WithName("initDynamicClient")
-	log.Info("Initializing k8s client")
-	var config *rest.Config
-	var err error
+func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+	log := r.log.WithName("Reconcile").WithValues("namespace", req.Namespace, "name", req.Name)
 
-	kubeconfig := os.Getenv("KUBECONFIG")
-	if kubeconfig != "" {
-		log.Info("Using KUBECONFIG")
-		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
-	} else {
-		config, err = rest.InClusterConfig()
+	// Lack of Status.SyncStatus update on namespace/name mismatch (like in N3000ClusterReconciler):
+	// N3000Node is between Operator & Daemon so we're in control of this communication channel.
+
+	if req.Namespace != r.namespace {
+		log.Info("unexpected namespace - ignoring", "expected namespace", r.namespace)
+		return ctrl.Result{}, nil
 	}
 
+	if req.Name != fmt.Sprintf(crNameTemplate, r.nodeName) {
+		log.Info("CR intended for another node - ignoring", "expected name", fmt.Sprintf(crNameTemplate, r.nodeName))
+		return ctrl.Result{}, nil
+	}
+
+	ctx := context.Background()
+
+	n3000node := &fpgav1.N3000Node{}
+	if err := r.Client.Get(ctx, req.NamespacedName, n3000node); err != nil {
+		if k8serrors.IsNotFound(err) {
+			log.Info("reconciled n3000node not found")
+			return ctrl.Result{}, r.CreateEmptyN3000NodeIfNeeded(r.Client)
+		}
+		log.Error(err, "Get(n3000node) failed")
+		return ctrl.Result{}, err
+	}
+
+	// TODO:
+	// (rough overview)
+	// - Decide if node needs to be cordoned (difference between current & desired state of FPGA & Fortville)
+	// - Leader election & node cordon
+	// - Bitstream programming & fortville firmware update
+	// - Uncordon & give up leader
+
+	status, err := r.createBasicNodeStatus()
 	if err != nil {
-		panic(err)
+		log.Error(err, "failed to create basic node status")
+		return ctrl.Result{}, err
+	}
+	n3000node.Status = *status
+	if err := r.Status().Update(context.Background(), n3000node); err != nil {
+		log.Error(err, "failed to update N3000Node status")
+		return ctrl.Result{}, err
 	}
 
-	client, err := dynamic.NewForConfig(config)
-	if err != nil {
-		panic(err)
-	}
+	log.Info("Reconciled")
 
-	d.client = client
+	return ctrl.Result{}, nil
 }
 
-func (d *Daemon) startDynamicInformer() {
-	informerFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(d.client,
-		informerResync,
-		d.namespace,
-		nil)
-	informer := informerFactory.ForResource(nodeGVR)
-	informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    d.nodeAddFunc,
-		UpdateFunc: d.nodeUpdateFunc,
-		DeleteFunc: d.nodeDeleteFunc,
-	})
-	informer.Informer().Run(d.stopCh)
-}
-
-func (d *Daemon) nodeAddFunc(obj interface{}) {
-	log := d.Log.WithName("nodeAddFunc")
-	log.V(2).Info("N3000Nodes resource added", "node", d.nodeName)
-	d.eventBufferMtx.Lock()
-	defer d.eventBufferMtx.Unlock()
-
-	var n fpgav1.N3000Node
-	err := scheme.Scheme.Convert(obj, &n, nil)
+func (r *N3000NodeReconciler) createBasicNodeStatus() (*fpgav1.N3000NodeStatus, error) {
+	fortvilleStatus, err := r.fortville.getNetworkDevices()
 	if err != nil {
-		log.Error(err, "Unable to convert Object to N3000Node...ignoring")
-		return
-	}
-	d.eventBuffer = NodeEvent{
-		eventType: Add,
-		oldObj:    nil,
-		newObj:    &n,
-	}
-	o := &unstructured.Unstructured{}
-	err = scheme.Scheme.Convert(&n, o, nil)
-	if err != nil {
-		log.Error(err, "Unable to convert N3000Node to obj...ignoring")
-		return
-	}
-}
-
-func (d *Daemon) nodeUpdateFunc(old, obj interface{}) {
-	log := d.Log.WithName("nodeUpdateFunc")
-	log.V(2).Info("N3000Nodes resource updated", "node", d.nodeName)
-	d.eventBufferMtx.Lock()
-	defer d.eventBufferMtx.Unlock()
-	var no fpgav1.N3000Node
-	err := scheme.Scheme.Convert(obj, &no, nil)
-	if err != nil {
-		log.Error(err, "Unable to convert old Object to N3000Node...ignoring")
-		return
-	}
-	var nn fpgav1.N3000Node
-	err = scheme.Scheme.Convert(obj, &nn, nil)
-	if err != nil {
-		log.Error(err, "Unable to convert new Object to N3000Node...ignoring")
-		return
+		return nil, err
 	}
 
-	d.eventBuffer = NodeEvent{
-		eventType: Update,
-		oldObj:    &no,
-		newObj:    &nn,
-	}
-}
-
-func (d *Daemon) nodeDeleteFunc(obj interface{}) {
-	log := d.Log.WithName("nodeDeleteFunc")
-	log.V(2).Info("N3000Nodes resource deleted", "node", d.nodeName)
-	d.eventBufferMtx.Lock()
-	defer d.eventBufferMtx.Unlock()
-	var n fpgav1.N3000Node
-	err := scheme.Scheme.Convert(obj, &n, nil)
+	fpgaStatus, err := r.fpga.getFPGAStatus()
 	if err != nil {
-		log.Error(err, "Unable to convert Object to N3000Node...ignoring")
-		return
+		return nil, err
 	}
-	d.eventBuffer = NodeEvent{
-		eventType: Delete,
-		oldObj:    nil,
-		newObj:    &n,
-	}
-}
 
-func (d *Daemon) GetEventBuffer() NodeEvent {
-	d.eventBufferMtx.Lock()
-	defer d.eventBufferMtx.Unlock()
-	eb := d.eventBuffer
-	return eb
+	return &fpgav1.N3000NodeStatus{
+		Fortville: fortvilleStatus,
+		FPGA:      fpgaStatus,
+	}, nil
 }
