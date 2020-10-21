@@ -99,6 +99,7 @@ metadata:
   annotations:
     openshift.io/scc: fpga-driver
 spec:
+  minReadySeconds: 10
   selector:
     matchLabels:
       app: fpga-driver-daemonset

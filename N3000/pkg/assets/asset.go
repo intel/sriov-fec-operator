@@ -114,7 +114,18 @@ func (a *Asset) createOrUpdate(ctx context.Context, c client.Client) error {
 	for _, obj := range a.objects {
 		a.log.V(4).Info("createOrUpdate", "asset", a.Path, "kind", obj.GetObjectKind())
 
+		objCopy := obj.DeepCopyObject()
 		result, err := ctrl.CreateOrUpdate(ctx, c, obj, func() error {
+			if objCopy.GetObjectKind().GroupVersionKind().Kind == "DaemonSet" {
+				ds, ok := obj.(*appsv1.DaemonSet)
+				dsCopy, okCopy := objCopy.(*appsv1.DaemonSet)
+				if ok && okCopy {
+					ds.Spec = dsCopy.Spec
+				} else {
+					a.log.Error(nil, "kind is daemonset, but casting type failed", "ok", ok, "okCopy", okCopy)
+					return errors.New("kind is daemonset, but casting type failed")
+				}
+			}
 			return nil
 		})
 

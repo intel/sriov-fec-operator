@@ -112,6 +112,7 @@ metadata:
   name: fpgainfo-exporter
   namespace: n3000-operator-resources
 spec:
+  minReadySeconds: 10
   selector:
     matchLabels:
       app: fpgainfo-exporter
