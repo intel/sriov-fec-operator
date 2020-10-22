@@ -69,6 +69,9 @@ type N3000Node struct {
 
 	Spec   N3000NodeSpec   `json:"spec,omitempty"`
 	Status N3000NodeStatus `json:"status,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Type:=bool
+	DryRun bool `json:"dryrun,omitempty"`
 }
 
 // +kubebuilder:object:root=true

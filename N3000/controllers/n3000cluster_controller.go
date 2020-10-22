@@ -91,6 +91,18 @@ func (r *N3000ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		return ctrl.Result{}, nil
 	}
 
+	for _, node := range clusterConfig.Spec.Nodes {
+		if node.Fortville.Command != "" && node.Fortville.FirmwareURL == "" {
+			log.Info("received Fortville command and empty url", "command",
+				node.Fortville.Command)
+
+			r.updateStatus(clusterConfig, fpgav1.IgnoredSync,
+				"N3000Cluster with Fortville command and valid FirmwareURL are handled")
+
+			return ctrl.Result{}, nil
+		}
+	}
+
 	n3000nodes, err := r.splitClusterIntoNodes(ctx, clusterConfig)
 	if err != nil {
 		log.Error(err, "cluster into nodes split failed")
@@ -161,6 +173,7 @@ func (r *N3000ClusterReconciler) splitClusterIntoNodes(ctx context.Context,
 				}
 				nodeRes.Spec.FPGA = res.FPGA
 				nodeRes.Spec.Fortville = res.Fortville
+				nodeRes.DryRun = n3000cluster.Spec.DryRun
 				n3000Nodes = append(n3000Nodes, nodeRes)
 				break
 			}

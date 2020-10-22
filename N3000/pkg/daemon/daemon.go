@@ -101,6 +101,42 @@ func (r *N3000NodeReconciler) CreateEmptyN3000NodeIfNeeded(c client.Client) erro
 	return err
 }
 
+func (r *N3000NodeReconciler) flash(n *fpgav1.N3000Node) error {
+	log := r.log.WithName("flash")
+	err := r.fpga.processFPGA(n)
+	if err != nil {
+		log.Error(err, "Unable to processFPGA")
+		return err
+	}
+
+	err = r.fortville.flash(n)
+	if err != nil {
+		log.Error(err, "Unable to flash fortville")
+		return err
+	}
+	return nil
+}
+
+func (r *N3000NodeReconciler) createStatus(n *fpgav1.N3000Node) (*fpgav1.N3000NodeStatus, error) {
+	log := r.log.WithName("createStatus")
+
+	status, err := r.createBasicNodeStatus()
+	if err != nil {
+		log.Error(err, "failed to create basic node status")
+		return nil, err
+	}
+
+	log.V(2).Info("Updating fortville status with nvmupdate inventory data")
+	i, err := r.fortville.getInventory(n)
+	if err != nil {
+		log.Error(err, "Unable to get inventory...using basic status only")
+		return nil, err
+	} else {
+		r.fortville.processInventory(&i, status) // fill ns with data from inventory
+	}
+	return status, nil
+}
+
 func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log := r.log.WithName("Reconcile").WithValues("namespace", req.Namespace, "name", req.Name)
 
@@ -136,12 +172,18 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// - Bitstream programming & fortville firmware update
 	// - Uncordon & give up leader
 
-	status, err := r.createBasicNodeStatus()
+	err := r.flash(n3000node)
 	if err != nil {
-		log.Error(err, "failed to create basic node status")
+		log.Error(err, "failed to flash")
 		return ctrl.Result{}, err
 	}
-	n3000node.Status = *status
+
+	s, err := r.createStatus(n3000node)
+	if err != nil {
+		log.Error(err, "failed to get status")
+		return ctrl.Result{}, err
+	}
+	n3000node.Status = *s
 	if err := r.Status().Update(context.Background(), n3000node); err != nil {
 		log.Error(err, "failed to update N3000Node status")
 		return ctrl.Result{}, err
@@ -158,7 +200,7 @@ func (r *N3000NodeReconciler) createBasicNodeStatus() (*fpgav1.N3000NodeStatus, 
 		return nil, err
 	}
 
-	fpgaStatus, err := r.fpga.getFPGAStatus()
+	fpgaStatus, err := getFPGAInventory()
 	if err != nil {
 		return nil, err
 	}

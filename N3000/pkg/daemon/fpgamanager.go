@@ -4,6 +4,7 @@
 package daemon
 
 import (
+	"fmt"
 	"log"
 	"os/exec"
 	"regexp"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/go-logr/logr"
 	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -27,6 +29,7 @@ var (
 		}
 		return string(output), nil
 	}
+	fpgaUserImageFile = "/root/test/fpga.bin"
 )
 
 func getFPGAInventory() ([]fpgav1.N3000FpgaStatus, error) {
@@ -69,12 +72,60 @@ type FPGAManager struct {
 	Log logr.Logger
 }
 
-func (fpgaM *FPGAManager) getFPGAStatus() ([]fpgav1.N3000FpgaStatus, error) {
-	//log := fpgaM.Log.WithName("getFPGAStatus")
+func (fpga *FPGAManager) dryrunFPGAprogramming() {
+	log := fpga.Log.WithName("dryrunFPGAprogramming")
+	log.Info("FPGA programming in dryrun mode")
+}
 
-	//TODO fpga get status data
-	devs := make([]fpgav1.N3000FpgaStatus, 0)
-	//...
+func (fpga *FPGAManager) FPGAprogramming() error {
+	log := fpga.Log.WithName("FPGAprogramming")
+	log.Info("Start programming FPGA")
+	//TODO: call cmd fpgasupdate <bin file> <PCIe>
+	return nil
+}
 
-	return devs, nil
+func (fpga *FPGAManager) verifyPCIAddrs(fpgaCR []fpgav1.N3000Fpga) error {
+	currentInventory, err := getFPGAInventory()
+	if err != nil {
+		return fmt.Errorf("Unable to get FPGA inventory before programming err: " + err.Error())
+	}
+	for idx := range fpgaCR {
+		for i := range currentInventory {
+			if fpgaCR[idx].PCIAddr == currentInventory[i].PciAddr {
+				break
+			}
+		}
+		return fmt.Errorf("Unable to detect FPGA PCIAddr=%s: ", fpgaCR[idx].PCIAddr)
+	}
+	return nil
+}
+
+func (fpga *FPGAManager) processFPGA(n *fpgav1.N3000Node) error {
+	log := fpga.Log.WithName("processFPGA")
+	log.Info("Start processFPGA", "url")
+
+	err := fpga.verifyPCIAddrs(n.Spec.FPGA)
+	if err != nil {
+		return err
+	}
+	for idx := range n.Spec.FPGA {
+		err := getImage(fpgaUserImageFile,
+			n.Spec.FPGA[idx].UserImageURL,
+			n.Spec.FPGA[idx].CheckSum,
+			log)
+		if err != nil {
+			log.Error(err, "Unable to get FPGA Image")
+			return errors.Wrap(err, "FPGA image error:")
+		}
+		if n.DryRun == true {
+			fpga.dryrunFPGAprogramming()
+		} else {
+			err = fpga.FPGAprogramming()
+			if err != nil {
+				log.Error(err, "Unable to programming FPGA")
+				return err
+			}
+		}
+	}
+	return nil
 }

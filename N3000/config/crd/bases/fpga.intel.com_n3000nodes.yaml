@@ -26,6 +26,8 @@ spec:
             of an object. Servers should convert recognized schemas to the latest
             internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
           type: string
+        dryrun:
+          type: bool
         kind:
           description: 'Kind is a string value representing the REST resource this
             object represents. Servers may infer this from the endpoint the client
@@ -39,7 +41,7 @@ spec:
             fortville:
               properties:
                 checksum:
-                  pattern: '[a-z0-9]+'
+                  pattern: '[a-fA-F0-9]{32}'
                   type: string
                 command:
                   enum:
@@ -59,15 +61,13 @@ spec:
                   type: array
               type: object
             fpga:
-              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                Important: Run "make" to regenerate code after modifying this file'
               items:
                 properties:
                   PCIAddr:
                     pattern: '[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]'
                     type: string
                   checksum:
-                    pattern: '[a-z0-9]+'
+                    pattern: '[a-fA-F0-9]{32}'
                     type: string
                   userImageURL:
                     pattern: '[a-zA-Z0-9\.\-\/]+'

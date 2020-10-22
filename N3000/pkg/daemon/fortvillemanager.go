@@ -7,11 +7,8 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/xml"
-	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
@@ -19,13 +16,16 @@ import (
 
 	"github.com/go-logr/logr"
 	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
+	"github.com/pkg/errors"
 )
 
-var (
+const (
 	supportedFortville = `"X710\|XXV710\|XL710"`
 	// nvmInstallDest     = "/nvmupdate/"
-	nvmInstallDest   = "/root/test/"
-	inventoryOutFile = nvmInstallDest + "inventory.xml"
+	nvmInstallDest        = "/root/test/"
+	inventoryOutFile      = nvmInstallDest + "inventory.xml"
+	nvmPackageDestination = nvmInstallDest + "/nvmupdate.tar.gz"
+	nvmupdate64epath      = nvmInstallDest + "700Series/Linux_x64/nvmupdate64e"
 )
 
 type FortvilleManager struct {
@@ -74,73 +74,60 @@ func (fm *FortvilleManager) getNetworkDevices() ([]fpgav1.N3000FortvilleStatus, 
 	return devs, nil
 }
 
-func (fm *FortvilleManager) installNvmupdate(firmwareURL string) (string, error) {
-	log := fm.Log.WithName("installNvmupdate")
-
-	_, err := os.Stat(nvmInstallDest + "700Series/Linux_x64/nvmupdate64e")
-	if os.IsNotExist(err) {
-		if firmwareURL == "" {
-			return "", errors.New("Unable to install nvmupdate - empty .Spec.Fortville.FirmwareURL")
-		}
-
-		log.Info("nvmupdate tool not found - downloading", "url", firmwareURL)
-		f, err := os.Create(nvmInstallDest + "/nvmupdate.tar.gz")
-		if err != nil {
-			return "", err
-		}
-		defer f.Close()
-
-		r, err := http.Get(firmwareURL)
-		if err != nil {
-			return "", err
-		}
-
-		if r.StatusCode != http.StatusOK {
-			return "", fmt.Errorf("Unable to download nvmupdate package from: %s err: %s", firmwareURL, r.Status)
-		}
-		defer r.Body.Close()
-
-		_, err = io.Copy(f, r.Body)
-		if err != nil {
-			return "", err
-		}
-
-		log.Info("Extracting nvmupdate.tar.gz")
-		cmd := exec.Command("tar", "xzfv", nvmInstallDest+"/nvmupdate.tar.gz", "-C", nvmInstallDest)
-		err = cmd.Run()
-		if err != nil {
-			return "", err
-		}
-	}
-	return nvmInstallDest + "700Series/Linux_x64/nvmupdate64e", nil
-}
-
-func (fm *FortvilleManager) getNvmupdatePath(firmwareURL string) (string, error) {
-	if fm.nvmupdatePath != "" {
-		return fm.nvmupdatePath, nil
-	}
-
-	p, err := fm.installNvmupdate(firmwareURL)
+func (fm *FortvilleManager) installdNvmupdate() error {
+	log := fm.Log.WithName("installdNvmupdate")
+	log.Info("Extracting nvmupdate package")
+	cmd := exec.Command("tar", "xzfv", nvmPackageDestination, "-C", nvmInstallDest)
+	err := cmd.Run()
 	if err != nil {
-		return "", err
+		return err
 	}
-
-	fm.nvmupdatePath = p
-	return p, nil
+	return nil
 }
 
-func (fm *FortvilleManager) getInventory(firmwareURL string) (DeviceInventory, error) {
+// func (fm *FortvilleManager) dryrunNvmupdate() {
+// 	log := fm.Log.WithName("dryrunNvmupdate")
+// 	log.Info("install Nvmupdate in dryrun mode")
+// }
+
+func (fm *FortvilleManager) flash(n *fpgav1.N3000Node) error {
+	log := fm.Log.WithName("flash")
+	if n.Spec.Fortville.FirmwareURL != "" {
+		log.Info("Start flashing fortville")
+		//call nvmupdate
+	}
+	return nil
+}
+
+func (fm *FortvilleManager) getInventory(n *fpgav1.N3000Node) (DeviceInventory, error) {
 	log := fm.Log.WithName("getInventory")
-	nvmPath, err := fm.getNvmupdatePath(firmwareURL)
-	if err != nil {
-		log.Error(err, "Unable to get nvmupdate")
-		return DeviceInventory{}, err
+
+	if n.Spec.Fortville.FirmwareURL != "" {
+		err := getImage(nvmPackageDestination,
+			n.Spec.Fortville.FirmwareURL,
+			n.Spec.Fortville.CheckSum,
+			log)
+		if err != nil {
+			log.Error(err, "Unable to get Fortville Image")
+			return DeviceInventory{}, errors.Wrap(err, "Fortville image error:")
+		}
+		err = fm.installdNvmupdate()
+		if err != nil {
+			log.Error(err, "Unable to install nvmupdate")
+			return DeviceInventory{}, errors.Wrap(err, "Fortville image error:")
+		}
+		fm.nvmupdatePath = nvmupdate64epath
 	}
 
-	inventoryCmd := nvmPath + " -i -o " + inventoryOutFile
-	_, err = exec.Command("bash", "-c", inventoryCmd).Output()
+	var i DeviceInventory
+	if fm.nvmupdatePath == "" {
+		return i, nil
+	}
+
+	out, err := exec.Command("bash", "-c", fm.nvmupdatePath, " -i -o ", inventoryOutFile).Output()
 	if err != nil {
-		log.Error(err, "Error when executing", "cmd", inventoryCmd)
+		log.Error(err, "Error when executing", "cmd", "bash", "-c", fm.nvmupdatePath, " -i -o ")
+		log.Info("Info when executing %s", string(out))
 		return DeviceInventory{}, err
 	}
 
@@ -153,7 +140,6 @@ func (fm *FortvilleManager) getInventory(firmwareURL string) (DeviceInventory, e
 
 	b, _ := ioutil.ReadAll(invf)
 
-	var i DeviceInventory
 	err = xml.Unmarshal(b, &i)
 	if err != nil {
 		return DeviceInventory{}, err
