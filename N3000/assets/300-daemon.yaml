@@ -1,0 +1,165 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: n3000-daemon
+  namespace: n3000-operator-resources
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: n3000-daemon
+  namespace: n3000-operator-resources
+rules:
+- apiGroups:
+  - fpga.intel.com
+  resources:
+  - '*'
+  - n3000nodes
+  verbs:
+  - '*'
+- apiGroups:
+  - security.openshift.io
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
+  resourceNames:
+  - privileged
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: n3000-daemon
+  namespace: n3000-operator-resources
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: n3000-daemon
+  namespace: n3000-operator-resources
+subjects:
+- kind: ServiceAccount
+  name: n3000-daemon
+  namespace: n3000-operator-resources
+userNames:
+- system:serviceaccount:n3000-operator-resources:n3000-daemon
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: n3000-daemonset
+  name: n3000-daemonset
+  namespace: n3000-operator-resources
+  annotations:
+    openshift.io/scc: n3000-daemon
+spec:
+  selector:
+    matchLabels:
+      app: n3000-daemonset
+  template:
+    metadata:
+      # Mark this pod as a critical add-on; when enabled, the critical add-on scheduler
+      # reserves resources for critical add-on pods so that they can be rescheduled after
+      # a failure.  This annotation works in tandem with the toleration below.
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        app: n3000-daemonset
+    spec:
+      nodeSelector:
+        feature.node.kubernetes.io/pci-8086.present: "true"
+      tolerations:
+      - key: intel.com/fpga
+        operator: Exists
+        effect: NoSchedule
+      serviceAccount: n3000-daemon
+      serviceAccountName: n3000-daemon
+      hostPID: true
+      containers:
+      - image: {{ .N3000_DAEMON_IMAGE }}:{{ .N3000_OPAE_VERSION }}"
+        imagePullPolicy: Always
+        name: n3000-daemon
+        volumeMounts:
+          - name: dev
+            mountPath: /dev
+          - name: devmem
+            mountPath: /dev/mem
+          - name: devkmem
+            mountPath: /dev/kmem
+          - name: devio
+            mountPath: /dev/io
+          - name: devpci
+            mountPath: /dev/pci
+          - name: bootkernel
+            mountPath: /boot/kernel
+          - name: libmodules
+            mountPath: /lib/modules
+          - name: classnet
+            mountPath: /sys/class/net
+          - name: pcidrivers
+            mountPath: /sys/bus/pci/drivers
+          - name: pcidevices
+            mountPath: /sys/bus/pci/devices
+          - name: pcislots
+            mountPath: /sys/bus/pci/slots
+          - name: module
+            mountPath: /sys/module
+          - name: systab
+            mountPath: /sys/firmware/efi/systab
+        env:
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: NODENAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+        securityContext:
+          privileged: true
+          seLinuxOptions:
+            level: "s0"
+      volumes:
+        - name: dev
+          hostPath:
+            path: /dev
+        - name: devmem
+          hostPath:
+            path: /dev/mem
+        - name: devkmem
+          hostPath:
+            path: /dev/kmem
+        - name: devio
+          hostPath:
+            path: /dev/io
+        - name: devpci
+          hostPath:
+            path: /dev/pci
+        - name: bootkernel
+          hostPath:
+            path: /boot/kernel
+        - name: libmodules
+          hostPath:
+            path: /lib/modules
+        - name: classnet
+          hostPath:
+            path: /sys/class/net
+        - name: pcidrivers
+          hostPath:
+            path: /sys/bus/pci/drivers
+        - name: pcidevices
+          hostPath:
+            path: /sys/bus/pci/devices
+        - name: pcislots
+          hostPath:
+            path: /sys/bus/pci/slots
+        - name: module
+          hostPath:
+            path: /sys/module
+        - name: systab
+          hostPath:
+            path: /sys/firmware/efi/systab
+

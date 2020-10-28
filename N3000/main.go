@@ -92,6 +92,10 @@ func main() {
 			{
 				Path: "assets/200-monitoring.yaml",
 			},
+			{
+				Path:              "assets/300-daemon.yaml",
+				BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
+			},
 		},
 	}).LoadAndDeploy(context.Background()); err != nil {
 		setupLog.Error(err, "failed to deploy the assets")
