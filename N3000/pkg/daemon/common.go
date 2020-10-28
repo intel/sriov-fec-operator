@@ -85,7 +85,19 @@ func getImage(path string, url string, checksum string, log logr.Logger) error {
 		log.Info("Downloading image", "url:", url)
 		err := downloadImage(path, url, checksum)
 		if err != nil {
-			log.Error(err, "Unable to download Fortville Image")
+			log.Error(err, "Unable to download Image")
+			return err
+		}
+	}
+	return nil
+}
+
+func createFolder(path string, log logr.Logger) error {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		errDir := os.MkdirAll(path, 0777)
+		if errDir != nil {
+			log.Info("Unable to create", "path:", path)
 			return err
 		}
 	}

@@ -29,7 +29,8 @@ var (
 		}
 		return string(output), nil
 	}
-	fpgaUserImageFile = "/root/test/fpga.bin"
+	fpgaUserImageSubfolderPath = "/root/test"
+	fpgaUserImageFile          = fpgaUserImageSubfolderPath + "/fpga.bin"
 )
 
 func getFPGAInventory() ([]fpgav1.N3000FpgaStatus, error) {
@@ -85,33 +86,43 @@ func (fpga *FPGAManager) FPGAprogramming() error {
 }
 
 func (fpga *FPGAManager) verifyPCIAddrs(fpgaCR []fpgav1.N3000Fpga) error {
+	log := fpga.Log.WithName("verifyPCIAddrs")
 	currentInventory, err := getFPGAInventory()
 	if err != nil {
 		return fmt.Errorf("Unable to get FPGA inventory before programming err: " + err.Error())
 	}
 	for idx := range fpgaCR {
+		pciFound := false
 		for i := range currentInventory {
 			if fpgaCR[idx].PCIAddr == currentInventory[i].PciAddr {
+				log.Info("PCIAddr detected", "PciAddr", fpgaCR[idx].PCIAddr)
+				pciFound = true
 				break
 			}
 		}
-		return fmt.Errorf("Unable to detect FPGA PCIAddr=%s: ", fpgaCR[idx].PCIAddr)
+		if !pciFound {
+			return fmt.Errorf("Unable to detect FPGA PCIAddr=%s: ", fpgaCR[idx].PCIAddr)
+		}
 	}
 	return nil
 }
 
 func (fpga *FPGAManager) processFPGA(n *fpgav1.N3000Node) error {
 	log := fpga.Log.WithName("processFPGA")
-	log.Info("Start processFPGA", "url")
 
 	err := fpga.verifyPCIAddrs(n.Spec.FPGA)
 	if err != nil {
 		return err
 	}
-	for idx := range n.Spec.FPGA {
+	err = createFolder(fpgaUserImageSubfolderPath, log)
+	if err != nil {
+		return err
+	}
+	for _, obj := range n.Spec.FPGA {
+		log.Info("Start processFPGA", "url", obj.UserImageURL)
 		err := getImage(fpgaUserImageFile,
-			n.Spec.FPGA[idx].UserImageURL,
-			n.Spec.FPGA[idx].CheckSum,
+			obj.UserImageURL,
+			obj.CheckSum,
 			log)
 		if err != nil {
 			log.Error(err, "Unable to get FPGA Image")
