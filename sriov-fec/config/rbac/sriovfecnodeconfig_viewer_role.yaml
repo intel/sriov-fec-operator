@@ -1,0 +1,20 @@
+# permissions for end users to view sriovfecnodeconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sriovfecnodeconfig-viewer-role
+rules:
+- apiGroups:
+  - sriovfec.intel.com
+  resources:
+  - sriovfecnodeconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - sriovfec.intel.com
+  resources:
+  - sriovfecnodeconfigs/status
+  verbs:
+  - get

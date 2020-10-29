@@ -1,0 +1,5 @@
+## Append samples you want in your CSV to this file as resources ##
+resources:
+- sriovfec_v1_sriovfecclusterconfig.yaml
+- sriovfec_v1_sriovfecnodeconfig.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

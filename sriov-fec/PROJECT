@@ -1,7 +1,14 @@
 domain: intel.com
 layout: go.kubebuilder.io/v2
 projectName: sriov-fec
-repo: github.com/otcshare/operator/sriov-fec
+repo: github.com/otcshare/openshift-operator/sriov-fec
+resources:
+- group: sriovfec
+  kind: SriovFecClusterConfig
+  version: v1
+- group: sriovfec
+  kind: SriovFecNodeConfig
+  version: v1
 version: 3-alpha
 plugins:
   go.sdk.operatorframework.io/v2-alpha: {}

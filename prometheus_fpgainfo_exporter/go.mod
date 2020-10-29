@@ -1,4 +1,4 @@
-module github.com/otcshare/operator/prometheus_fpgainfo_exporter
+module github.com/otcshare/openshift-operator/prometheus_fpgainfo_exporter
 
 go 1.14
 

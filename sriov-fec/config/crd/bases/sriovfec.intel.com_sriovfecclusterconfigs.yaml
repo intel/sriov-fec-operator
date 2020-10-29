@@ -1,0 +1,237 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: sriovfecclusterconfigs.sriovfec.intel.com
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.syncStatus
+    name: SyncStatus
+    type: string
+  group: sriovfec.intel.com
+  names:
+    kind: SriovFecClusterConfig
+    listKind: SriovFecClusterConfigList
+    plural: sriovfecclusterconfigs
+    singular: sriovfecclusterconfig
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: SriovFecClusterConfig is the Schema for the sriovfecclusterconfigs
+        API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: SriovFecClusterConfigSpec defines the desired state of SriovFecClusterConfig
+          properties:
+            nodes:
+              description: List of node configurations
+              items:
+                properties:
+                  cards:
+                    description: List of card configs
+                    items:
+                      properties:
+                        pciAddress:
+                          description: PCIAdress is a card's PCI address that will
+                            be configured according to this spec
+                          type: string
+                        pfDeviceID:
+                          description: PFDeviceID
+                          type: string
+                        pfDriver:
+                          description: PFDriver to bound the PFs to
+                          type: string
+                        queuesConfiguration:
+                          description: QueuesConfiguration is a config for card's
+                            queues
+                          properties:
+                            downlink:
+                              properties:
+                                bandwidth:
+                                  type: integer
+                                loadBalance:
+                                  type: integer
+                                queues:
+                                  properties:
+                                    vf0:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                    vf1:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                    vf2:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                    vf3:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                    vf4:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                    vf5:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                    vf6:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                    vf7:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                  type: object
+                              required:
+                              - bandwidth
+                              - loadBalance
+                              - queues
+                              type: object
+                            flrTimeout:
+                              minimum: 0
+                              type: integer
+                            networkType:
+                              enum:
+                              - FPGA_5GNR
+                              - FPGA_LTE
+                              type: string
+                            pfMode:
+                              type: boolean
+                            uplink:
+                              properties:
+                                bandwidth:
+                                  type: integer
+                                loadBalance:
+                                  type: integer
+                                queues:
+                                  properties:
+                                    vf0:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                    vf1:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                    vf2:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                    vf3:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                    vf4:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                    vf5:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                    vf6:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                    vf7:
+                                      maximum: 32
+                                      minimum: 0
+                                      type: integer
+                                  type: object
+                              required:
+                              - bandwidth
+                              - loadBalance
+                              - queues
+                              type: object
+                          required:
+                          - downlink
+                          - flrTimeout
+                          - networkType
+                          - pfMode
+                          - uplink
+                          type: object
+                        vendorID:
+                          description: VendorID is ID of card's vendor
+                          type: string
+                        vfAmount:
+                          description: VFAmount is an amount of VFs to be created
+                          type: integer
+                        vfDeviceID:
+                          description: VFDeviceID
+                          type: string
+                        vfDriver:
+                          description: VFDriver to bound the VFs to
+                          type: string
+                      required:
+                      - pfDeviceID
+                      - pfDriver
+                      - queuesConfiguration
+                      - vendorID
+                      - vfAmount
+                      - vfDeviceID
+                      - vfDriver
+                      type: object
+                    type: array
+                  nodeName:
+                    description: Name of the node
+                    type: string
+                  oneCardConfigForAll:
+                    description: If true, then the first card config will be used
+                      for all cards. pciAddress will be ignored.
+                    type: boolean
+                required:
+                - cards
+                - oneCardConfigForAll
+                type: object
+              type: array
+            oneNodeConfigForAll:
+              description: If true, then the first node config will be used for all
+                nodes. nodeName will be ignored. First card config will be used, pciAddress
+                will be ignored
+              type: boolean
+          required:
+          - nodes
+          - oneNodeConfigForAll
+          type: object
+        status:
+          description: SriovFecClusterConfigStatus defines the observed state of SriovFecClusterConfig
+          properties:
+            lastSyncError:
+              type: string
+            syncStatus:
+              type: string
+          type: object
+      type: object
+  version: v1
+  versions:
+  - name: v1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
