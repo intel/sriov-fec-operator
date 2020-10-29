@@ -127,7 +127,7 @@ func (fm *FortvilleManager) getInventory(n *fpgav1.N3000Node) (DeviceInventory, 
 	out, err := exec.Command("bash", "-c", fm.nvmupdatePath, " -i -o ", inventoryOutFile).Output()
 	if err != nil {
 		log.Error(err, "Error when executing", "cmd", "bash", "-c", fm.nvmupdatePath, " -i -o ")
-		log.Info("Info when executing %s", string(out))
+		log.Info("Executed unsuccessfully", "output", string(out))
 		return DeviceInventory{}, err
 	}
 

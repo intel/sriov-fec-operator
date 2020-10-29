@@ -8,10 +8,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/go-logr/logr"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
+
+	"github.com/go-logr/logr"
 )
 
 func verifyChecksum(f *os.File, expected string) (bool, error) {
@@ -102,4 +104,15 @@ func createFolder(path string, log logr.Logger) error {
 		}
 	}
 	return nil
+}
+
+func runExec(execPath string, commands []string, log logr.Logger) (string, error) {
+	cmd := exec.Command(execPath, commands...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Info("Executed unsuccessfully", "execPath", execPath, "commands", commands,
+			"output", string(output))
+		return "", err
+	}
+	return string(output), nil
 }

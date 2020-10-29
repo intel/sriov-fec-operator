@@ -200,7 +200,7 @@ func (r *N3000NodeReconciler) createBasicNodeStatus() (*fpgav1.N3000NodeStatus, 
 		return nil, err
 	}
 
-	fpgaStatus, err := getFPGAInventory()
+	fpgaStatus, err := getFPGAInventory(r.log)
 	if err != nil {
 		return nil, err
 	}

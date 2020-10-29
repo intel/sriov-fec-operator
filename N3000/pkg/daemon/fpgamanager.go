@@ -5,11 +5,11 @@ package daemon
 
 import (
 	"fmt"
-	"log"
-	"os/exec"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
@@ -17,26 +17,41 @@ import (
 )
 
 var (
-	fpgaInfoPath = "fpgainfo"
-	bmcRegex     = regexp.MustCompile(`^([a-zA-Z .:]+?)(?:\s*:\s)(.+)$`)
-	fpgaInfoExec = func(command string) (string, error) {
-		cmd := exec.Command(fpgaInfoPath, command)
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			log.Printf("`%s %s` executed unsuccessfully. Output:'%s', Error: %+v",
-				fpgaInfoPath, command, string(output), err)
-			return "", err
-		}
-		return string(output), nil
-	}
-	fpgaUserImageSubfolderPath = "/root/test"
-	fpgaUserImageFile          = fpgaUserImageSubfolderPath + "/fpga.bin"
+	fpgaInfoPath                = "fpgainfo"
+	fpgaInfoExec                = runExec
+	bmcRegex                    = regexp.MustCompile(`^([a-zA-Z .:]+?)(?:\s*:\s)(.+)$`)
+	bmcParametersRegex          = regexp.MustCompile(`^([ ()0-9a-zA-Z .:]+?)(?:\s*:\s)(.+) (.+)$`)
+	fpgaUserImageSubfolderPath  = "/root/test"
+	fpgaUserImageFile           = fpgaUserImageSubfolderPath + "/fpga.bin"
+	fpgasUpdatePath             = "fpgasupdate"
+	fpgasUpdateExec             = runExec
+	rsuPath                     = "rsu"
+	rsuExec                     = runExec
+	restartTimeLimitInSeconds   = 20
+	fpgaTemperatureDefaultLimit = 85.0 //in Celsius degrees
+	fpgaTemperatureBottomRange  = 60.0 //in Celsius degrees
+	fpgaTemperatureTopRange     = 95.0 //in Celsius degrees
+	envTemperatureLimitName     = "FPGA_DIE_TEMP_LIMIT"
 )
 
-func getFPGAInventory() ([]fpgav1.N3000FpgaStatus, error) {
-	fpgaInfoBMCOutput, err := fpgaInfoExec("bmc")
+func getFPGATemperatureLimit() float64 {
+	val := os.Getenv(envTemperatureLimitName)
+	if val == "" {
+		return fpgaTemperatureDefaultLimit
+	}
+	temperature, err := strconv.ParseFloat(val, 64)
 	if err != nil {
-		log.Printf("getFPGAInventory(): Failed to get output from fpgainfo: %+v", err)
+		return fpgaTemperatureDefaultLimit
+	}
+	if temperature < fpgaTemperatureBottomRange || temperature > fpgaTemperatureTopRange {
+		return fpgaTemperatureDefaultLimit
+	}
+	return temperature
+}
+
+func getFPGAInventory(log logr.Logger) ([]fpgav1.N3000FpgaStatus, error) {
+	fpgaInfoBMCOutput, err := fpgaInfoExec(fpgaInfoPath, []string{"bmc"}, log)
+	if err != nil {
 		return nil, err
 	}
 
@@ -69,6 +84,47 @@ func getFPGAInventory() ([]fpgav1.N3000FpgaStatus, error) {
 	return inventory, nil
 }
 
+func checkFPGADieTemperature(PCIAddr string, log logr.Logger) error {
+	fpgaInfoBMCOutput, err := fpgaInfoExec(fpgaInfoPath, []string{"bmc"}, log)
+	if err != nil {
+		return err
+	}
+	pciFound := false
+	fpgaDieTemperature := 0.0
+	for _, deviceBMCOutput := range strings.Split(fpgaInfoBMCOutput, "//****** BMC SENSORS ******//") {
+		for _, line := range strings.Split(deviceBMCOutput, "\n") {
+			matches := bmcRegex.FindStringSubmatch(line)
+			if matches != nil && len(matches) == 3 {
+				switch matches[1] {
+				case "PCIe s:b:d.f":
+					if PCIAddr == matches[2] {
+						pciFound = true
+					}
+				}
+			}
+			matches = bmcParametersRegex.FindStringSubmatch(line)
+			if matches != nil && len(matches) == 4 {
+				switch matches[1] {
+				case "(12) FPGA Die Temperature":
+					fpgaDieTemperature, _ = strconv.ParseFloat(matches[2], 64)
+				}
+			}
+		}
+		if pciFound {
+			break
+		}
+	}
+	if pciFound {
+		limit := getFPGATemperatureLimit()
+		if fpgaDieTemperature > limit {
+			return fmt.Errorf("FPGA temperature: %f, exceeded limit: %f, on PCIAddr: %s",
+				fpgaDieTemperature, limit, PCIAddr)
+		}
+		return nil
+	}
+	return fmt.Errorf("Not found PCIAddr: %s", PCIAddr)
+}
+
 type FPGAManager struct {
 	Log logr.Logger
 }
@@ -78,16 +134,38 @@ func (fpga *FPGAManager) dryrunFPGAprogramming() {
 	log.Info("FPGA programming in dryrun mode")
 }
 
-func (fpga *FPGAManager) FPGAprogramming() error {
+func (fpga *FPGAManager) FPGAprogramming(PCIAddr string) error {
 	log := fpga.Log.WithName("FPGAprogramming")
+
+	//--------REMOVE THIS BLOCK OF CODE WHEN LOGIC WILL BE FULLY TESTED----
+	if true {
+		err := errors.New(">>> FPGAprogramming Blocker <<<")
+		log.Error(err, "Failed to programming FPGA")
+		return err
+	}
+	//---------------------------------------------------------------------
+
 	log.Info("Start programming FPGA")
-	//TODO: call cmd fpgasupdate <bin file> <PCIe>
+	_, err := fpgasUpdateExec(fpgasUpdatePath,
+		[]string{fpgaUserImageFile, PCIAddr}, fpga.Log)
+	if err != nil {
+		log.Error(err, "Failed to programming FPGA on PCIAddr", PCIAddr)
+		return err
+	}
+	log.Info("Programming FPGA completed, start new power cycle N3000 ...")
+	_, err = rsuExec(rsuPath, []string{"bmcimg", PCIAddr}, fpga.Log)
+	if err != nil {
+		log.Error(err, "Failed to execute rsu on PCIAddr", PCIAddr)
+		return err
+	}
+	//TODO: wait for start next power cycle?
+	time.Sleep(time.Duration(restartTimeLimitInSeconds) * time.Second)
 	return nil
 }
 
 func (fpga *FPGAManager) verifyPCIAddrs(fpgaCR []fpgav1.N3000Fpga) error {
 	log := fpga.Log.WithName("verifyPCIAddrs")
-	currentInventory, err := getFPGAInventory()
+	currentInventory, err := getFPGAInventory(fpga.Log)
 	if err != nil {
 		return fmt.Errorf("Unable to get FPGA inventory before programming err: " + err.Error())
 	}
@@ -119,8 +197,12 @@ func (fpga *FPGAManager) processFPGA(n *fpgav1.N3000Node) error {
 		return err
 	}
 	for _, obj := range n.Spec.FPGA {
+		err := checkFPGADieTemperature(obj.PCIAddr, fpga.Log)
+		if err != nil {
+			return err
+		}
 		log.Info("Start processFPGA", "url", obj.UserImageURL)
-		err := getImage(fpgaUserImageFile,
+		err = getImage(fpgaUserImageFile,
 			obj.UserImageURL,
 			obj.CheckSum,
 			log)
@@ -131,7 +213,7 @@ func (fpga *FPGAManager) processFPGA(n *fpgav1.N3000Node) error {
 		if n.DryRun == true {
 			fpga.dryrunFPGAprogramming()
 		} else {
-			err = fpga.FPGAprogramming()
+			err = fpga.FPGAprogramming(obj.PCIAddr)
 			if err != nil {
 				log.Error(err, "Unable to programming FPGA")
 				return err

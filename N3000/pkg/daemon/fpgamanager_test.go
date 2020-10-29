@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/klog/klogr"
 )
 
 const (
@@ -31,7 +33,7 @@ Pr Interface Id               : 12345678-abcd-efgh-ijkl-0123456789ab
 ( 8) 3.3V Voltage             : 3.26 Volts
 (10) FPGA Core Voltage        : 0.90 Volts
 (11) FPGA Core Current        : 20.99 Amps
-(12) FPGA Die Temperature     : 61.50 Celsius
+(12) FPGA Die Temperature     : 73.00 Celsius
 (13) Board Temperature        : 30.00 Celsius
 (14) QSFP0 Supply Voltage     : N/A
 (15) QSFP0 Temperature        : N/A
@@ -62,7 +64,7 @@ Pr Interface Id               : 87654321-abcd-efgh-ijkl-0123456789ab
 ( 8) 3.3V Voltage             : 3.26 Volts
 (10) FPGA Core Voltage        : 0.90 Volts
 (11) FPGA Core Current        : 21.19 Amps
-(12) FPGA Die Temperature     : 63.00 Celsius
+(12) FPGA Die Temperature     : 98.50 Celsius
 (13) Board Temperature        : 31.00 Celsius
 (14) QSFP0 Supply Voltage     : N/A
 (15) QSFP0 Temperature        : N/A
@@ -77,8 +79,8 @@ Pr Interface Id               : 87654321-abcd-efgh-ijkl-0123456789ab
 `
 )
 
-func fakeFpgaInfo(cmd string) (string, error) {
-	if cmd == "bmc" {
+func fakeFpgaInfo(fpgaInfoPath string, cmd []string, log logr.Logger) (string, error) {
+	if len(cmd) == 1 && cmd[0] == "bmc" {
 		return bmcOutput, nil
 	}
 	return "", fmt.Errorf("Unsupported command: %s", cmd)
@@ -90,10 +92,11 @@ func TestMain(t *testing.T) {
 }
 
 var _ = Describe("FPGA Manager", func() {
+	log := klogr.New().WithName("fpgamanager-Test")
 	var _ = Describe("getFPGAInfo", func() {
 		var _ = It("will return valid []N3000FpgaStatus ", func() {
 			fpgaInfoExec = fakeFpgaInfo
-			result, err := getFPGAInventory()
+			result, err := getFPGAInventory(log)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(result)).To(Equal(2))
@@ -110,6 +113,30 @@ var _ = Describe("FPGA Manager", func() {
 			Expect(result[1].BitstreamVersion).To(Equal("2.0.0"))
 			Expect(result[1].NumaNode).To(Equal(1))
 
+		})
+	})
+	var _ = Describe("checkFPGADieTemperature", func() {
+		var _ = It("will return nil in successfully scenario", func() {
+			fpgaInfoExec = fakeFpgaInfo
+			err := checkFPGADieTemperature("0000:1b:00.0", log)
+
+			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("will return error when FPGA temperature exceeded limit", func() {
+			fpgaInfoExec = fakeFpgaInfo
+			err := checkFPGADieTemperature("0000:2b:00.0", log)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(
+				Equal("FPGA temperature: 98.500000, exceeded limit: 85.000000, on PCIAddr: 0000:2b:00.0"))
+		})
+
+		var _ = It("will return error when PCIAddr not exist", func() {
+			fpgaInfoExec = fakeFpgaInfo
+			err := checkFPGADieTemperature("0000:xx:00.0", log)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("Not found PCIAddr: 0000:xx:00.0"))
 		})
 	})
 })
