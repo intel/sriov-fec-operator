@@ -1,7 +1,9 @@
 FROM registry.access.redhat.com/ubi8:latest
 
 RUN dnf install -y \
-     python3 json-c
+     python3 json-c procps-ng
+
+RUN pip3 install intelhex
 
 # 1.3.8-2
 ARG OPAE_VERSION
