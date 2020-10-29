@@ -97,6 +97,8 @@ spec:
             mountPath: /boot/kernel
           - name: libmodules
             mountPath: /lib/modules
+          - name: classfpga
+            mountPath: /sys/class/fpga
           - name: classnet
             mountPath: /sys/class/net
           - name: pcidrivers
@@ -105,6 +107,8 @@ spec:
             mountPath: /sys/bus/pci/devices
           - name: pcislots
             mountPath: /sys/bus/pci/slots
+          - name: sysdevices
+            mountPath: /sys/devices
           - name: module
             mountPath: /sys/module
           - name: systab
@@ -144,6 +148,9 @@ spec:
         - name: libmodules
           hostPath:
             path: /lib/modules
+        - name: classfpga
+          hostPath:
+            path: /sys/class/fpga
         - name: classnet
           hostPath:
             path: /sys/class/net
@@ -156,6 +163,9 @@ spec:
         - name: pcislots
           hostPath:
             path: /sys/bus/pci/slots
+        - name: sysdevices
+          hostPath:
+            path: /sys/devices
         - name: module
           hostPath:
             path: /sys/module
