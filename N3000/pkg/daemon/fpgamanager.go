@@ -20,7 +20,7 @@ var (
 	fpgaInfoPath                = "fpgainfo"
 	fpgaInfoExec                = runExec
 	bmcRegex                    = regexp.MustCompile(`^([a-zA-Z .:]+?)(?:\s*:\s)(.+)$`)
-	bmcParametersRegex          = regexp.MustCompile(`^([ ()0-9a-zA-Z .:]+?)(?:\s*:\s)(.+) (.+)$`)
+	bmcParametersRegex          = regexp.MustCompile(`^([()0-9]+?) (.+)(?:\s*:\s)(.+) (.+)$`)
 	fpgaUserImageSubfolderPath  = "/root/test"
 	fpgaUserImageFile           = fpgaUserImageSubfolderPath + "/fpga.bin"
 	fpgasUpdatePath             = "fpgasupdate"
@@ -103,10 +103,10 @@ func checkFPGADieTemperature(PCIAddr string, log logr.Logger) error {
 				}
 			}
 			matches = bmcParametersRegex.FindStringSubmatch(line)
-			if matches != nil && len(matches) == 4 {
+			if matches != nil && len(matches) == 5 {
 				switch matches[1] {
-				case "(12) FPGA Die Temperature":
-					fpgaDieTemperature, _ = strconv.ParseFloat(matches[2], 64)
+				case "(12)":
+					fpgaDieTemperature, _ = strconv.ParseFloat(matches[3], 64)
 				}
 			}
 		}
@@ -201,7 +201,7 @@ func (fpga *FPGAManager) processFPGA(n *fpgav1.N3000Node) error {
 		if err != nil {
 			return err
 		}
-		log.Info("Start processFPGA", "url", obj.UserImageURL)
+		log.Info("Start downloading", "url", obj.UserImageURL)
 		err = getImage(fpgaUserImageFile,
 			obj.UserImageURL,
 			obj.CheckSum,
@@ -210,6 +210,7 @@ func (fpga *FPGAManager) processFPGA(n *fpgav1.N3000Node) error {
 			log.Error(err, "Unable to get FPGA Image")
 			return errors.Wrap(err, "FPGA image error:")
 		}
+		log.Info("Image downloaded")
 		if n.DryRun == true {
 			fpga.dryrunFPGAprogramming()
 		} else {
