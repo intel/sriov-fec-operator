@@ -106,8 +106,13 @@ func createFolder(path string, log logr.Logger) error {
 	return nil
 }
 
-func runExec(execPath string, commands []string, log logr.Logger) (string, error) {
+func runExec(execPath string, commands []string, log logr.Logger, dryRun bool) (string, error) {
 	cmd := exec.Command(execPath, commands...)
+	if dryRun {
+		log.Info("Run exec in dryrun mode", "command", cmd)
+		return "", nil
+	}
+	log.Info("Run exec", "command", cmd)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Info("Executed unsuccessfully", "execPath", execPath, "commands", commands,

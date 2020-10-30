@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-logr/logr"
 	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
@@ -50,7 +49,7 @@ func getFPGATemperatureLimit() float64 {
 }
 
 func getFPGAInventory(log logr.Logger) ([]fpgav1.N3000FpgaStatus, error) {
-	fpgaInfoBMCOutput, err := fpgaInfoExec(fpgaInfoPath, []string{"bmc"}, log)
+	fpgaInfoBMCOutput, err := fpgaInfoExec(fpgaInfoPath, []string{"bmc"}, log, false)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +84,7 @@ func getFPGAInventory(log logr.Logger) ([]fpgav1.N3000FpgaStatus, error) {
 }
 
 func checkFPGADieTemperature(PCIAddr string, log logr.Logger) error {
-	fpgaInfoBMCOutput, err := fpgaInfoExec(fpgaInfoPath, []string{"bmc"}, log)
+	fpgaInfoBMCOutput, err := fpgaInfoExec(fpgaInfoPath, []string{"bmc"}, log, false)
 	if err != nil {
 		return err
 	}
@@ -129,37 +128,22 @@ type FPGAManager struct {
 	Log logr.Logger
 }
 
-func (fpga *FPGAManager) dryrunFPGAprogramming() {
-	log := fpga.Log.WithName("dryrunFPGAprogramming")
-	log.Info("FPGA programming in dryrun mode")
-}
-
-func (fpga *FPGAManager) FPGAprogramming(PCIAddr string) error {
+func (fpga *FPGAManager) FPGAprogramming(PCIAddr string, dryRun bool) error {
 	log := fpga.Log.WithName("FPGAprogramming")
-
-	//--------REMOVE THIS BLOCK OF CODE WHEN LOGIC WILL BE FULLY TESTED----
-	if true {
-		err := errors.New(">>> FPGAprogramming Blocker <<<")
-		log.Error(err, "Failed to programming FPGA")
-		return err
-	}
-	//---------------------------------------------------------------------
 
 	log.Info("Start programming FPGA")
 	_, err := fpgasUpdateExec(fpgasUpdatePath,
-		[]string{fpgaUserImageFile, PCIAddr}, fpga.Log)
+		[]string{fpgaUserImageFile, PCIAddr}, fpga.Log, dryRun)
 	if err != nil {
-		log.Error(err, "Failed to programming FPGA on PCIAddr", PCIAddr)
+		log.Error(err, "Failed to programming FPGA on PCIAddr", "pci", PCIAddr)
 		return err
 	}
 	log.Info("Programming FPGA completed, start new power cycle N3000 ...")
-	_, err = rsuExec(rsuPath, []string{"bmcimg", PCIAddr}, fpga.Log)
+	_, err = rsuExec(rsuPath, []string{"bmcimg", PCIAddr}, fpga.Log, dryRun)
 	if err != nil {
-		log.Error(err, "Failed to execute rsu on PCIAddr", PCIAddr)
+		log.Error(err, "Failed to execute rsu on PCIAddr", "pci", PCIAddr)
 		return err
 	}
-	//TODO: wait for start next power cycle?
-	time.Sleep(time.Duration(restartTimeLimitInSeconds) * time.Second)
 	return nil
 }
 
@@ -211,14 +195,10 @@ func (fpga *FPGAManager) processFPGA(n *fpgav1.N3000Node) error {
 			return errors.Wrap(err, "FPGA image error:")
 		}
 		log.Info("Image downloaded")
-		if n.DryRun == true {
-			fpga.dryrunFPGAprogramming()
-		} else {
-			err = fpga.FPGAprogramming(obj.PCIAddr)
-			if err != nil {
-				log.Error(err, "Unable to programming FPGA")
-				return err
-			}
+		err = fpga.FPGAprogramming(obj.PCIAddr, n.DryRun)
+		if err != nil {
+			log.Error(err, "Failed to program FPGA:", "pci", obj.PCIAddr)
+			return err
 		}
 	}
 	return nil

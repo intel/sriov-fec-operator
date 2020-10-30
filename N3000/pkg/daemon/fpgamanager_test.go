@@ -79,7 +79,7 @@ Pr Interface Id               : 87654321-abcd-efgh-ijkl-0123456789ab
 `
 )
 
-func fakeFpgaInfo(fpgaInfoPath string, cmd []string, log logr.Logger) (string, error) {
+func fakeFpgaInfo(fpgaInfoPath string, cmd []string, log logr.Logger, dryRun bool) (string, error) {
 	if len(cmd) == 1 && cmd[0] == "bmc" {
 		return bmcOutput, nil
 	}
