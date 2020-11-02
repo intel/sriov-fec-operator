@@ -79,7 +79,7 @@ spec:
       serviceAccountName: n3000-daemon
       hostPID: true
       containers:
-      - image: {{ .N3000_DAEMON_IMAGE }}:{{ .N3000_OPAE_VERSION }}"
+      - image: "{{ .N3000_DAEMON_IMAGE }}:{{ .N3000_OPAE_VERSION }}"
         imagePullPolicy: Always
         name: n3000-daemon
         volumeMounts:
