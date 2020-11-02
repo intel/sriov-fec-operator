@@ -23,6 +23,25 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type VF struct {
+	PCIAddress string `json:"pciAddress"`
+	Driver     string `json:"driver"`
+	DeviceID   string `json:"deviceID"`
+}
+
+type SriovAccelerator struct {
+	VendorID       string `json:"vendorID"`
+	DeviceID       string `json:"deviceID"`
+	PCIAddress     string `json:"pciAddress"`
+	Driver         string `json:"driver"`
+	MaxVFAvailable int    `json:"maxVFavailable"`
+	VFs            []VF   `json:"vfs"`
+}
+
+type NodeInventory struct {
+	SriovAccelerators []SriovAccelerator `json:"sriovAccelerators"`
+}
+
 // SriovFecNodeConfigSpec defines the desired state of SriovFecNodeConfig
 type SriovFecNodeConfigSpec struct {
 	// +kubebuilder:validation:Required
@@ -39,8 +58,9 @@ type SriovFecNodeConfigSpec struct {
 
 // SriovFecNodeConfigStatus defines the observed state of SriovFecNodeConfig
 type SriovFecNodeConfigStatus struct {
-	SyncStatus    string `json:"syncStatus,omitempty"`
-	LastSyncError string `json:"lastSyncError,omitempty"`
+	SyncStatus    string        `json:"syncStatus,omitempty"`
+	LastSyncError string        `json:"lastSyncError,omitempty"`
+	Inventory     NodeInventory `json:"inventory,omitempty"`
 }
 
 // +kubebuilder:object:root=true

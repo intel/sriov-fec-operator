@@ -199,6 +199,48 @@ spec:
         status:
           description: SriovFecNodeConfigStatus defines the observed state of SriovFecNodeConfig
           properties:
+            inventory:
+              properties:
+                sriovAccelerators:
+                  items:
+                    properties:
+                      deviceID:
+                        type: string
+                      driver:
+                        type: string
+                      maxVFavailable:
+                        type: integer
+                      pciAddress:
+                        type: string
+                      vendorID:
+                        type: string
+                      vfs:
+                        items:
+                          properties:
+                            deviceID:
+                              type: string
+                            driver:
+                              type: string
+                            pciAddress:
+                              type: string
+                          required:
+                          - deviceID
+                          - driver
+                          - pciAddress
+                          type: object
+                        type: array
+                    required:
+                    - deviceID
+                    - driver
+                    - maxVFavailable
+                    - pciAddress
+                    - vendorID
+                    - vfs
+                    type: object
+                  type: array
+              required:
+              - sriovAccelerators
+              type: object
             lastSyncError:
               type: string
             syncStatus:
