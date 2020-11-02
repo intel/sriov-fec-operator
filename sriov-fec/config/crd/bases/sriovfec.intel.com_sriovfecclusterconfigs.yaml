@@ -49,17 +49,7 @@ spec:
                     description: List of card configs
                     items:
                       properties:
-                        pciAddress:
-                          description: PCIAdress is a card's PCI address that will
-                            be configured according to this spec
-                          type: string
-                        pfDeviceID:
-                          description: PFDeviceID
-                          type: string
-                        pfDriver:
-                          description: PFDriver to bound the PFs to
-                          type: string
-                        queuesConfiguration:
+                        bbDevConfig:
                           description: QueuesConfiguration is a config for card's
                             queues
                           properties:
@@ -172,6 +162,17 @@ spec:
                           - pfMode
                           - uplink
                           type: object
+                        pciAddress:
+                          description: PCIAdress is a card's PCI address that will
+                            be configured according to this spec
+                          pattern: '[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]'
+                          type: string
+                        pfDeviceID:
+                          description: PFDeviceID
+                          type: string
+                        pfDriver:
+                          description: PFDriver to bound the PFs to
+                          type: string
                         vendorID:
                           description: VendorID is ID of card's vendor
                           type: string
@@ -185,9 +186,9 @@ spec:
                           description: VFDriver to bound the VFs to
                           type: string
                       required:
+                      - bbDevConfig
                       - pfDeviceID
                       - pfDriver
-                      - queuesConfiguration
                       - vendorID
                       - vfAmount
                       - vfDeviceID

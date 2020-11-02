@@ -1,23 +1,23 @@
-/*
-
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2020 Intel Corporation
 
 package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+type SyncStatus string
+
+var (
+	// InProgressSync indicates that the synchronization of the CR is in progress
+	InProgressSync SyncStatus = "InProgress"
+	// SucceededSync indicates that the synchronization of the CR succeeded
+	SucceededSync SyncStatus = "Succeeded"
+	// FailedSync indicates that the synchronization of the CR failed
+	FailedSync SyncStatus = "Failed"
+	// IgnoredSync indicates that the CR is ignored
+	IgnoredSync SyncStatus = "Ignored"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -79,7 +79,7 @@ type UplinkDownlink struct {
 	Queues UplinkDownlinkQueues `json:"queues"`
 }
 
-type CardQueues struct {
+type BBDevConfig struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Enum=FPGA_5GNR;FPGA_LTE
 
@@ -104,6 +104,8 @@ type CardQueues struct {
 }
 
 type CardConfig struct {
+	// +kubebuilder:validation:Pattern=`[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]`
+
 	// PCIAdress is a card's PCI address that will be configured according to this spec
 	PCIAddress string `json:"pciAddress,omitempty"`
 
@@ -140,7 +142,7 @@ type CardConfig struct {
 	// +kubebuilder:validation:Required
 
 	// QueuesConfiguration is a config for card's queues
-	QueuesConfiguration CardQueues `json:"queuesConfiguration"`
+	BBDevConfig BBDevConfig `json:"bbDevConfig"`
 }
 
 type NodeConfig struct {
@@ -175,8 +177,8 @@ type SriovFecClusterConfigSpec struct {
 
 // SriovFecClusterConfigStatus defines the observed state of SriovFecClusterConfig
 type SriovFecClusterConfigStatus struct {
-	SyncStatus    string `json:"syncStatus,omitempty"`
-	LastSyncError string `json:"lastSyncError,omitempty"`
+	SyncStatus    SyncStatus `json:"syncStatus,omitempty"`
+	LastSyncError string     `json:"lastSyncError,omitempty"`
 }
 
 // +kubebuilder:object:root=true

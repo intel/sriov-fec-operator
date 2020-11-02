@@ -27,7 +27,7 @@ spec:
             flrTimeout: 610
             downlink:
               bandwidth: 3
-              load_balance: 128
+              loadBalance: 128
               queues:
                 vf0: 16
                 vf1: 16
@@ -39,7 +39,7 @@ spec:
                 vf7: 0
             uplink:
               bandwidth: 3
-              load_balance: 128
+              loadBalance: 128
               queues:
                 vf0: 16
                 vf1: 16

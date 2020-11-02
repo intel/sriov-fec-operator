@@ -65,7 +65,7 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 		return reconcile.Result{}, err
 	}
 
-	updateStatus := func(status, reason string) {
+	updateStatus := func(status sriovfecv1.SyncStatus, reason string) {
 		clusterConfig.Status.SyncStatus = status
 		clusterConfig.Status.LastSyncError = reason
 		if err := r.Status().Update(context.TODO(), clusterConfig, &client.UpdateOptions{}); err != nil {
@@ -79,7 +79,7 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 		log.Info("received ClusterConfig, but it not an expected one - it'll be ignored",
 			"expectedNamespace", NAMESPACE, "expectedName", DEFAULT_CLUSTER_CONFIG_NAME)
 
-		updateStatus("Ignored", fmt.Sprintf(
+		updateStatus(sriovfecv1.IgnoredSync, fmt.Sprintf(
 			"Only SriovFecClusterConfig with name '%s' and namespace '%s' are handled",
 			DEFAULT_CLUSTER_CONFIG_NAME, NAMESPACE))
 
@@ -95,7 +95,7 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 			log.Info("provided wrong amount of NodeConfigs - should be 1", "NodeConfigs amount",
 				len(clusterConfig.Spec.Nodes))
 
-			updateStatus("InvalidConfig", fmt.Sprintf(
+			updateStatus(sriovfecv1.FailedSync, fmt.Sprintf(
 				"OneNodeConfigForAll requested but amount of provided nodeConfigs is %d (should be 1)",
 				len(clusterConfig.Spec.Nodes)))
 
@@ -111,7 +111,7 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 
 	for idx, nodeConfig := range clusterConfig.Spec.Nodes {
 		if nodeConfig.OneCardConfigForAll && len(nodeConfig.Cards) != 1 {
-			updateStatus("InvalidConfig",
+			updateStatus(sriovfecv1.FailedSync,
 				fmt.Sprintf("OneCardConfigForAll requested but amount of provided cardConfigs is %d (should be 1) "+
 					"for %d node on the list", len(clusterConfig.Spec.Nodes), idx))
 			return reconcile.Result{}, nil
@@ -121,7 +121,7 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 	nodeList, err := r.getNodesWithIntelAccelerator()
 	if err != nil {
 		log.Error(err, "failed to obtain nodes with Intel accelerator")
-		updateStatus("NfdFailure", "failed to obtain nodes with Intel accelerator - check logs")
+		updateStatus(sriovfecv1.FailedSync, "nfd error: failed to obtain nodes with Intel accelerator - check logs")
 		return reconcile.Result{}, err
 	}
 
@@ -136,11 +136,11 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 	nodeConfigs := r.renderNodeConfigs(clusterConfig, nodeList)
 	if err := r.syncNodeConfigs(nodeConfigs); err != nil {
 		log.Error(err, "syncNodeConfigs failed")
-		updateStatus("NodeConfigsCreationFailed", "failed to create NodeConfigs - check logs")
+		updateStatus(sriovfecv1.FailedSync, "failed to create NodeConfigs - check logs")
 		return reconcile.Result{}, err
 	}
 
-	updateStatus("NodeConfigsCreated", "")
+	updateStatus(sriovfecv1.SucceededSync, "")
 
 	return reconcile.Result{}, nil
 }
