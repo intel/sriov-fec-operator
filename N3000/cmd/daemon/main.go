@@ -12,6 +12,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientset "k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,6 +49,13 @@ func main() {
 	}
 
 	config := ctrl.GetConfigOrDie()
+
+	cset, err := clientset.NewForConfig(config)
+	if err != nil {
+		setupLog.Error(err, "failed to create clientset")
+		os.Exit(1)
+	}
+
 	directClient, err := client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		setupLog.Error(err, "failed to create direct client")
@@ -65,8 +73,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	daemon := daemon.NewN3000NodeReconciler(mgr.GetClient(), ctrl.Log.WithName("daemon"), nodeName, namespace)
-
+	daemon := daemon.NewN3000NodeReconciler(mgr.GetClient(), cset, ctrl.Log.WithName("daemon"), nodeName, namespace)
 	if err := daemon.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "N3000Cluster")
 		os.Exit(1)

@@ -7,10 +7,13 @@ import (
 	"context"
 	"fmt"
 
+	dh "github.com/otcshare/openshift-operator/N3000/pkg/drainhelper"
+
 	"github.com/go-logr/logr"
 	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientset "k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -27,9 +30,11 @@ type N3000NodeReconciler struct {
 
 	fortville FortvilleManager
 	fpga      FPGAManager
+
+	drainHelper *dh.DrainHelper
 }
 
-func NewN3000NodeReconciler(c client.Client, log logr.Logger,
+func NewN3000NodeReconciler(c client.Client, clientSet *clientset.Clientset, log logr.Logger,
 	nodename, namespace string) *N3000NodeReconciler {
 
 	return &N3000NodeReconciler{
@@ -43,6 +48,7 @@ func NewN3000NodeReconciler(c client.Client, log logr.Logger,
 		fpga: FPGAManager{
 			Log: log.WithName("fpgaManager"),
 		},
+		drainHelper: dh.NewDrainHelper(log, clientSet, nodename, namespace),
 	}
 }
 
@@ -165,17 +171,31 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	// TODO:
-	// (rough overview)
-	// - Decide if node needs to be cordoned (difference between current & desired state of FPGA & Fortville)
-	// - Leader election & node cordon
-	// - Bitstream programming & fortville firmware update
-	// - Uncordon & give up leader
+	// here we should decide if we need to put node into maintenance mode
+	// at least some basic checks like CR's Generation, to avoid reconciling twice the same CR
+	drainNeeded := true
 
-	err := r.flash(n3000node)
-	if err != nil {
-		log.Error(err, "failed to flash")
-		return ctrl.Result{}, err
+	if drainNeeded {
+		var result ctrl.Result
+		var actionErr error
+
+		err := r.drainHelper.Run(func(c context.Context) {
+			err := r.flash(n3000node)
+			if err != nil {
+				log.Error(err, "failed to flash")
+				actionErr = err
+			}
+		})
+
+		if err != nil {
+			// some kind of error around leader election / node (un)cordon / node drain
+			return result, err
+		}
+
+		if actionErr != nil {
+			// flashing/programming logic failure
+			return result, actionErr
+		}
 	}
 
 	s, err := r.createStatus(n3000node)
