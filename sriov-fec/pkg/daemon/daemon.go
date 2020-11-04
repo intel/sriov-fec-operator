@@ -14,6 +14,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	reasonWaitingForInventory = "Initial, empty NodeConfig. Waiting for inventory refresh"
+)
+
 type NodeConfigReconciler struct {
 	client.Client
 	log       logr.Logger
@@ -63,9 +67,38 @@ func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		return ctrl.Result{}, err
 	}
 
+	if err := r.refreshStatus(nodeConfig); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	log.Info("Reconciled")
 
 	return ctrl.Result{}, nil
+}
+
+func (r *NodeConfigReconciler) refreshStatus(nc *sriovv1.SriovFecNodeConfig) error {
+	log := r.log.WithName("refreshStatus")
+
+	inv, err := GetSriovInventory(log)
+	if err != nil {
+		log.Error(err, "failed to obtain sriov inventory")
+		return err
+	}
+
+	log.Info("obtained inventory", "inv", inv)
+
+	nc.Status.Inventory = *inv
+	if nc.Status.SyncStatus == sriovv1.InProgressSync && nc.Status.LastSyncError == reasonWaitingForInventory {
+		nc.Status.SyncStatus = sriovv1.SucceededSync
+		nc.Status.LastSyncError = ""
+	}
+
+	if err := r.Status().Update(context.Background(), nc); err != nil {
+		log.Error(err, "failed to update NodeConfig status")
+		return err
+	}
+
+	return nil
 }
 
 // CreateEmptyNodeConfigIfNeeded creates empty CR to be Reconciled in near future and filled with Status.
@@ -87,36 +120,36 @@ func (r *NodeConfigReconciler) CreateEmptyNodeConfigIfNeeded(c client.Client) er
 		return nil
 	}
 
-	if k8serrors.IsNotFound(err) {
-		log.Info("not found - creating")
-
-		nodeConfig = &sriovv1.SriovFecNodeConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      r.nodeName,
-				Namespace: r.namespace,
-			},
-			Spec: sriovv1.SriovFecNodeConfigSpec{
-				OneCardConfigForAll: true,
-				Cards:               []sriovv1.CardConfig{},
-			},
-			Status: sriovv1.SriovFecNodeConfigStatus{
-				SyncStatus:    "sriovv1.InProgressSync",
-				LastSyncError: "Initial, empty NodeConfig. Waiting for inventory refresh",
-			},
-		}
-
-		if createErr := c.Create(context.Background(), nodeConfig); createErr != nil {
-			log.Error(createErr, "failed to create")
-			return createErr
-		}
-
-		updateErr := c.Status().Update(context.Background(), nodeConfig)
-		if updateErr != nil {
-			log.Error(updateErr, "failed to update status")
-		}
-		return updateErr
+	if !k8serrors.IsNotFound(err) {
+		return err
 	}
 
-	return err
+	log.Info("not found - creating")
+
+	nodeConfig = &sriovv1.SriovFecNodeConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.nodeName,
+			Namespace: r.namespace,
+		},
+		Spec: sriovv1.SriovFecNodeConfigSpec{
+			OneCardConfigForAll: true,
+			Cards:               []sriovv1.CardConfig{},
+		},
+		Status: sriovv1.SriovFecNodeConfigStatus{
+			SyncStatus:    sriovv1.InProgressSync,
+			LastSyncError: reasonWaitingForInventory,
+		},
+	}
+
+	if createErr := c.Create(context.Background(), nodeConfig); createErr != nil {
+		log.Error(createErr, "failed to create")
+		return createErr
+	}
+
+	updateErr := c.Status().Update(context.Background(), nodeConfig)
+	if updateErr != nil {
+		log.Error(updateErr, "failed to update status")
+	}
+	return updateErr
 
 }

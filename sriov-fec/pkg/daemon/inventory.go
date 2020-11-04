@@ -20,8 +20,9 @@ const (
 
 var (
 	deviceIDWhitelist = map[string]string{
-		"0d8f": "0d90",
-		"5052": "5050",
+		"0d8f": "0d90", // 5G
+		"5052": "5050", // LTE
+		"0b32": "",     // Factory dummy
 	}
 )
 
@@ -39,7 +40,9 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 		return nil, err
 	}
 
-	accelerators := &sriovv1.NodeInventory{}
+	accelerators := &sriovv1.NodeInventory{
+		SriovAccelerators: []sriovv1.SriovAccelerator{},
+	}
 
 	for _, device := range devices {
 		if !(device.Vendor.ID == vendorID &&
@@ -58,17 +61,18 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 
 		driver, err := utils.GetDriverName(device.Address)
 		if err != nil {
-			log.Error(err, "failed to get driver for device", "pci", device.Address)
+			log.Info("unable to get driver for device", "pci", device.Address, "reason", err.Error())
 		} else {
 			driver = ""
 		}
 
 		acc := sriovv1.SriovAccelerator{
-			VendorID:       device.Vendor.ID,
-			DeviceID:       device.Product.ID,
-			PCIAddress:     device.Address,
-			Driver:         driver,
-			MaxVFAvailable: utils.GetSriovVFcapacity(device.Address),
+			VendorID:   device.Vendor.ID,
+			DeviceID:   device.Product.ID,
+			PCIAddress: device.Address,
+			Driver:     driver,
+			MaxVFs:     utils.GetSriovVFcapacity(device.Address),
+			VFs:        []sriovv1.VF{},
 		}
 
 		vfs, err := utils.GetVFList(device.Address)
@@ -83,7 +87,7 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 
 			driver, err := utils.GetDriverName(vf)
 			if err != nil {
-				log.Error(err, "failed to get driver name for VF", "pci", vf, "pf", device.Address)
+				log.Info("failed to get driver name for VF", "pci", vf, "pf", device.Address, "reason", err.Error())
 			} else {
 				vfInfo.Driver = driver
 			}

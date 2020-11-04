@@ -17,12 +17,12 @@ type VF struct {
 }
 
 type SriovAccelerator struct {
-	VendorID       string `json:"vendorID"`
-	DeviceID       string `json:"deviceID"`
-	PCIAddress     string `json:"pciAddress"`
-	Driver         string `json:"driver"`
-	MaxVFAvailable int    `json:"maxVFavailable"`
-	VFs            []VF   `json:"vfs"`
+	VendorID   string `json:"vendorID"`
+	DeviceID   string `json:"deviceID"`
+	PCIAddress string `json:"pciAddress"`
+	Driver     string `json:"driver"`
+	MaxVFs     int    `json:"maxVirtualFunctions"`
+	VFs        []VF   `json:"virtualFunctions"`
 }
 
 type NodeInventory struct {
@@ -45,7 +45,7 @@ type SriovFecNodeConfigSpec struct {
 
 // SriovFecNodeConfigStatus defines the observed state of SriovFecNodeConfig
 type SriovFecNodeConfigStatus struct {
-	SyncStatus    string        `json:"syncStatus,omitempty"`
+	SyncStatus    SyncStatus    `json:"syncStatus,omitempty"`
 	LastSyncError string        `json:"lastSyncError,omitempty"`
 	Inventory     NodeInventory `json:"inventory,omitempty"`
 }

@@ -209,13 +209,13 @@ spec:
                         type: string
                       driver:
                         type: string
-                      maxVFavailable:
+                      maxVirtualFunctions:
                         type: integer
                       pciAddress:
                         type: string
                       vendorID:
                         type: string
-                      vfs:
+                      virtualFunctions:
                         items:
                           properties:
                             deviceID:
@@ -233,10 +233,10 @@ spec:
                     required:
                     - deviceID
                     - driver
-                    - maxVFavailable
+                    - maxVirtualFunctions
                     - pciAddress
                     - vendorID
-                    - vfs
+                    - virtualFunctions
                     type: object
                   type: array
               required:
