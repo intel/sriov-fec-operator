@@ -182,7 +182,7 @@ spec:
                     type: string
                   bootPage:
                     type: string
-                  deviceOd:
+                  deviceId:
                     type: string
                   numaNode:
                     type: integer

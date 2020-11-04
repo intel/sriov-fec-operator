@@ -40,7 +40,7 @@ type N3000NodeStatus struct {
 
 type N3000FpgaStatus struct {
 	PciAddr          string `json:"pciAddr,omitempty"`
-	DeviceID         string `json:"deviceOd,omitempty"`
+	DeviceID         string `json:"deviceId,omitempty"`
 	BitstreamID      string `json:"bitstreamId,omitempty"`
 	BitstreamVersion string `json:"bitstreamVersion,omitempty"`
 	BootPage         string `json:"bootPage,omitempty"`
