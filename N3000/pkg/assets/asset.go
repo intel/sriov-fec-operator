@@ -112,7 +112,7 @@ func (a *Asset) load() error {
 
 func (a *Asset) createOrUpdate(ctx context.Context, c client.Client) error {
 	for _, obj := range a.objects {
-		a.log.V(4).Info("createOrUpdate", "asset", a.Path, "kind", obj.GetObjectKind())
+		a.log.Info("createOrUpdate", "asset", a.Path, "kind", obj.GetObjectKind())
 
 		objCopy := obj.DeepCopyObject()
 		result, err := ctrl.CreateOrUpdate(ctx, c, obj, func() error {
@@ -134,7 +134,7 @@ func (a *Asset) createOrUpdate(ctx context.Context, c client.Client) error {
 			return err
 		}
 
-		a.log.V(4).Info("CreateOrUpdate", "result", result)
+		a.log.Info("CreateOrUpdate", "result", result)
 	}
 
 	return nil
@@ -167,7 +167,7 @@ func (a *Asset) waitUntilReady(ctx context.Context, apiReader client.Reader) err
 					return false, err
 				}
 
-				a.log.V(3).Info("daemonset status", "name", ds.GetName(),
+				a.log.Info("daemonset status", "name", ds.GetName(),
 					"NumberUnavailable", ds.Status.NumberUnavailable,
 					"DesiredNumberScheduled", ds.Status.DesiredNumberScheduled)
 

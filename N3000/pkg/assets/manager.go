@@ -75,7 +75,7 @@ func (m *Manager) Load(ctx context.Context) error {
 		log.Error(err, "failed to build template vars")
 		return err
 	}
-	log.V(3).Info("template vars", "tv", tv)
+	log.Info("template vars", "tv", tv)
 
 	for idx := range m.Assets {
 		log.Info("loading asset", "path", m.Assets[idx].Path)
@@ -88,7 +88,7 @@ func (m *Manager) Load(ctx context.Context) error {
 			return err
 		}
 
-		log.V(3).Info("asset loaded successfully", "path", m.Assets[idx].Path, "objects", len(m.Assets[idx].objects))
+		log.Info("asset loaded successfully", "path", m.Assets[idx].Path, "objects", len(m.Assets[idx].objects))
 	}
 
 	return nil
@@ -108,7 +108,7 @@ func (m *Manager) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		log.V(3).Info("asset created successfully", "path", asset.Path)
+		log.Info("asset created successfully", "path", asset.Path)
 
 		if err := asset.waitUntilReady(ctx, m.Client); err != nil {
 			log.Error(err, "waitUntilReady")
