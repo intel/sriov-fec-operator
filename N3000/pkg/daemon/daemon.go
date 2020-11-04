@@ -12,6 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -86,12 +87,7 @@ func (r *N3000NodeReconciler) CreateEmptyN3000NodeIfNeeded(c client.Client) erro
 				Name:      name,
 				Namespace: r.namespace,
 			},
-			Status: fpgav1.N3000NodeStatus{
-				SyncStatus:    fpgav1.InProgressSync,
-				LastSyncError: "Initial, empty N3000Node. Waiting for inventory refresh",
-			},
 		}
-
 		if createErr := c.Create(context.Background(), n3000node); createErr != nil {
 			log.Error(createErr, "failed to create")
 			return createErr
@@ -146,7 +142,7 @@ func (r *N3000NodeReconciler) createStatus(n *fpgav1.N3000Node) (*fpgav1.N3000No
 func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log := r.log.WithName("Reconcile").WithValues("namespace", req.Namespace, "name", req.Name)
 
-	// Lack of Status.SyncStatus update on namespace/name mismatch (like in N3000ClusterReconciler):
+	// Lack of update on namespace/name mismatch (like in N3000ClusterReconciler):
 	// N3000Node is between Operator & Daemon so we're in control of this communication channel.
 
 	if req.Namespace != r.namespace {
@@ -169,6 +165,14 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 		log.Error(err, "Get(n3000node) failed")
 		return ctrl.Result{}, err
+	}
+
+	lastCondition := meta.FindStatusCondition(n3000node.Status.Conditions, "Flashed")
+	if lastCondition != nil {
+		if lastCondition.ObservedGeneration == n3000node.GetGeneration() {
+			log.Info("CR already handled")
+			return ctrl.Result{}, nil
+		}
 	}
 
 	err := r.fpga.verifyPreconditions(n3000node)
@@ -203,10 +207,20 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		log.Error(err, "failed to get status")
 		return ctrl.Result{}, nil
 	}
-	if flashErr != nil {
-		s.SyncStatus = fpgav1.FailedSync
-		s.LastSyncError = flashErr.Error()
+
+	flashCondition := metav1.Condition{
+		Type:               "Flashed",
+		Status:             metav1.ConditionTrue,
+		Message:            "Flashed successfully",
+		ObservedGeneration: n3000node.GetGeneration(),
+		Reason:             "FlashSucceeded",
 	}
+	if flashErr != nil {
+		flashCondition.Status = metav1.ConditionFalse
+		flashCondition.Message = flashErr.Error()
+		flashCondition.Reason = "FlashFailed"
+	}
+	meta.SetStatusCondition(&s.Conditions, flashCondition)
 
 	n3000node.Status = *s
 	if err := r.Status().Update(context.Background(), n3000node); err != nil {

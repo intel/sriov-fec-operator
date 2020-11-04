@@ -33,10 +33,9 @@ type N3000NodeSpec struct {
 
 // N3000NodeStatus defines the observed state of N3000Node
 type N3000NodeStatus struct {
-	SyncStatus    SyncStatus             `json:"syncStatus,omitempty"`
-	LastSyncError string                 `json:"lastSyncError,omitempty"`
-	FPGA          []N3000FpgaStatus      `json:"fpga,omitempty"`
-	Fortville     []N3000FortvilleStatus `json:"fortville,omitempty"`
+	Conditions []metav1.Condition     `json:"conditions,omitempty"`
+	FPGA       []N3000FpgaStatus      `json:"fpga,omitempty"`
+	Fortville  []N3000FortvilleStatus `json:"fortville,omitempty"`
 }
 
 type N3000FpgaStatus struct {
@@ -63,6 +62,7 @@ type N3000FortvilleStatusModules struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Flashed",type=string,JSONPath=`.status.conditions[?(@.type=="Flashed")].status`
 
 // N3000Node is the Schema for the n3000nodes API
 type N3000Node struct {
