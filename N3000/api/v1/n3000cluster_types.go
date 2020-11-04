@@ -82,7 +82,6 @@ type N3000ClusterSpec struct {
 
 	Nodes []N3000ClusterNode `json:"nodes"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Type:=bool
 	DryRun bool `json:"dryrun,omitempty"`
 }
 

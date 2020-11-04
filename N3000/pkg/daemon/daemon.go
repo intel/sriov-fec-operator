@@ -109,7 +109,7 @@ func (r *N3000NodeReconciler) CreateEmptyN3000NodeIfNeeded(c client.Client) erro
 
 func (r *N3000NodeReconciler) flash(n *fpgav1.N3000Node) error {
 	log := r.log.WithName("flash")
-	err := r.fpga.processFPGA(n)
+	err := r.fpga.ProgramFPGAs(n)
 	if err != nil {
 		log.Error(err, "Unable to processFPGA")
 		return err
@@ -171,19 +171,24 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
+	err := r.fpga.verifyPreconditions(n3000node)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	//TODO fortville preconditions and download images
 	// here we should decide if we need to put node into maintenance mode
 	// at least some basic checks like CR's Generation, to avoid reconciling twice the same CR
 	drainNeeded := true
-
+	var flashErr error
 	if drainNeeded {
 		var result ctrl.Result
-		var actionErr error
 
 		err := r.drainHelper.Run(func(c context.Context) {
 			err := r.flash(n3000node)
 			if err != nil {
 				log.Error(err, "failed to flash")
-				actionErr = err
+				flashErr = err
 			}
 		})
 
@@ -191,22 +196,22 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			// some kind of error around leader election / node (un)cordon / node drain
 			return result, err
 		}
-
-		if actionErr != nil {
-			// flashing/programming logic failure
-			return result, actionErr
-		}
 	}
 
 	s, err := r.createStatus(n3000node)
 	if err != nil {
 		log.Error(err, "failed to get status")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, nil
 	}
+	if flashErr != nil {
+		s.SyncStatus = fpgav1.FailedSync
+		s.LastSyncError = flashErr.Error()
+	}
+
 	n3000node.Status = *s
 	if err := r.Status().Update(context.Background(), n3000node); err != nil {
 		log.Error(err, "failed to update N3000Node status")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, nil
 	}
 
 	log.Info("Reconciled")

@@ -27,6 +27,8 @@ import (
 type N3000NodeSpec struct {
 	FPGA      []N3000Fpga    `json:"fpga,omitempty"`
 	Fortville N3000Fortville `json:"fortville,omitempty"`
+	// +kubebuilder:validation:Optional
+	DryRun bool `json:"dryrun,omitempty"`
 }
 
 // N3000NodeStatus defines the observed state of N3000Node
@@ -69,9 +71,6 @@ type N3000Node struct {
 
 	Spec   N3000NodeSpec   `json:"spec,omitempty"`
 	Status N3000NodeStatus `json:"status,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Type:=bool
-	DryRun bool `json:"dryrun,omitempty"`
 }
 
 // +kubebuilder:object:root=true

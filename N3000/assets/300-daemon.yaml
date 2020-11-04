@@ -155,6 +155,8 @@ spec:
             mountPath: /sys/module
           - name: systab
             mountPath: /sys/firmware/efi/systab
+          - name: cache-volume
+            mountPath: /n3000-workdir
         env:
           - name: NAMESPACE
             valueFrom:
@@ -214,3 +216,5 @@ spec:
         - name: systab
           hostPath:
             path: /sys/firmware/efi/systab
+        - name: cache-volume
+          emptyDir: {}

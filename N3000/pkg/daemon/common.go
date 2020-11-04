@@ -16,21 +16,24 @@ import (
 	"github.com/go-logr/logr"
 )
 
-func verifyChecksum(f *os.File, expected string) (bool, error) {
+func verifyChecksum(path, expected string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, errors.New("Failed to open file to calculate md5")
+	}
+	defer f.Close()
 	h := md5.New()
 	if _, err := io.Copy(h, f); err != nil {
 		return false, errors.New("Failed to copy file to calculate md5")
 	}
-
 	if hex.EncodeToString(h.Sum(nil)) != expected {
-		return false, fmt.Errorf("Checksum mismatch: %s, expected: %s",
-			hex.EncodeToString(h.Sum(nil)), expected)
+		return false, nil
 	}
 
 	return true, nil
 }
 
-func downloadImage(path string, url string, checksum string) error {
+func downloadImage(path, url, checksum string) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
@@ -54,42 +57,41 @@ func downloadImage(path string, url string, checksum string) error {
 	}
 
 	if checksum != "" {
-		ret, err := verifyChecksum(f, checksum)
-		if !ret {
+		match, err := verifyChecksum(path, checksum)
+		if err != nil {
 			return err
+		}
+		if !match {
+			return fmt.Errorf("Checksum mismatch in downloaded file: %s", url)
 		}
 	}
 	return nil
 }
 
-func getImage(path string, url string, checksum string, log logr.Logger) error {
-	f, err := os.Open(path)
+func getImage(path, url, checksum string, log logr.Logger) error {
+	_, err := os.Stat(path)
 	if err == nil {
-		ret, _ := verifyChecksum(f, checksum)
-		if !ret {
-			f.Close()
-			err := os.Remove(path)
-			if err != nil {
-				return fmt.Errorf("Unable to remove old image file: %s",
-					path)
-			}
-			f = nil
-		} else {
-			log.Info("Image already downloaded", "path:", path)
-			defer f.Close()
-		}
-	} else {
-		f = nil
-	}
-
-	if f == nil {
-		os.Remove(path)
-		log.Info("Downloading image", "url:", url)
-		err := downloadImage(path, url, checksum)
+		ret, err := verifyChecksum(path, checksum)
 		if err != nil {
-			log.Error(err, "Unable to download Image")
 			return err
 		}
+		if ret {
+			log.Info("Image already downloaded", "path", path)
+			return nil
+		}
+		err = os.Remove(path)
+		if err != nil {
+			return fmt.Errorf("Unable to remove old image file: %s",
+				path)
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	log.Info("Downloading image", "url", url)
+	if err := downloadImage(path, url, checksum); err != nil {
+		log.Error(err, "Unable to download Image")
+		return err
 	}
 	return nil
 }
@@ -99,7 +101,7 @@ func createFolder(path string, log logr.Logger) error {
 	if os.IsNotExist(err) {
 		errDir := os.MkdirAll(path, 0777)
 		if errDir != nil {
-			log.Info("Unable to create", "path:", path)
+			log.Info("Unable to create", "path", path)
 			return err
 		}
 	}
@@ -112,7 +114,6 @@ func runExec(execPath string, commands []string, log logr.Logger, dryRun bool) (
 		log.Info("Run exec in dryrun mode", "command", cmd)
 		return "", nil
 	}
-	log.Info("Run exec", "command", cmd)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Info("Executed unsuccessfully", "execPath", execPath, "commands", commands,

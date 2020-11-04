@@ -6,6 +6,7 @@ package daemon
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,8 +21,8 @@ var (
 	fpgaInfoExec                = runExec
 	bmcRegex                    = regexp.MustCompile(`^([a-zA-Z .:]+?)(?:\s*:\s)(.+)$`)
 	bmcParametersRegex          = regexp.MustCompile(`^([()0-9]+?) (.+)(?:\s*:\s)(.+) (.+)$`)
-	fpgaUserImageSubfolderPath  = "/root/test"
-	fpgaUserImageFile           = fpgaUserImageSubfolderPath + "/fpga.bin"
+	fpgaUserImageSubfolderPath  = "/n3000-workdir"
+	fpgaUserImageFile           = filepath.Join(fpgaUserImageSubfolderPath, "fpga")
 	fpgasUpdatePath             = "fpgasupdate"
 	fpgasUpdateExec             = runExec
 	rsuPath                     = "rsu"
@@ -128,20 +129,20 @@ type FPGAManager struct {
 	Log logr.Logger
 }
 
-func (fpga *FPGAManager) FPGAprogramming(PCIAddr string, dryRun bool) error {
-	log := fpga.Log.WithName("FPGAprogramming")
+func (fpga *FPGAManager) ProgramFPGA(file string, PCIAddr string, dryRun bool) error {
+	log := fpga.Log.WithName("ProgramFPGA").WithValues("pci", PCIAddr)
 
-	log.Info("Start programming FPGA")
+	log.Info("Starting")
 	_, err := fpgasUpdateExec(fpgasUpdatePath,
-		[]string{fpgaUserImageFile, PCIAddr}, fpga.Log, dryRun)
+		[]string{file, PCIAddr}, fpga.Log, dryRun)
 	if err != nil {
-		log.Error(err, "Failed to programming FPGA on PCIAddr", "pci", PCIAddr)
+		log.Error(err, "Failed to program FPGA")
 		return err
 	}
-	log.Info("Programming FPGA completed, start new power cycle N3000 ...")
+	log.Info("Program FPGA completed, start new power cycle N3000 ...")
 	_, err = rsuExec(rsuPath, []string{"bmcimg", PCIAddr}, fpga.Log, dryRun)
 	if err != nil {
-		log.Error(err, "Failed to execute rsu on PCIAddr", "pci", PCIAddr)
+		log.Error(err, "Failed to execute rsu")
 		return err
 	}
 	return nil
@@ -151,7 +152,7 @@ func (fpga *FPGAManager) verifyPCIAddrs(fpgaCR []fpgav1.N3000Fpga) error {
 	log := fpga.Log.WithName("verifyPCIAddrs")
 	currentInventory, err := getFPGAInventory(fpga.Log)
 	if err != nil {
-		return fmt.Errorf("Unable to get FPGA inventory before programming err: " + err.Error())
+		return fmt.Errorf("Unable to get FPGA inventory before program err: " + err.Error())
 	}
 	for idx := range fpgaCR {
 		pciFound := false
@@ -169,9 +170,8 @@ func (fpga *FPGAManager) verifyPCIAddrs(fpgaCR []fpgav1.N3000Fpga) error {
 	return nil
 }
 
-func (fpga *FPGAManager) processFPGA(n *fpgav1.N3000Node) error {
-	log := fpga.Log.WithName("processFPGA")
-
+func (fpga *FPGAManager) verifyPreconditions(n *fpgav1.N3000Node) error {
+	log := fpga.Log.WithName("verifyPreconditions")
 	err := fpga.verifyPCIAddrs(n.Spec.FPGA)
 	if err != nil {
 		return err
@@ -180,13 +180,14 @@ func (fpga *FPGAManager) processFPGA(n *fpgav1.N3000Node) error {
 	if err != nil {
 		return err
 	}
-	for _, obj := range n.Spec.FPGA {
+	for i, obj := range n.Spec.FPGA {
 		err := checkFPGADieTemperature(obj.PCIAddr, fpga.Log)
 		if err != nil {
 			return err
 		}
+		indexStr := strconv.Itoa(i)
 		log.Info("Start downloading", "url", obj.UserImageURL)
-		err = getImage(fpgaUserImageFile,
+		err = getImage(fpgaUserImageFile+indexStr+".bin",
 			obj.UserImageURL,
 			obj.CheckSum,
 			log)
@@ -194,8 +195,21 @@ func (fpga *FPGAManager) processFPGA(n *fpgav1.N3000Node) error {
 			log.Error(err, "Unable to get FPGA Image")
 			return errors.Wrap(err, "FPGA image error:")
 		}
-		log.Info("Image downloaded")
-		err = fpga.FPGAprogramming(obj.PCIAddr, n.DryRun)
+		log.Info("Image downloaded", "url", obj.UserImageURL)
+	}
+	return nil
+}
+
+func (fpga *FPGAManager) ProgramFPGAs(n *fpgav1.N3000Node) error {
+	log := fpga.Log.WithName("ProgramFPGAs")
+	for i, obj := range n.Spec.FPGA {
+		err := checkFPGADieTemperature(obj.PCIAddr, fpga.Log)
+		if err != nil {
+			return err
+		}
+		indexStr := strconv.Itoa(i)
+		log.Info("Start program", "PCIAddr", obj.PCIAddr)
+		err = fpga.ProgramFPGA(fpgaUserImageFile+indexStr+".bin", obj.PCIAddr, n.Spec.DryRun)
 		if err != nil {
 			log.Error(err, "Failed to program FPGA:", "pci", obj.PCIAddr)
 			return err
