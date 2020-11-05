@@ -146,8 +146,7 @@ func (a *Asset) waitUntilReady(ctx context.Context, apiReader client.Reader) err
 	}
 
 	for _, obj := range a.objects {
-		kind := obj.GetObjectKind().GroupVersionKind().Kind
-		if kind == "DaemonSet" {
+		if _, ok := obj.(*appsv1.DaemonSet); ok {
 			a.log.Info("waiting until daemonset is ready", "asset", a.Path)
 
 			backoff := wait.Backoff{
