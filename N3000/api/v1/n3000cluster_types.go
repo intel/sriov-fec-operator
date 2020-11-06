@@ -42,10 +42,10 @@ var (
 type N3000Fpga struct {
 	// +kubebuilder:validation:Pattern=[a-zA-Z0-9\.\-\/]+
 	UserImageURL string `json:"userImageURL,omitempty"`
-	// +kubebuilder:validation:Pattern=`[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]`
+	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]$`
 	PCIAddr string `json:"PCIAddr,omitempty"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Pattern=`[a-fA-F0-9]{32}`
+	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{32}$`
 	CheckSum string `json:"checksum,omitempty"`
 }
 
@@ -54,18 +54,15 @@ type N3000Fortville struct {
 	// +kubebuilder:validation:Pattern=[a-zA-Z0-9\.\-\/]+
 	FirmwareURL string `json:"firmwareURL,omitempty"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=inventory;update
-	Command string `json:"command,omitempty"`
+	MACs []FortvilleMAC `json:"MACs,omitempty"`
 	// +kubebuilder:validation:Optional
-	MACs []FortvilleMAC `json:"macs,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Pattern=`[a-fA-F0-9]{32}`
+	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{32}$`
 	CheckSum string `json:"checksum,omitempty"`
 }
 
 type FortvilleMAC struct {
-	// +kubebuilder:validation:Pattern=`[A-F0-9]{12}`
-	MAC string `json:"mac,omitempty"`
+	// +kubebuilder:validation:Pattern=`^[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}$`
+	MAC string `json:"MAC,omitempty"`
 }
 
 type N3000ClusterNode struct {

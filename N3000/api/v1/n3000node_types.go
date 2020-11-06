@@ -39,7 +39,7 @@ type N3000NodeStatus struct {
 }
 
 type N3000FpgaStatus struct {
-	PciAddr          string `json:"pciAddr,omitempty"`
+	PciAddr          string `json:"PCIAddr,omitempty"`
 	DeviceID         string `json:"deviceId,omitempty"`
 	BitstreamID      string `json:"bitstreamId,omitempty"`
 	BitstreamVersion string `json:"bitstreamVersion,omitempty"`
@@ -48,11 +48,15 @@ type N3000FpgaStatus struct {
 }
 
 type N3000FortvilleStatus struct {
-	Name    string                        `json:"name,omitempty"`
-	PciAddr string                        `json:"pciAddr,omitempty"`
-	Modules []N3000FortvilleStatusModules `json:"modules,omitempty"`
-	MAC     string                        `json:"mac,omitempty"`
-	SAN     string                        `json:"san,omitempty"`
+	N3000PCI string            `json:"N3000PCI,omitempty"`
+	NICs     []FortvilleStatus `json:"NICs,omitempty"`
+}
+
+type FortvilleStatus struct {
+	Name    string `json:"name,omitempty"`
+	PciAddr string `json:"PCIAddr,omitempty"`
+	Version string `json:"NVMVersion,omitempty"`
+	MAC     string `json:"MAC,omitempty"`
 }
 
 type N3000FortvilleStatusModules struct {

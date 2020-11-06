@@ -5,6 +5,7 @@ package daemon
 
 import (
 	"fmt"
+	"os/exec"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -79,8 +80,8 @@ Pr Interface Id               : 87654321-abcd-efgh-ijkl-0123456789ab
 `
 )
 
-func fakeFpgaInfo(fpgaInfoPath string, cmd []string, log logr.Logger, dryRun bool) (string, error) {
-	if len(cmd) == 1 && cmd[0] == "bmc" {
+func fakeFpgaInfo(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
+	if cmd.String() == "fpgainfo bmc" {
 		return bmcOutput, nil
 	}
 	return "", fmt.Errorf("Unsupported command: %s", cmd)

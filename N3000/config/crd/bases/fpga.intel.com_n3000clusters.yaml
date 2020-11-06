@@ -43,25 +43,20 @@ spec:
                 properties:
                   fortville:
                     properties:
+                      MACs:
+                        items:
+                          properties:
+                            MAC:
+                              pattern: '[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}'
+                              type: string
+                          type: object
+                        type: array
                       checksum:
                         pattern: '[a-fA-F0-9]{32}'
-                        type: string
-                      command:
-                        enum:
-                        - inventory
-                        - update
                         type: string
                       firmwareURL:
                         pattern: '[a-zA-Z0-9\.\-\/]+'
                         type: string
-                      macs:
-                        items:
-                          properties:
-                            mac:
-                              pattern: '[A-F0-9]{12}'
-                              type: string
-                          type: object
-                        type: array
                     type: object
                   fpga:
                     items:

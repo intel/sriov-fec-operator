@@ -3,12 +3,11 @@
 
 package daemon
 
-import "encoding/xml"
-
-type DeviceInventory struct {
-	XMLName       xml.Name   `xml:"DeviceInventory"`
-	InventoryList []Instance `xml:"Instance"`
-}
+import (
+	"encoding/xml"
+	"io/ioutil"
+	"os"
+)
 
 type Instance struct {
 	XMLName   xml.Name     `xml:"Instance"`
@@ -28,9 +27,15 @@ type Instance struct {
 }
 
 type Module struct {
-	XMLName xml.Name `xml:"Module"`
-	Type    string   `xml:"type,attr"`
-	Version string   `xml:"version,attr"`
+	XMLName xml.Name     `xml:"Module"`
+	Type    string       `xml:"type,attr"`
+	Version string       `xml:"version,attr"`
+	Status  ModuleStatus `xml:"Status"`
+}
+
+type ModuleStatus struct {
+	XMLName xml.Name `xml:"Status"`
+	Result  string   `xml:"result,attr"`
 }
 
 type VPD struct {
@@ -53,4 +58,28 @@ type MACAddresses struct {
 	XMLName xml.Name `xml:"MACAddresses"`
 	Mac     MAC      `xml:"MAC"`
 	San     SAN      `xml:"SAN"`
+}
+
+type DeviceUpdate struct {
+	XMLName             xml.Name   `xml:"DeviceUpdate"`
+	Instance            []Instance `xml:"Instance"`
+	PowerCycleRequired  int        `xml:"PowerCycleRequired"`
+	NextUpdateAvailable int        `xml:"NextUpdateAvailable"`
+	RebootRequired      int        `xml:"RebootRequired"`
+}
+
+func getDeviceUpdateFromFile(path string) (*DeviceUpdate, error) {
+	invf, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer invf.Close()
+	b, _ := ioutil.ReadAll(invf)
+
+	u := &DeviceUpdate{}
+	err = xml.Unmarshal(b, u)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
 }

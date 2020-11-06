@@ -44,25 +44,20 @@ spec:
               type: boolean
             fortville:
               properties:
+                MACs:
+                  items:
+                    properties:
+                      MAC:
+                        pattern: '[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}'
+                        type: string
+                    type: object
+                  type: array
                 checksum:
                   pattern: '[a-fA-F0-9]{32}'
-                  type: string
-                command:
-                  enum:
-                  - inventory
-                  - update
                   type: string
                 firmwareURL:
                   pattern: '[a-zA-Z0-9\.\-\/]+'
                   type: string
-                macs:
-                  items:
-                    properties:
-                      mac:
-                        pattern: '[A-F0-9]{12}'
-                        type: string
-                    type: object
-                  type: array
               type: object
             fpga:
               items:
@@ -154,28 +149,28 @@ spec:
             fortville:
               items:
                 properties:
-                  mac:
+                  N3000PCI:
                     type: string
-                  modules:
+                  NICs:
                     items:
                       properties:
-                        type:
+                        MAC:
                           type: string
-                        version:
+                        NVMVersion:
+                          type: string
+                        PCIAddr:
+                          type: string
+                        name:
                           type: string
                       type: object
                     type: array
-                  name:
-                    type: string
-                  pciAddr:
-                    type: string
-                  san:
-                    type: string
                 type: object
               type: array
             fpga:
               items:
                 properties:
+                  PCIAddr:
+                    type: string
                   bitstreamId:
                     type: string
                   bitstreamVersion:
@@ -186,8 +181,6 @@ spec:
                     type: string
                   numaNode:
                     type: integer
-                  pciAddr:
-                    type: string
                 type: object
               type: array
           type: object

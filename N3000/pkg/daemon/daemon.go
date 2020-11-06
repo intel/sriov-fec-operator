@@ -5,6 +5,7 @@ package daemon
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	dh "github.com/otcshare/openshift-operator/N3000/pkg/drainhelper"
@@ -103,40 +104,40 @@ func (r *N3000NodeReconciler) CreateEmptyN3000NodeIfNeeded(c client.Client) erro
 	return err
 }
 
-func (r *N3000NodeReconciler) flash(n *fpgav1.N3000Node) error {
-	log := r.log.WithName("flash")
-	err := r.fpga.ProgramFPGAs(n)
-	if err != nil {
-		log.Error(err, "Unable to processFPGA")
-		return err
-	}
-
-	err = r.fortville.flash(n)
-	if err != nil {
-		log.Error(err, "Unable to flash fortville")
-		return err
-	}
-	return nil
-}
-
 func (r *N3000NodeReconciler) createStatus(n *fpgav1.N3000Node) (*fpgav1.N3000NodeStatus, error) {
 	log := r.log.WithName("createStatus")
 
-	status, err := r.createBasicNodeStatus()
+	fortvilleStatus, err := r.fortville.getInventory()
 	if err != nil {
-		log.Error(err, "failed to create basic node status")
+		log.Error(err, "Failed to get Fortville inventory")
 		return nil, err
 	}
 
-	log.V(2).Info("Updating fortville status with nvmupdate inventory data")
-	i, err := r.fortville.getInventory(n)
+	fpgaStatus, err := getFPGAInventory(r.log)
 	if err != nil {
-		log.Error(err, "Unable to get inventory...using basic status only")
+		log.Error(err, "Failed to get FPGA inventory")
 		return nil, err
-	} else {
-		r.fortville.processInventory(&i, status) // fill ns with data from inventory
 	}
-	return status, nil
+
+	return &fpgav1.N3000NodeStatus{
+		Fortville: fortvilleStatus,
+		FPGA:      fpgaStatus,
+	}, nil
+}
+
+func (r *N3000NodeReconciler) verifySpec(n *fpgav1.N3000Node) error {
+	for _, f := range n.Spec.FPGA {
+		if f.UserImageURL == "" {
+			return errors.New("Missing UserImageURL for PCI: " + f.PCIAddr)
+		}
+	}
+
+	if len(n.Spec.Fortville.MACs) > 0 {
+		if n.Spec.Fortville.FirmwareURL == "" {
+			return errors.New("Missing Fortville FirmwareURL")
+		}
+	}
+	return nil
 }
 
 func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -175,30 +176,73 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	}
 
-	err := r.fpga.verifyPreconditions(n3000node)
-	if err != nil {
-		return ctrl.Result{}, err
+	flashCondition := metav1.Condition{
+		Type:               "Flashed",
+		Status:             metav1.ConditionTrue,
+		Message:            "Inventory up to date",
+		ObservedGeneration: n3000node.GetGeneration(),
+		Reason:             "FlashNotRequested",
 	}
 
-	//TODO fortville preconditions and download images
-	// here we should decide if we need to put node into maintenance mode
-	// at least some basic checks like CR's Generation, to avoid reconciling twice the same CR
-	drainNeeded := true
-	var flashErr error
-	if drainNeeded {
-		var result ctrl.Result
-
-		err := r.drainHelper.Run(func(c context.Context) {
-			err := r.flash(n3000node)
-			if err != nil {
-				log.Error(err, "failed to flash")
-				flashErr = err
+	err := r.verifySpec(n3000node)
+	if err != nil {
+		log.Error(err, "verifySpec error")
+		flashCondition.Status = metav1.ConditionFalse
+		flashCondition.Message = err.Error()
+		flashCondition.Reason = "FlashFailed"
+	} else {
+		if n3000node.Spec.FPGA != nil || n3000node.Spec.Fortville.MACs != nil {
+			if n3000node.Spec.FPGA != nil {
+				err := r.fpga.verifyPreconditions(n3000node)
+				if err != nil {
+					return ctrl.Result{}, err
+				}
 			}
-		})
 
-		if err != nil {
-			// some kind of error around leader election / node (un)cordon / node drain
-			return result, err
+			if n3000node.Spec.Fortville.MACs != nil {
+				err = r.fortville.verifyPreconditions(n3000node)
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+			}
+
+			var flashErr error
+			var result ctrl.Result
+
+			err := r.drainHelper.Run(func(c context.Context) {
+				if n3000node.Spec.FPGA != nil {
+					err := r.fpga.ProgramFPGAs(n3000node)
+					if err != nil {
+						log.Error(err, "Unable to flash FPGA")
+						flashErr = err
+						return
+					}
+				}
+
+				if n3000node.Spec.Fortville.MACs != nil {
+					err = r.fortville.flash(n3000node)
+					if err != nil {
+						log.Error(err, "Unable to flash Fortville")
+						flashErr = err
+						return
+					}
+				}
+			})
+
+			if err != nil {
+				// some kind of error around leader election / node (un)cordon / node drain
+				return result, err
+			}
+
+			if flashErr != nil {
+				flashCondition.Status = metav1.ConditionFalse
+				flashCondition.Message = flashErr.Error()
+				flashCondition.Reason = "FlashFailed"
+			} else {
+				flashCondition.Status = metav1.ConditionTrue
+				flashCondition.Message = "Flashed successfully"
+				flashCondition.Reason = "FlashSucceeded"
+			}
 		}
 	}
 
@@ -208,18 +252,6 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, nil
 	}
 
-	flashCondition := metav1.Condition{
-		Type:               "Flashed",
-		Status:             metav1.ConditionTrue,
-		Message:            "Flashed successfully",
-		ObservedGeneration: n3000node.GetGeneration(),
-		Reason:             "FlashSucceeded",
-	}
-	if flashErr != nil {
-		flashCondition.Status = metav1.ConditionFalse
-		flashCondition.Message = flashErr.Error()
-		flashCondition.Reason = "FlashFailed"
-	}
 	meta.SetStatusCondition(&s.Conditions, flashCondition)
 
 	n3000node.Status = *s
@@ -231,21 +263,4 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log.Info("Reconciled")
 
 	return ctrl.Result{}, nil
-}
-
-func (r *N3000NodeReconciler) createBasicNodeStatus() (*fpgav1.N3000NodeStatus, error) {
-	fortvilleStatus, err := r.fortville.getNetworkDevices()
-	if err != nil {
-		return nil, err
-	}
-
-	fpgaStatus, err := getFPGAInventory(r.log)
-	if err != nil {
-		return nil, err
-	}
-
-	return &fpgav1.N3000NodeStatus{
-		Fortville: fortvilleStatus,
-		FPGA:      fpgaStatus,
-	}, nil
 }
