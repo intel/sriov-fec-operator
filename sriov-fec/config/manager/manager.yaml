@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
+
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -28,6 +31,7 @@ spec:
         args:
         - --enable-leader-election
         image: controller:latest
+        imagePullPolicy: Always
         name: manager
         resources:
           limits:
@@ -36,4 +40,9 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+        env:
+        - name: SRIOV_FEC_DAEMON_IMAGE
+          value: $SRIOV_FEC_DAEMON_IMAGE
+        - name: SRIOV_FEC_DAEMON_VERSION
+          value: $SRIOV_FEC_DAEMON_VERSION
       terminationGracePeriodSeconds: 10

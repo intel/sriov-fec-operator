@@ -17,16 +17,21 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
+	"time"
 
+	secv1 "github.com/openshift/api/security/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/otcshare/openshift-operator/N3000/pkg/assets"
 	sriovfecv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
 	"github.com/otcshare/openshift-operator/sriov-fec/controllers"
 	// +kubebuilder:scaffold:imports
@@ -40,6 +45,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
+	utilruntime.Must(secv1.AddToScheme(scheme))
 	utilruntime.Must(sriovfecv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
@@ -55,7 +61,8 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	config := ctrl.GetConfigOrDie()
+	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
@@ -76,6 +83,29 @@ func main() {
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
+
+	client, err := client.New(config, client.Options{Scheme: scheme})
+	if err != nil {
+		setupLog.Error(err, "failed to create client")
+		os.Exit(1)
+	}
+	if err := (&assets.Manager{
+		Client:    client,
+		Log:       ctrl.Log.WithName("asset_manager").WithName("sriov-fec"),
+		EnvPrefix: "SRIOV_FEC_",
+		Assets: []assets.Asset{
+			{
+				Path: "assets/100-device-plugin.yml",
+			},
+			{
+				Path:              "assets/200-daemon.yaml",
+				BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
+			},
+		},
+	}).LoadAndDeploy(context.Background()); err != nil {
+		setupLog.Error(err, "failed to deploy the assets")
+		os.Exit(1)
+	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

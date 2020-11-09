@@ -1,5 +1,8 @@
+## SPDX-License-Identifier: Apache-2.0
+## Copyright (c) 2020 Intel Corporation
+
 # Build the manager binary
-FROM golang:1.13 as builder
+FROM golang:1.14 as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -22,6 +25,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager 
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/manager .
+COPY assets assets/
+
 USER nonroot:nonroot
 
 ENTRYPOINT ["/manager"]

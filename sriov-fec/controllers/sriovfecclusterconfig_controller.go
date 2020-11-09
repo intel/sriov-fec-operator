@@ -49,6 +49,11 @@ type SriovFecClusterConfigReconciler struct {
 
 // +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecclusterconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecclusterconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups="",resources=nodes,verbs=list
+// +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;configmaps,verbs=*
+// +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=*
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=*
+// +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=*
 
 func (r *SriovFecClusterConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
