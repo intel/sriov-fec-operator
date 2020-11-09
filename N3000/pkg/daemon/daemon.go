@@ -18,10 +18,30 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 const (
 	crNameTemplate = "n3000node-%s"
+)
+
+type FlashConditionReason string
+
+const (
+	// FlashCondition flash condition name
+	FlashCondition string = "Flashed"
+
+	// Failed indicates that the flashing is in an unknown state
+	FlashUnknown FlashConditionReason = "Unknown"
+	// FlashInProgress indicates that the flashing process is in progress
+	FlashInProgress FlashConditionReason = "InProgress"
+	// FlashFailed indicates that the flashing process failed
+	FlashFailed FlashConditionReason = "Failed"
+	// FlashNotRequested indicates that the flashing process was not requested
+	FlashNotRequested FlashConditionReason = "NotRequested"
+	// FlashSucceeded indicates that the flashing process succeeded
+	FlashSucceeded FlashConditionReason = "Succeeded"
 )
 
 type N3000NodeReconciler struct {
@@ -55,8 +75,32 @@ func NewN3000NodeReconciler(c client.Client, clientSet *clientset.Clientset, log
 }
 
 func (r *N3000NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&fpgav1.N3000Node{}).
+		WithEventFilter(predicate.Funcs{
+			CreateFunc: func(e event.CreateEvent) bool {
+				n3000node, ok := e.Object.(*fpgav1.N3000Node)
+				if !ok {
+					r.log.Info("Failed to convert e.Object to fpgav1.N3000Node", "e.Object", e.Object)
+					return false
+				}
+				cond := meta.FindStatusCondition(n3000node.Status.Conditions, FlashCondition)
+				if cond != nil && cond.ObservedGeneration == e.Meta.GetGeneration() {
+					r.log.Info("Created object was handled previously, ignoring")
+					return false
+				}
+				return true
+
+			},
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				if e.MetaOld.GetGeneration() == e.MetaNew.GetGeneration() {
+					r.log.Info("Update ignored, generation unchanged")
+					return false
+				}
+				return true
+			},
+		}).
 		Complete(r)
 }
 
@@ -89,40 +133,68 @@ func (r *N3000NodeReconciler) CreateEmptyN3000NodeIfNeeded(c client.Client) erro
 				Namespace: r.namespace,
 			},
 		}
-		if createErr := c.Create(context.Background(), n3000node); createErr != nil {
-			log.Error(createErr, "failed to create")
-			return createErr
-		}
 
-		updateErr := c.Status().Update(context.Background(), n3000node)
-		if updateErr != nil {
-			log.Error(updateErr, "failed to update status")
-		}
-		return updateErr
+		return c.Create(context.Background(), n3000node)
 	}
 
 	return err
 }
 
-func (r *N3000NodeReconciler) createStatus(n *fpgav1.N3000Node) (*fpgav1.N3000NodeStatus, error) {
-	log := r.log.WithName("createStatus")
+func (r *N3000NodeReconciler) getNodeStatus(n *fpgav1.N3000Node) (fpgav1.N3000NodeStatus, error) {
+	log := r.log.WithName("getNodeStatus")
 
 	fortvilleStatus, err := r.fortville.getInventory()
 	if err != nil {
 		log.Error(err, "Failed to get Fortville inventory")
-		return nil, err
+		return fpgav1.N3000NodeStatus{}, err
 	}
 
 	fpgaStatus, err := getFPGAInventory(r.log)
 	if err != nil {
 		log.Error(err, "Failed to get FPGA inventory")
-		return nil, err
+		return fpgav1.N3000NodeStatus{}, err
 	}
 
-	return &fpgav1.N3000NodeStatus{
+	return fpgav1.N3000NodeStatus{
 		Fortville: fortvilleStatus,
 		FPGA:      fpgaStatus,
 	}, nil
+}
+
+func (r *N3000NodeReconciler) updateStatus(n *fpgav1.N3000Node, c []metav1.Condition) error {
+	log := r.log.WithName("updateStatus")
+
+	nodeStatus, err := r.getNodeStatus(n)
+	if err != nil {
+		log.Error(err, "failed to get N3000Node status")
+		return err
+	}
+
+	for _, condition := range c {
+		meta.SetStatusCondition(&nodeStatus.Conditions, condition)
+	}
+	n.Status = nodeStatus
+	if err := r.Status().Update(context.Background(), n); err != nil {
+		log.Error(err, "failed to update N3000Node status")
+		return err
+	}
+
+	return nil
+}
+
+func (r *N3000NodeReconciler) updateFlashCondition(n *fpgav1.N3000Node, status metav1.ConditionStatus,
+	reason FlashConditionReason, msg string) {
+	log := r.log.WithName("updateFlashCondition")
+	fc := metav1.Condition{
+		Type:               FlashCondition,
+		Status:             status,
+		Reason:             string(reason),
+		Message:            msg,
+		ObservedGeneration: n.GetGeneration(),
+	}
+	if err := r.updateStatus(n, []metav1.Condition{fc}); err != nil {
+		log.Error(err, "failed to update N3000Node flash condition")
+	}
 }
 
 func (r *N3000NodeReconciler) verifySpec(n *fpgav1.N3000Node) error {
@@ -168,99 +240,78 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	lastCondition := meta.FindStatusCondition(n3000node.Status.Conditions, "Flashed")
-	if lastCondition != nil {
-		if lastCondition.ObservedGeneration == n3000node.GetGeneration() {
-			log.Info("CR already handled")
-			return ctrl.Result{}, nil
-		}
-	}
-
-	flashCondition := metav1.Condition{
-		Type:               "Flashed",
-		Status:             metav1.ConditionTrue,
-		Message:            "Inventory up to date",
-		ObservedGeneration: n3000node.GetGeneration(),
-		Reason:             "FlashNotRequested",
-	}
-
 	err := r.verifySpec(n3000node)
 	if err != nil {
 		log.Error(err, "verifySpec error")
-		flashCondition.Status = metav1.ConditionFalse
-		flashCondition.Message = err.Error()
-		flashCondition.Reason = "FlashFailed"
-	} else {
-		if n3000node.Spec.FPGA != nil || n3000node.Spec.Fortville.MACs != nil {
-			if n3000node.Spec.FPGA != nil {
-				err := r.fpga.verifyPreconditions(n3000node)
-				if err != nil {
-					return ctrl.Result{}, err
-				}
-			}
+		r.updateFlashCondition(n3000node, metav1.ConditionFalse, FlashFailed, err.Error())
+		return ctrl.Result{}, nil
+	}
 
-			if n3000node.Spec.Fortville.MACs != nil {
-				err = r.fortville.verifyPreconditions(n3000node)
-				if err != nil {
-					return ctrl.Result{}, err
-				}
-			}
+	if n3000node.Spec.FPGA == nil && n3000node.Spec.Fortville.MACs == nil {
+		log.Info("Nothing to do")
+		r.updateFlashCondition(n3000node, metav1.ConditionFalse, FlashNotRequested, "Inventory up to date")
+		return ctrl.Result{}, nil
+	}
 
-			var flashErr error
-			var result ctrl.Result
-
-			err := r.drainHelper.Run(func(c context.Context) {
-				if n3000node.Spec.FPGA != nil {
-					err := r.fpga.ProgramFPGAs(n3000node)
-					if err != nil {
-						log.Error(err, "Unable to flash FPGA")
-						flashErr = err
-						return
-					}
-				}
-
-				if n3000node.Spec.Fortville.MACs != nil {
-					err = r.fortville.flash(n3000node)
-					if err != nil {
-						log.Error(err, "Unable to flash Fortville")
-						flashErr = err
-						return
-					}
-				}
-			})
-
-			if err != nil {
-				// some kind of error around leader election / node (un)cordon / node drain
-				return result, err
-			}
-
-			if flashErr != nil {
-				flashCondition.Status = metav1.ConditionFalse
-				flashCondition.Message = flashErr.Error()
-				flashCondition.Reason = "FlashFailed"
-			} else {
-				flashCondition.Status = metav1.ConditionTrue
-				flashCondition.Message = "Flashed successfully"
-				flashCondition.Reason = "FlashSucceeded"
-			}
+	// Update current condition to reflect that the flash started
+	currentCondition := meta.FindStatusCondition(n3000node.Status.Conditions, FlashCondition)
+	if currentCondition != nil {
+		currentCondition.Status = metav1.ConditionFalse
+		currentCondition.Reason = string(FlashInProgress)
+		currentCondition.Message = "Flash started"
+		if err := r.updateStatus(n3000node, []metav1.Condition{*currentCondition}); err != nil {
+			log.Error(err, "failed to update current N3000Node flash condition")
+			return ctrl.Result{}, err
 		}
 	}
 
-	s, err := r.createStatus(n3000node)
+	if n3000node.Spec.FPGA != nil {
+		err := r.fpga.verifyPreconditions(n3000node)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	if n3000node.Spec.Fortville.MACs != nil {
+		err = r.fortville.verifyPreconditions(n3000node)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	var flashErr error
+	err = r.drainHelper.Run(func(c context.Context) {
+		if n3000node.Spec.FPGA != nil {
+			err := r.fpga.ProgramFPGAs(n3000node)
+			if err != nil {
+				log.Error(err, "Unable to flash FPGA")
+				flashErr = err
+				return
+			}
+		}
+
+		if n3000node.Spec.Fortville.MACs != nil {
+			err = r.fortville.flash(n3000node)
+			if err != nil {
+				log.Error(err, "Unable to flash Fortville")
+				flashErr = err
+				return
+			}
+		}
+	})
+
 	if err != nil {
-		log.Error(err, "failed to get status")
+		// some kind of error around leader election / node (un)cordon / node drain
+		r.updateFlashCondition(n3000node, metav1.ConditionUnknown, FlashUnknown, err.Error())
 		return ctrl.Result{}, nil
 	}
 
-	meta.SetStatusCondition(&s.Conditions, flashCondition)
-
-	n3000node.Status = *s
-	if err := r.Status().Update(context.Background(), n3000node); err != nil {
-		log.Error(err, "failed to update N3000Node status")
-		return ctrl.Result{}, nil
+	if flashErr != nil {
+		r.updateFlashCondition(n3000node, metav1.ConditionFalse, FlashFailed, flashErr.Error())
+	} else {
+		r.updateFlashCondition(n3000node, metav1.ConditionTrue, FlashSucceeded, "Flashed successfully")
 	}
 
 	log.Info("Reconciled")
-
 	return ctrl.Result{}, nil
 }

@@ -66,7 +66,7 @@ type N3000FortvilleStatusModules struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Flashed",type=string,JSONPath=`.status.conditions[?(@.type=="Flashed")].status`
+// +kubebuilder:printcolumn:name="Flash",type=string,JSONPath=`.status.conditions[?(@.type=="Flashed")].reason`
 
 // N3000Node is the Schema for the n3000nodes API
 type N3000Node struct {
