@@ -86,7 +86,7 @@ func NewDeviceBMCInfo(output string) *DeviceBMCInfo {
 
 	for _, line := range strings.Split(output, "\n") {
 		textMatches := bmcQualitativeRegex.FindStringSubmatch(line)
-		if textMatches != nil && len(textMatches) == 3 {
+		if len(textMatches) == 3 {
 			label := sanitizeLabel(textMatches[1])
 			value := textMatches[2]
 
@@ -96,7 +96,7 @@ func NewDeviceBMCInfo(output string) *DeviceBMCInfo {
 		}
 
 		floatMatches := bmcFloatRegex.FindStringSubmatch(line)
-		if floatMatches != nil && len(floatMatches) == 3 {
+		if len(floatMatches) == 3 {
 			name, unitFamily := extractUnit(floatMatches[1])
 
 			label := sanitizeLabel(name)

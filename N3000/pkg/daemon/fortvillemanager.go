@@ -33,8 +33,6 @@ var (
 	fpgadiagExec  = runExec
 	ethtoolExec   = runExec
 
-	macRegex     = regexp.MustCompile(`^(MAC address [0-9]+?)(?:\s*:\s)(.+)$`)
-	macPCIRegex  = regexp.MustCompile(`(PCIe s:b:d\.f)(?:\s*:\s)(.+)`)
 	pciRegex     = regexp.MustCompile(`^([a-f0-9]{4}):([a-f0-9]{2}):([a-f0-9]{2})\.([012357])$`)
 	mactestRegex = regexp.MustCompile(`^(?:\s*)([a-z0-9]+)(?:\s*)([a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2})$`)
 	ethtoolRegex = regexp.MustCompile(`^([a-z-]+?)(?:\s*:\s)(.+)$`)
@@ -56,7 +54,7 @@ func (fm *FortvilleManager) getN3000Devices() ([]string, error) {
 	for _, deviceBMCOutput := range strings.Split(fpgaInfoBMCOutput, "//****** BMC SENSORS ******//") {
 		for _, line := range strings.Split(deviceBMCOutput, "\n") {
 			matches := bmcRegex.FindStringSubmatch(line)
-			if matches != nil && len(matches) == 3 && matches[1] == "PCIe s:b:d.f" {
+			if len(matches) == 3 && matches[1] == "PCIe s:b:d.f" {
 				devs = append(devs, matches[2])
 				break
 			}
@@ -71,13 +69,13 @@ func (fm *FortvilleManager) getN3000NICs(bmcPCI string) ([]fpgav1.FortvilleStatu
 	var fs []fpgav1.FortvilleStatus
 
 	matches := pciRegex.FindStringSubmatch(bmcPCI)
-	if matches != nil && len(matches) == 5 {
+	if len(matches) == 5 {
 		out, err := fpgadiagExec(exec.Command(fpgadiagPath, "-m", "mactest", "-S", matches[1], "-B",
 			matches[2], "-D", matches[3], "-F", matches[4]), log, false)
 		if err == nil {
 			for _, line := range strings.Split(out, "\n") {
 				m := mactestRegex.FindStringSubmatch(line)
-				if m != nil && len(m) == 3 {
+				if len(m) == 3 {
 					s := fpgav1.FortvilleStatus{
 						MAC: m[2],
 					}
@@ -108,7 +106,7 @@ func (fm *FortvilleManager) addEthtoolInfo(ifName string, fs *fpgav1.FortvilleSt
 	if err == nil {
 		for _, line := range strings.Split(out, "\n") {
 			m := ethtoolRegex.FindStringSubmatch(line)
-			if m != nil && len(m) == 3 {
+			if len(m) == 3 {
 				switch m[1] {
 				case "bus-info":
 					fs.PciAddr = m[2]

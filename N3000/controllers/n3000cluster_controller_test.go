@@ -38,6 +38,9 @@ var _ = Describe("ExampleTest", func() {
 			Nodes: []fpgav1.N3000ClusterNode{
 				{
 					NodeName: "dummy",
+					Fortville: fpgav1.N3000Fortville{
+						FirmwareURL: "http://exampleurl.com",
+					},
 				},
 			},
 		},
@@ -67,12 +70,14 @@ var _ = Describe("ExampleTest", func() {
 				},
 			}
 
-			reconciler.Reconcile(request)
+			_, err = reconciler.Reconcile(request)
+			Expect(err).ToNot(HaveOccurred())
 
 			// Check if node config was created out of cluster config
 			nodeConfigs := &fpgav1.N3000NodeList{}
 			err = k8sClient.List(context.TODO(), nodeConfigs)
 			Expect(err).ToNot(HaveOccurred())
+
 			Expect(len(nodeConfigs.Items)).To(Equal(1))
 			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("n3000node-dummy"))
 		})

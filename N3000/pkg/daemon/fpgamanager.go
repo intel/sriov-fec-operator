@@ -28,7 +28,6 @@ var (
 	fpgasUpdateExec             = runExec
 	rsuPath                     = "rsu"
 	rsuExec                     = runExec
-	restartTimeLimitInSeconds   = 20
 	fpgaTemperatureDefaultLimit = 85.0 //in Celsius degrees
 	fpgaTemperatureBottomRange  = 60.0 //in Celsius degrees
 	fpgaTemperatureTopRange     = 95.0 //in Celsius degrees
@@ -62,7 +61,7 @@ func getFPGAInventory(log logr.Logger) ([]fpgav1.N3000FpgaStatus, error) {
 		pciFound := false
 		for _, line := range strings.Split(deviceBMCOutput, "\n") {
 			matches := bmcRegex.FindStringSubmatch(line)
-			if matches != nil && len(matches) == 3 {
+			if len(matches) == 3 {
 				switch matches[1] {
 				case "PCIe s:b:d.f":
 					dev.PciAddr = matches[2]
@@ -95,7 +94,7 @@ func checkFPGADieTemperature(PCIAddr string, log logr.Logger) error {
 	for _, deviceBMCOutput := range strings.Split(fpgaInfoBMCOutput, "//****** BMC SENSORS ******//") {
 		for _, line := range strings.Split(deviceBMCOutput, "\n") {
 			matches := bmcRegex.FindStringSubmatch(line)
-			if matches != nil && len(matches) == 3 {
+			if len(matches) == 3 {
 				switch matches[1] {
 				case "PCIe s:b:d.f":
 					if PCIAddr == matches[2] {
@@ -104,7 +103,7 @@ func checkFPGADieTemperature(PCIAddr string, log logr.Logger) error {
 				}
 			}
 			matches = bmcParametersRegex.FindStringSubmatch(line)
-			if matches != nil && len(matches) == 5 {
+			if len(matches) == 5 {
 				switch matches[1] {
 				case "(12)":
 					fpgaDieTemperature, _ = strconv.ParseFloat(matches[3], 64)
