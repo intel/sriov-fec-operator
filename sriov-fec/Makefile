@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
+
 # Current Operator version
 VERSION ?= 0.0.1
 # Default bundle image tag

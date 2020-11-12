@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
 <!-- omit in toc -->
 # Contribution Guide
 Welcome to the Open Network Edge Services Software (OpenNESS) project. OpenNESS is an open-source solution that is enriched by people like — you. Your contributions drive the network & enterprise edge computing!

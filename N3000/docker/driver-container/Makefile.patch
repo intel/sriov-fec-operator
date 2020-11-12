@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
 --- Makefile    2020-06-25 21:48:52.000000000 +0200
 +++ Makefile.new        2020-08-12 10:02:38.150906905 +0200
 @@ -1,6 +1,7 @@
