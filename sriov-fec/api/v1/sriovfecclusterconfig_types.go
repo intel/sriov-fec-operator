@@ -4,6 +4,8 @@
 package v1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -22,6 +24,11 @@ var (
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+func (udq *UplinkDownlinkQueues) String() string {
+	return fmt.Sprintf("%d,%d,%d,%d,%d,%d,%d,%d", udq.VF0, udq.VF1, udq.VF2, udq.VF3,
+		udq.VF4, udq.VF5, udq.VF6, udq.VF7)
+}
 
 type UplinkDownlinkQueues struct {
 	// +kubebuilder:validation:Minimum=0
