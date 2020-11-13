@@ -109,7 +109,12 @@ func NewDrainHelper(l logr.Logger, cs *clientset.Clientset, nodeName, namespace 
 	}
 }
 
-func (dh *DrainHelper) Run(f func(context.Context)) error {
+// Run joins leader election and drains the node if becomes a leader.
+//
+// f is a function that takes a context and returns a bool. It should return true if uncordon should be performed.
+// If `f` returns false, the uncordon does not take place. This is useful in 2-step scenario like sriov-fec-daemon where
+// reboot must be performed without loosing the leadership and without the uncordon.
+func (dh *DrainHelper) Run(f func(context.Context) bool) error {
 	log := dh.log.WithName("Run()")
 
 	defer func() {
@@ -145,32 +150,33 @@ func (dh *DrainHelper) Run(f func(context.Context)) error {
 		OnStartedLeading: func(ctx context.Context) {
 			log.Info("started leading")
 
-			defer func() {
-				log.V(4).Info("cancelling the context to finish the leadership")
-				cancel()
-			}()
-
-			defer func() {
+			uncordonAndFreeLeadership := func() {
 				// always try to uncordon the node
 				// e.g. when cordoning succeeds, but draining fails
 				log.V(4).Info("uncordoning node")
 				if err := dh.uncordon(ctx); err != nil {
 					log.Error(err, "uncordon failed")
 					innerErr = err
-					return
 				}
-			}()
+
+				log.V(4).Info("cancelling the context to finish the leadership")
+				cancel()
+			}
 
 			log.V(4).Info("cordoning & draining node")
 			if err := dh.cordonAndDrain(ctx); err != nil {
 				log.Error(err, "cordonAndDrain failed")
 				innerErr = err
+				uncordonAndFreeLeadership()
 				return
 			}
 
 			log.Info("worker function - start")
-			f(ctx)
-			log.Info("worker function - end")
+			performUncordon := f(ctx)
+			log.Info("worker function - end", "performUncordon", performUncordon)
+			if performUncordon {
+				uncordonAndFreeLeadership()
+			}
 		},
 		OnStoppedLeading: func() {
 			log.V(4).Info("stopped leading")

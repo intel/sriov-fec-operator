@@ -280,13 +280,13 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	var flashErr error
-	err = r.drainHelper.Run(func(c context.Context) {
+	err = r.drainHelper.Run(func(c context.Context) bool {
 		if n3000node.Spec.FPGA != nil {
 			err := r.fpga.ProgramFPGAs(n3000node)
 			if err != nil {
 				log.Error(err, "Unable to flash FPGA")
 				flashErr = err
-				return
+				return true
 			}
 		}
 
@@ -295,7 +295,7 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			if err != nil {
 				log.Error(err, "Unable to flash Fortville")
 				flashErr = err
-				return
+				return true
 			}
 		}
 	})
