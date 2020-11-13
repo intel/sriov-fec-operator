@@ -86,7 +86,9 @@ type UplinkDownlink struct {
 	Queues UplinkDownlinkQueues `json:"queues"`
 }
 
-type BBDevConfig struct {
+// N3000BBDevConfig specifies variables to configure N3000 with
+type N3000BBDevConfig struct {
+
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Enum=FPGA_5GNR;FPGA_LTE
 
@@ -110,31 +112,22 @@ type BBDevConfig struct {
 	Uplink UplinkDownlink `json:"uplink"`
 }
 
-type CardConfig struct {
+// BBDevConfig is a struct containing configuration for various FEC cards
+type BBDevConfig struct {
+	N3000 *N3000BBDevConfig `json:"n3000,omitempty"`
+}
+
+// PhysicalFunctionConfig defines a possible configuration of a single Physical Function (PF), i.e. card
+type PhysicalFunctionConfig struct {
 	// +kubebuilder:validation:Pattern=`[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]`
 
-	// PCIAdress is a card's PCI address that will be configured according to this spec
+	// PCIAdress is a Physical Functions's PCI address that will be configured according to this spec
 	PCIAddress string `json:"pciAddress,omitempty"`
-
-	// +kubebuilder:validation:Required
-
-	// VendorID is ID of card's vendor
-	VendorID string `json:"vendorID"`
-
-	// +kubebuilder:validation:Required
-
-	// PFDeviceID
-	PFDeviceID string `json:"pfDeviceID"`
 
 	// +kubebuilder:validation:Required
 
 	// PFDriver to bound the PFs to
 	PFDriver string `json:"pfDriver"`
-
-	// +kubebuilder:validation:Required
-
-	// VFDeviceID
-	VFDeviceID string `json:"vfDeviceID"`
 
 	// +kubebuilder:validation:Required
 
@@ -148,7 +141,7 @@ type CardConfig struct {
 
 	// +kubebuilder:validation:Required
 
-	// QueuesConfiguration is a config for card's queues
+	// BBDevConfig is a config for PF's queues
 	BBDevConfig BBDevConfig `json:"bbDevConfig"`
 }
 
@@ -158,24 +151,12 @@ type NodeConfig struct {
 
 	// +kubebuilder:validation:Required
 
-	// If true, then the first card config will be used for all cards.
-	// pciAddress will be ignored.
-	OneCardConfigForAll bool `json:"oneCardConfigForAll"`
-
-	// +kubebuilder:validation:Required
-
-	// List of card configs
-	Cards []CardConfig `json:"cards"`
+	// List of physical functions (cards) configs
+	PhysicalFunctions []PhysicalFunctionConfig `json:"physicalFunctions"`
 }
 
 // SriovFecClusterConfigSpec defines the desired state of SriovFecClusterConfig
 type SriovFecClusterConfigSpec struct {
-	// +kubebuilder:validation:Required
-
-	// If true, then the first node config will be used for all nodes.
-	// nodeName will be ignored. First card config will be used, pciAddress will be ignored
-	OneNodeConfigForAll bool `json:"oneNodeConfigForAll"`
-
 	// +kubebuilder:validation:Required
 
 	// List of node configurations

@@ -48,176 +48,159 @@ spec:
               description: List of node configurations
               items:
                 properties:
-                  cards:
-                    description: List of card configs
+                  nodeName:
+                    description: Name of the node
+                    type: string
+                  physicalFunctions:
+                    description: List of physical functions (cards) configs
                     items:
+                      description: PhysicalFunctionConfig defines a possible configuration
+                        of a single Physical Function (PF), i.e. card
                       properties:
                         bbDevConfig:
-                          description: QueuesConfiguration is a config for card's
-                            queues
+                          description: BBDevConfig is a config for PF's queues
                           properties:
-                            downlink:
+                            n3000:
+                              description: N3000BBDevConfig specifies variables to
+                                configure N3000 with
                               properties:
-                                bandwidth:
-                                  type: integer
-                                loadBalance:
-                                  type: integer
-                                queues:
+                                downlink:
                                   properties:
-                                    vf0:
-                                      maximum: 32
-                                      minimum: 0
+                                    bandwidth:
                                       type: integer
-                                    vf1:
-                                      maximum: 32
-                                      minimum: 0
+                                    loadBalance:
                                       type: integer
-                                    vf2:
-                                      maximum: 32
-                                      minimum: 0
+                                    queues:
+                                      properties:
+                                        vf0:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                        vf1:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                        vf2:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                        vf3:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                        vf4:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                        vf5:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                        vf6:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                        vf7:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                  required:
+                                  - bandwidth
+                                  - loadBalance
+                                  - queues
+                                  type: object
+                                flrTimeout:
+                                  minimum: 0
+                                  type: integer
+                                networkType:
+                                  enum:
+                                  - FPGA_5GNR
+                                  - FPGA_LTE
+                                  type: string
+                                pfMode:
+                                  type: boolean
+                                uplink:
+                                  properties:
+                                    bandwidth:
                                       type: integer
-                                    vf3:
-                                      maximum: 32
-                                      minimum: 0
+                                    loadBalance:
                                       type: integer
-                                    vf4:
-                                      maximum: 32
-                                      minimum: 0
-                                      type: integer
-                                    vf5:
-                                      maximum: 32
-                                      minimum: 0
-                                      type: integer
-                                    vf6:
-                                      maximum: 32
-                                      minimum: 0
-                                      type: integer
-                                    vf7:
-                                      maximum: 32
-                                      minimum: 0
-                                      type: integer
+                                    queues:
+                                      properties:
+                                        vf0:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                        vf1:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                        vf2:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                        vf3:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                        vf4:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                        vf5:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                        vf6:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                        vf7:
+                                          maximum: 32
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                  required:
+                                  - bandwidth
+                                  - loadBalance
+                                  - queues
                                   type: object
                               required:
-                              - bandwidth
-                              - loadBalance
-                              - queues
+                              - downlink
+                              - flrTimeout
+                              - networkType
+                              - pfMode
+                              - uplink
                               type: object
-                            flrTimeout:
-                              minimum: 0
-                              type: integer
-                            networkType:
-                              enum:
-                              - FPGA_5GNR
-                              - FPGA_LTE
-                              type: string
-                            pfMode:
-                              type: boolean
-                            uplink:
-                              properties:
-                                bandwidth:
-                                  type: integer
-                                loadBalance:
-                                  type: integer
-                                queues:
-                                  properties:
-                                    vf0:
-                                      maximum: 32
-                                      minimum: 0
-                                      type: integer
-                                    vf1:
-                                      maximum: 32
-                                      minimum: 0
-                                      type: integer
-                                    vf2:
-                                      maximum: 32
-                                      minimum: 0
-                                      type: integer
-                                    vf3:
-                                      maximum: 32
-                                      minimum: 0
-                                      type: integer
-                                    vf4:
-                                      maximum: 32
-                                      minimum: 0
-                                      type: integer
-                                    vf5:
-                                      maximum: 32
-                                      minimum: 0
-                                      type: integer
-                                    vf6:
-                                      maximum: 32
-                                      minimum: 0
-                                      type: integer
-                                    vf7:
-                                      maximum: 32
-                                      minimum: 0
-                                      type: integer
-                                  type: object
-                              required:
-                              - bandwidth
-                              - loadBalance
-                              - queues
-                              type: object
-                          required:
-                          - downlink
-                          - flrTimeout
-                          - networkType
-                          - pfMode
-                          - uplink
                           type: object
                         pciAddress:
-                          description: PCIAdress is a card's PCI address that will
-                            be configured according to this spec
+                          description: PCIAdress is a Physical Functions's PCI address
+                            that will be configured according to this spec
                           pattern: '[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]'
-                          type: string
-                        pfDeviceID:
-                          description: PFDeviceID
                           type: string
                         pfDriver:
                           description: PFDriver to bound the PFs to
                           type: string
-                        vendorID:
-                          description: VendorID is ID of card's vendor
-                          type: string
                         vfAmount:
                           description: VFAmount is an amount of VFs to be created
                           type: integer
-                        vfDeviceID:
-                          description: VFDeviceID
-                          type: string
                         vfDriver:
                           description: VFDriver to bound the VFs to
                           type: string
                       required:
                       - bbDevConfig
-                      - pfDeviceID
                       - pfDriver
-                      - vendorID
                       - vfAmount
-                      - vfDeviceID
                       - vfDriver
                       type: object
                     type: array
-                  nodeName:
-                    description: Name of the node
-                    type: string
-                  oneCardConfigForAll:
-                    description: If true, then the first card config will be used
-                      for all cards. pciAddress will be ignored.
-                    type: boolean
                 required:
-                - cards
-                - oneCardConfigForAll
+                - physicalFunctions
                 type: object
               type: array
-            oneNodeConfigForAll:
-              description: If true, then the first node config will be used for all
-                nodes. nodeName will be ignored. First card config will be used, pciAddress
-                will be ignored
-              type: boolean
           required:
           - nodes
-          - oneNodeConfigForAll
           type: object
         status:
           description: SriovFecClusterConfigStatus defines the observed state of SriovFecClusterConfig

@@ -26,33 +26,26 @@ type SriovAccelerator struct {
 }
 
 type NodeInventory struct {
-	SriovAccelerators []SriovAccelerator `json:"sriovAccelerators"`
+	SriovAccelerators []SriovAccelerator `json:"sriovAccelerators,omitempty"`
 }
 
 // SriovFecNodeConfigSpec defines the desired state of SriovFecNodeConfig
 type SriovFecNodeConfigSpec struct {
 	// +kubebuilder:validation:Required
 
-	// If true, then the first card config will be used for all cards.
-	// pciAddress will be ignored.
-	OneCardConfigForAll bool `json:"oneCardConfigForAll"`
-
-	// +kubebuilder:validation:Required
-
-	// List of card configs
-	Cards []CardConfig `json:"cards"`
+	// List of PhysicalFunctions configs
+	PhysicalFunctions []PhysicalFunctionConfig `json:"physicalFunctions"`
 }
 
 // SriovFecNodeConfigStatus defines the observed state of SriovFecNodeConfig
 type SriovFecNodeConfigStatus struct {
-	SyncStatus    SyncStatus    `json:"syncStatus,omitempty"`
-	LastSyncError string        `json:"lastSyncError,omitempty"`
-	Inventory     NodeInventory `json:"inventory,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Inventory  NodeInventory      `json:"inventory,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="SyncStatus",type=string,JSONPath=`.status.syncStatus`
+// +kubebuilder:printcolumn:name="Configured",type=string,JSONPath=`.status.conditions[?(@.type=="Configured")].status`
 
 // SriovFecNodeConfig is the Schema for the sriovfecnodeconfigs API
 type SriovFecNodeConfig struct {

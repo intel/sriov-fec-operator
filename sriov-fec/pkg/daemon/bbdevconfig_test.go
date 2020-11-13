@@ -52,7 +52,7 @@ func TestMain(t *testing.T) {
 }
 
 var _ = Describe("bbdevconfig", func() {
-	sampleBBDevConfig0 := sriovv1.BBDevConfig{
+	sampleBBDevConfig0 := sriovv1.N3000BBDevConfig{
 		PFMode: true,
 		Uplink: sriovv1.UplinkDownlink{
 			Bandwidth:   8,
@@ -87,7 +87,7 @@ var _ = Describe("bbdevconfig", func() {
 	var _ = Describe("generateBBDevConfigFile", func() {
 		var _ = It("will create valid config ", func() {
 			filename := "config.cfg"
-			err := generateBBDevConfigFile(&sampleBBDevConfig0, filepath.Join(testTmpFolder, filename))
+			err := generateN3000BBDevConfigFile(&sampleBBDevConfig0, filepath.Join(testTmpFolder, filename))
 			Expect(err).ToNot(HaveOccurred())
 			err = compareFiles(filepath.Join(testTmpFolder, filename), "testdata/bbdevconfig_test1.cfg")
 			Expect(err).ToNot(HaveOccurred())

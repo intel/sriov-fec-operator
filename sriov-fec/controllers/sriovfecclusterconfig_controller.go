@@ -94,38 +94,6 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("is one config for all nodes requested?",
-		"oneNodeConfigForAll", clusterConfig.Spec.OneNodeConfigForAll,
-		"amount of node configs", len(clusterConfig.Spec.Nodes))
-
-	if clusterConfig.Spec.OneNodeConfigForAll {
-		if len(clusterConfig.Spec.Nodes) != 1 {
-			log.Info("provided wrong amount of NodeConfigs - should be 1", "NodeConfigs amount",
-				len(clusterConfig.Spec.Nodes))
-
-			updateStatus(sriovfecv1.FailedSync, fmt.Sprintf(
-				"OneNodeConfigForAll requested but amount of provided nodeConfigs is %d (should be 1)",
-				len(clusterConfig.Spec.Nodes)))
-
-			return reconcile.Result{}, nil
-		}
-
-		if !clusterConfig.Spec.Nodes[0].OneCardConfigForAll {
-			updateStatus("InvalidConfig",
-				"OneNodeConfigForAll requested but OneCardConfigForAll is false. It must be true")
-			return reconcile.Result{}, nil
-		}
-	}
-
-	for idx, nodeConfig := range clusterConfig.Spec.Nodes {
-		if nodeConfig.OneCardConfigForAll && len(nodeConfig.Cards) != 1 {
-			updateStatus(sriovfecv1.FailedSync,
-				fmt.Sprintf("OneCardConfigForAll requested but amount of provided cardConfigs is %d (should be 1) "+
-					"for %d node on the list", len(clusterConfig.Spec.Nodes), idx))
-			return reconcile.Result{}, nil
-		}
-	}
-
 	nodeList, err := r.getNodesWithIntelAccelerator()
 	if err != nil {
 		log.Error(err, "failed to obtain nodes with Intel accelerator")
@@ -188,62 +156,39 @@ func (r *SriovFecClusterConfigReconciler) renderNodeConfigs(clusterConfig *sriov
 
 	nodeConfigs := []sriovfecv1.SriovFecNodeConfig{}
 
-	if clusterConfig.Spec.OneNodeConfigForAll {
+	nodeHasAccelerator := func(nodeName string) bool {
+		// check user-provided NodeName against list of nodes with accelerators according to the NFD
 		for _, node := range nodeList.Items {
-			nodeCfg := sriovfecv1.SriovFecNodeConfig{
-				TypeMeta: v1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "SriovFecNodeConfig",
-				},
-				Spec: sriovfecv1.SriovFecNodeConfigSpec{
-					OneCardConfigForAll: true,
-					Cards:               clusterConfig.Spec.Nodes[0].Cards,
-				},
+			if node.Name == nodeName {
+				return true
 			}
-
-			nodeCfg.SetName(node.Name)
-			nodeCfg.SetNamespace("default")
-
-			log.Info("creating nodeConfig", "nodeName", node.Name)
-
-			nodeConfigs = append(nodeConfigs, nodeCfg)
-		}
-	} else {
-		nodeHasAccelerator := func(nodeName string) bool {
-			// check user-provided NodeName against list of nodes with accelerators according to the NFD
-			for _, node := range nodeList.Items {
-				if node.Name == nodeName {
-					return true
-				}
-			}
-
-			return false
 		}
 
-		for _, nodeConfigSpec := range clusterConfig.Spec.Nodes {
-			if !nodeHasAccelerator(nodeConfigSpec.NodeName) {
-				log.Info("received config for node that has no accelerator - NodeConfig spec will not be generated",
-					"nodeName", nodeConfigSpec.NodeName)
-				continue
-			}
+		return false
+	}
 
-			nodeCfg := sriovfecv1.SriovFecNodeConfig{
-				TypeMeta: v1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "SriovFecNodeConfig",
-				},
-				Spec: sriovfecv1.SriovFecNodeConfigSpec{
-					OneCardConfigForAll: nodeConfigSpec.OneCardConfigForAll,
-					Cards:               nodeConfigSpec.Cards,
-				},
-			}
-			nodeCfg.SetName(nodeConfigSpec.NodeName)
-			nodeCfg.SetNamespace("default")
-
-			log.Info("creating nodeConfig", "nodeName", nodeConfigSpec.NodeName)
-
-			nodeConfigs = append(nodeConfigs, nodeCfg)
+	for _, nodeConfigSpec := range clusterConfig.Spec.Nodes {
+		if !nodeHasAccelerator(nodeConfigSpec.NodeName) {
+			log.Info("received config for node that has no accelerator - NodeConfig spec will not be generated",
+				"nodeName", nodeConfigSpec.NodeName)
+			continue
 		}
+
+		nodeCfg := sriovfecv1.SriovFecNodeConfig{
+			TypeMeta: v1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "SriovFecNodeConfig",
+			},
+			Spec: sriovfecv1.SriovFecNodeConfigSpec{
+				PhysicalFunctions: nodeConfigSpec.PhysicalFunctions,
+			},
+		}
+		nodeCfg.SetName(nodeConfigSpec.NodeName)
+		nodeCfg.SetNamespace("default")
+
+		log.Info("creating nodeConfig", "nodeName", nodeConfigSpec.NodeName)
+
+		nodeConfigs = append(nodeConfigs, nodeCfg)
 	}
 
 	return nodeConfigs

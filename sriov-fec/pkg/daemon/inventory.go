@@ -18,11 +18,16 @@ const (
 	vendorID            = "8086"
 )
 
+type deviceInfo struct {
+	VFDeviceID string
+	DeviceName string
+}
+
 var (
-	deviceIDWhitelist = map[string]string{
-		"0d8f": "0d90", // 5G
-		"5052": "5050", // LTE
-		"0b32": "",     // Factory dummy
+	deviceIDWhitelist = map[string]deviceInfo{
+		"0d8f": {"0d90", "FPGA_5GNR"},
+		"5052": {"5050", "FPGA_LTE"},
+		"0b32": {"", ""}, // Factory dummy
 	}
 )
 
@@ -62,7 +67,6 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 		driver, err := utils.GetDriverName(device.Address)
 		if err != nil {
 			log.Info("unable to get driver for device", "pci", device.Address, "reason", err.Error())
-		} else {
 			driver = ""
 		}
 

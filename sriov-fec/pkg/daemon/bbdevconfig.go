@@ -4,9 +4,12 @@
 package daemon
 
 import (
+	"errors"
 	"fmt"
+	"os/exec"
 	"strconv"
 
+	"github.com/go-logr/logr"
 	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
 	"gopkg.in/ini.v1"
 )
@@ -21,9 +24,15 @@ const (
 	load_balance = "load_balance"
 	vfqmap       = "vfqmap"
 	flr_time_out = "flr_time_out"
+
+	pfConfigAppFilepath = "/sriov_workdir/pf_bb_config"
 )
 
-func generateBBDevConfigFile(nc *sriovv1.BBDevConfig, file string) error {
+func generateN3000BBDevConfigFile(nc *sriovv1.N3000BBDevConfig, file string) error {
+	if nc == nil {
+		return errors.New("received nil N3000BBDevConfig")
+	}
+
 	cfg := ini.Empty()
 	err := cfg.NewSections(mode, ul, dl, flr)
 	if err != nil {
@@ -49,5 +58,31 @@ func generateBBDevConfigFile(nc *sriovv1.BBDevConfig, file string) error {
 	if err != nil {
 		return fmt.Errorf("Unable to write config to file: %s", file)
 	}
+	return nil
+}
+
+// runPFConfig executes a pf-bb-config tool
+// deviceName is one of: FPGA_LTE or FPGA_5GNR or ACC100
+// cfgFilepath is a filepath to the config
+// pciAddress points to a specific PF device
+func runPFConfig(log logr.Logger, deviceName, cfgFilepath, pciAddress string) error {
+	switch deviceName {
+	case "FPGA_LTE", "FPGA_5GNR", "ACC100":
+	default:
+		return fmt.Errorf("incorrect deviceName for pf config: %s", deviceName)
+	}
+
+	cmd := exec.Command(pfConfigAppFilepath, deviceName, "-c", cfgFilepath, "-p", pciAddress)
+	log.Info("executing pf config app", "cmd", cmd)
+
+	out, err := cmd.Output()
+	output := string(out)
+	if err != nil {
+		log.Error(err, "failed to execute pf config app", "cmd", cmd, "output", output)
+		return err
+	}
+
+	log.Info("pf config app output", "cmd", cmd, "output", output)
+
 	return nil
 }

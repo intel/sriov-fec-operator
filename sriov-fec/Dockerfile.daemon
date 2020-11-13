@@ -3,15 +3,7 @@
 
 FROM golang:1.14 as builder
 
-WORKDIR /workspace
-COPY go.mod go.sum ./
-RUN go mod download
-
-COPY cmd cmd/
-COPY pkg pkg/
-copy api api/
-
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
+WORKDIR /workspace-pf
 
 RUN git clone --depth 1 --branch r44 https://github.com/benhoyt/inih && \
     cd inih/extra  && \
@@ -20,6 +12,18 @@ RUN git clone --depth 1 --branch r44 https://github.com/benhoyt/inih && \
 RUN git clone  --depth 1 --branch v20.11 https://github.com/intel/pf-bb-config && \
     cd pf-bb-config && \
     INIH_PATH=../inih make
+
+
+WORKDIR /workspace-go
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY cmd cmd/
+COPY pkg pkg/
+copy api api/
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
 
 FROM registry.access.redhat.com/ubi8:latest
 
@@ -30,7 +34,7 @@ RUN mkdir -p /usr/share/misc/ && \
     rm -rfv ./pci.ids.gz
 
 WORKDIR /sriov_workdir
-COPY --from=builder /workspace/sriov_fec_daemon .
-COPY --from=builder /workspace/pf-bb-config/pf_bb_config .
+COPY --from=builder /workspace-go/sriov_fec_daemon .
+COPY --from=builder /workspace-pf/pf-bb-config/pf_bb_config .
 
 ENTRYPOINT ["/sriov_workdir/sriov_fec_daemon"]

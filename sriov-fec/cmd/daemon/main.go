@@ -12,6 +12,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientset "k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,6 +55,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	cset, err := clientset.NewForConfig(config)
+	if err != nil {
+		setupLog.Error(err, "failed to create clientset")
+		os.Exit(1)
+	}
+
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
@@ -65,7 +72,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	daemon := daemon.NewNodeConfigReconciler(mgr.GetClient(),
+	daemon := daemon.NewNodeConfigReconciler(mgr.GetClient(), cset,
 		ctrl.Log.WithName("daemon"), nodeName, namespace)
 
 	if err := daemon.SetupWithManager(mgr); err != nil {
