@@ -4,82 +4,94 @@
 package daemon
 
 import (
+	"context"
 	"encoding/xml"
-	"io/ioutil"
+	"errors"
+	"io"
 	"os"
+	"strconv"
+	"time"
 )
 
-type Instance struct {
-	XMLName   xml.Name     `xml:"Instance"`
-	Vendor    string       `xml:"vendor,attr"`
-	Device    string       `xml:"device,attr"`
-	Subdevice string       `xml:"subdevicedevice,attr"`
-	Subvendor string       `xml:"subvendor,attr"`
-	Bus       string       `xml:"bus,attr"`
-	Dev       string       `xml:"dev,attr"`
-	Func      string       `xml:"func,attr"`
-	PBA       string       `xml:"PBA,attr"`
-	PortID    string       `xml:"port_id,attr"`
-	Display   string       `xml:"display,attr"`
-	Modules   []Module     `xml:"Module"`
-	VPDs      []VPD        `xml:"VPD"`
-	MACAddr   MACAddresses `xml:"MACAddresses"`
-}
+var (
+	maxFileSize           = int64(10)              // Maximum update file size in kilobytes
+	updateXMLParseTimeout = 100 * time.Millisecond // Update xml parse timeout
+)
 
-type Module struct {
-	XMLName xml.Name     `xml:"Module"`
+type module struct {
 	Type    string       `xml:"type,attr"`
 	Version string       `xml:"version,attr"`
-	Status  ModuleStatus `xml:"Status"`
+	Status  moduleStatus `xml:"Status"`
 }
 
-type ModuleStatus struct {
-	XMLName xml.Name `xml:"Status"`
-	Result  string   `xml:"result,attr"`
+type moduleStatus struct {
+	Result string `xml:"result,attr"`
 }
 
-type VPD struct {
-	XMLName xml.Name `xml:"VPD"`
-	Type    string   `xml:"type,attr"`
-	Key     string   `xml:"key,attr"`
+type deviceUpdateInstance struct {
+	Modules             []module
+	NextUpdateAvailable int
 }
 
-type MAC struct {
-	XMLName xml.Name `xml:"MAC"`
-	Address string   `xml:"address,attr"`
-}
-
-type SAN struct {
-	XMLName xml.Name `xml:"SAN"`
-	Address string   `xml:"address,attr"`
-}
-
-type MACAddresses struct {
-	XMLName xml.Name `xml:"MACAddresses"`
-	Mac     MAC      `xml:"MAC"`
-	San     SAN      `xml:"SAN"`
-}
-
-type DeviceUpdate struct {
-	XMLName             xml.Name   `xml:"DeviceUpdate"`
-	Instance            []Instance `xml:"Instance"`
-	PowerCycleRequired  int        `xml:"PowerCycleRequired"`
-	NextUpdateAvailable int        `xml:"NextUpdateAvailable"`
-	RebootRequired      int        `xml:"RebootRequired"`
-}
-
-func getDeviceUpdateFromFile(path string) (*DeviceUpdate, error) {
+func getDeviceUpdateFromFile(path string) (*deviceUpdateInstance, error) {
 	invf, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer invf.Close()
-	b, _ := ioutil.ReadAll(invf)
 
-	u := &DeviceUpdate{}
-	err = xml.Unmarshal(b, u)
+	stat, err := invf.Stat()
 	if err != nil {
 		return nil, err
 	}
-	return u, nil
+
+	kSize := stat.Size() / 1024
+	if kSize > maxFileSize {
+		return nil, errors.New("Update status xml file too large: " + strconv.Itoa(int(kSize)) + "kB")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), updateXMLParseTimeout)
+	defer cancel()
+
+	u := &deviceUpdateInstance{}
+	decoder := xml.NewDecoder(invf)
+	for {
+		select {
+		case <-ctx.Done():
+			cancel()
+			return nil, ctx.Err()
+		default:
+			token, err := decoder.Token()
+			if token == nil {
+				return u, nil
+			}
+			if err != nil {
+				if err == io.EOF {
+					return u, nil
+				}
+				return nil, err
+			}
+
+			switch t := token.(type) {
+			case xml.StartElement:
+				if t.Name.Local == "Module" {
+					var m module
+					err := decoder.DecodeElement(&m, &t)
+					if err != nil {
+						return nil, err
+					}
+					u.Modules = append(u.Modules, m)
+				}
+
+				if t.Name.Local == "NextUpdateAvailable" {
+					var nua int
+					err := decoder.DecodeElement(&nua, &t)
+					if err != nil {
+						return nil, err
+					}
+					u.NextUpdateAvailable = nua
+				}
+			}
+		}
+	}
 }

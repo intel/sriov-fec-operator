@@ -243,16 +243,11 @@ func (fm *FortvilleManager) flashMac(mac string, dryRun bool) error {
 				return err
 			}
 
-			if len(us.Instance) != 1 {
-				err := fmt.Errorf("Invalid update status Instance size, there should be one element %+v", us)
-				return err
-			}
-
-			var em ModuleStatus
+			var em moduleStatus
 			var errStatus error
 
 			moduleVersions := ""
-			for _, m := range us.Instance[0].Modules {
+			for _, m := range us.Modules {
 				if m.Status != em {
 					if m.Status.Result != "Success" {
 						errStatus = fmt.Errorf("Invalid update result: %s for MAC: %s module %s version %s",
