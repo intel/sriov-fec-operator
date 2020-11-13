@@ -298,6 +298,7 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 				return true
 			}
 		}
+		return true
 	})
 
 	if err != nil {
