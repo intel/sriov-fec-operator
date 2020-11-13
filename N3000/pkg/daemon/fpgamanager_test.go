@@ -6,12 +6,15 @@ package daemon
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
 	"k8s.io/klog/klogr"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (
@@ -87,6 +90,20 @@ func fakeFpgaInfo(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
 	return "", fmt.Errorf("Unsupported command: %s", cmd)
 }
 
+func fakeFpgasUpdate(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
+	if strings.Contains(cmd.String(), "fpgasupdate") {
+		return "", nil
+	}
+	return "", fmt.Errorf("Unsupported command: %s", cmd)
+}
+
+func fakeRsu(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
+	if strings.Contains(cmd.String(), "rsu") && strings.Contains(cmd.String(), "bmcimg") {
+		return "", nil
+	}
+	return "", fmt.Errorf("Unsupported command: %s", cmd)
+}
+
 func TestMain(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Main suite")
@@ -94,6 +111,28 @@ func TestMain(t *testing.T) {
 
 var _ = Describe("FPGA Manager", func() {
 	log := klogr.New().WithName("fpgamanager-Test")
+	f := FPGAManager{Log: ctrl.Log.WithName("daemon-test")}
+	sampleOneFPGA := fpgav1.N3000Node{
+		Spec: fpgav1.N3000NodeSpec{
+			FPGA: []fpgav1.N3000Fpga{
+				{
+					PCIAddr: "0000:1b:00.0",
+				},
+			},
+		},
+	}
+	sampleTwoFPGAs := fpgav1.N3000Node{
+		Spec: fpgav1.N3000NodeSpec{
+			FPGA: []fpgav1.N3000Fpga{
+				{
+					PCIAddr: "0000:1b:00.0",
+				},
+				{
+					PCIAddr: "0000:1x:00.0",
+				},
+			},
+		},
+	}
 	var _ = Describe("getFPGAInfo", func() {
 		var _ = It("will return valid []N3000FpgaStatus ", func() {
 			fpgaInfoExec = fakeFpgaInfo
@@ -132,12 +171,28 @@ var _ = Describe("FPGA Manager", func() {
 				Equal("FPGA temperature: 98.500000, exceeded limit: 85.000000, on PCIAddr: 0000:2b:00.0"))
 		})
 
-		var _ = It("will return error when PCIAddr not exist", func() {
+		var _ = It("will return error when PCIAddr does not exist", func() {
 			fpgaInfoExec = fakeFpgaInfo
 			err := checkFPGADieTemperature("0000:xx:00.0", log)
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("Not found PCIAddr: 0000:xx:00.0"))
+		})
+	})
+	var _ = Describe("programFPGAs", func() {
+		var _ = It("will return nil in successfully scenario", func() {
+			fpgaInfoExec = fakeFpgaInfo
+			fpgasUpdateExec = fakeFpgasUpdate
+			rsuExec = fakeRsu
+			err := f.ProgramFPGAs(&sampleOneFPGA)
+			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("will return error when one PCIAddr in CR does not exist", func() {
+			fpgaInfoExec = fakeFpgaInfo
+			fpgasUpdateExec = fakeFpgasUpdate
+			rsuExec = fakeRsu
+			err := f.ProgramFPGAs(&sampleTwoFPGAs)
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })
