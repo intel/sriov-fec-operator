@@ -124,7 +124,7 @@ spec:
       serviceAccountName: fpga-driver
       hostPID: true
       containers:
-      - image: "{{ .N3000_DRIVER_CONTAINER_IMAGE }}:{{ .N3000_OPAE_VERSION }}-{{ .kernel }}"
+      - image: "{{ .N3000_DRIVER_CONTAINER_IMAGE }}--{{ .kernel }}"
         imagePullPolicy: Always
         name: fpga-driver
         command: ["/driver-workdir/entrypoint.sh"]

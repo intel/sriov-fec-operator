@@ -30,7 +30,7 @@ spec:
         - /manager
         args:
         - --enable-leader-election
-        image: controller:latest
+        image: n3000-operator:v1.0.0
         name: manager
         resources:
           limits:
@@ -44,8 +44,6 @@ spec:
           value: $N3000_DAEMON_IMAGE
         - name: N3000_DRIVER_CONTAINER_IMAGE
           value: $N3000_DRIVER_CONTAINER_IMAGE
-        - name: N3000_OPAE_VERSION
-          value: $N3000_OPAE_VERSION
         - name: N3000_MONITORING_IMAGE
           value: $N3000_MONITORING_IMAGE
       terminationGracePeriodSeconds: 10

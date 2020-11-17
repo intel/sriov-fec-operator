@@ -30,7 +30,7 @@ spec:
         - /manager
         args:
         - --enable-leader-election
-        image: controller:latest
+        image: sriov-fec-operator:v1.0.0
         imagePullPolicy: Always
         name: manager
         resources:
@@ -43,6 +43,4 @@ spec:
         env:
         - name: SRIOV_FEC_DAEMON_IMAGE
           value: $SRIOV_FEC_DAEMON_IMAGE
-        - name: SRIOV_FEC_DAEMON_VERSION
-          value: $SRIOV_FEC_DAEMON_VERSION
       terminationGracePeriodSeconds: 10

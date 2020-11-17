@@ -123,7 +123,7 @@ spec:
       hostNetwork: true
       containers:
       - name: sriov-fec-daemon
-        image: "{{ .SRIOV_FEC_DAEMON_IMAGE }}:{{ .SRIOV_FEC_DAEMON_VERSION }}"
+        image: "{{ .SRIOV_FEC_DAEMON_IMAGE }}"
         imagePullPolicy: Always
         args:
         - --zap-devel
