@@ -22,9 +22,10 @@ import (
 )
 
 const (
-	drainHelperTimeout      = 90 * time.Second
-	leaseDurationEnvVarName = "LEASE_DURATION_SECONDS"
-	leaseDurationDefault    = int64(60) // probably needs tweaking (especially for the SRIOV with reboot)
+	drainHelperTimeoutEnvVarName = "DRAIN_TIMEOUT_SECONDS"
+	drainHelperTimeoutDefault    = int64(90)
+	leaseDurationEnvVarName      = "LEASE_DURATION_SECONDS"
+	leaseDurationDefault         = int64(600)
 )
 
 // logWriter is a wrapper around logr's log.Info() to allow drain.Helper logging
@@ -49,6 +50,19 @@ type DrainHelper struct {
 
 func NewDrainHelper(l logr.Logger, cs *clientset.Clientset, nodeName, namespace string) *DrainHelper {
 	log := l.WithName("drainhelper")
+
+	drainTimeout := drainHelperTimeoutDefault
+	drainTimeoutStr := os.Getenv(drainHelperTimeoutEnvVarName)
+	if drainTimeoutStr != "" {
+		val, err := strconv.ParseInt(drainTimeoutStr, 10, 64)
+		if err != nil {
+			log.Error(err, "failed to parse env variable to int64 - using default value",
+				"variable", drainHelperTimeoutEnvVarName)
+		} else {
+			drainTimeout = val
+		}
+	}
+	log.Info("drain settings", "timeout seconds", drainTimeout)
 
 	leaseDur := leaseDurationDefault
 	leaseDurStr := os.Getenv(leaseDurationEnvVarName)
@@ -85,7 +99,7 @@ func NewDrainHelper(l logr.Logger, cs *clientset.Clientset, nodeName, namespace 
 			IgnoreAllDaemonSets: true,
 			DeleteLocalData:     true,
 			GracePeriodSeconds:  -1,
-			Timeout:             drainHelperTimeout,
+			Timeout:             time.Duration(drainTimeout) * time.Second,
 			OnPodDeletedOrEvicted: func(pod *corev1.Pod, usingEviction bool) {
 				act := "Deleted"
 				if usingEviction {
