@@ -127,10 +127,18 @@ spec:
       - image: "{{ .N3000_DRIVER_CONTAINER_IMAGE }}:{{ .N3000_OPAE_VERSION }}-{{ .kernel }}"
         imagePullPolicy: Always
         name: fpga-driver
-        command: ["/entrypoint.sh"]
+        command: ["/driver-workdir/entrypoint.sh"]
         securityContext:
           privileged: true
           seLinuxOptions:
             level: "s0"
+      volumeMounts:
+        - name: host_driver_mtd
+          mountPath: /host_driver_mtd
+      volumes:
+        - name: host_driver_mtd
+          hostPath:
+            path: "/lib/modules/{{ .kernel }}/kernel/drivers/mtd"
+
       nodeSelector:
         feature.node.kubernetes.io/pci-8086.present: "true"
