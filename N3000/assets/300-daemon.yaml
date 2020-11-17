@@ -129,8 +129,8 @@ spec:
         imagePullPolicy: Always
         name: n3000-daemon
         volumeMounts:
-          - name: dev
-            mountPath: /dev
+          - name: devchar
+            mountPath: /dev/char
           - name: devmem
             mountPath: /dev/mem
           - name: devkmem
@@ -157,8 +157,6 @@ spec:
             mountPath: /sys/devices
           - name: module
             mountPath: /sys/module
-          - name: systab
-            mountPath: /sys/firmware/efi/systab
           - name: cache-volume
             mountPath: /n3000-workdir
         env:
@@ -175,9 +173,9 @@ spec:
           seLinuxOptions:
             level: "s0"
       volumes:
-        - name: dev
+        - name: devchar
           hostPath:
-            path: /dev
+            path: /dev/char
         - name: devmem
           hostPath:
             path: /dev/mem
@@ -217,8 +215,5 @@ spec:
         - name: module
           hostPath:
             path: /sys/module
-        - name: systab
-          hostPath:
-            path: /sys/firmware/efi/systab
         - name: cache-volume
           emptyDir: {}
