@@ -101,14 +101,6 @@ func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	}
 	log.Info("obtained nodeConfig", "generation", nodeConfig.GetGeneration())
 
-	lastCondition := meta.FindStatusCondition(nodeConfig.Status.Conditions, conditionConfigured)
-	if lastCondition != nil {
-		if lastCondition.ObservedGeneration == nodeConfig.GetGeneration() {
-			log.Info("CR already handled", "generation", lastCondition.ObservedGeneration)
-			return ctrl.Result{}, nil
-		}
-	}
-
 	configuredCondition := metav1.Condition{
 		Type:               conditionConfigured,
 		Status:             metav1.ConditionTrue,
@@ -117,6 +109,7 @@ func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		Reason:             "ConfigurationSucceeded",
 	}
 
+	skipStatusUpdate := false
 	if len(nodeConfig.Spec.PhysicalFunctions) > 0 {
 		var configurationErr error
 
@@ -145,6 +138,7 @@ func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 					configurationErr = err
 					return true
 				}
+				skipStatusUpdate = true
 				return false // leave node cordoned & keep the leadership
 			}
 
@@ -169,6 +163,11 @@ func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 			configuredCondition.Reason = "ConfigurationFailed"
 			configuredCondition.Message = configurationErr.Error()
 		}
+	}
+
+	if skipStatusUpdate {
+		log.Info("status update skipped - CR will be handled again after node reboot")
+		return ctrl.Result{}, nil
 	}
 
 	meta.SetStatusCondition(&nodeConfig.Status.Conditions, configuredCondition)
