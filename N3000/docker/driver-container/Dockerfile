@@ -9,11 +9,14 @@ ENV KERNEL_VERSION=$KERNEL_VERSION
 ARG OPAE_VERSION
 ENV OPAE_VERSION=$OPAE_VERSION
 
-RUN dnf install -y  \
+RUN dnf install --disablerepo=* --enablerepo=ubi-8-appstream --enablerepo=ubi-8-baseos  -y  \
+    make gcc patch cpio kmod
+
+RUN dnf install --disablerepo=* --enablerepo=rhel-8-for-x86_64-baseos-rpms -y \
     kernel-devel-${KERNEL_VERSION} \
     kernel-headers-${KERNEL_VERSION} \
     kernel-core-${KERNEL_VERSION} \
-    elfutils-libelf-devel make gcc patch cpio kmod && \
+    elfutils-libelf-devel && \
     dnf clean all
 
 WORKDIR /opae-prepare
