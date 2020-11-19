@@ -99,6 +99,12 @@ function build_image {
     build_image "sriov-fec" "Dockerfile.daemon" "${SRIOV_D_IMG}" "${SRIOV_D_BUILD_ARGS}"
 ### END
 
+### BUILD Node labeler daemon
+    NODE_LABLER_TAG="${IMAGE_VER}"
+    NODE_LABLER_IMG="n3000-labeler:${NODE_LABLER_TAG}"
+    NODE_LABLER_BUILD_ARGS=""
+    build_image "N3000/labeler" "Dockerfile" "${NODE_LABLER_IMG}" "${NODE_LABLER_BUILD_ARGS}"
+### END
 
 if [ -n "${REGISTRY}" ]
 then

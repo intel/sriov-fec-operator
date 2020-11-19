@@ -31,7 +31,6 @@ spec:
         args:
         - --enable-leader-election
         image: sriov-fec-operator:v1.0.0
-        imagePullPolicy: Always
         name: manager
         resources:
           limits:

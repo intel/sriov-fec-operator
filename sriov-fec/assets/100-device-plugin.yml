@@ -90,7 +90,7 @@ spec:
     spec:
       hostNetwork: true
       nodeSelector:
-        feature.node.kubernetes.io/pci-8086.present: "true"
+        fpga.intel.com/intel-accelerator-present: ""
       serviceAccountName: sriov-device-plugin
       containers:
       - name: sriov-device-plugin

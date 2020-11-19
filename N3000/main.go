@@ -80,24 +80,40 @@ func main() {
 		setupLog.Error(err, "failed to create client")
 		os.Exit(1)
 	}
+
 	if err := (&assets.Manager{
 		Client:    client,
 		Log:       ctrl.Log.WithName("asset_manager").WithName("n3000"),
 		EnvPrefix: "N3000_",
 		Assets: []assets.Asset{
 			{
-				Path:              "assets/100-driver-container.yaml",
-				BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
-			},
-			{
-				Path: "assets/200-monitoring.yaml",
-			},
-			{
-				Path:              "assets/300-daemon.yaml",
+				Path:              "assets/100-labeler.yaml",
 				BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
 			},
 		},
-	}).LoadAndDeploy(context.Background()); err != nil {
+	}).LoadAndDeploy(context.Background(), false); err != nil {
+		setupLog.Error(err, "failed to deploy the labeler")
+		os.Exit(1)
+	}
+
+	if err := (&assets.Manager{
+		Client:    client,
+		Log:       ctrl.Log.WithName("asset_manager").WithName("n3000"),
+		EnvPrefix: "N3000_",
+		Assets: []assets.Asset{
+			{
+				Path:              "assets/200-driver-container.yaml",
+				BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
+			},
+			{
+				Path: "assets/300-monitoring.yaml",
+			},
+			{
+				Path:              "assets/400-daemon.yaml",
+				BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
+			},
+		},
+	}).LoadAndDeploy(context.Background(), true); err != nil {
 		setupLog.Error(err, "failed to deploy the assets")
 		os.Exit(1)
 	}

@@ -29,7 +29,7 @@ type Manager struct {
 // buildTemplateVars creates map with variables for templating.
 // Template variables are env variables with specified prefix and additional information
 // from cluster such as kernel
-func (m *Manager) buildTemplateVars(ctx context.Context) (map[string]string, error) {
+func (m *Manager) buildTemplateVars(ctx context.Context, setKernelVar bool) (map[string]string, error) {
 	tp := make(map[string]string)
 
 	for _, pair := range os.Environ() {
@@ -39,26 +39,29 @@ func (m *Manager) buildTemplateVars(ctx context.Context) (map[string]string, err
 		}
 	}
 
-	nodeList := &corev1.NodeList{}
-	err := m.Client.List(ctx, nodeList)
+	if !setKernelVar {
+		return tp, nil
+	}
+
+	nodes := &corev1.NodeList{}
+	err := m.Client.List(ctx, nodes, &client.MatchingLabels{"fpga.intel.com/intel-accelerator-present": ""})
 	if err != nil {
 		return nil, err
 	}
-	// Assuming whole cluster is using the same kernel
 
-	if len(nodeList.Items) == 0 {
+	if len(nodes.Items) == 0 {
 		m.Log.Error(nil, "received empty node list")
 		return nil, errors.New("empty node list while building template vars")
 	}
 
-	tp["kernel"] = nodeList.Items[0].Status.NodeInfo.KernelVersion
+	tp["kernel"] = nodes.Items[0].Status.NodeInfo.KernelVersion
 
 	return tp, nil
 }
 
 // LoadAndDeploy issues an asset load and then deployment
-func (m *Manager) LoadAndDeploy(ctx context.Context) error {
-	if err := m.Load(ctx); err != nil {
+func (m *Manager) LoadAndDeploy(ctx context.Context, setKernelVar bool) error {
+	if err := m.Load(ctx, setKernelVar); err != nil {
 		return err
 	}
 	if err := m.Deploy(ctx); err != nil {
@@ -68,9 +71,9 @@ func (m *Manager) LoadAndDeploy(ctx context.Context) error {
 }
 
 // Load loads given assets from paths
-func (m *Manager) Load(ctx context.Context) error {
+func (m *Manager) Load(ctx context.Context, setKernelVar bool) error {
 	log := m.Log.WithName("Load()")
-	tv, err := m.buildTemplateVars(ctx)
+	tv, err := m.buildTemplateVars(ctx, setKernelVar)
 	if err != nil {
 		log.Error(err, "failed to build template vars")
 		return err

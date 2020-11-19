@@ -46,4 +46,6 @@ spec:
           value: $N3000_DRIVER_CONTAINER_IMAGE
         - name: N3000_MONITORING_IMAGE
           value: $N3000_MONITORING_IMAGE
+        - name: N3000_LABELER_IMAGE
+          value: $N3000_LABELER_IMAGE
       terminationGracePeriodSeconds: 10

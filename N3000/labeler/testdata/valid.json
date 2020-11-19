@@ -1,0 +1,9 @@
+{
+  "VendorID": "0000",
+  "Class": "00",
+  "SubClass": "00",
+  "Devices": {
+    "test": "test"
+  },
+  "NodeLabel": "LABEL"
+}

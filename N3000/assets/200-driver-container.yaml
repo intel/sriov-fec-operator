@@ -125,7 +125,6 @@ spec:
       hostPID: true
       containers:
       - image: "{{ .N3000_DRIVER_CONTAINER_IMAGE }}--{{ .kernel }}"
-        imagePullPolicy: Always
         name: fpga-driver
         command: ["/driver-workdir/entrypoint.sh"]
         securityContext:
@@ -140,4 +139,4 @@ spec:
           hostPath:
             path: "/lib/modules/{{ .kernel }}/kernel/drivers/mtd"
       nodeSelector:
-        feature.node.kubernetes.io/pci-8086.present: "true"
+        fpga.intel.com/intel-accelerator-present: ""

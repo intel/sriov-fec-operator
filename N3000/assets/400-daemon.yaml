@@ -115,7 +115,7 @@ spec:
         app: n3000-daemonset
     spec:
       nodeSelector:
-        feature.node.kubernetes.io/pci-8086.present: "true"
+        fpga.intel.com/intel-accelerator-present: ""
       tolerations:
       - key: intel.com/fpga
         operator: Exists
@@ -126,7 +126,6 @@ spec:
       hostNetwork: true
       containers:
       - image: "{{ .N3000_DAEMON_IMAGE }}"
-        imagePullPolicy: Always
         name: n3000-daemon
         volumeMounts:
           - name: devchar

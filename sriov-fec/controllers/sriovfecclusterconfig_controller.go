@@ -131,14 +131,8 @@ func (r *SriovFecClusterConfigReconciler) SetupWithManager(mgr ctrl.Manager) err
 func (r *SriovFecClusterConfigReconciler) getNodesWithIntelAccelerator() (*corev1.NodeList, error) {
 	nodeList := &corev1.NodeList{}
 
-	// By default NFD is configured to allow only take following hardware into consideration:
-	// 0200 (Ethernet controllers), 03 (Display controllers), 12 (Processing accelerators)
-	// It would be best to reconfigure NFD to provide DeviceClass in addition to the Vendor,
-	/// but currently it's not possible (https://github.com/openshift/cluster-nfd-operator/issues/99)
 	labelsToMatch := &client.MatchingLabels{
-		"node-role.kubernetes.io/worker":              "",
-		"beta.kubernetes.io/os":                       "linux",
-		"feature.node.kubernetes.io/pci-8086.present": "true",
+		"fpga.intel.com/intel-accelerator-present": "",
 	}
 	err := r.List(context.TODO(), nodeList, labelsToMatch)
 	if err != nil {

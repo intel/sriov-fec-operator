@@ -112,7 +112,7 @@ spec:
         app: sriov-fec-daemonset
     spec:
       nodeSelector:
-        feature.node.kubernetes.io/pci-8086.present: "true"
+        fpga.intel.com/intel-accelerator-present: ""
       tolerations:
       - key: intel.com/sriovfec
         operator: Exists
@@ -124,7 +124,6 @@ spec:
       containers:
       - name: sriov-fec-daemon
         image: "{{ .SRIOV_FEC_DAEMON_IMAGE }}"
-        imagePullPolicy: Always
         args:
         - --zap-devel
         - --zap-log-level=4

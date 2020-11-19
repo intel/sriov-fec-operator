@@ -129,7 +129,6 @@ spec:
       serviceAccountName: fpgainfo-exporter
       containers:
       - image: "{{ .N3000_MONITORING_IMAGE }}"
-        imagePullPolicy: Always
         name: fpgainfo-exporter
         ports:
         - name: metrics
@@ -143,4 +142,4 @@ spec:
            memory: 200Mi
            cpu: 200m
       nodeSelector:
-        feature.node.kubernetes.io/pci-8086.present: "true"
+        fpga.intel.com/intel-accelerator-present: ""
