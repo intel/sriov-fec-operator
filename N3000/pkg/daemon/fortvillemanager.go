@@ -16,14 +16,9 @@ import (
 )
 
 const (
-	fpgadiagPath          = "fpgadiag"
-	ethtoolPath           = "ethtool"
-	nvmInstallDest        = "/n3000-workdir/nvmupdate/"
-	updateOutFile         = nvmInstallDest + "update.xml"
-	nvmPackageDestination = nvmInstallDest + "nvmupdate.tar.gz"
-	nvmupdate64ePath      = nvmInstallDest + "700Series/Linux_x64/"
-	nvmupdate64e          = "./nvmupdate64e"
-	configFile            = nvmInstallDest + "700Series/Linux_x64/nvmupdate.cfg"
+	fpgadiagPath = "fpgadiag"
+	ethtoolPath  = "ethtool"
+	nvmupdate64e = "./nvmupdate64e"
 	// Currently going from pre-4.42 to post-4.42 is the only 2 step upgrade process
 	updateStepCount = 2
 )
@@ -32,10 +27,17 @@ var (
 	nvmupdateExec = runExec
 	fpgadiagExec  = runExec
 	ethtoolExec   = runExec
+	tarExec       = runExec
 
 	pciRegex     = regexp.MustCompile(`^([a-f0-9]{4}):([a-f0-9]{2}):([a-f0-9]{2})\.([012357])$`)
 	mactestRegex = regexp.MustCompile(`^(?:\s*)([a-z0-9]+)(?:\s*)([a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2})$`)
 	ethtoolRegex = regexp.MustCompile(`^([a-z-]+?)(?:\s*:\s)(.+)$`)
+
+	nvmInstallDest        = "/n3000-workdir/nvmupdate/"
+	updateOutFile         = nvmInstallDest + "update.xml"
+	nvmPackageDestination = nvmInstallDest + "nvmupdate.tar.gz"
+	nvmupdate64ePath      = nvmInstallDest + "700Series/Linux_x64/"
+	configFile            = nvmInstallDest + "700Series/Linux_x64/nvmupdate.cfg"
 )
 
 type FortvilleManager struct {
@@ -164,10 +166,10 @@ func (fm *FortvilleManager) getInventory() ([]fpgav1.N3000FortvilleStatus, error
 		nf := fpgav1.N3000FortvilleStatus{
 			N3000PCI: d,
 		}
-
 		fs, err := fm.getN3000NICs(d)
 		if err != nil {
 			log.Error(err, "Unable to retrieve Fortville devices for N3000 card", "BMC PCI", d)
+			return nfs, err
 		} else {
 			nf.NICs = fs
 		}
@@ -180,12 +182,8 @@ func (fm *FortvilleManager) getInventory() ([]fpgav1.N3000FortvilleStatus, error
 func (fm *FortvilleManager) installNvmupdate() error {
 	log := fm.Log.WithName("installNvmupdate")
 	log.Info("Extracting nvmupdate package")
-	cmd := exec.Command("tar", "xzfv", nvmPackageDestination, "-C", nvmInstallDest)
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err := tarExec(exec.Command("tar", "xzfv", nvmPackageDestination, "-C", nvmInstallDest), log, false)
+	return err
 }
 
 func (fm *FortvilleManager) getNVMUpdate(n *fpgav1.N3000Node) error {

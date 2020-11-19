@@ -101,6 +101,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).ShouldNot(HaveOccurred())
 	fpgaUserImageSubfolderPath = testTmpFolder
 	fpgaUserImageFile = filepath.Join(testTmpFolder, "fpga")
+	mockFortvilleEnv()
 })
 
 var _ = AfterSuite(func() {
