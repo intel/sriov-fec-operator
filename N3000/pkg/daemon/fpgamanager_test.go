@@ -5,7 +5,12 @@ package daemon
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -83,28 +88,67 @@ Pr Interface Id               : 87654321-abcd-efgh-ijkl-0123456789ab
 `
 )
 
+var (
+	fakeFpgaInfoErrReturn    error = nil
+	fakeFpgasUpdateErrReturn error = nil
+	fakeRsuUpdateErrReturn   error = nil
+	testTmpFolder            string
+)
+
+var _ = BeforeSuite(func() {
+	var err error
+	testTmpFolder, err = ioutil.TempDir("/tmp", "fpgamanager_test")
+	Expect(err).ShouldNot(HaveOccurred())
+	fpgaUserImageSubfolderPath = testTmpFolder
+	fpgaUserImageFile = filepath.Join(testTmpFolder, "fpga")
+})
+
+var _ = AfterSuite(func() {
+	err := os.RemoveAll(testTmpFolder)
+	Expect(err).ShouldNot(HaveOccurred())
+})
+
 func fakeFpgaInfo(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
 	if cmd.String() == "fpgainfo bmc" {
-		return bmcOutput, nil
+		return bmcOutput, fakeFpgaInfoErrReturn
 	}
 	return "", fmt.Errorf("Unsupported command: %s", cmd)
 }
 
 func fakeFpgasUpdate(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
 	if strings.Contains(cmd.String(), "fpgasupdate") {
-		return "", nil
+		return "", fakeFpgasUpdateErrReturn
 	}
 	return "", fmt.Errorf("Unsupported command: %s", cmd)
 }
 
 func fakeRsu(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
 	if strings.Contains(cmd.String(), "rsu") && strings.Contains(cmd.String(), "bmcimg") {
-		return "", nil
+		return "", fakeRsuUpdateErrReturn
 	}
 	return "", fmt.Errorf("Unsupported command: %s", cmd)
 }
 
+func clean() {
+	fakeFpgaInfoErrReturn = nil
+	fakeFpgasUpdateErrReturn = nil
+	fakeRsuUpdateErrReturn = nil
+}
+
+func serverMock() *httptest.Server {
+	handler := http.NewServeMux()
+	handler.HandleFunc("/fpga/image", usersMock)
+
+	srv := httptest.NewServer(handler)
+
+	return srv
+}
+
+func usersMock(w http.ResponseWriter, r *http.Request) {
+	_, _ = w.Write([]byte("mock server responding"))
+}
 func TestMain(t *testing.T) {
+	clean()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Main suite")
 }
@@ -116,7 +160,8 @@ var _ = Describe("FPGA Manager", func() {
 		Spec: fpgav1.N3000NodeSpec{
 			FPGA: []fpgav1.N3000Fpga{
 				{
-					PCIAddr: "0000:1b:00.0",
+					PCIAddr:      "0000:1b:00.0",
+					UserImageURL: "http://www.test.com/fpga/image/1.bin",
 				},
 			},
 		},
@@ -129,6 +174,16 @@ var _ = Describe("FPGA Manager", func() {
 				},
 				{
 					PCIAddr: "0000:1x:00.0",
+				},
+			},
+		},
+	}
+	sampleWrongUrlFPGA := fpgav1.N3000Node{
+		Spec: fpgav1.N3000NodeSpec{
+			FPGA: []fpgav1.N3000Fpga{
+				{
+					PCIAddr:      "0000:1b:00.0",
+					UserImageURL: "*?1.bin",
 				},
 			},
 		},
@@ -154,6 +209,13 @@ var _ = Describe("FPGA Manager", func() {
 			Expect(result[1].NumaNode).To(Equal(1))
 
 		})
+		var _ = It("will return error when fpgaInfo failed", func() {
+			fakeFpgaInfoErrReturn = fmt.Errorf("error")
+			fpgaInfoExec = fakeFpgaInfo
+			_, err := getFPGAInventory(log)
+			clean()
+			Expect(err).To(HaveOccurred())
+		})
 	})
 	var _ = Describe("checkFPGADieTemperature", func() {
 		var _ = It("will return nil in successfully scenario", func() {
@@ -170,13 +232,41 @@ var _ = Describe("FPGA Manager", func() {
 			Expect(err.Error()).To(
 				Equal("FPGA temperature: 98.500000, exceeded limit: 85.000000, on PCIAddr: 0000:2b:00.0"))
 		})
-
 		var _ = It("will return error when PCIAddr does not exist", func() {
 			fpgaInfoExec = fakeFpgaInfo
 			err := checkFPGADieTemperature("0000:xx:00.0", log)
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("Not found PCIAddr: 0000:xx:00.0"))
+		})
+		var _ = It("will return error when fpgaInfo failed", func() {
+			fakeFpgaInfoErrReturn = fmt.Errorf("error")
+			fpgaInfoExec = fakeFpgaInfo
+			err := checkFPGADieTemperature("0000:xx:00.0", log)
+			clean()
+			Expect(err).To(HaveOccurred())
+		})
+	})
+	var _ = Describe("getFPGATemperatureLimit", func() {
+		var _ = It("will return temperature limit from env variable", func() {
+			fpgaTemperature := 75.0 //in Celsius degrees
+			err := os.Setenv(envTemperatureLimitName, fmt.Sprintf("%f", fpgaTemperature))
+			Expect(err).ToNot(HaveOccurred())
+			t := getFPGATemperatureLimit()
+			Expect(t).To(Equal(fpgaTemperature))
+		})
+		var _ = It("will return default temperature limit, incorrect env variable", func() {
+			err := os.Setenv(envTemperatureLimitName, "incorrect_float_value")
+			Expect(err).ToNot(HaveOccurred())
+			t := getFPGATemperatureLimit()
+			Expect(t).To(Equal(fpgaTemperatureDefaultLimit))
+		})
+		var _ = It("will return default temperature limit, env variable exceeded limit", func() {
+			fpgaTemperature := 10.0 //in Celsius degrees
+			err := os.Setenv(envTemperatureLimitName, fmt.Sprintf("%f", fpgaTemperature))
+			Expect(err).ToNot(HaveOccurred())
+			t := getFPGATemperatureLimit()
+			Expect(t).To(Equal(fpgaTemperatureDefaultLimit))
 		})
 	})
 	var _ = Describe("programFPGAs", func() {
@@ -187,11 +277,67 @@ var _ = Describe("FPGA Manager", func() {
 			err := f.ProgramFPGAs(&sampleOneFPGA)
 			Expect(err).ToNot(HaveOccurred())
 		})
+		var _ = It("will return error when fpgasUpdate failed", func() {
+			fpgaInfoExec = fakeFpgaInfo
+			fakeFpgasUpdateErrReturn = fmt.Errorf("error")
+			fpgasUpdateExec = fakeFpgasUpdate
+			rsuExec = fakeRsu
+			err := f.ProgramFPGAs(&sampleOneFPGA)
+			clean()
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("will return error when rsuExec failed", func() {
+			fpgaInfoExec = fakeFpgaInfo
+			fpgasUpdateExec = fakeFpgasUpdate
+			fakeRsuUpdateErrReturn = fmt.Errorf("error")
+			rsuExec = fakeRsu
+			err := f.ProgramFPGAs(&sampleOneFPGA)
+			clean()
+			Expect(err).To(HaveOccurred())
+		})
 		var _ = It("will return error when one PCIAddr in CR does not exist", func() {
 			fpgaInfoExec = fakeFpgaInfo
 			fpgasUpdateExec = fakeFpgasUpdate
 			rsuExec = fakeRsu
 			err := f.ProgramFPGAs(&sampleTwoFPGAs)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+	var _ = Describe("verifyPreconditions", func() {
+		var _ = It("will return nil in successfully scenario", func() {
+			srv := serverMock()
+			defer srv.Close()
+			fpgaInfoExec = fakeFpgaInfo
+			err := f.verifyPreconditions(&sampleOneFPGA)
+			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("will return error when http get failed", func() {
+			srv := serverMock()
+			defer srv.Close()
+			fpgaInfoExec = fakeFpgaInfo
+			err := f.verifyPreconditions(&sampleWrongUrlFPGA)
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("will return error when fpga temperature exceeded limit", func() {
+			fpgaTemperature := 70.0 //in Celsius degrees
+			err := os.Setenv(envTemperatureLimitName, fmt.Sprintf("%f", fpgaTemperature))
+			Expect(err).ToNot(HaveOccurred())
+			fpgaInfoExec = fakeFpgaInfo
+			err = f.verifyPreconditions(&sampleOneFPGA)
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("will return error when one PCIAddr in CR does not exist", func() {
+			srv := serverMock()
+			defer srv.Close()
+			fpgaInfoExec = fakeFpgaInfo
+			err := f.verifyPreconditions(&sampleTwoFPGAs)
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("will return error when fpgaInfo failed", func() {
+			fakeFpgaInfoErrReturn = fmt.Errorf("error")
+			fpgaInfoExec = fakeFpgaInfo
+			err := f.verifyPreconditions(&sampleOneFPGA)
+			clean()
 			Expect(err).To(HaveOccurred())
 		})
 	})
