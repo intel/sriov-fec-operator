@@ -39,7 +39,7 @@ roleRef:
   namespace: n3000-operator-resources
 subjects:
 - kind: ServiceAccount
-  name: nvidia-driver
+  name: fpga-driver
   namespace: n3000-operator-resources
 userNames:
 - system:serviceaccount:n3000-operator-resources:fpga-driver
@@ -132,13 +132,12 @@ spec:
           privileged: true
           seLinuxOptions:
             level: "s0"
-      volumeMounts:
-        - name: host_driver_mtd
-          mountPath: /host_driver_mtd
+        volumeMounts:
+          - name: host-driver-mtd
+            mountPath: /host_driver_mtd
       volumes:
-        - name: host_driver_mtd
+        - name: host-driver-mtd
           hostPath:
             path: "/lib/modules/{{ .kernel }}/kernel/drivers/mtd"
-
       nodeSelector:
         feature.node.kubernetes.io/pci-8086.present: "true"

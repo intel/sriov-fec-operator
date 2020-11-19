@@ -33,7 +33,7 @@ mkdir -p /lib/modules/$(uname -r)/extra
 ln -s /opae-drivers/"$(uname -r)"/*.ko "/lib/modules/$(uname -r)/extra"
 
 # Link mtd from host
-ln -s /host_driver_mtd/mtd.ko.xz "/lib/modules/$(uname-r)/extra"
+ln -s /host_driver_mtd/mtd.ko.xz "/lib/modules/$(uname -r)/extra"
 
 depmod
 

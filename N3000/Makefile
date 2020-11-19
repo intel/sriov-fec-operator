@@ -63,7 +63,7 @@ uninstall: manifests kustomize
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image n3000-operator=${IMG}
 	source hack/env.sh && $(KUSTOMIZE) build config/default | envsubst | kubectl apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.

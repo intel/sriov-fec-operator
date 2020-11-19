@@ -6,7 +6,7 @@ kind: Namespace
 metadata:
   labels:
     control-plane: controller-manager
-  name: system
+  name: operator-resources
 ---
 apiVersion: apps/v1
 kind: Deployment

@@ -2,7 +2,7 @@
 # Copyright (c) 2020 Intel Corporation
 
 # Adds namespace to all resources.
-namespace: n3000-system
+namespace: n3000-operator-resources
 
 # Value of this field is prepended to the
 # names of all resources, e.g. a deployment named
