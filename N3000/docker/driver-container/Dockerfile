@@ -59,7 +59,7 @@ RUN ./n3000-$OPAE_VERSION-rte-el8-setup.sh extract && \
 
 FROM registry.access.redhat.com/ubi8:latest
 WORKDIR /driver-workdir
-RUN dnf install --disablerepo=* --enablerepo=ubi-8-baseos -y kmod
+RUN dnf install --disablerepo=* --enablerepo=ubi-8-baseos --setopt=install_weak_deps=False -y kmod
 COPY --from=builder /opae-drivers/${KERNEL_VERSION} /opae-drivers/${KERNEL_VERSION}
 COPY entrypoint.sh .
 RUN chmod +x /driver-workdir/entrypoint.sh
