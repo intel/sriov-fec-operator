@@ -16,15 +16,19 @@ IMAGES_TO_BUILD=""
 REGISTRY=""
 IMAGES_BUILT=()
 
-usage() { echo "Usage: $0 [-r registry] [-i <image1,image2>]" 1>&2; exit 1; }
+usage() { echo "Usage: $0 [-r registry] [-i <image1,image2>] [-t]" 1>&2; exit 1; }
 
-while getopts ":r:i:" o; do
+TLS_VERIFY="true"
+while getopts ":r:i:t" o; do
     case "${o}" in
         r)
             REGISTRY=${OPTARG}
             ;;
         i)
             IMAGES_TO_BUILD=${OPTARG}
+            ;;
+        t)
+            TLS_VERIFY="false"
             ;;
         *)
             usage
@@ -110,7 +114,7 @@ if [ -n "${REGISTRY}" ]
 then
     for img in "${IMAGES_BUILT[@]}"; do
         echo "Pushing ${img} to ${REGISTRY}"
-        podman push localhost/"${img}" "${REGISTRY}/${img}"
+        podman push --tls-verify="${TLS_VERIFY}" localhost/"${img}" "${REGISTRY}/${img}"
     done
 fi
 
