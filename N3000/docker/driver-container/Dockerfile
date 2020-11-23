@@ -9,10 +9,24 @@ ENV KERNEL_VERSION=$KERNEL_VERSION
 ARG OPAE_VERSION
 ENV OPAE_VERSION=$OPAE_VERSION
 
+ARG OCP_VERSION=4.6
+ARG RELEASE_VERSION=8.2
+
+RUN echo $RELEASE_VERSION > /etc/yum/vars/releasever
+RUN yum config-manager --set-enabled rhocp-$OCP_VERSION-for-rhel-8-x86_64-rpms || true && \
+    if ! yum makecache; then \
+    yum config-manager --set-disabled rhocp-$OCP_VERSION-for-rhel-8-x86_64-rpms; \
+    fi
+RUN yum config-manager --set-enabled rhel-8-for-x86_64-baseos-eus-rpms || true && \
+    if ! yum makecache; then \
+    yum config-manager --set-disabled rhel-8-for-x86_64-baseos-eus-rpms; \
+    fi
+RUN yum update -y
+
+
 RUN dnf install --disablerepo=* --enablerepo=ubi-8-appstream --enablerepo=ubi-8-baseos  -y  \
     make gcc patch cpio kmod
-
-RUN dnf install --disablerepo=* --enablerepo=rhel-8-for-x86_64-baseos-rpms -y \
+RUN dnf install -y \
     kernel-devel-${KERNEL_VERSION} \
     kernel-headers-${KERNEL_VERSION} \
     kernel-core-${KERNEL_VERSION} \
