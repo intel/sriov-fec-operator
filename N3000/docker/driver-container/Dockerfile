@@ -55,12 +55,14 @@ RUN ./n3000-$OPAE_VERSION-rte-el8-setup.sh extract && \
     make KERNELVER=${KERNEL_VERSION} && \
     mkdir -p /opae-drivers/${KERNEL_VERSION} && \
     cp -v *.ko /opae-drivers/${KERNEL_VERSION} && \
+    cp /opae-prepare/n3000-$OPAE_VERSION-rte/opae/opae-intel-fpga-driver-*.src.rpm /opae-drivers/ && \
     rm -rf /opae-prepare
 
 FROM registry.access.redhat.com/ubi8:latest
 WORKDIR /driver-workdir
 RUN dnf install --disablerepo=* --enablerepo=ubi-8-baseos --setopt=install_weak_deps=False -y kmod
 COPY --from=builder /opae-drivers/${KERNEL_VERSION} /opae-drivers/${KERNEL_VERSION}
+COPY --from=builder /opae-drivers/opae-intel-fpga-driver-*.src.rpm  /opae-drivers/
 COPY entrypoint.sh .
 RUN chmod +x /driver-workdir/entrypoint.sh
 
