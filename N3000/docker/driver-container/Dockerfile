@@ -10,26 +10,22 @@ ARG OPAE_VERSION
 ENV OPAE_VERSION=$OPAE_VERSION
 
 ARG OCP_VERSION=4.6
-ARG RELEASE_VERSION=8.2
+ENV OCP_VERSION=$OPAE_VERSION
 
-RUN echo $RELEASE_VERSION > /etc/yum/vars/releasever
-RUN yum config-manager --set-enabled rhocp-$OCP_VERSION-for-rhel-8-x86_64-rpms || true && \
-    if ! yum makecache; then \
-    yum config-manager --set-disabled rhocp-$OCP_VERSION-for-rhel-8-x86_64-rpms; \
-    fi
-RUN yum config-manager --set-enabled rhel-8-for-x86_64-baseos-eus-rpms || true && \
-    if ! yum makecache; then \
-    yum config-manager --set-disabled rhel-8-for-x86_64-baseos-eus-rpms; \
-    fi
-RUN yum update -y
+ARG RELEASE_VERSION=8.2
+ENV RELEASE_VERSION=$RELEASE_VERSION
+
+COPY enable_repositories.sh ./
+RUN ./enable_repositories.sh
 
 
 RUN dnf install --disablerepo=* --enablerepo=ubi-8-appstream --enablerepo=ubi-8-baseos  -y  \
     make gcc patch cpio kmod
-RUN dnf install -y \
-    kernel-devel-${KERNEL_VERSION} \
-    kernel-headers-${KERNEL_VERSION} \
-    kernel-core-${KERNEL_VERSION} \
+
+RUN [[ "${KERNEL_VERSION}" == *"rt"* ]] && RT="rt-" || RT="" && \
+    dnf install -y \
+    kernel-${RT}devel-${KERNEL_VERSION} \
+    kernel-${RT}core-${KERNEL_VERSION} \
     elfutils-libelf-devel && \
     dnf clean all
 
@@ -61,9 +57,10 @@ RUN ./n3000-$OPAE_VERSION-rte-el8-setup.sh extract && \
 FROM registry.access.redhat.com/ubi8:latest
 WORKDIR /driver-workdir
 RUN dnf install --disablerepo=* --enablerepo=ubi-8-baseos --setopt=install_weak_deps=False -y kmod
-COPY --from=builder /opae-drivers/${KERNEL_VERSION} /opae-drivers/${KERNEL_VERSION}
 COPY --from=builder /opae-drivers/opae-intel-fpga-driver-*.src.rpm  /opae-drivers/
 COPY entrypoint.sh .
 RUN chmod +x /driver-workdir/entrypoint.sh
+
+COPY --from=builder /opae-drivers/${KERNEL_VERSION} /opae-drivers/${KERNEL_VERSION}
 
 ENTRYPOINT ["/bin/bash"]
