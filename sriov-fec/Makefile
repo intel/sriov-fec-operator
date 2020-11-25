@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020 Intel Corporation
 
+# Default k8s command-line tool exec
+export CLI_EXEC?=oc
 # Current Operator version
 VERSION ?= 0.0.1
 # Default bundle image tag
@@ -45,18 +47,18 @@ run: generate fmt vet manifests
 
 # Install CRDs into a cluster
 install: manifests kustomize
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+	$(KUSTOMIZE) build config/crd | $(CLI_EXEC) apply -f -
 
 # Uninstall CRDs from a cluster
 uninstall: manifests kustomize
-	$(KUSTOMIZE) build config/crd | kubectl delete -f -
+	$(KUSTOMIZE) build config/crd | $(CLI_EXEC) delete -f -
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	# In hack/env.sh we store variables related to asset deployment such as daemon url and tag
 	# these vars are substituted stored as operator's env vars and later substituted during asset deployment
-	source hack/env.sh && $(KUSTOMIZE) build config/default | envsubst | kubectl apply -f -
+	source hack/env.sh && $(KUSTOMIZE) build config/default | envsubst | $(CLI_EXEC) apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen

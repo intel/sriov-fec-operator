@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020 Intel Corporation
 
+# Default k8s command-line tool exec
+export CLI_EXEC?=oc
 # Current Operator version
 VERSION ?= 0.0.1
 # Default bundle image tag
@@ -55,16 +57,16 @@ run: generate fmt vet manifests
 
 # Install CRDs into a cluster
 install: manifests kustomize
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+	$(KUSTOMIZE) build config/crd | $(CLI_EXEC) apply -f -
 
 # Uninstall CRDs from a cluster
 uninstall: manifests kustomize
-	$(KUSTOMIZE) build config/crd | kubectl delete -f -
+	$(KUSTOMIZE) build config/crd | $(CLI_EXEC) delete -f -
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image n3000-operator=${IMG}
-	source hack/env.sh && $(KUSTOMIZE) build config/default | envsubst | oc apply -f -
+	source hack/env.sh && $(KUSTOMIZE) build config/default | envsubst | $(CLI_EXEC) apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
