@@ -123,6 +123,8 @@ spec:
       hostNetwork: true
       containers:
       - name: sriov-fec-daemon
+        securityContext:
+          readOnlyRootFilesystem: true
         image: "{{ .SRIOV_FEC_DAEMON_IMAGE }}"
         args:
         - --zap-devel

@@ -130,6 +130,8 @@ spec:
       containers:
       - image: "{{ .N3000_MONITORING_IMAGE }}"
         name: fpgainfo-exporter
+        securityContext:
+          readOnlyRootFilesystem: true
         ports:
         - name: metrics
           containerPort: 42222

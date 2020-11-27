@@ -127,6 +127,8 @@ spec:
       containers:
       - image: "{{ .N3000_DAEMON_IMAGE }}"
         name: n3000-daemon
+        securityContext:
+          readOnlyRootFilesystem: true
         volumeMounts:
           - name: devchar
             mountPath: /dev/char

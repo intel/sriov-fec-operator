@@ -79,6 +79,8 @@ spec:
       containers:
       - image: "{{ .N3000_LABELER_IMAGE }}"
         name: n3000-discovery
+        securityContext:
+          readOnlyRootFilesystem: true
         volumeMounts:
         - name: config-volume
           mountPath: "/labeler-workspace/config"

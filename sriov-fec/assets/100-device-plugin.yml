@@ -95,6 +95,8 @@ spec:
       containers:
       - name: sriov-device-plugin
         image: nfvpe/sriov-device-plugin:v3.2
+        securityContext:
+          readOnlyRootFilesystem: true
         args:
         - --log-level=10
         securityContext:
