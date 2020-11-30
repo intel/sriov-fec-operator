@@ -44,6 +44,8 @@ spec:
         spec:
           description: SriovFecClusterConfigSpec defines the desired state of SriovFecClusterConfig
           properties:
+            drainSkip:
+              type: boolean
             nodes:
               description: List of node configurations
               items:

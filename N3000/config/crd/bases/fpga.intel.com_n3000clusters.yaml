@@ -36,6 +36,8 @@ spec:
         spec:
           description: N3000ClusterSpec defines the desired state of N3000Cluster
           properties:
+            drainSkip:
+              type: boolean
             dryrun:
               type: boolean
             nodes:

@@ -149,7 +149,7 @@ func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 			}
 
 			return true
-		})
+		}, !nodeConfig.Spec.DrainSkip)
 
 		if dhErr != nil {
 			log.Error(dhErr, "drainhelper returned an error")

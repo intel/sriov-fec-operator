@@ -180,6 +180,7 @@ func (r *N3000ClusterReconciler) splitClusterIntoNodes(ctx context.Context,
 				nodeRes.Spec.FPGA = res.FPGA
 				nodeRes.Spec.Fortville = res.Fortville
 				nodeRes.Spec.DryRun = n3000cluster.Spec.DryRun
+				nodeRes.Spec.DrainSkip = n3000cluster.Spec.DrainSkip
 				n3000Nodes = append(n3000Nodes, nodeRes)
 				break
 			}

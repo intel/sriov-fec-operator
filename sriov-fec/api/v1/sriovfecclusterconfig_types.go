@@ -161,6 +161,8 @@ type SriovFecClusterConfigSpec struct {
 
 	// List of node configurations
 	Nodes []NodeConfig `json:"nodes"`
+	// +kubebuilder:validation:Optional
+	DrainSkip bool `json:"drainSkip,omitempty"`
 }
 
 // SriovFecClusterConfigStatus defines the observed state of SriovFecClusterConfig

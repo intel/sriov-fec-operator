@@ -175,6 +175,7 @@ func (r *SriovFecClusterConfigReconciler) renderNodeConfigs(clusterConfig *sriov
 			},
 			Spec: sriovfecv1.SriovFecNodeConfigSpec{
 				PhysicalFunctions: nodeConfigSpec.PhysicalFunctions,
+				DrainSkip:         clusterConfig.Spec.DrainSkip,
 			},
 		}
 		nodeCfg.SetName(nodeConfigSpec.NodeName)

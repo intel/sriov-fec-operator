@@ -299,7 +299,7 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			}
 		}
 		return true
-	})
+	}, !n3000node.Spec.DrainSkip)
 
 	if err != nil {
 		// some kind of error around leader election / node (un)cordon / node drain

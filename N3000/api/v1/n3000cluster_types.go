@@ -80,6 +80,8 @@ type N3000ClusterSpec struct {
 	Nodes []N3000ClusterNode `json:"nodes"`
 	// +kubebuilder:validation:Optional
 	DryRun bool `json:"dryrun,omitempty"`
+	// +kubebuilder:validation:Optional
+	DrainSkip bool `json:"drainSkip,omitempty"`
 }
 
 // N3000ClusterStatus defines the observed state of N3000Cluster

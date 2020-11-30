@@ -346,12 +346,15 @@ github.com/opencontainers/go-digest v1.0.0-rc1/go.mod h1:cMLVZDEM3+U2I4VmLI6N8jQ
 github.com/openshift/api v3.9.0+incompatible h1:fJ/KsefYuZAjmrr3+5U9yZIZbTOpVkDDLDLFresAeYs=
 github.com/openshift/api v3.9.0+incompatible/go.mod h1:dh9o4Fs58gpFXGSYfnVxGR9PnV53I8TW84pQaJDdGiY=
 github.com/otcshare/openshift-operator v0.0.0-20201103110205-aa790e3d2d50 h1:50LyHY0Zff4at1ikDAbkLXqFeRB8n0NCL18fOPd/bVI=
+github.com/otcshare/openshift-operator v0.0.0-20201130121254-7583a3e93894 h1:GdLIjylQW6LGdB1ZIfyhi+xwhcGGDmGnsJpKyDhwvvQ=
 github.com/otcshare/openshift-operator/N3000 v0.0.0-20201103110205-aa790e3d2d50 h1:udX7k3RdscqLPerLIxriINQgFUpQqjP2LP6b7ceZ+Rw=
 github.com/otcshare/openshift-operator/N3000 v0.0.0-20201103110205-aa790e3d2d50/go.mod h1:49Co2Emh1510hK59SBFavzQA7ocVLwdole+2e+1hXLs=
 github.com/otcshare/openshift-operator/N3000 v0.0.0-20201105100605-e010facd2a66 h1:w0qPP+fxSqAKoQm/Z1VSldxHTbNICKOk/lnSaXwI8v0=
 github.com/otcshare/openshift-operator/N3000 v0.0.0-20201105100605-e010facd2a66/go.mod h1:49Co2Emh1510hK59SBFavzQA7ocVLwdole+2e+1hXLs=
 github.com/otcshare/openshift-operator/N3000 v0.0.0-20201113074245-8afd34cf0768 h1:A00KxUeCrpIqaz2qzf43DfONyrzmg3wnXJeygjuxdo8=
 github.com/otcshare/openshift-operator/N3000 v0.0.0-20201113074245-8afd34cf0768/go.mod h1:49Co2Emh1510hK59SBFavzQA7ocVLwdole+2e+1hXLs=
+github.com/otcshare/openshift-operator/N3000 v0.0.0-20201130121254-7583a3e93894 h1:3q2S6MIdMMpG1ipFzVjlf6gDqOka3eFFcrIZo0mSjG0=
+github.com/otcshare/openshift-operator/N3000 v0.0.0-20201130121254-7583a3e93894/go.mod h1:49Co2Emh1510hK59SBFavzQA7ocVLwdole+2e+1hXLs=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/peterbourgon/diskv v2.0.1+incompatible h1:UBdAOUP5p4RWqPBg048CAvpKN+vxiaj6gdUUzhl4XmI=

@@ -105,7 +105,7 @@ func main() {
 				BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
 			},
 		},
-	}).LoadAndDeploy(context.Background()); err != nil {
+	}).LoadAndDeploy(context.Background(), true); err != nil {
 		setupLog.Error(err, "failed to deploy the assets")
 		os.Exit(1)
 	}

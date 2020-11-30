@@ -35,6 +35,8 @@ type SriovFecNodeConfigSpec struct {
 
 	// List of PhysicalFunctions configs
 	PhysicalFunctions []PhysicalFunctionConfig `json:"physicalFunctions"`
+	// +kubebuilder:validation:Optional
+	DrainSkip bool `json:"drainSkip,omitempty"`
 }
 
 // SriovFecNodeConfigStatus defines the observed state of SriovFecNodeConfig
