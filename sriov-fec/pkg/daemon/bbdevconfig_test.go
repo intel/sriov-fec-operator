@@ -92,5 +92,10 @@ var _ = Describe("bbdevconfig", func() {
 			err = compareFiles(filepath.Join(testTmpFolder, filename), "testdata/bbdevconfig_test1.cfg")
 			Expect(err).ToNot(HaveOccurred())
 		})
+		var _ = It("will return error when config is nil ", func() {
+			filename := "config.cfg"
+			err := generateN3000BBDevConfigFile(nil, filepath.Join(testTmpFolder, filename))
+			Expect(err).To(HaveOccurred())
+		})
 	})
 })

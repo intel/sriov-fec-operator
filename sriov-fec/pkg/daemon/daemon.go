@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	dh "github.com/otcshare/openshift-operator/N3000/pkg/drainhelper"
 	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/api/meta"
@@ -16,8 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-
-	dh "github.com/otcshare/openshift-operator/N3000/pkg/drainhelper"
 )
 
 const (
@@ -32,6 +31,10 @@ type NodeConfigReconciler struct {
 	drainHelper      *dh.DrainHelper
 	nodeConfigurator *NodeConfigurator
 }
+
+var (
+	getSriovInventory = GetSriovInventory
+)
 
 func NewNodeConfigReconciler(c client.Client, clientSet *clientset.Clientset, log logr.Logger,
 	nodename, namespace string) *NodeConfigReconciler {
@@ -132,7 +135,6 @@ func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 				}
 
 				log.Info("added kernel params - rebooting")
-
 				if err := r.nodeConfigurator.rebootNode(); err != nil {
 					log.Error(err, "failed to request a node reboot")
 					configurationErr = err
@@ -141,7 +143,6 @@ func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 				skipStatusUpdate = true
 				return false // leave node cordoned & keep the leadership
 			}
-
 			if err := r.nodeConfigurator.applyConfig(nodeConfig.Spec); err != nil {
 				log.Error(err, "failed applying new PF/VF configuration")
 				configurationErr = err
@@ -189,7 +190,7 @@ func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 func (r *NodeConfigReconciler) updateInventory(nc *sriovv1.SriovFecNodeConfig) error {
 	log := r.log.WithName("updateInventory")
 
-	inv, err := GetSriovInventory(log)
+	inv, err := getSriovInventory(log)
 	if err != nil {
 		log.Error(err, "failed to obtain sriov inventory")
 		return err

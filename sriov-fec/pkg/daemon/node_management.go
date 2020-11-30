@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -18,48 +17,22 @@ import (
 	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
 )
 
-const (
+var (
 	redhatReleaseFilepath = "/host/etc/redhat-release"
 	procCmdlineFilePath   = "/host/proc/cmdline"
 	sysBusPciDevices      = "/sys/bus/pci/devices"
 	sysBusPciDrivers      = "/sys/bus/pci/drivers"
 	vfNumFile             = "sriov_numvfs"
 	workdir               = "/sriov_artifacts"
-)
-
-var (
-	errWrongOS   = errors.New("running on non-CoreOS system. Only CoreOS is supported")
-	kernelParams = []string{"intel_iommu=on", "iommu=pt"}
+	errWrongOS            = errors.New("running on non-CoreOS system. Only CoreOS is supported")
+	kernelParams          = []string{"intel_iommu=on", "iommu=pt"}
+	runExecCmd            = execCmd
+	getVFconfigured       = utils.GetVFconfigured
+	getVFList             = utils.GetVFList
 )
 
 type NodeConfigurator struct {
 	Log logr.Logger
-}
-
-func (n *NodeConfigurator) execCmd(args []string) (string, error) {
-	var cmd *exec.Cmd
-	if len(args) == 0 {
-		n.Log.Error(nil, "provided cmd is empty")
-		return "", errors.New("cmd is empty")
-	} else if len(args) == 1 {
-		cmd = exec.Command(args[0])
-	} else {
-		cmd = exec.Command(args[0], args[1:]...)
-	}
-
-	n.Log.Info("executing command", "cmd", cmd)
-
-	out, err := cmd.Output()
-	if err != nil {
-		n.Log.Error(err, "failed to execute command", "cmd", args, "output", string(out))
-		return "", err
-	}
-
-	output := string(out)
-
-	n.Log.Info("commands output", "output", output)
-
-	return output, nil
 }
 
 func (n *NodeConfigurator) checkIfCoreOS() (bool, error) {
@@ -120,7 +93,7 @@ func (n *NodeConfigurator) isAnyKernelParamsMissing() (bool, error) {
 func (n *NodeConfigurator) addMissingKernelParams() (bool, error) {
 	log := n.Log.WithName("addMissingKernelParams")
 
-	kargs, err := n.execCmd([]string{"chroot", "/host/", "rpm-ostree", "kargs"})
+	kargs, err := runExecCmd([]string{"chroot", "/host/", "rpm-ostree", "kargs"}, log)
 	if err != nil {
 		return false, err
 	}
@@ -132,7 +105,7 @@ func (n *NodeConfigurator) addMissingKernelParams() (bool, error) {
 	for _, param := range kernelParams {
 		if !strings.Contains(kargs, param) {
 			log.V(2).Info("missing param - adding", "param", param)
-			_, err = n.execCmd([]string{"chroot", "/host/", "rpm-ostree", "kargs", "--append", param})
+			_, err = runExecCmd([]string{"chroot", "/host/", "rpm-ostree", "kargs", "--append", param}, log)
 			if err != nil {
 				return false, nil
 			}
@@ -146,17 +119,19 @@ func (n *NodeConfigurator) addMissingKernelParams() (bool, error) {
 }
 
 func (n *NodeConfigurator) loadModule(module string) error {
-	_, err := n.execCmd([]string{"chroot", "/host/", "modprobe", module})
+	log := n.Log.WithName("loadModule")
+	_, err := runExecCmd([]string{"chroot", "/host/", "modprobe", module}, log)
 	return err
 }
 
 func (n *NodeConfigurator) rebootNode() error {
+	log := n.Log.WithName("rebootNode")
 	// systemd-run command borrowed from openshift/sriov-network-operator
-	_, err := n.execCmd([]string{"chroot", "/host",
+	_, err := runExecCmd([]string{"chroot", "/host",
 		"systemd-run",
 		"--unit", "sriov-fec-daemon-reboot",
 		"--description", fmt.Sprintf("sriov-fec-daemon reboot"),
-		"/bin/sh", "-c", "systemctl stop kubelet.service; reboot"})
+		"/bin/sh", "-c", "systemctl stop kubelet.service; reboot"}, log)
 
 	return err
 }
@@ -230,7 +205,7 @@ func getMatchingExistingAccelerator(inventory *sriovv1.NodeInventory, pciAddress
 }
 
 func (n *NodeConfigurator) changeAmountOfVFs(pfPCIAddress string, vfsAmount int) error {
-	currentAmount := utils.GetVFconfigured(pfPCIAddress)
+	currentAmount := getVFconfigured(pfPCIAddress)
 	if currentAmount == vfsAmount {
 		return nil
 	}
@@ -261,7 +236,7 @@ func (n *NodeConfigurator) changeAmountOfVFs(pfPCIAddress string, vfsAmount int)
 func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec) error {
 	log := n.Log.WithName("applyConfig")
 
-	inv, err := GetSriovInventory(log)
+	inv, err := getSriovInventory(log)
 	if err != nil {
 		log.Error(err, "failed to obtain current sriov inventory")
 		return err
@@ -302,7 +277,7 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec
 			return err
 		}
 
-		createdVfs, err := utils.GetVFList(pf.PCIAddress)
+		createdVfs, err := getVFList(pf.PCIAddress)
 		if err != nil {
 			log.Error(err, "failed to get list of newly created VFs")
 			return err

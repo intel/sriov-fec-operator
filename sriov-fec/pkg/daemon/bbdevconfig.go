@@ -6,7 +6,6 @@ package daemon
 import (
 	"errors"
 	"fmt"
-	"os/exec"
 	"strconv"
 
 	"github.com/go-logr/logr"
@@ -71,18 +70,6 @@ func runPFConfig(log logr.Logger, deviceName, cfgFilepath, pciAddress string) er
 	default:
 		return fmt.Errorf("incorrect deviceName for pf config: %s", deviceName)
 	}
-
-	cmd := exec.Command(pfConfigAppFilepath, deviceName, "-c", cfgFilepath, "-p", pciAddress)
-	log.Info("executing pf config app", "cmd", cmd)
-
-	out, err := cmd.Output()
-	output := string(out)
-	if err != nil {
-		log.Error(err, "failed to execute pf config app", "cmd", cmd, "output", output)
-		return err
-	}
-
-	log.Info("pf config app output", "cmd", cmd, "output", output)
-
-	return nil
+	_, err := runExecCmd([]string{pfConfigAppFilepath, deviceName, "-c", cfgFilepath, "-p", pciAddress}, log)
+	return err
 }
