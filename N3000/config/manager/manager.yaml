@@ -48,4 +48,8 @@ spec:
           value: $N3000_MONITORING_IMAGE
         - name: N3000_LABELER_IMAGE
           value: $N3000_LABELER_IMAGE
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
       terminationGracePeriodSeconds: 10

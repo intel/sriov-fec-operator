@@ -42,4 +42,8 @@ spec:
         env:
         - name: SRIOV_FEC_DAEMON_IMAGE
           value: $SRIOV_FEC_DAEMON_IMAGE
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
       terminationGracePeriodSeconds: 10
