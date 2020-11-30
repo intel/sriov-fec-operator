@@ -1,0 +1,319 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "sriovfec.intel.com/v1",
+          "kind": "SriovFecClusterConfig",
+          "metadata": {
+            "name": "config"
+          },
+          "spec": {
+            "nodes": [
+              {
+                "cards": [
+                  {
+                    "pciAddress": "",
+                    "pfDeviceID": "0d8f",
+                    "pfDriver": "pci-pf-stub",
+                    "queuesConfiguration": {
+                      "downlink": {
+                        "bandwidth": 3,
+                        "loadBalance": 128,
+                        "queues": {
+                          "vf0": 16,
+                          "vf1": 16,
+                          "vf2": 0,
+                          "vf3": 0,
+                          "vf4": 0,
+                          "vf5": 0,
+                          "vf6": 0,
+                          "vf7": 0
+                        }
+                      },
+                      "flrTimeout": 610,
+                      "networkType": "FPGA_5GNR",
+                      "pfMode": true,
+                      "uplink": {
+                        "bandwidth": 3,
+                        "loadBalance": 128,
+                        "queues": {
+                          "vf0": 16,
+                          "vf1": 16,
+                          "vf2": 0,
+                          "vf3": 0,
+                          "vf4": 0,
+                          "vf5": 0,
+                          "vf6": 0,
+                          "vf7": 0
+                        }
+                      }
+                    },
+                    "vendorID": "8086",
+                    "vfAmount": 2,
+                    "vfDeviceID": "0d90",
+                    "vfDriver": "vfio-pci"
+                  }
+                ],
+                "nodeName": "",
+                "oneCardConfigForAll": true
+              }
+            ],
+            "oneNodeConfigForAll": true
+          }
+        },
+        {
+          "apiVersion": "sriovfec.intel.com/v1",
+          "kind": "SriovFecNodeConfig",
+          "metadata": {
+            "name": "sriovfecnodeconfig-sample"
+          },
+          "spec": {
+            "cards": [
+              {
+                "pci_addr": "",
+                "pf_device_id": "0d8f",
+                "pf_driver": "pci-pf-stub",
+                "queues": {
+                  "downlink": {
+                    "bandwidth": 3,
+                    "load_balance": 128,
+                    "queues": {
+                      "vf0": 16,
+                      "vf1": 16,
+                      "vf2": 0,
+                      "vf3": 0,
+                      "vf4": 0,
+                      "vf5": 0,
+                      "vf6": 0,
+                      "vf7": 0
+                    }
+                  },
+                  "flr_time_out": 610,
+                  "networkType": "FPGA_5GNR",
+                  "pf_mode_en": 0,
+                  "uplink": {
+                    "bandwidth": 3,
+                    "load_balance": 128,
+                    "queues": {
+                      "vf0": 16,
+                      "vf1": 16,
+                      "vf2": 0,
+                      "vf3": 0,
+                      "vf4": 0,
+                      "vf5": 0,
+                      "vf6": 0,
+                      "vf7": 0
+                    }
+                  }
+                },
+                "vendor_id": "8086",
+                "vf_amount": 2,
+                "vf_device_id": "0d90",
+                "vf_driver": "vfio-pci"
+              }
+            ],
+            "oneCardConfigForAll": true
+          }
+        }
+      ]
+    capabilities: Basic Install
+    operators.operatorframework.io/builder: operator-sdk-v1.2.0
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
+  name: sriov-fec.v1.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: SriovFecClusterConfig is the Schema for the sriovfecclusterconfigs API
+      displayName: Sriov Fec Cluster Config
+      kind: SriovFecClusterConfig
+      name: sriovfecclusterconfigs.sriovfec.intel.com
+      version: v1
+    - description: SriovFecNodeConfig is the Schema for the sriovfecnodeconfigs API
+      displayName: Sriov Fec Node Config
+      kind: SriovFecNodeConfig
+      name: sriovfecnodeconfigs.sriovfec.intel.com
+      version: v1
+  description: 'The Intel® FPGA Programmable Acceleration Card (Intel® FPGA PAC) plays a key role in accelerating certain types of workloads, which in turn increases the overall compute capacity of a commercial, off-the-shelf platform. FPGA benefits include:  Flexibility - FPGA functionality can change upon every power up of the device. Acceleration - Get products to market faster and increase your system performance. Integration - Modern FPGAs include on-die processors, transceiver I/Os at 28 Gbps (or faster), RAM blocks, DSP engines, and more. Total Cost of Ownership (TCO) - While ASICs may cost less per unit than an equivalent FPGA, building them requires a non-recurring expense (NRE), expensive software tools, specialized design teams, and long manufacturing cycles. This document explains how the FPGA resource can be used on the Open Network Edge Services Software (OpenNESS) platform for accelerating network functions and edge application workloads. We use the Intel® FPGA PAC N3000 as a reference FPGA and use LTE/5G Forward Error Correction (FEC) as an example workload that accelerates the 5G or 4G L1 base station network function. The same concept and mechanism is applicable for application acceleration workloads like AI and ML on FPGA for Inference applications. The Intel® FPGA PAC N3000 is a full-duplex, 100 Gbps in-system, re-programmable acceleration card for multi-workload networking application acceleration. It has an optimal memory mixture designed for network functions, with an integrated network interface card (NIC) in a small form factor that enables high throughput, low latency, and low power per bit for a custom networking pipeline.'
+  displayName: SRIOV-FEC Operator for Intel® FPGA PAC N3000
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          - namespaces
+          - serviceaccounts
+          verbs:
+          - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - nodes
+          verbs:
+          - list
+        - apiGroups:
+          - apps
+          resources:
+          - daemonsets
+          verbs:
+          - '*'
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterrolebindings
+          - clusterroles
+          - rolebindings
+          - roles
+          verbs:
+          - '*'
+        - apiGroups:
+          - security.openshift.io
+          resources:
+          - securitycontextconstraints
+          verbs:
+          - '*'
+        - apiGroups:
+          - sriovfec.intel.com
+          resources:
+          - sriovfecclusterconfigs
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - sriovfec.intel.com
+          resources:
+          - sriovfecclusterconfigs/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - authentication.k8s.io
+          resources:
+          - tokenreviews
+          verbs:
+          - create
+        - apiGroups:
+          - authorization.k8s.io
+          resources:
+          - subjectaccessreviews
+          verbs:
+          - create
+        serviceAccountName: default
+      deployments:
+      - name: sriov-fec-controller-manager
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              control-plane: controller-manager
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                control-plane: controller-manager
+            spec:
+              containers:
+              - args:
+                - --secure-listen-address=0.0.0.0:8443
+                - --upstream=http://127.0.0.1:8080/
+                - --logtostderr=true
+                - --v=10
+                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+                name: kube-rbac-proxy
+                ports:
+                - containerPort: 8443
+                  name: https
+                resources: {}
+              - args:
+                - --metrics-addr=127.0.0.1:8080
+                - --enable-leader-election
+                command:
+                - /manager
+                env:
+                - name: SRIOV_FEC_DAEMON_IMAGE
+                  value: docker.io/sriov-fec-daemon:v1.0.0
+                - name: NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                image: sriov-fec-operator:v1.0.0
+                name: manager
+                resources:
+                  limits:
+                    cpu: 100m
+                    memory: 30Mi
+                  requests:
+                    cpu: 100m
+                    memory: 20Mi
+              terminationGracePeriodSeconds: 10
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps/status
+          verbs:
+          - get
+          - update
+          - patch
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+        serviceAccountName: default
+    strategy: deployment
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - Vista Creek
+  - N3000
+  - N3000-2
+  - vRAN
+  - ORAN
+  - fpga accelerator
+  links:
+  - name: Sriov Fec
+    url: https://sriov-fec.domain
+  maturity: alpha
+  provider:
+    name: Intel Corporation
+    url: https://www.intel.com/content/www/us/en/communications/products/programmable/overview.html
+  version: 1.0.0
