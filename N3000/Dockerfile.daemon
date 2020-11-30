@@ -17,6 +17,9 @@ ARG OPAE_VERSION=$OPAE_VERSION
 FROM opae:$OPAE_VERSION
 
 RUN dnf install --disablerepo=* --enablerepo=ubi-8-baseos -y pciutils ethtool
+
+WORKDIR /srcrpms
+RUN dnf download --disablerepo=* --enablerepo=ubi-8-baseos --source pciutils ethtool
 WORKDIR /
 COPY --from=builder /workspace/n3000_daemon .
 

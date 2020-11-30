@@ -55,6 +55,8 @@ RUN ./n3000-$OPAE_VERSION-rte-el8-setup.sh extract && \
     rm -rf /opae-prepare
 
 FROM registry.access.redhat.com/ubi8:latest
+WORKDIR /srcrpms
+RUN dnf download --disablerepo=* --enablerepo=ubi-8-baseos --source kmod
 WORKDIR /driver-workdir
 RUN dnf install --disablerepo=* --enablerepo=ubi-8-baseos --setopt=install_weak_deps=False -y kmod
 COPY --from=builder /opae-drivers/opae-intel-fpga-driver-*.src.rpm  /opae-drivers/

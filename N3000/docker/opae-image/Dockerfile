@@ -6,6 +6,9 @@ FROM registry.access.redhat.com/ubi8:latest
 RUN dnf install --disablerepo=*  --enablerepo=ubi-8-appstream --enablerepo=ubi-8-baseos -y \
      python3 json-c procps-ng cpio
 
+WORKDIR /srcrpms
+RUN dnf download --disablerepo=* --enablerepo=ubi-8-appstream --enablerepo=ubi-8-baseos --source procps-ng cpio
+
 RUN pip3 install intelhex
 
 ARG OPAE_VERSION
