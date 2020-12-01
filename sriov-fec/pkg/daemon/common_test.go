@@ -11,7 +11,7 @@ import (
 
 var _ = Describe("common", func() {
 	log = ctrl.Log.WithName("SriovCommon-test")
-	var _ = Describe("execCmd", func() {
+	var _ = Context("execCmd", func() {
 		var _ = It("will return error when args is empty ", func() {
 			_, err := execCmd([]string{}, log)
 			Expect(err).To(HaveOccurred())

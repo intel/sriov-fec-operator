@@ -19,10 +19,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
 
 var (
@@ -123,7 +120,6 @@ var (
 		Name:      DEFAULT_CLUSTER_CONFIG_NAME,
 		Namespace: NAMESPACE,
 	}
-	k8sClient client.Client
 )
 
 func createCRWithNodeConfig(addNodeConfig bool) error {
@@ -131,22 +127,7 @@ func createCRWithNodeConfig(addNodeConfig bool) error {
 	getVFconfigured = fakeGetVFconfigured
 	getVFList = fakeGetVFList
 
-	testEnv := &envtest.Environment{
-		CRDDirectoryPaths: []string{filepath.Join("..", "..", "config", "crd", "bases")},
-	}
-	config, err := testEnv.Start()
-	Expect(err).ToNot(HaveOccurred())
-	Expect(config).ToNot(BeNil())
-
-	err = sriovv1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	// envtest is empty, create fake node
-	k8sClient, err = client.New(config, client.Options{Scheme: scheme.Scheme})
-	Expect(err).ToNot(HaveOccurred())
-	Expect(k8sClient).ToNot(BeNil())
-
-	err = k8sClient.Create(context.TODO(), node)
+	err := k8sClient.Create(context.TODO(), node)
 	Expect(err).ToNot(HaveOccurred())
 
 	if addNodeConfig {
@@ -155,6 +136,7 @@ func createCRWithNodeConfig(addNodeConfig bool) error {
 		Expect(err).ToNot(HaveOccurred())
 	}
 
+	Expect(config).ToNot(BeNil())
 	cset, err := clientset.NewForConfig(config)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -173,7 +155,7 @@ func createCRWithNodeConfig(addNodeConfig bool) error {
 }
 
 var _ = Describe("SriovDaemonTest", func() {
-	var _ = Describe("Reconciler", func() {
+	var _ = Context("Reconciler", func() {
 
 		BeforeEach(func() {
 			workdir = testTmpFolder
@@ -280,11 +262,13 @@ var _ = Describe("SriovDaemonTest", func() {
 					PhysicalFunctions: []sriovv1.PhysicalFunctionConfig{},
 				}
 				err = k8sClient.Update(context.TODO(), nodeConfig)
-
 				Expect(err).NotTo(HaveOccurred())
+
 				_, err = reconciler.Reconcile(request)
 				Expect(err).ToNot(HaveOccurred())
 			}
+			err = k8sClient.Delete(context.TODO(), nodeConfig)
+			Expect(err).ToNot(HaveOccurred())
 			err = k8sClient.Delete(context.TODO(), node)
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -325,9 +309,6 @@ var _ = Describe("SriovDaemonTest", func() {
 		})
 		var _ = It("will create cr with node config and failed unbind device", func() {
 			err := createFileInFolder(filepath.Join(sysBusPciDevices, PCIAddress), "driver")
-			Expect(err).ToNot(HaveOccurred())
-			fakeSystemdErrReturn = fmt.Errorf("error")
-			procCmdlineFilePath = "testdata/cmdline_test_missing_param"
 			err = createCRWithNodeConfig(true)
 			Expect(err).ToNot(HaveOccurred())
 

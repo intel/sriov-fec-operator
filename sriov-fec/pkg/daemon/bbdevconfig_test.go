@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -15,21 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
 )
-
-var (
-	testTmpFolder string
-)
-
-var _ = BeforeSuite(func() {
-	var err error
-	testTmpFolder, err = ioutil.TempDir("/tmp", "bbdevconfig_test")
-	Expect(err).ShouldNot(HaveOccurred())
-})
-
-var _ = AfterSuite(func() {
-	err := os.RemoveAll(testTmpFolder)
-	Expect(err).ShouldNot(HaveOccurred())
-})
 
 func compareFiles(firstFilepath, secondFilepath string) error {
 	first, err := ioutil.ReadFile(firstFilepath)
@@ -84,7 +68,7 @@ var _ = Describe("bbdevconfig", func() {
 		},
 		FLRTimeOut: 21,
 	}
-	var _ = Describe("generateBBDevConfigFile", func() {
+	var _ = Context("generateBBDevConfigFile", func() {
 		var _ = It("will create valid config ", func() {
 			filename := "config.cfg"
 			err := generateN3000BBDevConfigFile(&sampleBBDevConfig0, filepath.Join(testTmpFolder, filename))

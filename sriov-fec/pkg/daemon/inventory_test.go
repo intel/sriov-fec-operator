@@ -11,7 +11,7 @@ import (
 
 var _ = Describe("SriovInventoryTest", func() {
 	log := ctrl.Log.WithName("SriovDaemon-test")
-	var _ = Describe("GetSriovInventory", func() {
+	var _ = Context("GetSriovInventory", func() {
 		var _ = It("will return error when config is nil ", func() {
 			_, err := GetSriovInventory(log)
 			Expect(err).ToNot(HaveOccurred())
