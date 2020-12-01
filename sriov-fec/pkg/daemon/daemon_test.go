@@ -309,6 +309,8 @@ var _ = Describe("SriovDaemonTest", func() {
 		})
 		var _ = It("will create cr with node config and failed unbind device", func() {
 			err := createFileInFolder(filepath.Join(sysBusPciDevices, PCIAddress), "driver")
+			Expect(err).ToNot(HaveOccurred())
+
 			err = createCRWithNodeConfig(true)
 			Expect(err).ToNot(HaveOccurred())
 
