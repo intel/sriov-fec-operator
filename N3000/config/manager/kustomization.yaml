@@ -3,3 +3,9 @@
 
 resources:
 - manager.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: n3000-operator
+  newName: n3000-operator
+  newTag: v1.0.0

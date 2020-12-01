@@ -37,6 +37,8 @@ spec:
         spec:
           description: SriovFecNodeConfigSpec defines the desired state of SriovFecNodeConfig
           properties:
+            drainSkip:
+              type: boolean
             physicalFunctions:
               description: List of PhysicalFunctions configs
               items:

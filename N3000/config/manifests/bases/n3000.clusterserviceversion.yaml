@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
+
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+    operators.operatorframework.io/builder: operator-sdk-v1.2.0
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
+  name: n3000.vX.Y.Z
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: N3000Node is the Schema for the n3000nodes API
+      displayName: N3000 Node
+      kind: N3000Node
+      name: n3000nodes.fpga.intel.com
+      version: v1
+    - description: N3000Cluster is the Schema for the n3000clusters API
+      displayName: N3000 Cluster
+      kind: N3000Cluster
+      name: n3000clusters.fpga.intel.com
+      version: v1
+  description: 'The Intel® FPGA Programmable Acceleration Card (Intel® FPGA PAC) plays a key role in accelerating certain types of workloads, which in turn increases the overall compute capacity of a commercial, off-the-shelf platform. FPGA benefits include:  Flexibility - FPGA functionality can change upon every power up of the device. Acceleration - Get products to market faster and increase your system performance. Integration - Modern FPGAs include on-die processors, transceiver I/Os at 28 Gbps (or faster), RAM blocks, DSP engines, and more. Total Cost of Ownership (TCO) - While ASICs may cost less per unit than an equivalent FPGA, building them requires a non-recurring expense (NRE), expensive software tools, specialized design teams, and long manufacturing cycles. This document explains how the FPGA resource can be used on the Open Network Edge Services Software (OpenNESS) platform for accelerating network functions and edge application workloads. We use the Intel® FPGA PAC N3000 as a reference FPGA and use LTE/5G Forward Error Correction (FEC) as an example workload that accelerates the 5G or 4G L1 base station network function. The same concept and mechanism is applicable for application acceleration workloads like AI and ML on FPGA for Inference applications. The Intel® FPGA PAC N3000 is a full-duplex, 100 Gbps in-system, re-programmable acceleration card for multi-workload networking application acceleration. It has an optimal memory mixture designed for network functions, with an integrated network interface card (NIC) in a small form factor that enables high throughput, low latency, and low power per bit for a custom networking pipeline.'
+  displayName: Intel® FPGA PAC N3000 Operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - Vista Creek
+  - N3000
+  - N3000-2
+  - vRAN
+  - ORAN
+  - fpga accelerator
+  links:
+  - name: N3000
+    url: https://n3000.domain
+  maturity: alpha
+  provider:
+    name: Intel Corporation
+    url: https://www.intel.com/content/www/us/en/communications/products/programmable/overview.html
+  version: 0.0.0

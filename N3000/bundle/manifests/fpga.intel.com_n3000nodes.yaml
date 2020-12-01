@@ -37,7 +37,9 @@ spec:
         spec:
           description: N3000NodeSpec defines the desired state of N3000Node
           properties:
-            dryrun:
+            drainSkip:
+              type: boolean
+            dryRun:
               type: boolean
             fortville:
               properties:
