@@ -390,49 +390,6 @@ var _ = Describe("ExampleTest", func() {
 			Expect(len(nodeConfigs.Items)).To(Equal(0))
 		})
 
-		var _ = It("will not create a node - missing url", func() {
-
-			// envtest is empty, create fake node
-			err := k8sClient.Create(context.TODO(), node)
-			Expect(err).ToNot(HaveOccurred())
-
-			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = ""
-
-			// simulate creation of cluster config by the user
-			err = k8sClient.Create(context.TODO(), clusterConfig)
-			Expect(err).ToNot(HaveOccurred())
-
-			log = klogr.New().WithName("N3000ClusterReconciler-Test")
-			reconciler = N3000ClusterReconciler{
-				Client: k8sClient,
-				Scheme: scheme.Scheme,
-				Log:    log,
-			}
-
-			request = ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: namespace,
-					Name:      DEFAULT_N3000_CONFIG_NAME,
-				},
-			}
-
-			nodeConfigs := &fpgav1.N3000NodeList{}
-			err = k8sClient.List(context.TODO(), nodeConfigs)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(nodeConfigs.Items)).To(Equal(0))
-
-			_, err = reconciler.Reconcile(request)
-			Expect(err).ToNot(HaveOccurred())
-
-			// Check if node config was created out of cluster config
-			nodeConfigs = &fpgav1.N3000NodeList{}
-			err = k8sClient.List(context.TODO(), nodeConfigs)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(nodeConfigs.Items)).To(Equal(0))
-
-			doDeconf = false
-		})
-
 		var _ = It("will not create a node - url ok", func() {
 
 			// envtest is empty, create fake node

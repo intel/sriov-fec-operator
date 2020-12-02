@@ -25,18 +25,20 @@ var (
 	fpgaInfoPath = "fpgainfo"
 	address      = ":42222"
 
-	fpgaInfoExec = func(command string) (string, error) {
-		cmd := exec.Command(fpgaInfoPath, command)
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			log.Printf("`%s %s` executed unsuccessfully. Output:'%s', Error: %+v",
-				fpgaInfoPath, command, string(output), err)
-			return "", err
-		}
-
-		return string(output), nil
-	}
+	fpgaInfoExec = runFpgaInfo
 )
+
+func runFpgaInfo(command string) (string, error) {
+	cmd := exec.Command(fpgaInfoPath, command)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("`%s %s` executed unsuccessfully. Output:'%s', %+v",
+			fpgaInfoPath, command, string(output), err)
+		return "", err
+	}
+
+	return string(output), nil
+}
 
 // DeviceBMCInfo contains various metrics obtained from `fpgainfo bmc` grouped by unit families.
 type DeviceBMCInfo struct {

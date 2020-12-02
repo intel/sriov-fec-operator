@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
@@ -131,18 +133,49 @@ fpgainfo_voltage_volts{component="qsfp1_supply",pci="0000:2b:00.0"} -1
 `
 )
 
+var (
+	fakeFpgaInfoError error = nil
+)
+
 func fakeFpgaInfo(cmd string) (string, error) {
 	if cmd == "bmc" {
-		return bmcOutput, nil
+		return bmcOutput, fakeFpgaInfoError
 	}
 	return "", fmt.Errorf("Unsupported command: %s", cmd)
 }
 
-func TestBMCInfoCollection(t *testing.T) {
-	fpgaInfoExec = fakeFpgaInfo
-	collector := NewFpgaInfoCollector()
-
-	if err := testutil.CollectAndCompare(collector, strings.NewReader(bmcExpect)); err != nil {
-		t.Fatal("Unexpected metrics returned:", err)
-	}
+func TestMain(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Main suite")
 }
+
+var _ = Describe("fpgainfo", func() {
+	var _ = Context("Collect ", func() {
+		BeforeEach(func() {
+			fakeFpgaInfoError = nil
+		})
+
+		var _ = It("will collect valid fpgainfo ", func() {
+			fpgaInfoExec = fakeFpgaInfo
+			collector := NewFpgaInfoCollector()
+			err := testutil.CollectAndCompare(collector, strings.NewReader(bmcExpect))
+			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("will return nil when fpgainfo failed", func() {
+			fakeFpgaInfoError = fmt.Errorf("error")
+			fpgaInfoExec = fakeFpgaInfo
+			collector := NewFpgaInfoCollector()
+			Expect(collector).To(BeNil())
+		})
+		var _ = It("will successfully run exec ", func() {
+			fpgaInfoPath = "ls"
+			_, err := runFpgaInfo("--help")
+			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("will unsuccessfully run exec ", func() {
+			fpgaInfoPath = "wrong_exec"
+			_, err := runFpgaInfo("--help")
+			Expect(err).To(HaveOccurred())
+		})
+	})
+})
