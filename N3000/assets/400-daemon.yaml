@@ -5,14 +5,14 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: n3000-daemon
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: n3000-daemon
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
 rules:
 - apiGroups:
   - fpga.intel.com
@@ -41,7 +41,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: n3000-daemon
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
 rules:
 - apiGroups: [""]
   resources: ["pods"]
@@ -61,34 +61,34 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: n3000-daemon
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
 subjects:
 - kind: ServiceAccount
   name: n3000-daemon
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
 roleRef:
   kind: ClusterRole
   name: n3000-daemon
   apiGroup: rbac.authorization.k8s.io
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: n3000-daemon
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: n3000-daemon
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
 subjects:
 - kind: ServiceAccount
   name: n3000-daemon
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
 userNames:
-- system:serviceaccount:n3000-operator-resources:n3000-daemon
+- system:serviceaccount:n3000-operators-resources:n3000-daemon
 
 ---
 apiVersion: apps/v1
@@ -97,7 +97,7 @@ metadata:
   labels:
     app: n3000-daemonset
   name: n3000-daemonset
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
   annotations:
     openshift.io/scc: n3000-daemon
 spec:

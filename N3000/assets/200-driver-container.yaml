@@ -4,19 +4,19 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: n3000-operator-resources
+  name: n3000-operators-resources
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: fpga-driver
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: fpga-driver
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
 rules:
 - apiGroups:
   - security.openshift.io
@@ -31,18 +31,18 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: fpga-driver
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: fpga-driver
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
 subjects:
 - kind: ServiceAccount
   name: fpga-driver
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
 userNames:
-- system:serviceaccount:n3000-operator-resources:fpga-driver
+- system:serviceaccount:n3000-operators-resources:fpga-driver
 ---
 # Please edit the object below. Lines beginning with a '#' will be ignored,
 # and an empty file will abort the edit. If an error occurs while saving this file will be
@@ -88,7 +88,7 @@ seccompProfiles:
 supplementalGroups:
   type: RunAsAny
 users:
-- system:serviceaccount:n3000-operator-resources:fpga-driver
+- system:serviceaccount:n3000-operators-resources:fpga-driver
 volumes:
 - '*'
 ---
@@ -98,7 +98,7 @@ metadata:
   labels:
     app: fpga-driver-daemonset
   name: fpga-driver-daemonset
-  namespace: n3000-operator-resources
+  namespace: n3000-operators-resources
   annotations:
     openshift.io/scc: fpga-driver
 spec:
