@@ -99,17 +99,6 @@ func (r *N3000ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		return ctrl.Result{}, nil
 	}
 
-	for _, node := range clusterConfig.Spec.Nodes {
-		if node.Fortville.FirmwareURL == "" {
-			log.Info("received empty FirmwareURL")
-
-			r.updateStatus(clusterConfig, fpgav1.IgnoredSync,
-				"N3000Cluster with Fortville command and valid FirmwareURL are handled")
-
-			return ctrl.Result{}, nil
-		}
-	}
-
 	n3000nodes, err := r.splitClusterIntoNodes(ctx, clusterConfig)
 	if err != nil {
 		log.Error(err, "cluster into nodes split failed")
