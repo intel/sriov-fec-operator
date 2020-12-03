@@ -154,6 +154,59 @@ var _ = Describe("Fortville Manager", func() {
 			},
 		},
 	}
+	sampleOneFortvilleDryRun := fpgav1.N3000Node{
+		Spec: fpgav1.N3000NodeSpec{
+			Fortville: fpgav1.N3000Fortville{
+				MACs: []fpgav1.FortvilleMAC{
+					{
+						MAC: "64:4c:36:11:1b:a8",
+					},
+				},
+				FirmwareURL: "http://www.test.com/fortville/nvmPackage.tag.gz",
+			},
+			DryRun: true,
+		},
+	}
+	sampleOneFortvilleNoURL := fpgav1.N3000Node{
+		Spec: fpgav1.N3000NodeSpec{
+			Fortville: fpgav1.N3000Fortville{
+				MACs: []fpgav1.FortvilleMAC{
+					{
+						MAC: "64:4c:36:11:1b:a8",
+					},
+				},
+			},
+		},
+	}
+	sampleOneFortvilleInvalidChecksum := fpgav1.N3000Node{
+		Spec: fpgav1.N3000NodeSpec{
+			Fortville: fpgav1.N3000Fortville{
+				MACs: []fpgav1.FortvilleMAC{
+					{
+						MAC: "64:4c:36:11:1b:a8",
+					},
+				},
+				FirmwareURL: "http://www.test.com/fortville/nvmPackage.tag.gz",
+				CheckSum:    "0xbad",
+			},
+		},
+	}
+	/*
+		sampleOneFortvilleOkChecksum := fpgav1.N3000Node{
+			Spec: fpgav1.N3000NodeSpec{
+				Fortville: fpgav1.N3000Fortville{
+					MACs: []fpgav1.FortvilleMAC{
+						{
+							MAC: "64:4c:36:11:1b:a8",
+						},
+					},
+					FirmwareURL: "http://www.test.com/fortville/nvmPackage.tag.gz",
+					CheckSum:    "5e949800776ac373015a2e39aa4024b0",
+				},
+			},
+		}
+	*/
+
 	var _ = Describe("flash", func() {
 		var _ = It("will return nil in successfully scenario ", func() {
 			cleanFortville()
@@ -162,6 +215,10 @@ var _ = Describe("Fortville Manager", func() {
 			fpgaInfoExec = fakeFpgaInfo
 			fpgadiagExec = fakeFpgadiag
 			err := f.flash(&sampleOneFortville)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Second flash with the same data
+			err = f.flash(&sampleOneFortville)
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("will return error when nvmupdate failed", func() {
@@ -181,6 +238,27 @@ var _ = Describe("Fortville Manager", func() {
 			fpgadiagExec = fakeFpgadiag
 			err := f.flash(&sampleOneFortville)
 			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("will call runExc", func() {
+			cleanFortville()
+			nvmupdateExec = fakeNvmupdate
+			fpgaInfoExec = fakeFpgaInfo
+			fpgadiagExec = fakeFpgadiag
+			rsuExec = runExec
+
+			err := f.flash(&sampleOneFortville)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		var _ = It("will call runExec with DryRun flag", func() {
+			cleanFortville()
+			nvmupdateExec = fakeNvmupdate
+			fpgaInfoExec = fakeFpgaInfo
+			fpgadiagExec = fakeFpgadiag
+			rsuExec = runExec
+
+			err := f.flash(&sampleOneFortvilleDryRun)
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 	var _ = Describe("verifyPreconditions", func() {
@@ -213,6 +291,33 @@ var _ = Describe("Fortville Manager", func() {
 			defer srv.Close()
 			err := f.verifyPreconditions(&sampleOneFortville)
 			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("will fail because of no FirmwareURL ", func() {
+			cleanFortville()
+			fpgaInfoExec = fakeFpgaInfo
+			fpgadiagExec = fakeFpgadiag
+			tarExec = fakeTar
+			srv := serverFortvilleMock()
+			defer srv.Close()
+			err := f.verifyPreconditions(&sampleOneFortvilleNoURL)
+			Expect(err).To(HaveOccurred())
+
+			err = f.getNVMUpdate(&sampleOneFortvilleNoURL)
+			Expect(err).To(HaveOccurred())
+
+			fakeFpgaInfoErrReturn = fmt.Errorf("error")
+			_, err = f.getN3000Devices()
+			Expect(err).To(HaveOccurred())
+			fakeFpgaInfoErrReturn = nil
+		})
+		var _ = It("will fail because of wrong checksum ", func() {
+			cleanFortville()
+			ethtoolExec = fakeEthtool
+			nvmupdateExec = fakeNvmupdate
+			fpgaInfoExec = fakeFpgaInfo
+			fpgadiagExec = fakeFpgadiag
+			err := f.verifyPreconditions(&sampleOneFortvilleInvalidChecksum)
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })

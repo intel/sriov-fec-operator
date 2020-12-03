@@ -663,4 +663,20 @@ var _ = Describe("ExampleTest", func() {
 			doDeconf = false
 		})
 	})
+
+	var _ = Describe("Reconciler manager", func() {
+		var _ = It("setup with invalid manager", func() {
+			var m ctrl.Manager
+
+			err := reconciler.SetupWithManager(m)
+			Expect(err).To(HaveOccurred())
+
+			err = k8sClient.Create(context.TODO(), node)
+			Expect(err).ToNot(HaveOccurred())
+
+			doDeconf = false
+			removeCluster = false
+		})
+	})
+
 })

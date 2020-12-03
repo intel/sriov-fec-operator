@@ -5,14 +5,12 @@ package daemon
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"testing"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -92,22 +90,12 @@ var (
 	fakeFpgaInfoErrReturn    error = nil
 	fakeFpgasUpdateErrReturn error = nil
 	fakeRsuUpdateErrReturn   error = nil
-	testTmpFolder            string
 )
 
-var _ = BeforeSuite(func() {
-	var err error
-	testTmpFolder, err = ioutil.TempDir("/tmp", "fpgamanager_test")
-	Expect(err).ShouldNot(HaveOccurred())
+func mockFPGAEnv() {
 	fpgaUserImageSubfolderPath = testTmpFolder
 	fpgaUserImageFile = filepath.Join(testTmpFolder, "fpga")
-	mockFortvilleEnv()
-})
-
-var _ = AfterSuite(func() {
-	err := os.RemoveAll(testTmpFolder)
-	Expect(err).ShouldNot(HaveOccurred())
-})
+}
 
 func fakeFpgaInfo(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
 	if cmd.String() == "fpgainfo bmc" {
@@ -130,7 +118,7 @@ func fakeRsu(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
 	return "", fmt.Errorf("Unsupported command: %s", cmd)
 }
 
-func clean() {
+func cleanFPGA() {
 	fakeFpgaInfoErrReturn = nil
 	fakeFpgasUpdateErrReturn = nil
 	fakeRsuUpdateErrReturn = nil
@@ -147,11 +135,6 @@ func serverMock() *httptest.Server {
 
 func usersMock(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("mock server responding"))
-}
-func TestMain(t *testing.T) {
-	clean()
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Main suite")
 }
 
 var _ = Describe("FPGA Manager", func() {
@@ -214,7 +197,7 @@ var _ = Describe("FPGA Manager", func() {
 			fakeFpgaInfoErrReturn = fmt.Errorf("error")
 			fpgaInfoExec = fakeFpgaInfo
 			_, err := getFPGAInventory(log)
-			clean()
+			cleanFPGA()
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -244,7 +227,7 @@ var _ = Describe("FPGA Manager", func() {
 			fakeFpgaInfoErrReturn = fmt.Errorf("error")
 			fpgaInfoExec = fakeFpgaInfo
 			err := checkFPGADieTemperature("0000:xx:00.0", log)
-			clean()
+			cleanFPGA()
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -284,7 +267,7 @@ var _ = Describe("FPGA Manager", func() {
 			fpgasUpdateExec = fakeFpgasUpdate
 			rsuExec = fakeRsu
 			err := f.ProgramFPGAs(&sampleOneFPGA)
-			clean()
+			cleanFPGA()
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will return error when rsuExec failed", func() {
@@ -293,7 +276,7 @@ var _ = Describe("FPGA Manager", func() {
 			fakeRsuUpdateErrReturn = fmt.Errorf("error")
 			rsuExec = fakeRsu
 			err := f.ProgramFPGAs(&sampleOneFPGA)
-			clean()
+			cleanFPGA()
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will return error when one PCIAddr in CR does not exist", func() {
@@ -338,7 +321,7 @@ var _ = Describe("FPGA Manager", func() {
 			fakeFpgaInfoErrReturn = fmt.Errorf("error")
 			fpgaInfoExec = fakeFpgaInfo
 			err := f.verifyPreconditions(&sampleOneFPGA)
-			clean()
+			cleanFPGA()
 			Expect(err).To(HaveOccurred())
 		})
 	})
