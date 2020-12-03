@@ -29,7 +29,7 @@ var (
 	rsuPath                     = "rsu"
 	rsuExec                     = runExec
 	fpgaTemperatureDefaultLimit = 85.0 //in Celsius degrees
-	fpgaTemperatureBottomRange  = 60.0 //in Celsius degrees
+	fpgaTemperatureBottomRange  = 40.0 //in Celsius degrees
 	fpgaTemperatureTopRange     = 95.0 //in Celsius degrees
 	envTemperatureLimitName     = "FPGA_DIE_TEMP_LIMIT"
 )
