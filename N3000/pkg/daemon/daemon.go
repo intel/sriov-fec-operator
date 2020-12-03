@@ -268,14 +268,16 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if n3000node.Spec.FPGA != nil {
 		err := r.fpga.verifyPreconditions(n3000node)
 		if err != nil {
-			return ctrl.Result{}, err
+			r.updateFlashCondition(n3000node, metav1.ConditionFalse, FlashFailed, err.Error())
+			return ctrl.Result{}, nil
 		}
 	}
 
 	if n3000node.Spec.Fortville.MACs != nil {
 		err = r.fortville.verifyPreconditions(n3000node)
 		if err != nil {
-			return ctrl.Result{}, err
+			r.updateFlashCondition(n3000node, metav1.ConditionFalse, FlashFailed, err.Error())
+			return ctrl.Result{}, nil
 		}
 	}
 
