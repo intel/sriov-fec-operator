@@ -21,7 +21,7 @@ RUN go mod download
 
 COPY cmd cmd/
 COPY pkg pkg/
-copy api api/
+COPY api api/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
 
@@ -32,7 +32,7 @@ RUN mkdir -p /usr/share/misc/ && \
     curl https://pci-ids.ucw.cz/v2.2/pci.ids.gz --output pci.ids.gz && \
     gzip -d pci.ids.gz && \
     rm -rfv ./pci.ids.gz
-
+USER 1001
 WORKDIR /sriov_workdir
 COPY --from=builder /workspace-go/sriov_fec_daemon .
 COPY --from=builder /workspace-pf/pf-bb-config/pf_bb_config .

@@ -59,6 +59,7 @@ WORKDIR /srcrpms
 RUN dnf download --disablerepo=* --enablerepo=ubi-8-baseos --source kmod
 WORKDIR /driver-workdir
 RUN dnf install --disablerepo=* --enablerepo=ubi-8-baseos --setopt=install_weak_deps=False -y kmod
+USER 1001
 COPY --from=builder /opae-drivers/opae-intel-fpga-driver-*.src.rpm  /opae-drivers/
 COPY entrypoint.sh .
 RUN chmod +x /driver-workdir/entrypoint.sh

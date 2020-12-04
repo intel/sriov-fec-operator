@@ -18,6 +18,7 @@ RUN mkdir -p /usr/share/misc/ && \
     gzip -d pci.ids.gz && \
     rm -rfv ./pci.ids.gz
 
+USER 1001
 WORKDIR /labeler-workspace
 COPY --from=builder /workspace/node_labeler .
 
