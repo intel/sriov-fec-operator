@@ -111,6 +111,8 @@ var _ = Describe("N3000 Daemon Tests", func() {
 					},
 				},
 			}
+
+			setupManagers()
 		})
 
 		AfterEach(func() {
@@ -140,6 +142,8 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				err = k8sClient.Delete(context.TODO(), &nodeToDelete)
 				Expect(err).ToNot(HaveOccurred())
 			}
+
+			cleanUpHandlers()
 		})
 		var _ = It("check NewN3000NodeReconciler", func() {
 
