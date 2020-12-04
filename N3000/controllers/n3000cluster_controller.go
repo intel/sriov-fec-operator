@@ -64,7 +64,7 @@ type N3000ClusterReconciler struct {
 // +kubebuilder:rbac:groups=fpga.intel.com,resources=n3000clusters/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=fpga.intel.com,resources=n3000nodes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=list;watch
-// +kubebuilder:rbac:groups="",resources=namespaces,verbs=get
+// +kubebuilder:rbac:groups="",resources=namespaces,verbs=*
 // +kubebuilder:rbac:groups="",resources=services;serviceaccounts,verbs=*
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=serviceaccounts;roles;rolebindings;clusterroles;clusterrolebindings,verbs=*
 // +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=*
