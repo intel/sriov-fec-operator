@@ -28,6 +28,10 @@ var _ = Describe("ExampleTest", func() {
 	log := klogr.New()
 	doDeconf := true
 	removeCluster := true
+	namespacedName := types.NamespacedName{
+		Name:      DEFAULT_N3000_CONFIG_NAME,
+		Namespace: namespace,
+	}
 
 	BeforeEach(func() {
 
@@ -66,6 +70,8 @@ var _ = Describe("ExampleTest", func() {
 
 		var err error
 		if doDeconf {
+			err = k8sClient.Get(context.TODO(), namespacedName, clusterConfig)
+			Expect(err).NotTo(HaveOccurred())
 			clusterConfig.Spec = fpgav1.N3000ClusterSpec{
 				Nodes: []fpgav1.N3000ClusterNode{},
 			}
@@ -177,6 +183,8 @@ var _ = Describe("ExampleTest", func() {
 			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("n3000node-dummy"))
 
 			// switch nodes
+			err = k8sClient.Get(context.TODO(), namespacedName, clusterConfig)
+			Expect(err).NotTo(HaveOccurred())
 			clusterConfig.Spec = fpgav1.N3000ClusterSpec{
 				Nodes: []fpgav1.N3000ClusterNode{
 					{
@@ -184,7 +192,6 @@ var _ = Describe("ExampleTest", func() {
 					},
 				},
 			}
-
 			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummynode2.bin"
 			err = k8sClient.Update(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
@@ -241,6 +248,8 @@ var _ = Describe("ExampleTest", func() {
 			Expect(len(nodeConfigs.Items)).To(Equal(1))
 			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("n3000node-dummy"))
 
+			err = k8sClient.Get(context.TODO(), namespacedName, clusterConfig)
+			Expect(err).NotTo(HaveOccurred())
 			new_url := "https://new-url.com"
 			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = new_url
 			err = k8sClient.Update(context.TODO(), clusterConfig)
@@ -297,6 +306,8 @@ var _ = Describe("ExampleTest", func() {
 			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("n3000node-dummy"))
 
 			// switch nodes
+			err = k8sClient.Get(context.TODO(), namespacedName, clusterConfig)
+			Expect(err).NotTo(HaveOccurred())
 			clusterConfig.Spec = fpgav1.N3000ClusterSpec{
 				Nodes: []fpgav1.N3000ClusterNode{
 					{
@@ -304,7 +315,6 @@ var _ = Describe("ExampleTest", func() {
 					},
 				},
 			}
-
 			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummynode2.bin"
 			err = k8sClient.Update(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
@@ -315,7 +325,6 @@ var _ = Describe("ExampleTest", func() {
 			err = k8sClient.List(context.TODO(), nodeConfigs)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(nodeConfigs.Items)).To(Equal(0))
-			// Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("n3000node-dummynode2"))
 		})
 
 		var _ = It("will not create a node because of namespace not found", func() {

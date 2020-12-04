@@ -137,6 +137,7 @@ func (r *N3000ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			"namespace", node.GetNamespace(), "operationResult", result)
 	}
 
+	r.updateStatus(clusterConfig, fpgav1.SucceededSync, "")
 	return ctrl.Result{}, nil
 }
 
