@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -258,6 +259,35 @@ var _ = Describe("Fortville Manager", func() {
 			rsuExec = runExec
 
 			err := f.flash(&sampleOneFortvilleDryRun)
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+	var _ = Describe("verifyImagePaths", func() {
+		var _ = It("will return error when a path does not exist", func() {
+			orig := nvmupdate64ePath
+			nvmupdate64ePath = "nonexistent"
+			err := verifyImagePaths()
+			Expect(err).To(HaveOccurred())
+			nvmupdate64ePath = orig
+		})
+		var _ = It("will return error when a path is a symlink", func() {
+			p := path.Join(nvmupdate64ePath, nvmupdate64e)
+
+			err := os.Remove(p)
+			Expect(err).ShouldNot(HaveOccurred())
+			err = os.Symlink("/dev/null", p)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			err = verifyImagePaths()
+			Expect(err).To(HaveOccurred())
+
+			err = os.Remove(p)
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = os.Create(path.Join(testTmpFolder, "nvmupdate64e"))
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+		var _ = It("will return nil if paths are valid", func() {
+			err := verifyImagePaths()
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})

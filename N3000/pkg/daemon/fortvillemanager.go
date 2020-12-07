@@ -6,7 +6,9 @@ package daemon
 import (
 	"encoding/csv"
 	"fmt"
+	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"strings"
 
@@ -186,6 +188,23 @@ func (fm *FortvilleManager) installNvmupdate() error {
 	return err
 }
 
+func verifyImagePaths() error {
+	paths := []string{
+		path.Join(nvmupdate64ePath, nvmupdate64e),
+		configFile,
+	}
+	for _, p := range paths {
+		fi, err := os.Lstat(p)
+		if err != nil {
+			return errors.Wrap(err, "Failed to get file info")
+		}
+		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
+			return errors.New("Symbolic link detected in nvm package " + p)
+		}
+	}
+	return nil
+}
+
 func (fm *FortvilleManager) getNVMUpdate(n *fpgav1.N3000Node) error {
 	log := fm.Log.WithName("getNVMUpdate")
 	if n.Spec.Fortville.FirmwareURL != "" {
@@ -206,7 +225,7 @@ func (fm *FortvilleManager) getNVMUpdate(n *fpgav1.N3000Node) error {
 	} else {
 		return errors.New("Empty Fortville.FirmwareURL")
 	}
-	return nil
+	return verifyImagePaths()
 }
 
 func (fm *FortvilleManager) flashMac(mac string, dryRun bool) error {

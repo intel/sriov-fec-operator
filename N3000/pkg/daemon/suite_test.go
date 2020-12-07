@@ -6,6 +6,7 @@ package daemon
 import (
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 
@@ -45,6 +46,10 @@ var _ = BeforeSuite(func(done Done) {
 	var err error
 	testTmpFolder, err = ioutil.TempDir("/tmp", "N3000_test")
 	Expect(err).ShouldNot(HaveOccurred())
+	_, err = os.Create(path.Join(testTmpFolder, "nvmupdate64e"))
+	Expect(err).NotTo(HaveOccurred())
+	_, err = os.Create(path.Join(testTmpFolder, "nvmupdate.cfg"))
+	Expect(err).NotTo(HaveOccurred())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
