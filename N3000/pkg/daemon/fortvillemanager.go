@@ -11,6 +11,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"syscall"
 
 	"github.com/go-logr/logr"
 	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
@@ -232,9 +233,12 @@ func (fm *FortvilleManager) flashMac(mac string, dryRun bool) error {
 	log := fm.Log.WithName("flashMac")
 	step := 0
 	for {
-
+		rootAttr := &syscall.SysProcAttr{
+			Credential: &syscall.Credential{Uid: 0, Gid: 0},
+		}
 		// Call nvmupdate64 -i first to refresh devices
 		cmd := exec.Command(nvmupdate64e, "-i")
+		cmd.SysProcAttr = rootAttr
 		cmd.Dir = nvmupdate64ePath
 		_, err := nvmupdateExec(cmd, log, dryRun)
 		if err != nil {
@@ -245,6 +249,7 @@ func (fm *FortvilleManager) flashMac(mac string, dryRun bool) error {
 		m := strings.Replace(mac, ":", "", -1)
 		m = strings.ToUpper(m)
 		cmd = exec.Command(nvmupdate64e, "-u", "-m", m, "-c", configFile, "-o", updateOutFile, "-l")
+		cmd.SysProcAttr = rootAttr
 		cmd.Dir = nvmupdate64ePath
 		_, err = nvmupdateExec(cmd, log, dryRun)
 		if err != nil {
