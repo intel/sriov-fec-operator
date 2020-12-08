@@ -67,7 +67,7 @@ type N3000ClusterReconciler struct {
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=*
 // +kubebuilder:rbac:groups="",resources=services;serviceaccounts,verbs=*
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=serviceaccounts;roles;rolebindings;clusterroles;clusterrolebindings,verbs=*
-// +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=*
+// +kubebuilder:rbac:groups=apps,resources=daemonsets;deployments;deployments/finalizers,verbs=*
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;create;update
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=get;create;update
 

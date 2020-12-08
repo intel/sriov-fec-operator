@@ -12,6 +12,8 @@ import (
 	"github.com/go-logr/logr"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -24,6 +26,11 @@ type Manager struct {
 
 	// Prefix used to gather enviroment variables for the templating the assets
 	EnvPrefix string
+
+	// Can be removed after sigs.k8s.io/controller-runtime v0.7.0 release where client.Scheme() is available
+	Scheme *runtime.Scheme
+
+	Owner metav1.Object
 }
 
 // buildTemplateVars creates map with variables for templating.
@@ -106,7 +113,7 @@ func (m *Manager) Deploy(ctx context.Context) error {
 			asset.BlockingReadiness.Retries, "delay", asset.BlockingReadiness.Delay.String(),
 			"objects", len(asset.objects))
 
-		if err := asset.createOrUpdate(ctx, m.Client); err != nil {
+		if err := asset.createOrUpdate(ctx, m.Client, m.Owner, m.Scheme); err != nil {
 			log.Error(err, "failed to create asset", "path", asset.Path)
 			return err
 		}

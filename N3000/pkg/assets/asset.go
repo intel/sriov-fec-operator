@@ -19,12 +19,14 @@ import (
 	secv1 "github.com/openshift/api/security/v1"
 	promv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/deprecated/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func init() {
@@ -110,9 +112,33 @@ func (a *Asset) load() error {
 	return a.loadFromFile()
 }
 
-func (a *Asset) createOrUpdate(ctx context.Context, c client.Client) error {
+func (a *Asset) setOwner(owner metav1.Object, obj runtime.Object, s *runtime.Scheme) error {
+	metaObj, ok := obj.(metav1.Object)
+	if !ok {
+		return errors.New(obj.GetObjectKind().GroupVersionKind().String() + " is not metav1.Object")
+	}
+
+	if owner.GetNamespace() == metaObj.GetNamespace() {
+		a.log.Info("setOwner for object", "owner", owner.GetName()+"."+owner.GetNamespace(),
+			"object", metaObj.GetName()+"."+metaObj.GetNamespace())
+		if err := controllerutil.SetControllerReference(owner, metaObj, s); err != nil {
+			return err
+		}
+	} else {
+		a.log.Info("Unsupported owner for object...skipping", "owner", owner.GetName()+"."+owner.GetNamespace(),
+			"object", metaObj.GetName()+"."+metaObj.GetNamespace())
+	}
+	return nil
+}
+
+func (a *Asset) createOrUpdate(ctx context.Context, c client.Client, o metav1.Object, s *runtime.Scheme) error {
 	for _, obj := range a.objects {
 		a.log.Info("createOrUpdate", "asset", a.Path, "kind", obj.GetObjectKind())
+
+		err := a.setOwner(o, obj, s)
+		if err != nil {
+			return err
+		}
 
 		objCopy := obj.DeepCopyObject()
 		result, err := ctrl.CreateOrUpdate(ctx, c, obj, func() error {

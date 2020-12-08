@@ -23,9 +23,11 @@ import (
 	"context"
 	"flag"
 	"os"
+	"strings"
 	"time"
 
 	secv1 "github.com/openshift/api/security/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -41,8 +43,10 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme                 = runtime.NewScheme()
+	setupLog               = ctrl.Log.WithName("setup")
+	namespace              = os.Getenv("NAMESPACE")
+	operatorDeploymentName string
 )
 
 func init() {
@@ -50,6 +54,9 @@ func init() {
 
 	utilruntime.Must(secv1.AddToScheme(scheme))
 	utilruntime.Must(sriovfecv1.AddToScheme(scheme))
+
+	n := os.Getenv("NAME")
+	operatorDeploymentName = n[:strings.LastIndex(n[:strings.LastIndex(n, "-")], "-")]
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -87,15 +94,28 @@ func main() {
 	}
 	// +kubebuilder:scaffold:builder
 
-	client, err := client.New(config, client.Options{Scheme: scheme})
+	c, err := client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		setupLog.Error(err, "failed to create client")
 		os.Exit(1)
 	}
+
+	owner := &appsv1.Deployment{}
+	err = c.Get(context.Background(), client.ObjectKey{
+		Namespace: namespace,
+		Name:      operatorDeploymentName,
+	}, owner)
+	if err != nil {
+		setupLog.Error(err, "Unable to get operator deployment")
+		os.Exit(1)
+	}
+
 	if err := (&assets.Manager{
-		Client:    client,
+		Client:    c,
 		Log:       ctrl.Log.WithName("asset_manager").WithName("sriov-fec"),
 		EnvPrefix: "SRIOV_FEC_",
+		//	Scheme:    scheme,
+		//	Owner:     owner,
 		Assets: []assets.Asset{
 			{
 				Path: "assets/100-device-plugin.yml",
