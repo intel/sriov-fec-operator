@@ -114,8 +114,8 @@ func main() {
 		Client:    c,
 		Log:       ctrl.Log.WithName("asset_manager").WithName("sriov-fec"),
 		EnvPrefix: "SRIOV_FEC_",
-		//	Scheme:    scheme,
-		//	Owner:     owner,
+		Scheme:    scheme,
+		Owner:     owner,
 		Assets: []assets.Asset{
 			{
 				Path: "assets/100-device-plugin.yml",
