@@ -64,7 +64,7 @@ func main() {
 	}
 
 	// Check if we are able to iterate the cards
-	_, err = exec.Command("fpgadiag", "bmc").CombinedOutput()
+	_, err = exec.Command("fpgainfo", "bmc").CombinedOutput()
 	if err != nil {
 		setupLog.Error(err, "fpgainfo bmc failed to run")
 		os.Exit(1)
