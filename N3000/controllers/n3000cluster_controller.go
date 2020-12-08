@@ -27,9 +27,11 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -120,21 +122,11 @@ func (r *N3000ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	for _, node := range n3000nodes {
-		nodeCopy := node.DeepCopy()
-		result, err := ctrl.CreateOrUpdate(ctx, r, node, func() error {
-			// no SetControllerReference because n3000Node are managed by the n3000 daemons
-
-			node.Spec = nodeCopy.Spec
-			return nil
-		})
-
+		err := r.updateOrCreateNodeConfig(node)
 		if err != nil {
-			log.Error(err, "create or update")
+			log.Error(err, "create or update failed")
 			return reconcile.Result{}, err
 		}
-
-		log.Info("createOrUpdate n3000Node", "name", node.GetName(),
-			"namespace", node.GetNamespace(), "operationResult", result)
 	}
 
 	r.updateStatus(clusterConfig, fpgav1.SucceededSync, "")
@@ -146,7 +138,38 @@ func (r *N3000ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&fpgav1.N3000Cluster{}).
 		Complete(r)
 }
+func (r *N3000ClusterReconciler) updateOrCreateNodeConfig(nodeCfg *fpgav1.N3000Node) error {
+	log := r.Log.WithName("updateOrCreateNodeConfig")
+	log.Info("syncing node config", "name", nodeCfg.Name)
 
+	prev := &fpgav1.N3000Node{}
+
+	// try to get previous NodeConfig, if it does not exist - create, if exists - update
+	if err := r.Get(context.TODO(),
+		types.NamespacedName{Namespace: nodeCfg.Namespace, Name: nodeCfg.Name}, prev); err != nil {
+
+		if errors.IsNotFound(err) {
+			log.Info("old NodeConfig not found - creating", "name", nodeCfg.Name)
+			if err := r.Create(context.TODO(), nodeCfg); err != nil {
+				log.Error(err, "failed to create NodeConfig", "name", nodeCfg.Name)
+				return err
+			}
+		} else {
+			log.Error(err, "previous NodeConfig Get failed", "name", nodeCfg.Name)
+			return err
+		}
+	} else {
+		log.Info("previous NodeConfig found - updating", "name", nodeCfg.Name)
+
+		prev.Spec = nodeCfg.Spec
+		if err := r.Update(context.TODO(), prev); err != nil {
+			log.Error(err, "failed to update NodeConfig", "name", nodeCfg.Name)
+			return err
+		}
+	}
+
+	return nil
+}
 func (r *N3000ClusterReconciler) splitClusterIntoNodes(ctx context.Context,
 	n3000cluster *fpgav1.N3000Cluster) ([]*fpgav1.N3000Node, error) {
 
