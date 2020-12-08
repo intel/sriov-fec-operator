@@ -98,7 +98,7 @@ func mockFPGAEnv() {
 }
 
 func fakeFpgaInfo(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
-	if cmd.String() == "fpgainfo bmc" {
+	if strings.Contains(cmd.String(), "fpgainfo bmc") {
 		return bmcOutput, fakeFpgaInfoErrReturn
 	}
 	return "", fmt.Errorf("Unsupported command: %s", cmd)
