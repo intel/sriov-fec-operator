@@ -206,6 +206,26 @@ spec:
           - patch
           - update
         - apiGroups:
+          - sriovfec.intel.com
+          resources:
+          - sriovfecnodeconfigs
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - sriovfec.intel.com
+          resources:
+          - sriovfecnodeconfigs/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
           - authentication.k8s.io
           resources:
           - tokenreviews

@@ -11,6 +11,7 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/otcshare/openshift-operator/N3000 v0.0.0-20201130134649-208175bad15f
+	github.com/pkg/errors v0.9.1
 	gopkg.in/ini.v1 v1.62.0
 	k8s.io/api v0.19.3
 	k8s.io/apimachinery v0.19.3

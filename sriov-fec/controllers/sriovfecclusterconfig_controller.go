@@ -52,6 +52,8 @@ type SriovFecClusterConfigReconciler struct {
 
 // +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecclusterconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecclusterconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecnodeconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecnodeconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=list
 // +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;configmaps,verbs=*
 // +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=*
@@ -179,7 +181,7 @@ func (r *SriovFecClusterConfigReconciler) renderNodeConfigs(clusterConfig *sriov
 			},
 		}
 		nodeCfg.SetName(nodeConfigSpec.NodeName)
-		nodeCfg.SetNamespace("default")
+		nodeCfg.SetNamespace(NAMESPACE)
 
 		log.Info("creating nodeConfig", "nodeName", nodeConfigSpec.NodeName)
 

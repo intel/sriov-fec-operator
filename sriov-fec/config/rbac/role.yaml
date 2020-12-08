@@ -64,3 +64,23 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - sriovfec.intel.com
+  resources:
+  - sriovfecnodeconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sriovfec.intel.com
+  resources:
+  - sriovfecnodeconfigs/status
+  verbs:
+  - get
+  - patch
+  - update

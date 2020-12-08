@@ -9,6 +9,8 @@ import (
 	"github.com/go-logr/logr"
 	dh "github.com/otcshare/openshift-operator/N3000/pkg/drainhelper"
 	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
+	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -148,6 +150,7 @@ func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 				configurationErr = err
 			}
 
+			configurationErr = r.restartDevicePlugin()
 			return true
 		}, !nodeConfig.Spec.DrainSkip)
 
@@ -185,6 +188,38 @@ func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	log.Info("Reconciled")
 
 	return ctrl.Result{}, nil
+}
+
+func (r *NodeConfigReconciler) restartDevicePlugin() error {
+	pods := &corev1.PodList{}
+	err := r.Client.List(context.TODO(), pods,
+		client.InNamespace(r.namespace),
+		&client.MatchingLabels{"app": "sriov-device-plugin-daemonset"})
+
+	if err != nil {
+		return errors.Wrap(err, "failed to get pods")
+	}
+	if len(pods.Items) == 0 {
+		return errors.New("restartDevicePlugin: No pods found")
+	}
+
+	for _, p := range pods.Items {
+		if p.Spec.NodeName != r.nodeName {
+			continue
+		}
+		d := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: p.Namespace,
+				Name:      p.Name,
+			},
+		}
+		if err := r.Delete(context.TODO(), d, &client.DeleteOptions{}); err != nil {
+			return errors.Wrap(err, "failed to delete sriov-device-plugin-daemonset pod")
+		}
+
+	}
+
+	return nil
 }
 
 func (r *NodeConfigReconciler) updateInventory(nc *sriovv1.SriovFecNodeConfig) error {
