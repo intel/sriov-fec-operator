@@ -126,7 +126,6 @@ func serverFortvilleMock() *httptest.Server {
 }
 
 func usersFortvilleMock(w http.ResponseWriter, r *http.Request) {
-	_, _ = w.Write([]byte("mock server responding"))
 }
 
 var _ = Describe("Fortville Manager", func() {
@@ -192,21 +191,6 @@ var _ = Describe("Fortville Manager", func() {
 			},
 		},
 	}
-	/*
-		sampleOneFortvilleOkChecksum := fpgav1.N3000Node{
-			Spec: fpgav1.N3000NodeSpec{
-				Fortville: fpgav1.N3000Fortville{
-					MACs: []fpgav1.FortvilleMAC{
-						{
-							MAC: "64:4c:36:11:1b:a8",
-						},
-					},
-					FirmwareURL: "http://www.test.com/fortville/nvmPackage.tag.gz",
-					CheckSum:    "5e949800776ac373015a2e39aa4024b0",
-				},
-			},
-		}
-	*/
 
 	var _ = Describe("flash", func() {
 		var _ = It("will return nil in successfully scenario ", func() {
