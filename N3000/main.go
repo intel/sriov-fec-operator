@@ -30,7 +30,6 @@ import (
 var (
 	scheme                 = runtime.NewScheme()
 	setupLog               = ctrl.Log.WithName("setup")
-	namespace              = os.Getenv("NAMESPACE")
 	operatorDeploymentName string
 )
 
@@ -89,6 +88,7 @@ func main() {
 	}
 
 	owner := &appsv1.Deployment{}
+	namespace := os.Getenv("NAMESPACE")
 	err = c.Get(context.Background(), client.ObjectKey{
 		Namespace: namespace,
 		Name:      operatorDeploymentName,

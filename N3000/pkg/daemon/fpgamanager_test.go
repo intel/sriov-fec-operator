@@ -134,7 +134,6 @@ func serverMock() *httptest.Server {
 }
 
 func usersMock(w http.ResponseWriter, r *http.Request) {
-	_, _ = w.Write([]byte("mock server responding"))
 }
 
 var _ = Describe("FPGA Manager", func() {
