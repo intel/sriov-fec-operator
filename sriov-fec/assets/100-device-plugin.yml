@@ -94,7 +94,7 @@ spec:
       serviceAccountName: sriov-device-plugin
       containers:
       - name: sriov-device-plugin
-        image: nfvpe/sriov-device-plugin:v3.2
+        image: nfvpe/sriov-device-plugin:latest
         securityContext:
           readOnlyRootFilesystem: true
         args:
