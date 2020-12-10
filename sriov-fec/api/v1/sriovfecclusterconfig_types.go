@@ -119,8 +119,8 @@ type BBDevConfig struct {
 
 // PhysicalFunctionConfig defines a possible configuration of a single Physical Function (PF), i.e. card
 type PhysicalFunctionConfig struct {
-	// +kubebuilder:validation:Pattern=`[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]`
 
+	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[01][a-fA-F0-9]\.[0-7]$`
 	// PCIAdress is a Physical Functions's PCI address that will be configured according to this spec
 	PCIAddress string `json:"pciAddress,omitempty"`
 

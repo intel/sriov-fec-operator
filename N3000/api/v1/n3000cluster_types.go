@@ -42,7 +42,7 @@ var (
 type N3000Fpga struct {
 	// +kubebuilder:validation:Pattern=[a-zA-Z0-9\.\-\/]+
 	UserImageURL string `json:"userImageURL,omitempty"`
-	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]$`
+	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[01][a-fA-F0-9]\.[0-7]$`
 	PCIAddr string `json:"PCIAddr,omitempty"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{32}$`

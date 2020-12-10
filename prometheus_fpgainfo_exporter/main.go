@@ -20,7 +20,7 @@ import (
 var (
 	bmcFloatRegex       = regexp.MustCompile(`^\(\s*[0-9]*\)\s+(.+?)(?:\s*:\s*)(.+)$`)
 	bmcQualitativeRegex = regexp.MustCompile(`^([a-zA-Z .:]+?)(?:\s*:\s)(.+)$`)
-	pciRegex            = regexp.MustCompile(`[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[a-fA-F0-9]{2}\.[0-9]`)
+	pciRegex            = regexp.MustCompile(`[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[01][a-fA-F0-9]\.[0-7]`)
 
 	fpgaInfoPath = "fpgainfo"
 	address      = ":42222"
