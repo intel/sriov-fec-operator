@@ -114,6 +114,7 @@ func (r *N3000ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	for _, node := range nodesToDelete {
+		log.Info("Removing node: " + node.Name)
 		err = r.Delete(ctx, node)
 		if err != nil {
 			log.Error(err, "delete")
