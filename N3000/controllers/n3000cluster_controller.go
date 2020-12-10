@@ -107,19 +107,9 @@ func (r *N3000ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		return ctrl.Result{RequeueAfter: time.Second * 5}, err
 	}
 
-	nodesToDelete, err := r.getNodesToDelete(ctx, n3000nodes)
-	if err != nil {
-		log.Error(err, "getting list of nodes to delete failed")
+	if err = r.removeOldNodes(n3000nodes); err != nil {
+		log.Error(err, "removing old nodes failed")
 		return ctrl.Result{RequeueAfter: time.Second * 5}, err
-	}
-
-	for _, node := range nodesToDelete {
-		log.Info("Removing node: " + node.Name)
-		err = r.Delete(ctx, node)
-		if err != nil {
-			log.Error(err, "delete")
-			return reconcile.Result{}, err
-		}
 	}
 
 	for _, node := range n3000nodes {
@@ -204,31 +194,35 @@ func (r *N3000ClusterReconciler) splitClusterIntoNodes(ctx context.Context,
 	return n3000Nodes, nil
 }
 
-func (r *N3000ClusterReconciler) getNodesToDelete(ctx context.Context,
-	newNodes []*fpgav1.N3000Node) ([]*fpgav1.N3000Node, error) {
+func (r *N3000ClusterReconciler) removeOldNodes(newNodeCfgs []*fpgav1.N3000Node) error {
+	log := r.Log.WithName("removeOldNodes")
 
-	n3000NodeList := &fpgav1.N3000NodeList{}
-	err := r.Client.List(ctx, n3000NodeList)
-	if err != nil {
-		log.Error(err, "Unable to list the n3000Nodes")
-		return nil, err
+	// existing NodeConfigs which are not part of the new ClusterConfig are removed
+	// daemons will reiterate the devices and recreate NodeConfigs with empty spec and filled status
+
+	nodes := &fpgav1.N3000NodeList{}
+	if err := r.List(context.TODO(), nodes, &client.ListOptions{}); err != nil && !errors.IsNotFound(err) {
+		log.Error(err, "failed to get N3000NodeList")
+		return err
 	}
 
-	var nodesToDelete []*fpgav1.N3000Node
-
-	for _, existing := range n3000NodeList.Items {
-		shouldBeDeleted := true
-
-		for _, new := range newNodes {
-			if existing.GetName() == new.GetName() {
-				shouldBeDeleted = false
+	for _, node := range nodes.Items {
+		del := true
+		for _, newNode := range newNodeCfgs {
+			if node.GetName() == newNode.GetName() {
+				del = false
+				break
 			}
 		}
 
-		if shouldBeDeleted {
-			nodesToDelete = append(nodesToDelete, &existing)
+		if del {
+			log.Info("deleting existing N3000Node", "name", node.GetName())
+			if err := r.Delete(context.TODO(), &node, &client.DeleteOptions{}); err != nil {
+				log.Error(err, "failed to delete existing N3000Node", "name", node.GetName())
+				return err
+			}
 		}
 	}
 
-	return nodesToDelete, nil
+	return nil
 }
