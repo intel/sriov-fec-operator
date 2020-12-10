@@ -148,6 +148,7 @@ func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 			if err := r.nodeConfigurator.applyConfig(nodeConfig.Spec); err != nil {
 				log.Error(err, "failed applying new PF/VF configuration")
 				configurationErr = err
+				return true
 			}
 
 			configurationErr = r.restartDevicePlugin()
