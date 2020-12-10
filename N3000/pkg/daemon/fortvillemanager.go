@@ -371,9 +371,10 @@ func (fm *FortvilleManager) verifyPreconditions(n *fpgav1.N3000Node) error {
 					break
 				}
 			}
-			if !found {
-				return errors.New("MAC not found: " + m.MAC)
-			}
+		}
+
+		if !found {
+			return errors.New("MAC not found: " + m.MAC)
 		}
 	}
 
