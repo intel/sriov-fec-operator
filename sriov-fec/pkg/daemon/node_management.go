@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -195,6 +196,44 @@ func (n *NodeConfigurator) bindDeviceToDriver(pciAddress, driver string) error {
 	return err
 }
 
+func (n *NodeConfigurator) enableMasterBus(pciAddr string) error {
+	log := n.Log.WithName("enableMasterBus")
+	const MASTER_BUS_BIT int64 = 4
+	cmd := []string{"chroot", "/host/", "setpci", "-v", "-s", pciAddr, "COMMAND"}
+	out, err := runExecCmd(cmd, log)
+	if err != nil {
+		log.Error(err, "failed to get the PCI flags for: "+pciAddr)
+		return err
+	}
+
+	values := strings.Split(out, " = ")
+	if len(values) != 2 {
+		return fmt.Errorf("unexpected output form \"%s\": %s", strings.Join(cmd, " "), out)
+	}
+
+	v, err := strconv.ParseInt(strings.Replace(values[1], "\n", "", 1), 16, 16)
+	if err != nil {
+		log.Error(err, "failed to parse the value", "value", v)
+		return err
+	}
+
+	if v&MASTER_BUS_BIT == MASTER_BUS_BIT {
+		log.Info("MasterBus already set for " + pciAddr)
+		return nil
+	}
+
+	v = v | MASTER_BUS_BIT
+	cmd = []string{"chroot", "/host/", "setpci", "-v", "-s", pciAddr, fmt.Sprintf("COMMAND=0%x", v)}
+	out, err = runExecCmd(cmd, log)
+	if err != nil {
+		log.Error(err, "failed to set MasterBus bit", "output", out)
+		return err
+	}
+
+	log.Info("MasterBus set", "pci", pciAddr, "output", out)
+	return nil
+}
+
 func getMatchingExistingAccelerator(inventory *sriovv1.NodeInventory, pciAddress string) (sriovv1.SriovAccelerator, bool) {
 	for _, acc := range inventory.SriovAccelerators {
 		if acc.PCIAddress == pciAddress {
@@ -243,7 +282,7 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec
 	}
 
 	log.Info("current node status", "inventory", inv)
-
+	pciStubRegex := regexp.MustCompile("pci[-_]pf[-_]stub")
 	for _, pf := range nodeConfig.PhysicalFunctions {
 		acc, exists := getMatchingExistingAccelerator(inv, pf.PCIAddress)
 		if !exists {
@@ -308,6 +347,12 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec
 			}
 		} else {
 			log.Info("N3000 BBDevConfig is nil - queues will not be (re)configured")
+		}
+
+		if pciStubRegex.MatchString(pf.PFDriver) {
+			if err := n.enableMasterBus(pf.PCIAddress); err != nil {
+				return err
+			}
 		}
 	}
 
