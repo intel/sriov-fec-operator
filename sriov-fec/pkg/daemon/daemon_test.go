@@ -115,7 +115,7 @@ var (
 	nodeName                    = "config"
 	DEFAULT_CLUSTER_CONFIG_NAME = "config"
 	NAMESPACE                   = "default"
-	PCIAddress                  = "a123:45:71.3"
+	PCIAddress                  = "0000:14:00.1"
 	namespacedName              = types.NamespacedName{
 		Name:      DEFAULT_CLUSTER_CONFIG_NAME,
 		Namespace: NAMESPACE,

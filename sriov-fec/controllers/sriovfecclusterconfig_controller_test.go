@@ -71,7 +71,7 @@ var _ = Describe("SriovControllerTest", func() {
 							NodeName: nodeName,
 							PhysicalFunctions: []sriovv1.PhysicalFunctionConfig{
 								{
-									PCIAddress: "a123:45:71.3",
+									PCIAddress: "0000:14:00.1",
 									PFDriver:   "d",
 									VFDriver:   "v",
 									VFAmount:   5,
