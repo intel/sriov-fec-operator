@@ -8,16 +8,16 @@ Copyright (c) 2020 Intel Corporation
 - [Overview](#overview)
 - [Intel® PAC N3000 for vRAN Acceleration](#intel-pac-n3000-for-vran-acceleration)
 - [Enabling 5G Wireless Acceleration in FlexRAN](#enabling-5g-wireless-acceleration-in-flexran)
-- [OpenShift Operator for Intel® FPGA PAC N3000](#openshift-operator-for-intel-fpga-pac-n3000)
+- [OpenNESS Operator for Intel® FPGA PAC N3000](#openness-operator-for-intel-fpga-pac-n3000)
   - [N3000 Operator](#n3000-operator)
     - [Telemetry](#telemetry)
-    - [Driver container](#driver-container)
+    - [Driver Container](#driver-container)
     - [N3000 Daemon](#n3000-daemon)
       - [OPAE RTL Update](#opae-rtl-update)
       - [NVM Update](#nvm-update)
   - [SRIOV FEC Operator](#sriov-fec-operator)
-    - [FEC configuration](#fec-configuration)
-    - [SRIOV device plugin](#sriov-device-plugin)
+    - [FEC Configuration](#fec-configuration)
+    - [SRIOV Device Plugin](#sriov-device-plugin)
 - [Managing NIC Devices](#managing-nic-devices)
 - [Technical Requirements and Dependencies](#technical-requirements-and-dependencies)
 - [Deploying the Operator](#deploying-the-operator)
@@ -25,7 +25,7 @@ Copyright (c) 2020 Intel Corporation
   - [Applying Custom Resources](#applying-custom-resources)
 - [Hardware Validation Environment](#hardware-validation-environment)
 - [Summary](#summary)
-- [Appendix 1 - Developer Notes:](#appendix-1---developer-notes)
+- [Appendix 1 - Developer Notes](#appendix-1---developer-notes)
   - [Uninstalling Previously Installed Operator](#uninstalling-previously-installed-operator)
   - [Setting Up Operator Registry Locally](#setting-up-operator-registry-locally)
 
@@ -67,7 +67,7 @@ The 5G Wireless Acceleration reference design provides IP (Intel® FPGA IP and s
 
 ![Data flow for the user image, FEC, and Fronthaul IO](images/Intel-N3000-5G-pipeline.png)
 
-## OpenShift Operator for Intel® FPGA PAC N3000
+## OpenNESS Operator for Intel® FPGA PAC N3000
 
 The role of the operator for the Intel® FPGA PAC N3000 card is to orchestrate and manage the resources/devices exposed by the card within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
 The operator design for PACN3000 is a bundle operator consisting of two distinct operators. One of the operators is the Intel® FPGA PAC N3000 operator, the other is the SRIOV FEC operator.
@@ -274,7 +274,7 @@ The workflow of the SRIOV FEC operator is demonstrated in the following diagram:
 
 #### FEC Configuration
 
-The Intel® FPGA PAC N3000 correctly programmed with a vRAN image exposes a FEC PF device which is to be bound to PCI-PF-STUB driver in order to enable creation of the FEC VF devices. Once the FEC PF is bound to the correct driver, user can create up to 8 VF devices to be used in Cloud Native deployment of vRAN to accelerate FEC. Once these devices are created they are to be bound to a user-space driver such as VFIO-PCI in order for them to work and be consumed in vRAN application pods. Before the VF device is used by the application, the VF's encoding and decoding queues also need to be configured - this is done via pf-bb-config application with the input from the CR used as a configuration. Each FEC PF device provides a total of 64 queues to be configured, 32 queues for uplink and 32 queues for downlink, the queues should be distributed evenly across the VFs.
+The Intel® FPGA PAC N3000 correctly programmed with a vRAN image exposes a FEC PF device which is to be bound to PCI-PF-STUB driver in order to enable creation of the FEC VF devices. Once the FEC PF is bound to the correct driver, user can create up to 8 VF devices to be used in Cloud Native deployment of vRAN to accelerate FEC. Once these devices are created they are to be bound to a user-space driver such as VFIO-PCI in order for them to work and be consumed in vRAN application pods. Before the VF device is used by the application, the VF's encoding and decoding queues also need to be configured - this is done via pf-bb-config application with the input from the CR used as a configuration. Each FEC PF device provides a total of 64 queues to be configured, 32 queues for uplink and 32 queues for downlink, the queues would be typically distributed evenly across the VFs.
 
 Before the deployment of the SRIOV FEC daemon, the user should expect following devices from the vRAN enabled Intel® FPGA PAC N3000 card, where Device ID '0b30' is the RSU interface used to program the card, and the '0b8f' is a PF (Physical Function) of the programmed FEC device:
 ```shell
@@ -420,7 +420,7 @@ As part of the SRIOV FEC operator the K8s SRIOV Network Device plugin is being d
 }
 ```
 
-Once the SRIOV operator takes care of setting up and configuring the device, user can test the device using a sample 'test-bbdev' application from the [DPDK project](https://github.com/DPDK/dpdk/tree/v20.11/app/test-bbdev). An example of a prepared sample application's docker image can be found in [Intel® OpenNESS' project github EdgeApps repo](https://github.com/otcshare/edgeapps/tree/master/applications/fpga-sample-app).
+Once the SRIOV operator takes care of setting up and configuring the device, user can test the device using a sample 'test-bbdev' application from the [DPDK project](https://github.com/DPDK/dpdk/tree/v20.11/app/test-bbdev). An example of a prepared sample application's docker image can be found in [Intel® OpenNESS' project github EdgeApps repo](https://github.com/otcshare/edgeapps/tree/master/applications/fpga-sample-app). OpenNESS is an edge computing software toolkit that enables highly optimized and performant edge platforms to on-board and manage applications and network functions with cloud-like agility across any type of network. For more information, go to [www.openness.org](https://www.openness.org).
 
 With a sample image of the DPDK application, the following pod can be created, similar to the following file as an example:
 
