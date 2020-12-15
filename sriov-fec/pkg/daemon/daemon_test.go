@@ -30,10 +30,12 @@ var (
 	fakeSriovInventoryErrReturn error = nil
 	fakePFConfigErrReturn       error = nil
 	fakeGetVFListReturn         error = nil
+	fakeSetpciErrReturn         error = nil
 	fakeGetKargsOutput          string
 	fakeSriovInventoryOutput    *sriovv1.NodeInventory
 	fakeGetVFconfiguredOutput   int
 	fakeGetVFListOutput         []string
+	fakeSetpciOutput            string
 	lastRunExec                 string
 )
 
@@ -44,6 +46,8 @@ func clean() {
 	fakeSystemdErrReturn = nil
 	fakeSriovInventoryErrReturn = nil
 	fakeGetVFListReturn = nil
+	fakeSetpciErrReturn = nil
+	fakeSetpciOutput = ""
 	fakeGetKargsOutput = ""
 	fakeGetVFconfiguredOutput = 0
 	fakeGetVFListOutput = nil
@@ -80,6 +84,10 @@ func fakeRunExecCmd(args []string, log logr.Logger) (string, error) {
 	if i := sort.SearchStrings(args, "systemd-run"); i < len(args) {
 		lastRunExec = "systemd-run"
 		return "", fakeSystemdErrReturn
+	}
+	if i := sort.SearchStrings(args, "setpci"); i < len(args) {
+		lastRunExec = "setpci"
+		return fakeSetpciOutput, fakeSetpciErrReturn
 	}
 	if i := sort.SearchStrings(args, "rpm-ostree"); i < len(args) {
 		if i := sort.SearchStrings(args, "--append"); i < len(args) {
@@ -172,6 +180,8 @@ var _ = Describe("SriovDaemonTest", func() {
 			err = createFileInFolder(filepath.Join(sysBusPciDevices, PCIAddress), vfNumFile)
 			Expect(err).ToNot(HaveOccurred())
 			err = createFileInFolder(filepath.Join(sysBusPciDrivers, "PFdriver"), "bind")
+			Expect(err).ToNot(HaveOccurred())
+			err = createFileInFolder(filepath.Join(sysBusPciDrivers, "pci-pf-stub"), "bind")
 			Expect(err).ToNot(HaveOccurred())
 
 			fakeSriovInventoryOutput = &sriovv1.NodeInventory{
@@ -323,6 +333,19 @@ var _ = Describe("SriovDaemonTest", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(nodeConfigs.Items)).To(Equal(1))
 			Expect(lastRunExec).To(Equal("systemd-run"))
+		})
+		var _ = It("will create cr with node config and enable master bus", func() {
+			fakeSetpciOutput = PCIAddress + " = " + "1"
+			nodeConfig.Spec.PhysicalFunctions[0].PFDriver = "pci-pf-stub"
+			err := createCRWithNodeConfig(true)
+			Expect(err).ToNot(HaveOccurred())
+
+			//Check if node config was created out of cluster config
+			nodeConfigs := &sriovv1.SriovFecNodeConfigList{}
+			err = k8sClient.List(context.TODO(), nodeConfigs)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(nodeConfigs.Items)).To(Equal(1))
+			Expect(lastRunExec).To(Equal("setpci"))
 		})
 	})
 	var _ = Describe("Reconciler manager", func() {
