@@ -29,7 +29,120 @@ ff:ff:ff:ff:ff:ff
 ff:ff:ff:00:00:00
 ff:ff:ff:08:00:01
 `
-	nvmupdateOutputFile = "test/nvmupdate.xml"
+	nvmupdateOutputFile              = "test/nvmupdate.xml"
+	nvmupdateOutputFile_bad          = "test/nvmupdate-bad.xml"
+	nvmupdateOutputFile_nonextupdate = "test/nvmupdate-nonextupdate.xml"
+
+	invalidBmcOutput = `Board Management Controller, MAX10 NIOS FW version D.2.0.12
+Board Management Controller, MAX10 Build version D.2.0.5
+//****** BMC SENSORS ******//
+Object Id                     : 0xEF00000
+PCIe s:b:d.f                  : 0000:1:00.0
+Device Id                     : 0x0b30
+Numa Node                     : 0
+Ports Num                     : 01
+Bitstream Id                  : 0x21000000000000
+Bitstream Version             : 1.0.0
+Pr Interface Id               : 12345678-abcd-efgh-ijkl-0123456789ab
+( 1) Board Power              : 69.24 Watts
+( 2) 12V Backplane Current    : 2.75 Amps
+( 3) 12V Backplane Voltage    : 12.06 Volts
+( 4) 1.2V Voltage             : 1.19 Volts
+( 6) 1.8V Voltage             : 1.80 Volts
+( 8) 3.3V Voltage             : 3.26 Volts
+(10) FPGA Core Voltage        : 0.90 Volts
+(11) FPGA Core Current        : 20.99 Amps
+(12) FPGA Die Temperature     : 73.00 Celsius
+(13) Board Temperature        : 30.00 Celsius
+(14) QSFP0 Supply Voltage     : N/A
+(15) QSFP0 Temperature        : N/A
+(24) 12V AUX Current          : 3.10 Amps
+(25) 12V AUX Voltage          : 11.64 Volts
+(37) QSFP1 Supply Voltage     : N/A
+(38) QSFP1 Temperature        : N/A
+(44) PKVL0 Core Temperature   : 56.50 Celsius
+(45) PKVL0 SerDes Temperature : 57.00 Celsius
+(46) PKVL1 Core Temperature   : 57.00 Celsius
+(47) PKVL1 SerDes Temperature : 57.50 Celsius
+Board Management Controller, MAX10 NIOS FW version D.2.0.12
+Board Management Controller, MAX10 Build version D.2.0.5
+`
+
+	bmcOutputDoublePCI = `Board Management Controller, MAX10 NIOS FW version D.2.0.12
+Board Management Controller, MAX10 Build version D.2.0.5
+//****** BMC SENSORS ******//
+Object Id                     : 0xEF00000
+PCIe s:b:d.f                  : 0000:1b:00.0
+Device Id                     : 0x0b30
+Numa Node                     : 0
+Ports Num                     : 01
+Bitstream Id                  : 0x21000000000000
+Bitstream Version             : 1.0.0
+Pr Interface Id               : 12345678-abcd-efgh-ijkl-0123456789ab
+( 1) Board Power              : 69.24 Watts
+( 2) 12V Backplane Current    : 2.75 Amps
+( 3) 12V Backplane Voltage    : 12.06 Volts
+( 4) 1.2V Voltage             : 1.19 Volts
+( 6) 1.8V Voltage             : 1.80 Volts
+( 8) 3.3V Voltage             : 3.26 Volts
+(10) FPGA Core Voltage        : 0.90 Volts
+(11) FPGA Core Current        : 20.99 Amps
+(12) FPGA Die Temperature     : 73.00 Celsius
+(13) Board Temperature        : 30.00 Celsius
+(14) QSFP0 Supply Voltage     : N/A
+(15) QSFP0 Temperature        : N/A
+(24) 12V AUX Current          : 3.10 Amps
+(25) 12V AUX Voltage          : 11.64 Volts
+(37) QSFP1 Supply Voltage     : N/A
+(38) QSFP1 Temperature        : N/A
+(44) PKVL0 Core Temperature   : 56.50 Celsius
+(45) PKVL0 SerDes Temperature : 57.00 Celsius
+(46) PKVL1 Core Temperature   : 57.00 Celsius
+(47) PKVL1 SerDes Temperature : 57.50 Celsius
+Board Management Controller, MAX10 NIOS FW version D.2.0.12
+Board Management Controller, MAX10 Build version D.2.0.5
+//****** BMC SENSORS ******//
+Object Id                     : 0xEF00000
+PCIe s:b:d.f                  : 0000:1b:00.0
+Device Id                     : 0x0b30
+Numa Node                     : 1
+Ports Num                     : 01
+Bitstream Id                  : 0x32000000000000
+Bitstream Version             : 2.0.0
+Pr Interface Id               : 87654321-abcd-efgh-ijkl-0123456789ab
+( 1) Board Power              : 70.25 Watts
+( 2) 12V Backplane Current    : 2.79 Amps
+( 3) 12V Backplane Voltage    : 12.06 Volts
+( 4) 1.2V Voltage             : 1.19 Volts
+( 6) 1.8V Voltage             : 1.80 Volts
+( 8) 3.3V Voltage             : 3.26 Volts
+(10) FPGA Core Voltage        : 0.90 Volts
+(11) FPGA Core Current        : 21.19 Amps
+(12) FPGA Die Temperature     : 98.50 Celsius
+(13) Board Temperature        : 31.00 Celsius
+(14) QSFP0 Supply Voltage     : N/A
+(15) QSFP0 Temperature        : N/A
+(24) 12V AUX Current          : 3.14 Amps
+(25) 12V AUX Voltage          : 11.64 Volts
+(37) QSFP1 Supply Voltage     : N/A
+(38) QSFP1 Temperature        : N/A
+(44) PKVL0 Core Temperature   : 58.00 Celsius
+(45) PKVL0 SerDes Temperature : 58.00 Celsius
+(46) PKVL1 Core Temperature   : 58.50 Celsius
+(47) PKVL1 SerDes Temperature : 59.00 Celsius
+`
+
+	ethtoolOutput = `ethtoolOutput := driver: virtio_net
+version: 1.0.0
+firmware-version: 1
+expansion-rom-version:
+bus-info: 0000:00:03.0
+supports-statistics: no
+supports-test: no
+supports-eeprom-access: no
+supports-register-dump: no
+supports-priv-flags: no
+`
 )
 
 var (
@@ -125,6 +238,22 @@ func serverFortvilleMock() *httptest.Server {
 	return srv
 }
 
+func fakeFpgaInfoEmptyBCM(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
+	return "", nil
+}
+
+func fakeFpgaInfoInvalidBCM(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
+	return invalidBmcOutput, nil
+}
+
+func fakeFpgaInfoDoubleBMC(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
+	return bmcOutputDoublePCI, nil
+}
+
+func fakeEthtoolInvalidMac(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
+	return ethtoolOutput, nil
+}
+
 func usersFortvilleMock(w http.ResponseWriter, r *http.Request) {
 }
 
@@ -199,11 +328,71 @@ var _ = Describe("Fortville Manager", func() {
 			nvmupdateExec = fakeNvmupdate
 			fpgaInfoExec = fakeFpgaInfo
 			fpgadiagExec = fakeFpgadiag
+
 			err := f.flash(&sampleOneFortville)
 			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("will fail because of invalid MAC", func() {
+			cleanFortville()
+			ethtoolExec = fakeEthtool
+			nvmupdateExec = fakeNvmupdate
+			fpgaInfoExec = fakeFpgaInfo
+			fpgadiagExec = fakeFpgadiag
+			fakeNvmupdateSecondErrReturn = fmt.Errorf("error")
 
-			// Second flash with the same data
-			err = f.flash(&sampleOneFortville)
+			err := f.flash(&sampleOneFortville)
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("will fail because of invalid outfile", func() {
+			cleanFortville()
+			ethtoolExec = fakeEthtool
+			nvmupdateExec = fakeNvmupdate
+			fpgaInfoExec = fakeFpgaInfo
+			fpgadiagExec = fakeFpgadiag
+
+			tmpUpdateOutFile := updateOutFile
+			updateOutFile = testTmpFolder + "/invalidOutFile"
+
+			err := f.flash(&sampleOneFortville)
+			updateOutFile = tmpUpdateOutFile
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("will fail because of wrong status field", func() {
+			cleanFortville()
+			ethtoolExec = fakeEthtool
+			nvmupdateExec = fakeNvmupdate
+			fpgaInfoExec = fakeFpgaInfo
+			fpgadiagExec = fakeFpgadiag
+
+			tmpUpdateOutFile := updateOutFile
+			updateOutFile = nvmupdateOutputFile_bad
+
+			err := f.flash(&sampleOneFortville)
+			updateOutFile = tmpUpdateOutFile
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("will pass with noNextUpdate", func() {
+			cleanFortville()
+			ethtoolExec = fakeEthtool
+			nvmupdateExec = fakeNvmupdate
+			fpgaInfoExec = fakeFpgaInfo
+			fpgadiagExec = fakeFpgadiag
+
+			tmpUpdateOutFile := updateOutFile
+			updateOutFile = nvmupdateOutputFile_nonextupdate
+
+			err := f.flash(&sampleOneFortville)
+			updateOutFile = tmpUpdateOutFile
+			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("will return nil in successfully scenario (PCI address doubled in BMC)", func() {
+			cleanFortville()
+			ethtoolExec = fakeEthtool
+			nvmupdateExec = fakeNvmupdate
+			fpgadiagExec = fakeFpgadiag
+			fpgaInfoExec = fakeFpgaInfoDoubleBMC
+
+			err := f.flash(&sampleOneFortville)
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("will return error when nvmupdate failed", func() {
@@ -234,7 +423,6 @@ var _ = Describe("Fortville Manager", func() {
 			err := f.flash(&sampleOneFortville)
 			Expect(err).ToNot(HaveOccurred())
 		})
-
 		var _ = It("will call runExec with DryRun flag", func() {
 			cleanFortville()
 			nvmupdateExec = fakeNvmupdate
@@ -280,6 +468,31 @@ var _ = Describe("Fortville Manager", func() {
 			cleanFortville()
 			fpgaInfoExec = fakeFpgaInfo
 			fpgadiagExec = fakeFpgadiag
+			err := f.verifyPreconditions(&sampleWrongMACFortville)
+			Expect(err).To(HaveOccurred())
+
+		})
+		var _ = It("will return error when no MAC found", func() {
+			cleanFortville()
+			fpgaInfoExec = fakeFpgaInfoEmptyBCM
+			fpgadiagExec = fakeFpgadiag
+			err := f.verifyPreconditions(&sampleWrongMACFortville)
+			Expect(err).To(HaveOccurred())
+
+		})
+		var _ = It("will return error when PCI address is invalid", func() {
+			cleanFortville()
+			fpgaInfoExec = fakeFpgaInfoInvalidBCM
+			fpgadiagExec = fakeFpgadiag
+			err := f.verifyPreconditions(&sampleWrongMACFortville)
+			Expect(err).To(HaveOccurred())
+
+		})
+		var _ = It("will return error when PCI address is invalid (valid MAC)", func() {
+			cleanFortville()
+			fpgaInfoExec = fakeFpgaInfoInvalidBCM
+			fpgadiagExec = fakeFpgadiag
+			ethtoolExec = fakeEthtoolInvalidMac
 			err := f.verifyPreconditions(&sampleWrongMACFortville)
 			Expect(err).To(HaveOccurred())
 

@@ -47,6 +47,44 @@ const (
         <RebootRequired> 0 </RebootRequired>
         <PowerCycleRequired> 1 </PowerCycleRequired>
 </DeviceUpdate>`
+
+	nvmupdateOutputMissingModuleClose = `<?xml version="1.0" encoding="UTF-8"?>
+<DeviceUpdate lang="en">
+        <Instance vendor="8086" device="1572" subdevice="0" subvendor="8086" bus="7" dev="0" func="1" PBA="H58362-002" port_id="Port 2 of 2" display="Intel(R) Ethernet Converged Network Adapter X710">
+                <Module type="" version="1.0.2" display="">
+
+     `
+	nvmupdateOutputMissingNextUpdateAvailableClose = `<?xml version="1.0" encoding="UTF-8"?>
+<DeviceUpdate lang="en">
+        <Instance vendor="8086" device="1572" subdevice="0" subvendor="8086" bus="7" dev="0" func="1" PBA="H58362-002" port_id="Port 2 of 2" display="Intel(R) Ethernet Converged Network Adapter X710">
+                <Module type="PXE" version="1.0.2" display="">
+                </Module>
+                <Module type="EFI" version="1.0.5" display="">
+                </Module>
+                <Module type="NVM" version="8000191B" previous_version="8000143F" display="">
+                        <Status result="Success" id="0">All operations completed successfully.</Status>
+                </Module>
+                <VPD>
+                        <VPDField type="String">XL710 40GbE Controller</VPDField>
+                        <VPDField type="Readable" key="PN"></VPDField>
+                        <VPDField type="Readable" key="EC"></VPDField>
+                        <VPDField type="Readable" key="FG"></VPDField>
+                        <VPDField type="Readable" key="LC"></VPDField>
+                        <VPDField type="Readable" key="MN"></VPDField>
+                        <VPDField type="Readable" key="PG"></VPDField>
+                        <VPDField type="Readable" key="SN"></VPDField>
+                        <VPDField type="Readable" key="V0"></VPDField>
+                        <VPDField type="Checksum" key="RV">86</VPDField>
+                        <VPDField type="Writable" key="V1"></VPDField>
+                </VPD>
+                <MACAddresses>
+                        <MAC address="6805CA3AA725">
+                        </MAC>
+                        <SAN address="6805CA3AA727">
+                        </SAN>
+                </MACAddresses>
+        </Instance>
+        <NextUpdateAvailable>`
 )
 
 var _ = Describe("getDeviceUpdateFromFile", func() {
@@ -112,6 +150,44 @@ var _ = Describe("getDeviceUpdateFromFile", func() {
 		_, err = getDeviceUpdateFromFile(tmpfile.Name())
 		updateXMLParseTimeout = 100 * time.Millisecond
 
+		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("getDeviceUpdateFromFile", func() {
+	var _ = It("will return error if unable to open file", func() {
+
+		_, err := getDeviceUpdateFromFile("/dev/null/fake")
+		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("getDeviceUpdateFromFile", func() {
+	var _ = It("will return error if missing Module closing tag", func() {
+
+		tmpfile, err := ioutil.TempFile(".", "update")
+		Expect(err).ToNot(HaveOccurred())
+		defer os.Remove(tmpfile.Name())
+
+		_, err = tmpfile.Write([]byte(nvmupdateOutputMissingModuleClose))
+		Expect(err).ToNot(HaveOccurred())
+
+		_, err = getDeviceUpdateFromFile(tmpfile.Name())
+		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("getDeviceUpdateFromFile", func() {
+	var _ = It("will return error if missing NextUpdateAvailable closing tag", func() {
+
+		tmpfile, err := ioutil.TempFile(".", "update")
+		Expect(err).ToNot(HaveOccurred())
+		defer os.Remove(tmpfile.Name())
+
+		_, err = tmpfile.Write([]byte(nvmupdateOutputMissingNextUpdateAvailableClose))
+		Expect(err).ToNot(HaveOccurred())
+
+		_, err = getDeviceUpdateFromFile(tmpfile.Name())
 		Expect(err).To(HaveOccurred())
 	})
 })

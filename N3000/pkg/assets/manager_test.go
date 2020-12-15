@@ -9,9 +9,22 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/klog/v2/klogr"
 )
+
+//  runtime.Object implementation
+type InvalidRuntimeType struct {
+}
+
+func (i *InvalidRuntimeType) GetObjectKind() schema.ObjectKind {
+	return schema.EmptyObjectKind
+}
+func (i *InvalidRuntimeType) DeepCopyObject() runtime.Object {
+	return i
+}
 
 var _ = Describe("Asset Tests", func() {
 
@@ -72,7 +85,6 @@ var _ = Describe("Asset Tests", func() {
 			err = manager.LoadAndDeploy(context.TODO(), false)
 			Expect(err).To(HaveOccurred())
 		})
-
 		var _ = It("Run Manager loadFromFile (setKernel false, no retries)", func() {
 			var err error
 			log = klogr.New().WithName("N3000Assets-Test")
@@ -117,6 +129,33 @@ var _ = Describe("Asset Tests", func() {
 
 			err = manager.LoadAndDeploy(context.TODO(), false)
 			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("Run LoadAndDeploy (fail setting Owner)", func() {
+			var err error
+			log = klogr.New().WithName("N3000Assets-Test")
+
+			var invalidObject InvalidRuntimeType
+
+			assets := []Asset{
+				{
+					log:           log,
+					Path:          fakeAssetFile,
+					substitutions: map[string]string{"one": "two"},
+					objects: []runtime.Object{
+						&invalidObject},
+				},
+			}
+
+			manager := Manager{Client: k8sClient,
+				Log:    log,
+				Assets: assets,
+				Owner:  fakeOwner,
+				Scheme: scheme.Scheme}
+
+			Expect(manager).ToNot(Equal(nil))
+
+			err = manager.LoadAndDeploy(context.TODO(), false)
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })

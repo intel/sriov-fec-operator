@@ -36,7 +36,6 @@ var _ = Describe("ExampleTest", func() {
 	BeforeEach(func() {
 
 		doDeconf = true
-
 		removeCluster = true
 
 		node = &corev1.Node{
@@ -670,6 +669,46 @@ var _ = Describe("ExampleTest", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(nodeConfigs.Items)).To(Equal(0))
 			doDeconf = false
+		})
+
+		var _ = It("will fail to create node config because of invalide name", func() {
+
+			var err error
+			// envtest is empty, create fake node
+			err = k8sClient.Create(context.TODO(), node)
+			Expect(err).ToNot(HaveOccurred())
+
+			invalidName := "invalid"
+
+			// simulate creation of cluster config by the user
+			namespacedName.Name = invalidName
+			clusterConfig.ObjectMeta.Name = invalidName
+			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
+			err = k8sClient.Create(context.TODO(), clusterConfig)
+			Expect(err).ToNot(HaveOccurred())
+
+			log = klogr.New().WithName("N3000ClusterReconciler-Test")
+			reconciler = N3000ClusterReconciler{
+				Client: k8sClient,
+				Scheme: scheme.Scheme,
+				Log:    log,
+			}
+
+			request = ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: namespace,
+					Name:      invalidName,
+				},
+			}
+
+			_, err = reconciler.Reconcile(request)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Check if node config was created out of cluster config
+			nodeConfigs := &fpgav1.N3000NodeList{}
+			err = k8sClient.List(context.TODO(), nodeConfigs)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(nodeConfigs.Items)).To(Equal(0))
 		})
 	})
 

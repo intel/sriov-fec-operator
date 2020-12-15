@@ -122,6 +122,9 @@ func cleanFPGA() {
 	fakeFpgaInfoErrReturn = nil
 	fakeFpgasUpdateErrReturn = nil
 	fakeRsuUpdateErrReturn = nil
+
+	err := os.Setenv(envTemperatureLimitName, fmt.Sprintf("%f", fpgaTemperatureDefaultLimit))
+	Expect(err).ToNot(HaveOccurred())
 }
 
 func serverMock() *httptest.Server {
@@ -202,8 +205,11 @@ var _ = Describe("FPGA Manager", func() {
 	})
 	var _ = Describe("checkFPGADieTemperature", func() {
 		var _ = It("will return nil in successfully scenario", func() {
+			err := os.Setenv(envTemperatureLimitName, "")
+			Expect(err).ToNot(HaveOccurred())
+
 			fpgaInfoExec = fakeFpgaInfo
-			err := checkFPGADieTemperature("0000:1b:00.0", log)
+			err = checkFPGADieTemperature("0000:1b:00.0", log)
 
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -322,6 +328,20 @@ var _ = Describe("FPGA Manager", func() {
 			err := f.verifyPreconditions(&sampleOneFPGA)
 			cleanFPGA()
 			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("will succeed with non-existing directory", func() {
+			srv := serverMock()
+			defer srv.Close()
+			fpgaInfoExec = fakeFpgaInfo
+
+			tmpPathHolder := fpgaUserImageSubfolderPath
+			fpgaUserImageSubfolderPath = testTmpFolder + "/fakeFPGApath"
+
+			err := f.verifyPreconditions(&sampleOneFPGA)
+			Expect(err).ToNot(HaveOccurred())
+
+			os.Remove(fpgaUserImageSubfolderPath)
+			fpgaUserImageSubfolderPath = tmpPathHolder
 		})
 	})
 })

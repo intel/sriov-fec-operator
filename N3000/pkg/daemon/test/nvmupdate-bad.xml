@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DeviceUpdate lang="en">
+	<Instance vendor="8086" device="1572" subdevice="0" subvendor="8086" bus="7" dev="0" func="1" PBA="H58362-002" port_id="Port 2 of 2" display="Intel(R) Ethernet Converged Network Adapter X710">
+		<Module type="PXE" version="1.0.2" display="">
+		</Module>
+		<Module type="EFI" version="1.0.5" display="">
+		</Module>
+		<Module type="NVM" version="8000191B" previous_version="8000143F" display="">
+			<Status result="Failure" id="0">All operations completed successfully.</Status>
+		</Module>
+		<VPD>
+			<VPDField type="String">XL710 40GbE Controller</VPDField>
+			<VPDField type="Readable" key="PN"></VPDField>
+			<VPDField type="Readable" key="EC"></VPDField>
+			<VPDField type="Readable" key="FG"></VPDField>
+			<VPDField type="Readable" key="LC"></VPDField>
+			<VPDField type="Readable" key="MN"></VPDField>
+			<VPDField type="Readable" key="PG"></VPDField>
+			<VPDField type="Readable" key="SN"></VPDField>
+			<VPDField type="Readable" key="V0"></VPDField>
+			<VPDField type="Checksum" key="RV">86</VPDField>
+			<VPDField type="Writable" key="V1"></VPDField>
+		</VPD>
+		<MACAddresses>
+			<MAC address="644c36111ba8">
+			</MAC>
+			<SAN address="644c36111ba9">
+			</SAN>
+		</MACAddresses>
+	</Instance>
+	<NextUpdateAvailable> 1 </NextUpdateAvailable>
+	<RebootRequired> 0 </RebootRequired>
+	<PowerCycleRequired> 1 </PowerCycleRequired>
+</DeviceUpdate>
