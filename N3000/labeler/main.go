@@ -30,6 +30,8 @@ const (
 	configFilesizeLimitInBytes = 10485760 //10 MB
 )
 
+var getInclusterConfigFunc = rest.InClusterConfig
+
 func loadConfig(cfgPath string) (AcceleratorDiscoveryConfig, error) {
 	var cfg AcceleratorDiscoveryConfig
 	file, err := os.Open(filepath.Clean(cfgPath))
@@ -101,7 +103,7 @@ func findAccelerator(cfg *AcceleratorDiscoveryConfig) (bool, error) {
 }
 
 func setNodeLabel(nodeName, label string, removeLabel bool) error {
-	cfg, err := rest.InClusterConfig()
+	cfg, err := getInclusterConfigFunc()
 	if err != nil {
 		return fmt.Errorf("Failed to get cluster config: %v\n", err.Error())
 	}

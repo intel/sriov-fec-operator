@@ -4,14 +4,60 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
+
 	"github.com/jaypipes/ghw"
 	"github.com/jaypipes/pcidb"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"os"
-	"testing"
+
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/kubectl/pkg/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
+
+var (
+	node                         *corev1.Node
+	config                       *rest.Config
+	k8sClient                    client.Client
+	testEnv                      *envtest.Environment
+	fakeGetInclusterConfigReturn error = nil
+)
+
+func fakeGetInclusterConfig() (*rest.Config, error) {
+	return config, fakeGetInclusterConfigReturn
+}
+
+var _ = BeforeSuite(func(done Done) {
+	var err error
+	By("bootstrapping test environment")
+	testEnv = &envtest.Environment{
+		CRDDirectoryPaths: []string{filepath.Join("..", "config", "crd", "bases")},
+	}
+
+	config, err = testEnv.Start()
+	Expect(err).ToNot(HaveOccurred())
+	Expect(config).ToNot(BeNil())
+
+	k8sClient, err = client.New(config, client.Options{Scheme: scheme.Scheme})
+	Expect(err).ToNot(HaveOccurred())
+	Expect(k8sClient).ToNot(BeNil())
+
+	close(done)
+}, 60)
+
+var _ = AfterSuite(func() {
+	By("tearing down the test environment")
+	err := testEnv.Stop()
+	Expect(err).ToNot(HaveOccurred())
+})
 
 func TestMain(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -125,12 +171,51 @@ var _ = Describe("Labeler", func() {
 		})
 	})
 	var _ = Describe("setNodeLabel", func() {
+		BeforeEach(func() {
+			fakeGetInclusterConfigReturn = nil
+			getInclusterConfigFunc = fakeGetInclusterConfig
+			node = &corev1.Node{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "nodename",
+					Labels: map[string]string{
+						"fpga.intel.com/intel-accelerator-present": "",
+					},
+				},
+			}
+			err := k8sClient.Create(context.TODO(), node)
+			Expect(err).ToNot(HaveOccurred())
+		})
+		AfterEach(func() {
+			var err error
+			// Remove nodes
+			nodes := &corev1.NodeList{}
+			err = k8sClient.List(context.TODO(), nodes)
+			Expect(err).ToNot(HaveOccurred())
+
+			for _, nodeToDelete := range nodes.Items {
+				err = k8sClient.Delete(context.TODO(), &nodeToDelete)
+				Expect(err).ToNot(HaveOccurred())
+			}
+		})
 		var _ = It("will fail if there is no cluster", func() {
+			fakeGetInclusterConfigReturn = fmt.Errorf("error")
 			err := setNodeLabel("", "", false)
 			Expect(err).To(HaveOccurred())
 		})
+		var _ = It("will fail whene update node failes, empty label name", func() {
+			err := setNodeLabel("nodename", "", false)
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("will pass if there is cluster", func() {
+			err := setNodeLabel("nodename", "testlabel", false)
+			Expect(err).ToNot(HaveOccurred())
+		})
 	})
 	var _ = Describe("acceleratorDiscovery", func() {
+		BeforeEach(func() {
+			fakeGetInclusterConfigReturn = nil
+			getInclusterConfigFunc = fakeGetInclusterConfig
+		})
 		var _ = It("will fail if load config fails", func() {
 			err := acceleratorDiscovery("")
 			Expect(err).To(HaveOccurred())
@@ -146,6 +231,7 @@ var _ = Describe("Labeler", func() {
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will fail if there is no k8s cluster", func() {
+			fakeGetInclusterConfigReturn = fmt.Errorf("error")
 			getPCIDevices = func() ([]*ghw.PCIDevice, error) { return []*ghw.PCIDevice{}, nil }
 			os.Setenv("NODENAME", "test")
 			err := acceleratorDiscovery("testdata/valid.json")
