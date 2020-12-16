@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 
+	dh "github.com/otcshare/openshift-operator/N3000/pkg/drainhelper"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -18,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
 	"k8s.io/klog/v2/klogr"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -145,6 +148,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			cleanUpHandlers()
 		})
+
 		var _ = It("check NewN3000NodeReconciler", func() {
 
 			var clientSet clientset.Clientset
@@ -460,9 +464,213 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(request.Namespace).ToNot(Equal(reconciler.namespace))
 		})
-	})
 
-	var _ = Describe("Reconciler CreateEmptyN3000NodeIfNeeded", func() {
+		var _ = It("will fail to create node config because of missing MACS and FPGA", func() {
+			var err error
+
+			err = k8sClient.Create(context.Background(), n3000node)
+			Expect(err).ToNot(HaveOccurred())
+
+			// simulate creation of cluster config by the user
+			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
+
+			log = klogr.New().WithName("N3000NodeReconciler-Test")
+			request = ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: namespace,
+					Name:      "n3000node-gf",
+				},
+			}
+
+			reconciler = N3000NodeReconciler{Client: k8sClient, log: log,
+				namespace: request.NamespacedName.Namespace,
+				nodeName:  "gf",
+				fortville: FortvilleManager{
+					Log: log.WithName("fortvilleManager"),
+				},
+				fpga: FPGAManager{
+					Log: log.WithName("fpgaManager"),
+				},
+			}
+
+			_, err = (reconciler).Reconcile(request)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		var _ = It("will fail because of FPGA url missing", func() {
+			var err error
+
+			n3000node.Spec.FPGA = []fpgav1.N3000Fpga{
+				{
+					PCIAddr:      "ffff:ff:01.1",
+					UserImageURL: "",
+				},
+			}
+
+			err = k8sClient.Create(context.Background(), n3000node)
+			Expect(err).ToNot(HaveOccurred())
+
+			// simulate creation of cluster config by the user
+			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
+
+			log = klogr.New().WithName("N3000NodeReconciler-Test")
+			request = ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: namespace,
+					Name:      "n3000node-gf",
+				},
+			}
+
+			reconciler = N3000NodeReconciler{Client: k8sClient, log: log,
+				namespace: request.NamespacedName.Namespace,
+				nodeName:  "gf",
+				fortville: FortvilleManager{
+					Log: log.WithName("fortvilleManager"),
+				},
+				fpga: FPGAManager{
+					Log: log.WithName("fpgaManager"),
+				},
+			}
+
+			_, err = (reconciler).Reconcile(request)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		var _ = It("will fail with wrong FPGA preconditions", func() {
+			var err error
+
+			n3000node.Spec.FPGA = []fpgav1.N3000Fpga{
+				{
+					PCIAddr:      "ffff:ff:01.1",
+					UserImageURL: "/tmp/fake.bin",
+				},
+			}
+
+			err = k8sClient.Create(context.Background(), n3000node)
+			Expect(err).ToNot(HaveOccurred())
+
+			// simulate creation of cluster config by the user
+			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
+
+			log = klogr.New().WithName("N3000NodeReconciler-Test")
+			request = ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: namespace,
+					Name:      "n3000node-gf",
+				},
+			}
+
+			reconciler = N3000NodeReconciler{Client: k8sClient, log: log,
+				namespace: request.NamespacedName.Namespace,
+				nodeName:  "gf",
+				fortville: FortvilleManager{
+					Log: log.WithName("fortvilleManager"),
+				},
+				fpga: FPGAManager{
+					Log: log.WithName("fpgaManager"),
+				},
+			}
+
+			_, err = (reconciler).Reconcile(request)
+			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("will fail because of Flash problem", func() {
+			var err error
+
+			n3000node.Spec.FPGA = nil
+			n3000node.Spec.Fortville = fpgav1.N3000Fortville{
+				MACs: []fpgav1.FortvilleMAC{
+					{
+						MAC: "00:00:00:00:00:00",
+					},
+				},
+				FirmwareURL: "/tmp/fake/bin",
+			}
+
+			err = k8sClient.Create(context.Background(), n3000node)
+			Expect(err).ToNot(HaveOccurred())
+
+			// simulate creation of cluster config by the user
+			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
+
+			log = klogr.New().WithName("N3000NodeReconciler-Test")
+			request = ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: namespace,
+					Name:      "n3000node-gf",
+				},
+			}
+
+			reconciler = N3000NodeReconciler{Client: k8sClient, log: log,
+				namespace: request.NamespacedName.Namespace,
+				nodeName:  "gf",
+				fortville: FortvilleManager{
+					Log: log.WithName("fortvilleManager"),
+				},
+				fpga: FPGAManager{
+					Log: log.WithName("fpgaManager"),
+				},
+			}
+
+			_, err = (reconciler).Reconcile(request)
+			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("will run Reconcile with misconfiugred DrainHelper", func() {
+			var err error
+
+			n3000node.Spec.FPGA = nil
+			n3000node.Spec.Fortville = fpgav1.N3000Fortville{
+				MACs: []fpgav1.FortvilleMAC{
+					{
+						MAC: "64:4c:36:11:1b:a8",
+					},
+				},
+				FirmwareURL: "http://www.test.com/fortville/nvmPackage.tag.gz",
+			}
+
+			err = k8sClient.Create(context.Background(), n3000node)
+			Expect(err).ToNot(HaveOccurred())
+
+			// simulate creation of cluster config by the user
+			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
+
+			log = klogr.New().WithName("N3000NodeReconciler-Test")
+			request = ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: namespace,
+					Name:      "n3000node-gf",
+				},
+			}
+
+			srv := serverFortvilleMock()
+			defer srv.Close()
+
+			clientConfig := &restclient.Config{}
+			cset, err := clientset.NewForConfig(clientConfig)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = os.Setenv("DRAIN_TIMEOUT_SECONDS", "5")
+			Expect(err).ToNot(HaveOccurred())
+
+			err = os.Setenv("LEASE_DURATION_SECONDS", "15")
+			Expect(err).ToNot(HaveOccurred())
+
+			reconciler = N3000NodeReconciler{Client: k8sClient, log: log,
+				namespace: request.NamespacedName.Namespace,
+				nodeName:  "gf",
+				fortville: FortvilleManager{
+					Log: log.WithName("fortvilleManager"),
+				},
+				fpga: FPGAManager{
+					Log: log.WithName("fpgaManager"),
+				},
+				drainHelper: dh.NewDrainHelper(log, cset, "node", "namespace"),
+			}
+
+			_, err = (reconciler).Reconcile(request)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
 		var _ = It("check CreateEmptyN3000NodeIfNeeded", func() {
 			var err error
 
