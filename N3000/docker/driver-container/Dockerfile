@@ -55,6 +55,20 @@ RUN ./n3000-$OPAE_VERSION-rte-el8-setup.sh extract && \
     rm -rf /opae-prepare
 
 FROM registry.access.redhat.com/ubi8:latest
+
+ARG VERSION
+### Required OpenShift Labels
+LABEL name="OPAE Intel® FPGA Linux Device Drivers container($OPAE_VERSION)" \
+    vendor="Intel Corporation" \
+    version=$VERSION \
+    release="1" \
+    summary="OPAE Intel® FPGA Linux Device Drivers for kernel ${KERNEL_VERSION}" \
+    description="The OPAE Intel® FPGA driver provides interfaces for userspace applications \
+to configure, enumerate, open, and access FPGA accelerators on platforms \
+equipped with Intel® FPGA solutions and enables system-level management \
+functions such as FPGA reconfiguration, power management, and virtualization.\
+https://opae.github.io/latest/docs/drv_arch/drv_arch.html"
+
 WORKDIR /srcrpms
 RUN dnf download --disablerepo=* --enablerepo=ubi-8-baseos --source kmod
 WORKDIR /driver-workdir

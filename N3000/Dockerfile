@@ -23,6 +23,20 @@ COPY pkg/ pkg/
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+
+ARG VERSION
+### Required OpenShift Labels
+LABEL name="OpenNESS Operator for Intel® FPGA PAC N3000" \
+    vendor="Intel Corporation" \
+    version=$VERSION \
+    release="1" \
+    summary="OpenNESS Operator for Intel® FPGA PAC N3000 for 5G Cloudnative/vRAN deployment" \
+    description="OpenNESS Operator for Intel® FPGA PAC N3000 for 5G Cloudnative/vRAN \
+deployment supports high perofrmance Networking interface for 5G gNB Fronthaul and Midhaul \
+and 5G Forward Error Correction offload. OpenNESS Operator for Intel® FPGA PAC N3000 supports \
+Detection of the FPGA, Programming FPGA and Ethernet Firmware, Configuration and allocation \
+of SR-IOV resources to the O-DU Pods."
+
 WORKDIR /
 COPY --from=builder /workspace/manager .
 

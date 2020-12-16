@@ -27,6 +27,16 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fe
 
 FROM registry.access.redhat.com/ubi8:latest
 
+ARG VERSION
+### Required OpenShift Labels
+LABEL name="OpenNESS SRIOV-FEC Operator for Intel® FPGA PAC N3000 daemonset container" \
+    vendor="Intel Corporation" \
+    version=$VERSION \
+    release="1" \
+    summary="Manages SRIOV-FEC resources of Intel® FPGA PAC N3000" \
+    description="The daemonset container is responsible for building the nodes invenotry \
+and configuring the SRIOV-FEC portion of the supported accelerators"
+
 RUN mkdir -p /usr/share/misc/ && \
     cd /usr/share/misc/ && \
     curl https://pci-ids.ucw.cz/v2.2/pci.ids.gz --output pci.ids.gz && \

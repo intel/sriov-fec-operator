@@ -12,6 +12,16 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o node_lab
 
 FROM registry.access.redhat.com/ubi8:latest
 
+ARG VERSION
+### Required OpenShift Labels
+LABEL name="Intel® FPGA discovery container" \
+    vendor="Intel Corporation" \
+    version=$VERSION \
+    release="1" \
+    summary="Intel® FPGA discovery container labels kubernetes nodes that include Intel® FPGA accelerator" \
+    description="The container tries to detect Intel® FPGA accelerators and label the nodes that contain them \
+and remove the label for nodes that do not."
+
 RUN mkdir -p /usr/share/misc/ && \
     cd /usr/share/misc/ && \
     curl https://pci-ids.ucw.cz/v2.2/pci.ids.gz --output pci.ids.gz && \

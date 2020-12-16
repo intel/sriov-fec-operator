@@ -16,6 +16,16 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o n3000_da
 ARG OPAE_VERSION=$OPAE_VERSION
 FROM opae:$OPAE_VERSION
 
+ARG VERSION
+### Required OpenShift Labels
+LABEL name="OpenNESS Operator for Intel® FPGA PAC N3000 daemonset container" \
+    vendor="Intel Corporation" \
+    version=$VERSION \
+    release="1" \
+    summary="Container for Intel® FPGA PAC N3000 Operator that manages the accelerators on a node" \
+    description="The daemonset container is responsible for building the nodes invenotry \
+and configuring the accelerators"
+
 RUN dnf install --disablerepo=* --enablerepo=ubi-8-baseos -y pciutils ethtool
 
 WORKDIR /srcrpms

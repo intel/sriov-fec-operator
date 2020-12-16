@@ -57,56 +57,56 @@ function build_image {
 ### BUILD OPAE base image
     OPAE_TAG="${OPAE_VER}"
     OPAE_IMG="opae:${OPAE_TAG}"
-    OPAE_BUILD_ARGS="--build-arg=OPAE_VERSION=${OPAE_VER}"
+    OPAE_BUILD_ARGS="--build-arg=VERSION=${IMAGE_VER} --build-arg=OPAE_VERSION=${OPAE_VER}"
     build_image "N3000/docker/opae-image" "Dockerfile" "${OPAE_IMG}" "${OPAE_BUILD_ARGS}"
 ### END
 
 ### BUILD Driver container
     DRV_TAG="${IMAGE_VER}--${OPAE_VER}--${KERNEL_VER}"
     DRV_IMG="n3000-driver:${DRV_TAG}"
-    DRV_BUILD_ARGS="--build-arg=OPAE_VERSION=${OPAE_VER} --build-arg=KERNEL_VERSION=${KERNEL_VER}"
+    DRV_BUILD_ARGS="--build-arg=VERSION=${IMAGE_VER} --build-arg=OPAE_VERSION=${OPAE_VER} --build-arg=KERNEL_VERSION=${KERNEL_VER}"
     build_image "N3000/docker/driver-container" "Dockerfile" "${DRV_IMG}" "${DRV_BUILD_ARGS}"
 ### END
 
 ### BUILD N3000 Operator
     N3000_TAG="${IMAGE_VER}"
     N3000_IMG="n3000-operator:${N3000_TAG}"
-    N3000_BUILD_ARGS=""
+    N3000_BUILD_ARGS="--build-arg=VERSION=${IMAGE_VER} "
     build_image "N3000" "Dockerfile" "${N3000_IMG}" "${N3000_BUILD_ARGS}"
 ### END
 
 ### BUILD N3000 daemon
     N3000_D_TAG="${IMAGE_VER}--${OPAE_VER}"
     N3000_D_IMG="n3000-daemon:${N3000_D_TAG}"
-    N3000_D_BUILD_ARGS="--build-arg=OPAE_VERSION=${OPAE_VER}"
+    N3000_D_BUILD_ARGS="--build-arg=VERSION=${IMAGE_VER} --build-arg=OPAE_VERSION=${OPAE_VER}"
     build_image "N3000" "Dockerfile.daemon" "${N3000_D_IMG}" "${N3000_D_BUILD_ARGS}"
 ### END
 
 ### BUILD Prometheus exporter
     PROMETHEUS_TAG="${IMAGE_VER}--${OPAE_VER}"
     PROMETHEUS_IMG="n3000-monitoring:${PROMETHEUS_TAG}"
-    PROMETHEUS_BUILD_ARGS="--build-arg=OPAE_VERSION=${OPAE_VER}"
+    PROMETHEUS_BUILD_ARGS="--build-arg=VERSION=${IMAGE_VER} --build-arg=OPAE_VERSION=${OPAE_VER}"
     build_image "prometheus_fpgainfo_exporter" "Dockerfile" "${PROMETHEUS_IMG}" "${PROMETHEUS_BUILD_ARGS}"
 ### END
 
 ### BUILD SRIOV FEC operator
     SRIOV_TAG="${IMAGE_VER}"
     SRIOV_IMG="sriov-fec-operator:${SRIOV_TAG}"
-    SRIOV_BUILD_ARGS=""
+    SRIOV_BUILD_ARGS="--build-arg=VERSION=${IMAGE_VER} "
     build_image "sriov-fec" "Dockerfile" "${SRIOV_IMG}" "${SRIOV_BUILD_ARGS}"
 ### END
 
 ### BUILD SRIOV FEC daemon
     SRIOV_D_TAG="${IMAGE_VER}"
     SRIOV_D_IMG="sriov-fec-daemon:${SRIOV_D_TAG}"
-    SRIOV_D_BUILD_ARGS=""
+    SRIOV_D_BUILD_ARGS="--build-arg=VERSION=${IMAGE_VER} "
     build_image "sriov-fec" "Dockerfile.daemon" "${SRIOV_D_IMG}" "${SRIOV_D_BUILD_ARGS}"
 ### END
 
 ### BUILD Node labeler daemon
     NODE_LABLER_TAG="${IMAGE_VER}"
     NODE_LABLER_IMG="n3000-labeler:${NODE_LABLER_TAG}"
-    NODE_LABLER_BUILD_ARGS=""
+    NODE_LABLER_BUILD_ARGS="--build-arg=VERSION=${IMAGE_VER} "
     build_image "N3000/labeler" "Dockerfile" "${NODE_LABLER_IMG}" "${NODE_LABLER_BUILD_ARGS}"
 ### END
 
