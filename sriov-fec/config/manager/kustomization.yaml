@@ -8,4 +8,4 @@ kind: Kustomization
 images:
 - name: sriov-fec-operator
   newName: sriov-fec-operator
-  newTag: v1.0.0
+  newTag: v0.1.0

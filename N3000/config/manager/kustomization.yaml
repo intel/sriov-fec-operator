@@ -8,4 +8,4 @@ kind: Kustomization
 images:
 - name: n3000-operator
   newName: n3000-operator
-  newTag: v1.0.0
+  newTag: v0.1.0

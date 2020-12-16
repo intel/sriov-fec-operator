@@ -30,7 +30,7 @@ spec:
         - /manager
         args:
         - --enable-leader-election
-        image: sriov-fec-operator:v1.0.0
+        image: sriov-fec-operator:v0.1.0
         name: manager
         resources:
           limits:

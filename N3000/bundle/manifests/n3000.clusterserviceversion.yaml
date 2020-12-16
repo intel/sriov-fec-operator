@@ -31,7 +31,7 @@ metadata:
     capabilities: Basic Install
     operators.operatorframework.io/builder: operator-sdk-v1.2.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-  name: n3000.v1.0.0
+  name: n3000.v0.1.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -187,13 +187,13 @@ spec:
                 - /manager
                 env:
                 - name: N3000_DAEMON_IMAGE
-                  value: docker.io/n3000-daemon:v1.0.0--1.3.8-2
+                  value: registry.redhat.io/n3000-daemon:v0.1.0--1.3.8-2
                 - name: N3000_DRIVER_CONTAINER_IMAGE
-                  value: docker.io/n3000-driver:v1.0.0--1.3.8-2
+                  value: registry.redhat.io/n3000-driver:v0.1.0--1.3.8-2
                 - name: N3000_MONITORING_IMAGE
-                  value: docker.io/n3000-monitoring:v1.0.0--1.3.8-2
+                  value: registry.redhat.io/n3000-monitoring:v0.1.0--1.3.8-2
                 - name: N3000_LABELER_IMAGE
-                  value: docker.io/n3000-labeler:v1.0.0
+                  value: registry.redhat.io/n3000-labeler:v0.1.0
                 - name: NAMESPACE
                   valueFrom:
                     fieldRef:
@@ -202,7 +202,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.name
-                image: n3000-operator:v1.0.0
+                image: n3000-operator:v0.1.0
                 name: manager
                 resources:
                   limits:
@@ -265,4 +265,4 @@ spec:
   provider:
     name: Intel Corporation
     url: https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html
-  version: 1.0.0
+  version: 0.1.0
