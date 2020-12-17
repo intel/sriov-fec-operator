@@ -1,1 +1,4 @@
 .vscode
+
+# duplicate license file used in dockerfiles
+TEMP_LICENSE_COPY

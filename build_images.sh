@@ -43,6 +43,7 @@ function build_image {
     img_name="${3}"
     build_args="${4}"
 
+    cp "LICENSE" "${cont_dir}"/"TEMP_LICENSE_COPY"
 
     pushd "${cont_dir}" > /dev/null || exit
         if [ -z "${IMAGES_TO_BUILD}" ] || [[ "${IMAGES_TO_BUILD}" =~ ${img_name%:*} ]]; then

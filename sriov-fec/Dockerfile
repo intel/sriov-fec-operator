@@ -34,6 +34,7 @@ deployment supports high perofrmance Networking interface for 5G gNB Fronthaul a
 and 5G Forward Error Correction offload. SR-IOV FEC container is used for configuring the \
 Virtual Functions and the Queues realted to FEC IP in the Intel® FPGA PAC N3000 for 5G."
 
+COPY TEMP_LICENSE_COPY /licenses/LICENSE
 WORKDIR /
 COPY --from=builder /workspace/manager .
 COPY assets assets/

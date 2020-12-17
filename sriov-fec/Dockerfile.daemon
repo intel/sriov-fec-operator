@@ -43,6 +43,8 @@ RUN mkdir -p /usr/share/misc/ && \
     gzip -d pci.ids.gz && \
     rm -rfv ./pci.ids.gz
 USER 1001
+
+COPY TEMP_LICENSE_COPY /licenses/LICENSE
 WORKDIR /sriov_workdir
 COPY --from=builder /workspace-go/sriov_fec_daemon .
 COPY --from=builder /workspace-pf/pf-bb-config/pf_bb_config .

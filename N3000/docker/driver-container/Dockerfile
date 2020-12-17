@@ -69,6 +69,7 @@ equipped with Intel® FPGA solutions and enables system-level management \
 functions such as FPGA reconfiguration, power management, and virtualization.\
 https://opae.github.io/latest/docs/drv_arch/drv_arch.html"
 
+COPY TEMP_LICENSE_COPY /licenses/LICENSE
 WORKDIR /srcrpms
 RUN dnf download --disablerepo=* --enablerepo=ubi-8-baseos --source kmod
 WORKDIR /driver-workdir

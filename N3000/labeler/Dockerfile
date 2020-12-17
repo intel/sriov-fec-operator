@@ -28,6 +28,7 @@ RUN mkdir -p /usr/share/misc/ && \
     gzip -d pci.ids.gz && \
     rm -rfv ./pci.ids.gz
 
+COPY TEMP_LICENSE_COPY /licenses/LICENSE
 USER 1001
 WORKDIR /labeler-workspace
 COPY --from=builder /workspace/node_labeler .

@@ -16,3 +16,5 @@ LABEL operators.operatorframework.io.test.mediatype.v1=scorecard+v1
 COPY bundle/manifests /manifests/
 COPY bundle/metadata /metadata/
 COPY bundle/tests/scorecard /tests/scorecard/
+
+COPY TEMP_LICENSE_COPY /licenses/LICENSE

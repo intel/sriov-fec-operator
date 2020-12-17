@@ -24,6 +24,7 @@ LABEL name="Prometheus exporter for Intel® FPGA accelerators" \
 following information about Intel® FPGA accelerators: qualitative, \
 temperatures, voltages, currents, powers"
 
+COPY TEMP_LICENSE_COPY /licenses/LICENSE
 USER 1001
 WORKDIR /
 COPY --from=builder /workspace/fpgainfo_exporter .

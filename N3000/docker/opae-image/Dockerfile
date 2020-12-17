@@ -14,6 +14,8 @@ RUN pip3 install intelhex
 ARG OPAE_VERSION
 ENV OPAE_VERSION=${OPAE_VERSION}
 
+COPY TEMP_LICENSE_COPY /licenses/LICENSE
+
 WORKDIR /opae
 
 COPY n3000-${OPAE_VERSION}-rte-el8-setup.sh .

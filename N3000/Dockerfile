@@ -37,6 +37,8 @@ and 5G Forward Error Correction offload. OpenNESS Operator for Intel® FPGA PAC 
 Detection of the FPGA, Programming FPGA and Ethernet Firmware, Configuration and allocation \
 of SR-IOV resources to the O-DU Pods."
 
+COPY TEMP_LICENSE_COPY /licenses/LICENSE
+
 WORKDIR /
 COPY --from=builder /workspace/manager .
 
