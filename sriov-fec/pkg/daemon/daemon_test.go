@@ -114,23 +114,22 @@ func fakeGetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 }
 
 var (
-	node                        *corev1.Node
-	nodeConfig                  *sriovv1.SriovFecNodeConfig
-	request                     ctrl.Request
-	reconciler                  *NodeConfigReconciler
-	log                         = ctrl.Log.WithName("SriovDaemon-test")
-	doDeconf                    = true
-	nodeName                    = "config"
-	DEFAULT_CLUSTER_CONFIG_NAME = "config"
-	NAMESPACE                   = "default"
-	PCIAddress                  = "0000:14:00.1"
-	namespacedName              = types.NamespacedName{
-		Name:      DEFAULT_CLUSTER_CONFIG_NAME,
+	node           *corev1.Node
+	nodeConfig     *sriovv1.SriovFecNodeConfig
+	request        ctrl.Request
+	reconciler     *NodeConfigReconciler
+	log            = ctrl.Log.WithName("SriovDaemon-test")
+	doDeconf       = true
+	nodeName       = "config"
+	NAMESPACE      = "default"
+	PCIAddress     = "0000:14:00.1"
+	namespacedName = types.NamespacedName{
+		Name:      nodeName,
 		Namespace: NAMESPACE,
 	}
 )
 
-func createCRWithNodeConfig(addNodeConfig bool) error {
+func createCRWithNodeConfig(addNodeConfig bool, name, namespace string, req ctrl.Request) error {
 	getSriovInventory = fakeGetSriovInventory
 	getVFconfigured = fakeGetVFconfigured
 	getVFList = fakeGetVFList
@@ -149,16 +148,9 @@ func createCRWithNodeConfig(addNodeConfig bool) error {
 	Expect(err).ToNot(HaveOccurred())
 
 	reconciler = NewNodeConfigReconciler(k8sClient, cset,
-		log, nodeName, NAMESPACE)
+		log, name, namespace)
 
-	request = ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Namespace: NAMESPACE,
-			Name:      DEFAULT_CLUSTER_CONFIG_NAME,
-		},
-	}
-
-	_, err = reconciler.Reconcile(request)
+	_, err = reconciler.Reconcile(req)
 	return err
 }
 
@@ -174,6 +166,13 @@ var _ = Describe("SriovDaemonTest", func() {
 			clean()
 			runExecCmd = fakeRunExecCmd
 			doDeconf = true
+
+			request = ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: NAMESPACE,
+					Name:      nodeName,
+				},
+			}
 
 			err := createFileInFolder(filepath.Join(sysBusPciDevices, PCIAddress), "driver_override")
 			Expect(err).ToNot(HaveOccurred())
@@ -213,7 +212,7 @@ var _ = Describe("SriovDaemonTest", func() {
 			}
 			nodeConfig = &sriovv1.SriovFecNodeConfig{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      DEFAULT_CLUSTER_CONFIG_NAME,
+					Name:      nodeName,
 					Namespace: NAMESPACE,
 				},
 				Spec: sriovv1.SriovFecNodeConfigSpec{
@@ -276,14 +275,15 @@ var _ = Describe("SriovDaemonTest", func() {
 
 				_, err = reconciler.Reconcile(request)
 				Expect(err).ToNot(HaveOccurred())
+
+				err = k8sClient.Delete(context.TODO(), nodeConfig)
+				Expect(err).ToNot(HaveOccurred())
 			}
-			err = k8sClient.Delete(context.TODO(), nodeConfig)
-			Expect(err).ToNot(HaveOccurred())
 			err = k8sClient.Delete(context.TODO(), node)
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("will create cr without node config", func() {
-			err := createCRWithNodeConfig(false)
+			err := createCRWithNodeConfig(false, nodeName, NAMESPACE, request)
 			Expect(err).ToNot(HaveOccurred())
 
 			//Check if node config was created out of cluster config
@@ -293,10 +293,47 @@ var _ = Describe("SriovDaemonTest", func() {
 			Expect(len(nodeConfigs.Items)).To(Equal(1))
 			Expect(lastRunExec).To(Equal(""))
 		})
+		var _ = It("will ignore cr with wrong node name", func() {
+			err := createCRWithNodeConfig(false, "wrongName", NAMESPACE, request)
+			Expect(err).ToNot(HaveOccurred())
+
+			doDeconf = false
+			//Check if node config was created out of cluster config
+			nodeConfigs := &sriovv1.SriovFecNodeConfigList{}
+			err = k8sClient.List(context.TODO(), nodeConfigs)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(nodeConfigs.Items)).To(Equal(0))
+		})
+		var _ = It("will ignore cr with wrong namespace", func() {
+			err := createCRWithNodeConfig(false, nodeName, "wrongNamespace", request)
+			Expect(err).ToNot(HaveOccurred())
+			doDeconf = false
+			//Check if node config was created out of cluster config
+			nodeConfigs := &sriovv1.SriovFecNodeConfigList{}
+			err = k8sClient.List(context.TODO(), nodeConfigs)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(nodeConfigs.Items)).To(Equal(0))
+		})
+		var _ = It("will fail when namespace will be not handle", func() {
+			request = ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "wrongNamespace",
+					Name:      nodeName,
+				},
+			}
+			err := createCRWithNodeConfig(false, nodeName, "wrongNamespace", request)
+			Expect(err).To(HaveOccurred())
+			doDeconf = false
+			//Check if node config was created out of cluster config
+			nodeConfigs := &sriovv1.SriovFecNodeConfigList{}
+			err = k8sClient.List(context.TODO(), nodeConfigs)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(nodeConfigs.Items)).To(Equal(0))
+		})
 		var _ = It("will create cr with node config and failed reboot", func() {
 			fakeSystemdErrReturn = fmt.Errorf("error")
 			procCmdlineFilePath = "testdata/cmdline_test_missing_param"
-			err := createCRWithNodeConfig(true)
+			err := createCRWithNodeConfig(true, nodeName, NAMESPACE, request)
 			Expect(err).ToNot(HaveOccurred())
 
 			//Check if node config was created out of cluster config
@@ -307,7 +344,7 @@ var _ = Describe("SriovDaemonTest", func() {
 			Expect(lastRunExec).To(Equal("systemd-run"))
 		})
 		var _ = It("will create cr with node config", func() {
-			err := createCRWithNodeConfig(true)
+			err := createCRWithNodeConfig(true, nodeName, NAMESPACE, request)
 			Expect(err).ToNot(HaveOccurred())
 
 			//Check if node config was created out of cluster config
@@ -321,7 +358,7 @@ var _ = Describe("SriovDaemonTest", func() {
 			err := createFileInFolder(filepath.Join(sysBusPciDevices, PCIAddress), "driver")
 			Expect(err).ToNot(HaveOccurred())
 
-			err = createCRWithNodeConfig(true)
+			err = createCRWithNodeConfig(true, nodeName, NAMESPACE, request)
 			Expect(err).ToNot(HaveOccurred())
 
 			err = os.Remove(filepath.Join(sysBusPciDevices, PCIAddress, "driver"))
@@ -337,7 +374,7 @@ var _ = Describe("SriovDaemonTest", func() {
 		var _ = It("will create cr with node config and enable master bus", func() {
 			fakeSetpciOutput = PCIAddress + " = " + "1"
 			nodeConfig.Spec.PhysicalFunctions[0].PFDriver = "pci-pf-stub"
-			err := createCRWithNodeConfig(true)
+			err := createCRWithNodeConfig(true, nodeName, NAMESPACE, request)
 			Expect(err).ToNot(HaveOccurred())
 
 			//Check if node config was created out of cluster config
