@@ -18,7 +18,7 @@ COPY TEMP_LICENSE_COPY /licenses/LICENSE
 
 WORKDIR /opae
 
-COPY n3000-${OPAE_VERSION}-rte-el8-setup.sh .
+COPY files/opae/n3000-${OPAE_VERSION}-rte-el8-setup.sh .
 
 # We extract the package instead of installing directly,
 # because there's no way to ignore driver package (and its deps are not fulfilled [dkms])

@@ -126,6 +126,7 @@ spec:
       hostNetwork: true
       containers:
       - image: "{{ .N3000_DAEMON_IMAGE }}"
+        imagePullPolicy: IfNotPresent
         name: n3000-daemon
         securityContext:
           readOnlyRootFilesystem: true

@@ -8,8 +8,12 @@
 set -e
 
 OPAE_VER=${OPAE_VERSION:-1.3.8-2}
+
 KERNEL_VER=${KERNEL_VERSION:-4.18.0-193.28.1.rt13.77.el8_2.x86_64}
+KERNEL_SOURCE=${KERNEL_SOURCE:-yum}
+
 IMAGE_VER=${IMAGE_VERSION:-v0.1.0}
+CONTAINER_BUILD_BIN=${CONTAINER_BUILD_BIN:-podman}
 
 
 IMAGES_TO_BUILD=""
@@ -45,11 +49,12 @@ function build_image {
 
     cp "LICENSE" "${cont_dir}"/"TEMP_LICENSE_COPY"
 
+    cp -r files ${cont_dir}/
     pushd "${cont_dir}" > /dev/null || exit
         if [ -z "${IMAGES_TO_BUILD}" ] || [[ "${IMAGES_TO_BUILD}" =~ ${img_name%:*} ]]; then
             echo "Building ${img_name}"
             # shellcheck disable=SC2086
-            podman build . -t "${img_name}" -f "${cont_dockerfile}" ${build_args} > /dev/null
+            ${CONTAINER_BUILD_BIN} build . -t "${img_name}" -f "${cont_dockerfile}" ${build_args} > /dev/null
             IMAGES_BUILT+=("${img_name}")
         fi
     popd > /dev/null || exit
@@ -65,7 +70,7 @@ function build_image {
 ### BUILD Driver container
     DRV_TAG="${IMAGE_VER}--${OPAE_VER}--${KERNEL_VER}"
     DRV_IMG="n3000-driver:${DRV_TAG}"
-    DRV_BUILD_ARGS="--build-arg=VERSION=${IMAGE_VER} --build-arg=OPAE_VERSION=${OPAE_VER} --build-arg=KERNEL_VERSION=${KERNEL_VER}"
+    DRV_BUILD_ARGS="--build-arg=VERSION=${IMAGE_VER} --build-arg=OPAE_VERSION=${OPAE_VER} --build-arg=KERNEL_VERSION=${KERNEL_VER} --build-arg=KERNEL_SOURCE=${KERNEL_SOURCE}"
     build_image "N3000/docker/driver-container" "Dockerfile" "${DRV_IMG}" "${DRV_BUILD_ARGS}"
 ### END
 
@@ -111,11 +116,36 @@ function build_image {
     build_image "N3000/labeler" "Dockerfile" "${NODE_LABLER_IMG}" "${NODE_LABLER_BUILD_ARGS}"
 ### END
 
+# Replace the redhat registry if a custom one is requested
+if [ -n "${REGISTRY}" ]
+then
+    sed -i "s#registry.redhat.io/n3000#${REGISTRY}/n3000#g" N3000/bundle/manifests/n3000.clusterserviceversion.yaml
+    sed -i "s#registry.redhat.io/sriov#${REGISTRY}/sriov#g" sriov-fec/bundle/manifests/sriov-fec.clusterserviceversion.yaml
+fi
+
+### BUILD N3000 Bundle
+    N3000_BUNDLE_TAG="${IMAGE_VER}"
+    N3000_BUNDLE_IMG="n3000-bundle:${N3000_BUNDLE_TAG}"
+    build_image "N3000" "bundle.Dockerfile" "${N3000_BUNDLE_IMG}"
+### END
+
+### BUILD SRIOV FEC Bundle
+    SRIOV_BUNDLE_TAG="${IMAGE_VER}"
+    SRIOV_BUNDLE_IMG="sriov-fec-bundle:${SRIOV_BUNDLE_TAG}"
+    build_image "sriov-fec" "bundle.Dockerfile" "${SRIOV_BUNDLE_IMG}"
+### END
+
+if [ -n "${REGISTRY}" ]
+then
+    sed -i "s#${REGISTRY}/n3000#registry.redhat.io/n3000#g" N3000/bundle/manifests/n3000.clusterserviceversion.yaml
+    sed -i "s#${REGISTRY}/sriov#registry.redhat.io/sriov#g" sriov-fec/bundle/manifests/sriov-fec.clusterserviceversion.yaml
+fi
+
 if [ -n "${REGISTRY}" ]
 then
     for img in "${IMAGES_BUILT[@]}"; do
         echo "Pushing ${img} to ${REGISTRY}"
-        podman push --tls-verify="${TLS_VERIFY}" localhost/"${img}" "${REGISTRY}/${img}"
+        ${CONTAINER_BUILD_BIN} push --tls-verify="${TLS_VERIFY}" localhost/"${img}" "${REGISTRY}/${img}"
     done
 fi
 

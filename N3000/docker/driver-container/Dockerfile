@@ -6,11 +6,14 @@ FROM registry.access.redhat.com/ubi8:latest as builder
 ARG KERNEL_VERSION
 ENV KERNEL_VERSION=$KERNEL_VERSION
 
+ARG KERNEL_SOURCE
+ENV KERNEL_SOURCE=$KERNEL_SOURCE
+
 ARG OPAE_VERSION
 ENV OPAE_VERSION=$OPAE_VERSION
 
 ARG OCP_VERSION=4.6
-ENV OCP_VERSION=$OPAE_VERSION
+ENV OCP_VERSION=$OCP_VERSION
 
 ARG RELEASE_VERSION=8.2
 ENV RELEASE_VERSION=$RELEASE_VERSION
@@ -18,21 +21,28 @@ ENV RELEASE_VERSION=$RELEASE_VERSION
 COPY enable_repositories.sh ./
 RUN ./enable_repositories.sh
 
+COPY files ./files
 
 RUN dnf install --disablerepo=* --enablerepo=ubi-8-appstream --enablerepo=ubi-8-baseos  -y  \
     make gcc patch cpio kmod
 
-RUN [[ "${KERNEL_VERSION}" == *"rt"* ]] && RT="rt-" || RT="" && \
-    dnf install -y \
-    kernel-${RT}devel-${KERNEL_VERSION} \
-    kernel-${RT}core-${KERNEL_VERSION} \
-    elfutils-libelf-devel && \
-    dnf clean all
+RUN if [[ "${KERNEL_SOURCE}" == *"file"* ]]; then \
+        rpm -Uvh --nodeps ./files/kernel/*.rpm; \
+        dnf install -y elfutils-libelf-devel; \
+        dnf clean all; \
+    elif [[ "${KERNEL_SOURCE}" == *"yum"* ]]; then \
+        [[ "${KERNEL_VERSION}" == *"rt"* ]] && RT="rt-" || RT="" && \
+        dnf install -y \
+        kernel-${RT}devel-${KERNEL_VERSION} \
+        kernel-${RT}core-${KERNEL_VERSION} \
+        elfutils-libelf-devel && \
+        dnf clean all; \
+    fi
 
 WORKDIR /opae-prepare
 ARG OPAE_VERSION=$OPAE_VERSION
 
-COPY n3000-$OPAE_VERSION-rte-el8-setup.sh Makefile.patch ./
+COPY files/opae/n3000-${OPAE_VERSION}-rte-el8-setup.sh Makefile.patch ./
 
 # opae-intel-fpga-driver is extracted from opae package
 # it's unpacked, Makefile is patched (to allow building for other kernel)

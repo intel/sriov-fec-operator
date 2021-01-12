@@ -125,6 +125,7 @@ spec:
       hostPID: true
       containers:
       - image: "{{ .N3000_DRIVER_CONTAINER_IMAGE }}--{{ .kernel }}"
+        imagePullPolicy: IfNotPresent
         name: fpga-driver
         command: ["/driver-workdir/entrypoint.sh"]
         securityContext:

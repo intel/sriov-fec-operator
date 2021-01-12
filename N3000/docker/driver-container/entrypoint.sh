@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020 Intel Corporation
 
-modules=(regmap-mmio-mod intel-fpga-pci ifpga-sec-mgr fpga-mgr-mod 
-    spi-bitbang-mod i2c-altera intel-fpga-fme pac_n3000_net 
-    intel-max10 intel-fpga-pac-iopll intel-fpga-afu intel-on-chip-flash 
-    c827_retimer avmmi-bmc intel-fpga-pac-hssi 
+modules=(regmap-mmio-mod intel-fpga-pci ifpga-sec-mgr fpga-mgr-mod
+    spi-bitbang-mod i2c-altera intel-fpga-fme pac_n3000_net
+    intel-max10 intel-fpga-pac-iopll intel-fpga-afu intel-on-chip-flash
+    c827_retimer avmmi-bmc intel-fpga-pac-hssi
     spi-altera-mod spi-nor-mod altera-asmip2 intel-generic-qspi)
 
 modules_reverse_order=$(printf '%s\n' "${modules[@]}" | tac | tr '\n' ' ')

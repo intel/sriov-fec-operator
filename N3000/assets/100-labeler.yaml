@@ -84,6 +84,7 @@ spec:
       serviceAccountName: n3000-discovery
       containers:
       - image: "{{ .N3000_LABELER_IMAGE }}"
+        imagePullPolicy: IfNotPresent
         name: n3000-discovery
         securityContext:
           readOnlyRootFilesystem: true
