@@ -30,7 +30,7 @@ spec:
         - /manager
         args:
         - --enable-leader-election
-        image: n3000-operator:v0.1.0
+        image: n3000-operator:v1.0.0
         name: manager
         resources:
           limits:

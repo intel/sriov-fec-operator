@@ -125,7 +125,7 @@ metadata:
     capabilities: Basic Install
     operators.operatorframework.io/builder: operator-sdk-v1.2.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-  name: sriov-fec.v0.1.0
+  name: sriov-fec.v1.0.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -273,7 +273,7 @@ spec:
                 - /manager
                 env:
                 - name: SRIOV_FEC_DAEMON_IMAGE
-                  value: registry.redhat.io/sriov-fec-daemon:v0.1.0
+                  value: registry.redhat.io/sriov-fec-daemon:v1.0.0
                 - name: NAMESPACE
                   valueFrom:
                     fieldRef:
@@ -282,7 +282,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.name
-                image: registry.redhat.io/sriov-fec-operator:v0.1.0
+                image: registry.redhat.io/sriov-fec-operator:v1.0.0
                 imagePullPolicy: IfNotPresent
                 name: manager
                 resources:
@@ -346,4 +346,4 @@ spec:
   provider:
     name: Intel Corporation
     url: https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html
-  version: 0.1.0
+  version: 1.0.0

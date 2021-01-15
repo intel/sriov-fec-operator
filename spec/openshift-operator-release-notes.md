@@ -16,11 +16,11 @@ This document provides high-level system features, issues, and limitations infor
 - [Package Versions](#package-versions)
 
 # Release history 
-1. OpenNESS Operator for Intel® FPGA PAC N3000 v0.1.0  
+1. OpenNESS Operator for Intel® FPGA PAC N3000 v1.0.0  
 
    
 # Features for Release 
-1. **OpenNESS Operator for Intel® FPGA PAC N3000 v0.1.0**
+1. **OpenNESS Operator for Intel® FPGA PAC N3000 v1.0.0**
    - N3000 Operator  
       - N3000 operator handles the management of the FPGA configuration
       - Load the necessary drivers, allows the user to program the Intel® FPGA PAC N3000 user image and to update the firmware of the Intel® XL710 NICs
@@ -33,19 +33,19 @@ This document provides high-level system features, issues, and limitations infor
    	  - Deploys an instance of Prometheus exporter which collects metrics from the Intel® FPGA PAC N3000 card
 
 # Changes to Existing Features
-- **OpenNESS Operator for Intel® FPGA PAC N3000 v0.1.0**
+- **OpenNESS Operator for Intel® FPGA PAC N3000 v1.0.0**
   - There are no unsupported or discontinued features relevant to this release.
 
 # Fixed Issues
-- **OpenNESS Operator for Intel® FPGA PAC N3000 v0.1.0**
+- **OpenNESS Operator for Intel® FPGA PAC N3000 v1.0.0**
   - n/a - this is the first release.
 
 # Known Issues and Limitations
-- **OpenNESS Operator for Intel® FPGA PAC N3000 v0.1.0**
+- **OpenNESS Operator for Intel® FPGA PAC N3000 v1.0.0**
   - There are no known issues relevant to this release.
 
 # Release Content
-- **OpenNESS Operator for Intel® FPGA PAC N3000 v0.1.0**:
+- **OpenNESS Operator for Intel® FPGA PAC N3000 v1.0.0**:
   - N3000 Operator
   - SRIOV FEC Operator
   - Prometheus fpgainfo exporter
@@ -60,7 +60,7 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - RT Kernel (the OPAE Docker images are built for specific kernel version)
 
 # Supported Operating Systems
-**OpenNESS Operator for Intel® FPGA PAC N3000 v0.1.0** was tested using the following:
+**OpenNESS Operator for Intel® FPGA PAC N3000 v1.0.0** was tested using the following:
 - OpenShift: 4.6.4
 - Kubernetes: v1.19.0+9f84db3
 - RT Kernel: 4.18.0-193.14.3.el8_2.x86_64
