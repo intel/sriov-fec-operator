@@ -62,8 +62,10 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 # Supported Operating Systems
 **OpenNESS Operator for Intel® FPGA PAC N3000 v1.0.0** was tested using the following:
 - OpenShift: 4.6.4
+- OS: Red Hat Enterprise Linux CoreOS 46.82.202011061621-0
 - Kubernetes: v1.19.0+9f84db3
-- RT Kernel: 4.18.0-193.14.3.el8_2.x86_64
+- RT Kernel: 4.18.0-193.28.1.rt13.77.el8_2.x86_64
+- OPAE: n3000-1.3.8-2-rte-el8
 - RTL Image: 20ww27.5-2x2x25G-5GLDPC-v1.6.1-3.0.0_unsigned.bin
 - NVM Package: v7.30
 
