@@ -9,13 +9,13 @@ Copyright (c) 2020 Intel Corporation
 - [Intel® PAC N3000 for vRAN Acceleration](#intel-pac-n3000-for-vran-acceleration)
 - [Enabling 5G Wireless Acceleration in FlexRAN](#enabling-5g-wireless-acceleration-in-flexran)
 - [OpenNESS Operator for Intel® FPGA PAC N3000](#openness-operator-for-intel-fpga-pac-n3000)
-  - [N3000 Operator](#n3000-operator)
+  - [OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)](#openness-operator-for-intel-fpga-pac-n3000-programming)
     - [Telemetry](#telemetry)
     - [Driver Container](#driver-container)
     - [N3000 Daemon](#n3000-daemon)
       - [OPAE RTL Update](#opae-rtl-update)
       - [NVM Update](#nvm-update)
-  - [SRIOV FEC Operator](#sriov-fec-operator)
+  - [OpenNESS Operator for Intel® FPGA PAC N3000 (Management)](#openness-operator-for-intel-fpga-pac-n3000-management)
     - [FEC Configuration](#fec-configuration)
     - [SRIOV Device Plugin](#sriov-device-plugin)
 - [Managing NIC Devices](#managing-nic-devices)
@@ -70,10 +70,16 @@ The 5G Wireless Acceleration reference design provides IP (Intel® FPGA IP and s
 ## OpenNESS Operator for Intel® FPGA PAC N3000
 
 The role of the operator for the Intel® FPGA PAC N3000 card is to orchestrate and manage the resources/devices exposed by the card within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
-The operator design for PACN 3000 is a bundle operator consisting of two distinct operators. One of the operators is the Intel® FPGA PAC N3000 operator, and the other is the SRIOV FEC operator.
+The operator design for PAC N3000 is a bundle operator consisting of two distinct operators:
 
-### N3000 Operator
-The N3000 operator handles the management of the FPGA configuration. It provides functionality to load the necessary drivers, allows the user to program the Intel® FPGA PAC N3000 user image and to update the firmware of the Intel® XL710 NICs (Network Interface Cards). It also deploys an instance of Prometheus Exporter which collects metrics from the Intel® FPGA PAC N3000 card. The user interacts with the operator by providing a CR (Custom Resource). The operator constantly monitors the state of the CR to detect any changes and acts based on the changes detected. The CR is provided per cluster configuration, and the components for individual nodes can be configured by specifying appropriate values for each component per "nodeName". The operator attempts to download the FPGA user image and the XL710 firmware from a location specified in the CR. The user is responsible for providing a HTTP server from which the files can be downloaded. The user is also responsible for provisioning of the PCI address of the RSU interface from the Intel® FPGA PAC N3000 used to program the FPGA's user image, as well as MAC addresses of the XL710 NICs to be updated with the new firmware. The user does not have to program both the FPGA and the XL710 component at the same time.
+* OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)
+* OpenNESS Operator for Intel® FPGA PAC N3000 (Management)
+
+It is expected that both of the operators are deployed.
+
+### OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)
+
+This operator handles the management of the FPGA configuration. It provides functionality to load the necessary drivers, allows the user to program the Intel® FPGA PAC N3000 user image and to update the firmware of the Intel® XL710 NICs (Network Interface Cards). It also deploys an instance of Prometheus Exporter which collects metrics from the Intel® FPGA PAC N3000 card. The user interacts with the operator by providing a CR (Custom Resource). The operator constantly monitors the state of the CR to detect any changes and acts based on the changes detected. The CR is provided per cluster configuration, and the components for individual nodes can be configured by specifying appropriate values for each component per "nodeName". The operator attempts to download the FPGA user image and the XL710 firmware from a location specified in the CR. The user is responsible for providing a HTTP server from which the files can be downloaded. The user is also responsible for provisioning of the PCI address of the RSU interface from the Intel® FPGA PAC N3000 used to program the FPGA's user image, as well as MAC addresses of the XL710 NICs to be updated with the new firmware. The user does not have to program both the FPGA and the XL710 component at the same time.
 
 For more details, refer to:
 - Intel® FPGA PAC N3000 5G User image - [AN 907: Enabling 5G Wireless Acceleration in FlexRAN: for the Intel® FPGA Programmable Acceleration Card N3000](https://www.intel.com/content/www/us/en/programmable/documentation/ocl1575542673666.html)
@@ -423,9 +429,9 @@ status:
     deviceId: "0x0b30
 ```
 
-### SRIOV FEC Operator
+### OpenNESS Operator for Intel® FPGA PAC N3000 (Management)
 
-The SRIOV FEC operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications - the FEC devices are provided by Intel® FPGA PAC N3000 card programmed for the vRAN use-case. It provides functionality to create desired VFs (Virtual Functions) for the FEC device, binds them to appropriate drivers and configures the VF's queues for desired functionality in 4G or 5G deployment. It also deploys an instance of the K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources. The user interacts with the operator by providing a CR. The operator constantly monitors the state of the CR to detect any changes and acts based on the changes detected. The CR is provided per cluster configuration. The components for individual nodes can be configured by specifying appropriate values for each component per "nodeName". Once the CR is applied or updated, the operator/daemon checks if the configuration is already applied, and, if not it binds the PFs to driver, creates desired amount of VFs, binds them to driver and runs the [pf-bb-config utility](https://github.com/intel/pf-bb-config) to configure the VF queues to the desired configuration.
+This operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications - the FEC devices are provided by Intel® FPGA PAC N3000 card programmed for the vRAN use-case. It provides functionality to create desired VFs (Virtual Functions) for the FEC device, binds them to appropriate drivers and configures the VF's queues for desired functionality in 4G or 5G deployment. It also deploys an instance of the K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources. The user interacts with the operator by providing a CR. The operator constantly monitors the state of the CR to detect any changes and acts based on the changes detected. The CR is provided per cluster configuration. The components for individual nodes can be configured by specifying appropriate values for each component per "nodeName". Once the CR is applied or updated, the operator/daemon checks if the configuration is already applied, and, if not it binds the PFs to driver, creates desired amount of VFs, binds them to driver and runs the [pf-bb-config utility](https://github.com/intel/pf-bb-config) to configure the VF queues to the desired configuration.
 
 An example CR for the SRIOV FEC operator:
 
@@ -885,7 +891,7 @@ metadata:
 spec:
   channel: alpha
   name: n3000
-  source: intel-operators
+  source: certified-operators
   sourceNamespace: openshift-marketplace
 EOF
 ```
@@ -900,7 +906,7 @@ metadata:
 spec:
   channel: alpha
   name: sriov-fec
-  source: intel-operators
+  source: certified-operators
   sourceNamespace: openshift-marketplace
 EOF
 ```
@@ -1040,7 +1046,7 @@ cat <<EOF | oc apply -f -
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-    name: intel-operators
+    name: certified-operators
     namespace: openshift-marketplace
 spec:
     sourceType: grpc
