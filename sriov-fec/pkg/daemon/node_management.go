@@ -4,7 +4,6 @@
 package daemon
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -19,104 +18,28 @@ import (
 )
 
 var (
-	redhatReleaseFilepath = "/host/etc/redhat-release"
-	procCmdlineFilePath   = "/host/proc/cmdline"
-	sysBusPciDevices      = "/sys/bus/pci/devices"
-	sysBusPciDrivers      = "/sys/bus/pci/drivers"
-	vfNumFile             = "sriov_numvfs"
-	workdir               = "/sriov_artifacts"
-	errWrongOS            = errors.New("running on non-CoreOS system. Only CoreOS is supported")
-	kernelParams          = []string{"intel_iommu=on", "iommu=pt"}
-	runExecCmd            = execCmd
-	getVFconfigured       = utils.GetVFconfigured
-	getVFList             = utils.GetVFList
+	sysBusPciDevices = "/sys/bus/pci/devices"
+	sysBusPciDrivers = "/sys/bus/pci/drivers"
+	vfNumFile        = "sriov_numvfs"
+	workdir          = "/sriov_artifacts"
+	runExecCmd       = execCmd
+	getVFconfigured  = utils.GetVFconfigured
+	getVFList        = utils.GetVFList
 )
 
 type NodeConfigurator struct {
-	Log logr.Logger
-}
-
-func (n *NodeConfigurator) checkIfCoreOS() (bool, error) {
-	if _, err := os.Stat(redhatReleaseFilepath); err == nil {
-		n.Log.V(2).Info("redhat-release file exists")
-
-		content, err := ioutil.ReadFile(redhatReleaseFilepath)
-		if err != nil {
-			n.Log.Error(err, "failed to read contents of redhat-release file")
-			return false, err
-		}
-
-		isCoreOS := strings.Contains(string(content), "CoreOS")
-		n.Log.V(2).Info("coreos", "isCoreOS", isCoreOS)
-		return isCoreOS, nil
-
-	} else if os.IsNotExist(err) {
-		return false, nil
-	} else {
-		return false, err
-	}
-
+	Log              logr.Logger
+	kernelController *kernelController
 }
 
 // anyKernelParamsMissing checks current kernel cmdline
 // returns true if /proc/cmdline requires update
 func (n *NodeConfigurator) isAnyKernelParamsMissing() (bool, error) {
-	log := n.Log.WithName("isAnyKernelParamsMissing")
-
-	coreOS, err := n.checkIfCoreOS()
-	if err != nil {
-		return false, err
-	}
-
-	if !coreOS {
-		return false, errWrongOS
-	}
-
-	cmdlineBytes, err := ioutil.ReadFile(procCmdlineFilePath)
-	if err != nil {
-		log.Error(err, "failed to read file contents", "path", procCmdlineFilePath)
-		return false, err
-	}
-	cmdline := string(cmdlineBytes)
-
-	for _, param := range kernelParams {
-		if !strings.Contains(cmdline, param) {
-			log.Info("missing kernel param", "param", param)
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return n.kernelController.isAnyKernelParamsMissing()
 }
 
-// addMissingKernelParams adds missing kernel params to rpm-ostree kargs so after next reboot /proc/cmdline will be correct
-// true is returned if reboot is required
-func (n *NodeConfigurator) addMissingKernelParams() (bool, error) {
-	log := n.Log.WithName("addMissingKernelParams")
-
-	kargs, err := runExecCmd([]string{"chroot", "/host/", "rpm-ostree", "kargs"}, log)
-	if err != nil {
-		return false, err
-	}
-
-	log.V(2).Info("rpm-ostree", "kargs", kargs)
-
-	anyParamAdded := false
-
-	for _, param := range kernelParams {
-		if !strings.Contains(kargs, param) {
-			log.V(2).Info("missing param - adding", "param", param)
-			_, err = runExecCmd([]string{"chroot", "/host/", "rpm-ostree", "kargs", "--append", param}, log)
-			if err != nil {
-				return false, nil
-			}
-
-			anyParamAdded = true
-		}
-	}
-
-	log.V(2).Info("added missing params", "anyParamAdded", anyParamAdded)
-	return anyParamAdded, nil
+func (n *NodeConfigurator) addMissingKernelParams() error {
+	return n.kernelController.addMissingKernelParams()
 }
 
 func (n *NodeConfigurator) loadModule(module string) error {

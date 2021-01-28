@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -31,6 +32,7 @@ var (
 	k8sClient     client.Client
 	testEnv       *envtest.Environment
 	testTmpFolder string
+	log           = ctrl.Log.WithName("SriovDaemon-test")
 )
 
 func TestAPIs(t *testing.T) {

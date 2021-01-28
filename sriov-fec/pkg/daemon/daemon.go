@@ -5,7 +5,6 @@ package daemon
 
 import (
 	"context"
-
 	"github.com/go-logr/logr"
 	dh "github.com/otcshare/openshift-operator/N3000/pkg/drainhelper"
 	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
@@ -39,16 +38,23 @@ var (
 )
 
 func NewNodeConfigReconciler(c client.Client, clientSet *clientset.Clientset, log logr.Logger,
-	nodename, namespace string) *NodeConfigReconciler {
+	nodeName, ns string) (*NodeConfigReconciler, error) {
+
+	kk, err := createKernelController(log.WithName("KernelController"))
+	if err != nil {
+		return nil, err
+	}
+
+	nc := &NodeConfigurator{Log: log.WithName("NodeConfigurator"), kernelController: kk}
 
 	return &NodeConfigReconciler{
 		Client:           c,
 		log:              log,
-		nodeName:         nodename,
-		namespace:        namespace,
-		drainHelper:      dh.NewDrainHelper(log, clientSet, nodename, namespace),
-		nodeConfigurator: &NodeConfigurator{Log: log.WithName("NodeConfigurator")},
-	}
+		nodeName:         nodeName,
+		namespace:        ns,
+		drainHelper:      dh.NewDrainHelper(log, clientSet, nodeName, ns),
+		nodeConfigurator: nc,
+	}, nil
 }
 
 func (r *NodeConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -129,7 +135,7 @@ func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 			if missingParams {
 				log.Info("missing kernel params")
 
-				_, err := r.nodeConfigurator.addMissingKernelParams()
+				err := r.nodeConfigurator.addMissingKernelParams()
 				if err != nil {
 					log.Error(err, "failed to add missing params")
 					configurationErr = err

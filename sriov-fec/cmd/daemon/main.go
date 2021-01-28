@@ -42,8 +42,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	namespace := os.Getenv("NAMESPACE")
-	if namespace == "" {
+	ns := os.Getenv("NAMESPACE")
+	if ns == "" {
 		setupLog.Error(nil, "NAMESPACE environment variable is empty")
 		os.Exit(1)
 	}
@@ -65,15 +65,18 @@ func main() {
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
 		LeaderElection:     false,
-		Namespace:          namespace,
+		Namespace:          ns,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
-	daemon := daemon.NewNodeConfigReconciler(mgr.GetClient(), cset,
-		ctrl.Log.WithName("daemon"), nodeName, namespace)
+	daemon, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), cset, ctrl.Log.WithName("daemon"), nodeName, ns)
+	if err != nil {
+		setupLog.Error(err, "unable to create reconciler")
+		os.Exit(1)
+	}
 
 	if err := daemon.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NodeConfig")
