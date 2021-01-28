@@ -42,6 +42,8 @@ spec:
         env:
         - name: SRIOV_FEC_DAEMON_IMAGE
           value: $SRIOV_FEC_DAEMON_IMAGE
+        - name: SRIOV_FEC_LABELER_IMAGE
+          value: $SRIOV_FEC_LABELER_IMAGE
         - name: NAMESPACE
           valueFrom:
             fieldRef:

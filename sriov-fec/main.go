@@ -118,10 +118,13 @@ func main() {
 		Owner:     owner,
 		Assets: []assets.Asset{
 			{
-				Path: "assets/100-device-plugin.yml",
+				Path: "assets/100-labeler.yaml",
 			},
 			{
-				Path:              "assets/200-daemon.yaml",
+				Path: "assets/200-device-plugin.yaml",
+			},
+			{
+				Path:              "assets/300-daemon.yaml",
 				BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
 			},
 		},

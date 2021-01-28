@@ -274,6 +274,8 @@ spec:
                 env:
                 - name: SRIOV_FEC_DAEMON_IMAGE
                   value: registry.redhat.io/sriov-fec-daemon:v1.0.0
+                - name: SRIOV_FEC_LABELER_IMAGE
+                  value: registry.redhat.io/n3000-labeler:v1.0.0
                 - name: NAMESPACE
                   valueFrom:
                     fieldRef:
