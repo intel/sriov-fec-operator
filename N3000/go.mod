@@ -1,4 +1,4 @@
-module github.com/otcshare/openshift-operator/N3000
+module github.com/open-ness/openshift-operator/N3000
 
 go 1.14
 

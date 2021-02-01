@@ -8,8 +8,8 @@ import (
 	"os"
 	"os/exec"
 
-	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
-	"github.com/otcshare/openshift-operator/N3000/pkg/daemon"
+	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
+	"github.com/open-ness/openshift-operator/N3000/pkg/daemon"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"

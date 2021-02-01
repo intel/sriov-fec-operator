@@ -33,7 +33,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	sriovfecv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
+	sriovfecv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
 	// +kubebuilder:scaffold:imports
 )
 

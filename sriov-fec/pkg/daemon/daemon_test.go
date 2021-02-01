@@ -14,7 +14,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
+	sriovv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

@@ -8,10 +8,10 @@ import (
 	"errors"
 	"fmt"
 
-	dh "github.com/otcshare/openshift-operator/N3000/pkg/drainhelper"
+	dh "github.com/open-ness/openshift-operator/N3000/pkg/drainhelper"
 
 	"github.com/go-logr/logr"
-	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
+	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

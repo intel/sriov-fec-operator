@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	sriovfecv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
+	sriovfecv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
 )
 
 const (

@@ -36,9 +36,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/otcshare/openshift-operator/N3000/pkg/assets"
-	sriovfecv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
-	"github.com/otcshare/openshift-operator/sriov-fec/controllers"
+	"github.com/open-ness/openshift-operator/N3000/pkg/assets"
+	sriovfecv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
+	"github.com/open-ness/openshift-operator/sriov-fec/controllers"
 	// +kubebuilder:scaffold:imports
 )
 

@@ -1,7 +1,7 @@
 domain: intel.com
 layout: go.kubebuilder.io/v2
 projectName: n3000
-repo: github.com/otcshare/openshift-operator/N3000
+repo: github.com/open-ness/openshift-operator/N3000
 resources:
 - group: fpga
   kind: N3000Cluster

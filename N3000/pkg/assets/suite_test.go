@@ -18,7 +18,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
+	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// +kubebuilder:scaffold:imports

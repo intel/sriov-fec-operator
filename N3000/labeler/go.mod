@@ -1,4 +1,4 @@
-module github.com/otcshare/openshift-operator/labeler
+module github.com/open-ness/openshift-operator/labeler
 
 go 1.14
 

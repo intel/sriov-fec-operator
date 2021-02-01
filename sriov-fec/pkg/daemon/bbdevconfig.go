@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/go-logr/logr"
-	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
+	sriovv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
 	"gopkg.in/ini.v1"
 )
 
