@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IMAGE_REGISTRY=${N3000_IMAGE_REGISTRY:-registry.redhat.io}
+IMAGE_REGISTRY=${N3000_IMAGE_REGISTRY:-registry.connect.redhat.com/intel}
 IMAGE_VER=${N3000_IMAGE_VERSION:-v1.0.0}
 OPAE_VER=${N3000_OPAE_VERSION:-1.3.8-2}
 
