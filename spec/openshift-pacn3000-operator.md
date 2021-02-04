@@ -889,7 +889,7 @@ metadata:
   name: n3000-subscription
   namespace: n3000-operators-resources 
 spec:
-  channel: alpha
+  channel: stable
   name: n3000
   source: certified-operators
   sourceNamespace: openshift-marketplace
@@ -904,7 +904,7 @@ metadata:
   name: sriov-fec-subscription
   namespace: n3000-operators-resources 
 spec:
-  channel: alpha
+  channel: stable
   name: sriov-fec
   source: certified-operators
   sourceNamespace: openshift-marketplace

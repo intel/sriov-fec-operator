@@ -273,9 +273,9 @@ spec:
                 - /manager
                 env:
                 - name: SRIOV_FEC_DAEMON_IMAGE
-                  value: registry.redhat.io/sriov-fec-daemon:v1.0.0
+                  value: registry.connect.redhat.com/intel/sriov-fec-daemon:v1.0.0
                 - name: SRIOV_FEC_LABELER_IMAGE
-                  value: registry.redhat.io/n3000-labeler:v1.0.0
+                  value: registry.connect.redhat.com/intel/n3000-labeler:v1.0.0
                 - name: NAMESPACE
                   valueFrom:
                     fieldRef:
@@ -284,7 +284,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.name
-                image: registry.redhat.io/sriov-fec-operator:v1.0.0
+                image: registry.connect.redhat.com/intel/sriov-fec-operator:v1.0.0
                 imagePullPolicy: IfNotPresent
                 name: manager
                 resources:

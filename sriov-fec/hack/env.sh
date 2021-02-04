@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IMAGE_REGISTRY=${N3000_IMAGE_REGISTRY:-registry.redhat.io}
+IMAGE_REGISTRY=${N3000_IMAGE_REGISTRY:-registry.connect.redhat.com/intel}
 IMAGE_VER=${IMAGE_VER:-v1.0.0}
 
 export SRIOV_FEC_LABELER_IMAGE=${SRIOV_FEC_LABELER_IMAGE:-${IMAGE_REGISTRY}/n3000-labeler:${IMAGE_VER}}

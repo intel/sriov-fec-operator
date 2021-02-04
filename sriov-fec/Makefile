@@ -5,6 +5,11 @@
 export CLI_EXEC?=oc
 # Current Operator version
 VERSION ?= 1.0.0
+# Supported channels
+CHANNELS ?= stable
+# Default channel
+DEFAULT_CHANNEL ?= stable
+
 # Default bundle image tag
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
 # Options for 'bundle-build'
