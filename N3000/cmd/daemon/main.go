@@ -6,7 +6,6 @@ package main
 import (
 	"flag"
 	"os"
-	"os/exec"
 
 	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
 	"github.com/otcshare/openshift-operator/N3000/pkg/daemon"
@@ -60,13 +59,6 @@ func main() {
 	directClient, err := client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		setupLog.Error(err, "failed to create direct client")
-		os.Exit(1)
-	}
-
-	// Check if we are able to iterate the cards
-	_, err = exec.Command("fpgainfo", "bmc").CombinedOutput()
-	if err != nil {
-		setupLog.Error(err, "fpgainfo bmc failed to run")
 		os.Exit(1)
 	}
 

@@ -33,6 +33,7 @@ WORKDIR /srcrpms
 RUN dnf download --disablerepo=* --enablerepo=ubi-8-baseos --source pciutils ethtool
 USER 1001
 WORKDIR /
+COPY daemon_entrypoint.sh .
 COPY --from=builder /workspace/n3000_daemon .
 
-ENTRYPOINT ["/n3000_daemon"]
+ENTRYPOINT ["/daemon_entrypoint.sh"]
