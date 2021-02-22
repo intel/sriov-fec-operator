@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 
 apiVersion: v1
 kind: ServiceAccount
@@ -41,7 +41,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: n3000-daemon
-  namespace: n3000-operators-resources
 rules:
 - apiGroups: [""]
   resources: ["pods"]
@@ -61,7 +60,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: n3000-daemon
-  namespace: n3000-operators-resources
 subjects:
 - kind: ServiceAccount
   name: n3000-daemon

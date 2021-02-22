@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package daemon
 
@@ -68,7 +68,7 @@ var _ = Describe("SriovDaemonTest", func() {
 					PhysicalFunctions: []sriov.PhysicalFunctionConfig{},
 				}
 				Expect(k8sClient.Update(context.TODO(), &data.SriovFecNodeConfig)).NotTo(HaveOccurred())
-				Expect(returnLastArg(reconciler.Reconcile(ctrl.Request{NamespacedName: nn}))).ToNot(HaveOccurred())
+				Expect(returnLastArg(reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: nn}))).ToNot(HaveOccurred())
 				Expect(k8sClient.Delete(context.TODO(), &data.SriovFecNodeConfig)).ToNot(HaveOccurred())
 			} else if errors.IsNotFound(err) {
 				log.Info("Requested NodeConfig does not exists", "NodeConfig", &data.SriovFecNodeConfig)
@@ -86,7 +86,7 @@ var _ = Describe("SriovDaemonTest", func() {
 
 			Expect(
 				returnLastArg(
-					reconciler.Reconcile(ctrl.Request{NamespacedName: data.GetNamespacedName()}),
+					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
 				),
 			).To(Succeed())
 
@@ -103,7 +103,7 @@ var _ = Describe("SriovDaemonTest", func() {
 
 			Expect(
 				returnLastArg(
-					reconciler.Reconcile(ctrl.Request{NamespacedName: data.GetNamespacedName()}),
+					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
 				),
 			).To(Succeed())
 
@@ -122,7 +122,7 @@ var _ = Describe("SriovDaemonTest", func() {
 
 			Expect(
 				returnLastArg(
-					reconciler.Reconcile(ctrl.Request{NamespacedName: data.GetNamespacedName()}),
+					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
 				),
 			).To(Succeed())
 
@@ -137,7 +137,7 @@ var _ = Describe("SriovDaemonTest", func() {
 			Expect(initReconciler(reconciler, data.NodeConfigName(), "wrongNamespace")).To(Succeed())
 			Expect(
 				returnLastArg(
-					reconciler.Reconcile(
+					reconciler.Reconcile(context.TODO(),
 						ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "wrongNamespace", Name: data.NodeConfigName()}},
 					),
 				),
@@ -174,7 +174,7 @@ var _ = Describe("SriovDaemonTest", func() {
 
 			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
 			Expect(
-				returnLastArg(reconciler.Reconcile(ctrl.Request{NamespacedName: data.GetNamespacedName()})),
+				returnLastArg(reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()})),
 			).To(Succeed())
 
 			//Check if node config was created out of cluster config
@@ -202,7 +202,7 @@ var _ = Describe("SriovDaemonTest", func() {
 			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
 			Expect(
 				returnLastArg(
-					reconciler.Reconcile(ctrl.Request{NamespacedName: data.GetNamespacedName()}),
+					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
 				),
 			).To(Succeed())
 
@@ -230,7 +230,7 @@ var _ = Describe("SriovDaemonTest", func() {
 			Expect(k8sClient.Create(context.TODO(), &data.SriovFecNodeConfig)).To(Succeed())
 
 			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
-			Expect(returnLastArg(reconciler.Reconcile(ctrl.Request{NamespacedName: data.GetNamespacedName()}))).To(Succeed())
+			Expect(returnLastArg(reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}))).To(Succeed())
 
 			//Check if node config was created out of cluster config
 			nodeConfigs := &sriov.SriovFecNodeConfigList{}
@@ -266,7 +266,7 @@ var _ = Describe("SriovDaemonTest", func() {
 
 			Expect(
 				returnLastArg(
-					reconciler.Reconcile(ctrl.Request{NamespacedName: data.GetNamespacedName()}),
+					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
 				),
 			).To(Succeed())
 

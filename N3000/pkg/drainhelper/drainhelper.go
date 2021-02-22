@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package drainhelper
 
@@ -97,7 +97,7 @@ func NewDrainHelper(l logr.Logger, cs *clientset.Clientset, nodeName, namespace 
 			Client:              cs,
 			Force:               true,
 			IgnoreAllDaemonSets: true,
-			DeleteLocalData:     true,
+			DeleteEmptyDirData:  true,
 			GracePeriodSeconds:  -1,
 			Timeout:             time.Duration(drainTimeout) * time.Second,
 			OnPodDeletedOrEvicted: func(pod *corev1.Pod, usingEviction bool) {

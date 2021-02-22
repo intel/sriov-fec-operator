@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 
 apiVersion: v1
 kind: ServiceAccount
@@ -35,6 +35,7 @@ rules:
   - leases
   verbs:
   - '*'
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -58,7 +59,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: sriov-fec-daemon
-  namespace: n3000-operators-resources
 rules:
 - apiGroups: [""]
   resources: ["pods"]
@@ -72,12 +72,12 @@ rules:
 - apiGroups: [""]
   resources: ["pods/eviction"]
   verbs: ["create"]
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: sriov-fec-daemon
-  namespace: n3000-operators-resources
 subjects:
 - kind: ServiceAccount
   name: sriov-fec-daemon
@@ -87,6 +87,7 @@ roleRef:
   name: sriov-fec-daemon
   apiGroup: rbac.authorization.k8s.io
   namespace: n3000-operators-resources
+
 ---
 apiVersion: apps/v1
 kind: DaemonSet

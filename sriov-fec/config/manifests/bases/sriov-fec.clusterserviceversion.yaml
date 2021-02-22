@@ -7,9 +7,7 @@ metadata:
   annotations:
     alm-examples: '[]'
     capabilities: Basic Install
-    operators.operatorframework.io/builder: operator-sdk-v1.2.0
-    operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-  name: sriov-fec.vX.Y.Z
+  name: sriov-fec.v0.0.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}

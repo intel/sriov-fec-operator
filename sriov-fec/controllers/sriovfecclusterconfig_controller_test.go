@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 /*
 
@@ -127,7 +127,7 @@ var _ = Describe("SriovControllerTest", func() {
 				}
 				err = k8sClient.Update(context.TODO(), clusterConfig)
 				Expect(err).NotTo(HaveOccurred())
-				_, err = reconciler.Reconcile(request)
+				_, err = reconciler.Reconcile(context.TODO(), request)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
@@ -162,7 +162,7 @@ var _ = Describe("SriovControllerTest", func() {
 				},
 			}
 
-			_, err = reconciler.Reconcile(request)
+			_, err = reconciler.Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 
 			//Check if node config was created out of cluster config
@@ -214,7 +214,7 @@ var _ = Describe("SriovControllerTest", func() {
 				},
 			}
 
-			_, rec_err := reconciler.Reconcile(request)
+			_, rec_err := reconciler.Reconcile(context.TODO(), request)
 			Expect(rec_err).ToNot(HaveOccurred())
 
 			// Check if node config was created out of cluster config
@@ -232,7 +232,7 @@ var _ = Describe("SriovControllerTest", func() {
 
 			err = k8sClient.Update(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
-			_, rec_err = reconciler.Reconcile(request)
+			_, rec_err = reconciler.Reconcile(context.TODO(), request)
 			Expect(rec_err).ToNot(HaveOccurred())
 
 			nodeConfigs = &sriovv1.SriovFecNodeConfigList{}
@@ -274,7 +274,7 @@ var _ = Describe("SriovControllerTest", func() {
 				},
 			}
 
-			_, rec_err := reconciler.Reconcile(request)
+			_, rec_err := reconciler.Reconcile(context.TODO(), request)
 			Expect(rec_err).ToNot(HaveOccurred())
 
 			// Check if node config was created out of cluster config
@@ -291,7 +291,7 @@ var _ = Describe("SriovControllerTest", func() {
 
 			err = k8sClient.Update(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
-			_, rec_err = reconciler.Reconcile(request)
+			_, rec_err = reconciler.Reconcile(context.TODO(), request)
 			Expect(rec_err).ToNot(HaveOccurred())
 
 			nodeConfigs = &sriovv1.SriovFecNodeConfigList{}
@@ -323,7 +323,7 @@ var _ = Describe("SriovControllerTest", func() {
 				},
 			}
 
-			_, err = reconciler.Reconcile(request)
+			_, err = reconciler.Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 
 			// Check if node config was created out of cluster config
@@ -359,7 +359,7 @@ var _ = Describe("SriovControllerTest", func() {
 				},
 			}
 
-			_, err = reconciler.Reconcile(request)
+			_, err = reconciler.Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 
 			// Check if node config was created out of cluster config
@@ -392,7 +392,7 @@ var _ = Describe("SriovControllerTest", func() {
 				},
 			}
 
-			_, err = reconciler.Reconcile(request)
+			_, err = reconciler.Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 
 			// Check if node config was created out of cluster config
@@ -431,7 +431,7 @@ var _ = Describe("SriovControllerTest", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(nodeConfigs.Items)).To(Equal(0))
 
-			_, err = reconciler.Reconcile(request)
+			_, err = reconciler.Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 
 			// Check if node config was created out of cluster config
@@ -461,7 +461,7 @@ var _ = Describe("SriovControllerTest", func() {
 				},
 			}
 
-			_, err = reconciler.Reconcile(request)
+			_, err = reconciler.Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 
 			//Check if node config was created out of cluster config
@@ -478,7 +478,7 @@ var _ = Describe("SriovControllerTest", func() {
 			clusterConfig.Spec.Nodes[0].PhysicalFunctions[0].PFDriver = "test"
 			err = k8sClient.Update(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
-			_, err = reconciler.Reconcile(request)
+			_, err = reconciler.Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})

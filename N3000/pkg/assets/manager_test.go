@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package assets
 
@@ -8,11 +8,13 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/klog/v2/klogr"
 )
@@ -20,6 +22,39 @@ import (
 //  runtime.Object implementation
 type InvalidRuntimeType struct {
 }
+
+func (*InvalidRuntimeType) GetNamespace() string                                   { return "" }
+func (*InvalidRuntimeType) SetNamespace(namespace string)                          { return }
+func (*InvalidRuntimeType) GetName() string                                        { return "" }
+func (*InvalidRuntimeType) SetName(name string)                                    { return }
+func (*InvalidRuntimeType) GetGenerateName() string                                { return "" }
+func (*InvalidRuntimeType) SetGenerateName(name string)                            { return }
+func (*InvalidRuntimeType) GetUID() types.UID                                      { return "" }
+func (*InvalidRuntimeType) SetUID(uid types.UID)                                   { return }
+func (*InvalidRuntimeType) GetResourceVersion() string                             { return "" }
+func (*InvalidRuntimeType) SetResourceVersion(version string)                      { return }
+func (*InvalidRuntimeType) GetGeneration() int64                                   { return 0 }
+func (*InvalidRuntimeType) SetGeneration(generation int64)                         { return }
+func (*InvalidRuntimeType) GetSelfLink() string                                    { return "" }
+func (*InvalidRuntimeType) SetSelfLink(selfLink string)                            { return }
+func (*InvalidRuntimeType) GetCreationTimestamp() v1.Time                          { return v1.Now() }
+func (*InvalidRuntimeType) SetCreationTimestamp(timestamp v1.Time)                 { return }
+func (*InvalidRuntimeType) GetDeletionTimestamp() *v1.Time                         { return nil }
+func (*InvalidRuntimeType) SetDeletionTimestamp(timestamp *v1.Time)                { return }
+func (*InvalidRuntimeType) GetDeletionGracePeriodSeconds() *int64                  { return nil }
+func (*InvalidRuntimeType) SetDeletionGracePeriodSeconds(*int64)                   { return }
+func (*InvalidRuntimeType) GetLabels() map[string]string                           { return nil }
+func (*InvalidRuntimeType) SetLabels(labels map[string]string)                     { return }
+func (*InvalidRuntimeType) GetAnnotations() map[string]string                      { return nil }
+func (*InvalidRuntimeType) SetAnnotations(annotations map[string]string)           { return }
+func (*InvalidRuntimeType) GetFinalizers() []string                                { return nil }
+func (*InvalidRuntimeType) SetFinalizers(finalizers []string)                      { return }
+func (*InvalidRuntimeType) GetOwnerReferences() []v1.OwnerReference                { return nil }
+func (*InvalidRuntimeType) SetOwnerReferences([]v1.OwnerReference)                 { return }
+func (*InvalidRuntimeType) GetClusterName() string                                 { return "" }
+func (*InvalidRuntimeType) SetClusterName(clusterName string)                      { return }
+func (*InvalidRuntimeType) GetManagedFields() []v1.ManagedFieldsEntry              { return nil }
+func (*InvalidRuntimeType) SetManagedFields(managedFields []v1.ManagedFieldsEntry) { return }
 
 func (i *InvalidRuntimeType) GetObjectKind() schema.ObjectKind {
 	return schema.EmptyObjectKind
@@ -143,7 +178,7 @@ var _ = Describe("Asset Tests", func() {
 					log:           log,
 					Path:          fakeAssetFile,
 					substitutions: map[string]string{"one": "two"},
-					objects: []runtime.Object{
+					objects: []client.Object{
 						&invalidObject},
 				},
 			}

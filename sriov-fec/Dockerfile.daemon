@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 
-FROM golang:1.14 as builder
+FROM golang:1.15 as builder
 
 WORKDIR /workspace-pf
 
@@ -17,6 +17,7 @@ RUN git clone  --depth 1 --branch v20.11 https://github.com/intel/pf-bb-config &
 WORKDIR /workspace-go
 
 COPY go.mod go.sum ./
+
 RUN go mod download
 
 COPY cmd cmd/

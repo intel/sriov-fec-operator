@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 
-# This patch inject a sidecar container which is a HTTP proxy for the 
+# This patch inject a sidecar container which is a HTTP proxy for the
 # controller manager, it performs RBAC authorization against the Kubernetes API using SubjectAccessReviews.
 apiVersion: apps/v1
 kind: Deployment
@@ -24,5 +24,6 @@ spec:
           name: https
       - name: manager
         args:
-        - "--metrics-addr=127.0.0.1:8080"
-        - "--enable-leader-election"
+        - "--health-probe-bind-address=:8081"
+        - "--metrics-bind-address=127.0.0.1:8080"
+        - "--leader-elect"

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package daemon
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	dh "github.com/otcshare/openshift-operator/N3000/pkg/drainhelper"
 	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
@@ -68,7 +69,7 @@ func (r *NodeConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					return false
 				}
 				cond := meta.FindStatusCondition(nodeConfig.Status.Conditions, conditionConfigured)
-				if cond != nil && cond.ObservedGeneration == e.Meta.GetGeneration() {
+				if cond != nil && cond.ObservedGeneration == e.Object.GetGeneration() {
 					r.log.Info("Created object was handled previously, ignoring")
 					return false
 				}
@@ -76,7 +77,7 @@ func (r *NodeConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 			},
 			UpdateFunc: func(e event.UpdateEvent) bool {
-				if e.MetaOld.GetGeneration() == e.MetaNew.GetGeneration() {
+				if e.ObjectOld.GetGeneration() == e.ObjectNew.GetGeneration() {
 					r.log.Info("Update ignored, generation unchanged")
 					return false
 				}
@@ -86,7 +87,7 @@ func (r *NodeConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *NodeConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.log.WithName("Reconcile").WithValues("namespace", req.Namespace, "name", req.Name)
 
 	if req.Namespace != r.namespace {
@@ -98,8 +99,6 @@ func (r *NodeConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		log.Info("CR intended for another node - ignoring", "expected name", r.nodeName)
 		return ctrl.Result{}, nil
 	}
-
-	ctx := context.Background()
 
 	nodeConfig := &sriovv1.SriovFecNodeConfig{}
 	if err := r.Client.Get(ctx, req.NamespacedName, nodeConfig); err != nil {

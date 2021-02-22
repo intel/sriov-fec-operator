@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package daemon
 
@@ -127,7 +127,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 				err = k8sClient.Update(context.TODO(), clusterConfig)
 				Expect(err).NotTo(HaveOccurred())
-				_, err = (reconciler).Reconcile(request)
+				_, err = (reconciler).Reconcile(context.TODO(), request)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
@@ -374,7 +374,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				namespace: request.NamespacedName.Namespace,
 				nodeName:  "dummy"}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -396,7 +396,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				namespace: request.NamespacedName.Namespace,
 				nodeName:  "gf"}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -417,7 +417,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			reconciler = N3000NodeReconciler{Client: k8sClient, log: log, namespace: request.NamespacedName.Namespace, nodeName: "123NodeName"}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -439,7 +439,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			reconciler = N3000NodeReconciler{Client: k8sClient, log: log, namespace: request.NamespacedName.Namespace}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(reconciler.nodeName).To(Equal(""))
@@ -460,7 +460,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			reconciler = N3000NodeReconciler{Client: k8sClient, log: log}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(request.Namespace).ToNot(Equal(reconciler.namespace))
 		})
@@ -493,7 +493,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				},
 			}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -532,7 +532,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				},
 			}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -571,7 +571,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				},
 			}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("will fail because of Flash problem", func() {
@@ -612,7 +612,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				},
 			}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("will run Reconcile with misconfiugred DrainHelper", func() {
@@ -667,7 +667,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				drainHelper: dh.NewDrainHelper(log, cset, "node", "namespace"),
 			}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 		})
 

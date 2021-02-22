@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package daemon
 
@@ -86,7 +86,7 @@ func (r *N3000NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					return false
 				}
 				cond := meta.FindStatusCondition(n3000node.Status.Conditions, FlashCondition)
-				if cond != nil && cond.ObservedGeneration == e.Meta.GetGeneration() {
+				if cond != nil && cond.ObservedGeneration == e.Object.GetGeneration() {
 					r.log.Info("Created object was handled previously, ignoring")
 					return false
 				}
@@ -94,7 +94,7 @@ func (r *N3000NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 			},
 			UpdateFunc: func(e event.UpdateEvent) bool {
-				if e.MetaOld.GetGeneration() == e.MetaNew.GetGeneration() {
+				if e.ObjectOld.GetGeneration() == e.ObjectNew.GetGeneration() {
 					r.log.Info("Update ignored, generation unchanged")
 					return false
 				}
@@ -212,7 +212,7 @@ func (r *N3000NodeReconciler) verifySpec(n *fpgav1.N3000Node) error {
 	return nil
 }
 
-func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *N3000NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.log.WithName("Reconcile").WithValues("namespace", req.Namespace, "name", req.Name)
 
 	// Lack of update on namespace/name mismatch (like in N3000ClusterReconciler):
@@ -227,8 +227,6 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		log.Info("CR intended for another node - ignoring", "expected name", fmt.Sprintf(crNameTemplate, r.nodeName))
 		return ctrl.Result{}, nil
 	}
-
-	ctx := context.Background()
 
 	n3000node := &fpgav1.N3000Node{}
 	if err := r.Client.Get(ctx, req.NamespacedName, n3000node); err != nil {

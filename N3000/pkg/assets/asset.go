@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package assets
 
@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"text/template"
 	"time"
 
@@ -20,18 +21,25 @@ import (
 	promv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/deprecated/scheme"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	ctrl "sigs.k8s.io/controller-runtime"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+var (
+	rscheme = runtime.NewScheme()
+)
+
 func init() {
-	utilruntime.Must(secv1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(promv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(secv1.AddToScheme(rscheme))
+	utilruntime.Must(promv1.AddToScheme(rscheme))
 }
 
 // ReadinessPollConfig stores config for waiting block
@@ -54,7 +62,7 @@ type Asset struct {
 
 	substitutions map[string]string
 
-	objects []runtime.Object
+	objects []client.Object
 
 	log logr.Logger
 }
@@ -82,14 +90,16 @@ func (a *Asset) loadFromFile() error {
 	objectsDefs := rx.Split(templatedContent.String(), -1)
 
 	for _, objectDef := range objectsDefs {
-		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode([]byte(objectDef), nil, nil)
+		obj := unstructured.Unstructured{}
+		r := strings.NewReader(objectDef)
+		decoder := yaml.NewYAMLOrJSONDecoder(r, 4096)
+		err := decoder.Decode(&obj)
 		if err != nil {
 			return err
 		}
 
-		a.objects = append(a.objects, obj)
+		a.objects = append(a.objects, &obj)
 	}
-
 	return nil
 }
 
@@ -140,18 +150,7 @@ func (a *Asset) createOrUpdate(ctx context.Context, c client.Client, o metav1.Ob
 			return err
 		}
 
-		objCopy := obj.DeepCopyObject()
 		result, err := ctrl.CreateOrUpdate(ctx, c, obj, func() error {
-			if objCopy.GetObjectKind().GroupVersionKind().Kind == "DaemonSet" {
-				ds, ok := obj.(*appsv1.DaemonSet)
-				dsCopy, okCopy := objCopy.(*appsv1.DaemonSet)
-				if ok && okCopy {
-					ds.Spec = dsCopy.Spec
-				} else {
-					a.log.Error(nil, "kind is daemonset, but casting type failed", "ok", ok, "okCopy", okCopy)
-					return errors.New("kind is daemonset, but casting type failed")
-				}
-			}
 			return nil
 		})
 
@@ -172,7 +171,7 @@ func (a *Asset) waitUntilReady(ctx context.Context, apiReader client.Reader) err
 	}
 
 	for _, obj := range a.objects {
-		if _, ok := obj.(*appsv1.DaemonSet); ok {
+		if obj.GetObjectKind().GroupVersionKind().Kind == "DaemonSet" {
 			a.log.Info("waiting until daemonset is ready", "asset", a.Path)
 
 			backoff := wait.Backoff{
@@ -181,13 +180,9 @@ func (a *Asset) waitUntilReady(ctx context.Context, apiReader client.Reader) err
 				Factor:   1,
 			}
 			f := func() (bool, error) {
-				objKey, err := client.ObjectKeyFromObject(obj)
-				if err != nil {
-					return false, err
-				}
-
+				objKey := client.ObjectKeyFromObject(obj)
 				ds := &appsv1.DaemonSet{}
-				err = apiReader.Get(ctx, objKey, ds)
+				err := apiReader.Get(ctx, objKey, ds)
 				if err != nil {
 					return false, err
 				}

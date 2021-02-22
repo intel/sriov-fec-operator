@@ -2,12 +2,6 @@
 # Copyright (c) 2021 Intel Corporation
 
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: n3000-operators-resources
----
-
-apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: n3000-discovery
@@ -28,7 +22,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: n3000-discovery
-  namespace: n3000-operators-resources
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

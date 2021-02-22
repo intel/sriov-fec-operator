@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 
 FROM scratch
 
@@ -9,13 +9,11 @@ LABEL operators.operatorframework.io.bundle.metadata.v1=metadata/
 LABEL operators.operatorframework.io.bundle.package.v1=n3000
 LABEL operators.operatorframework.io.bundle.channels.v1=stable
 LABEL operators.operatorframework.io.bundle.channel.default.v1=stable
-LABEL operators.operatorframework.io.metrics.builder=operator-sdk-v1.2.0
+LABEL operators.operatorframework.io.metrics.builder=operator-sdk-v1.4.2
 LABEL operators.operatorframework.io.metrics.mediatype.v1=metrics+v1
-LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v2
+LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v3
 LABEL operators.operatorframework.io.test.config.v1=tests/scorecard/
 LABEL operators.operatorframework.io.test.mediatype.v1=scorecard+v1
-
-LABEL com.redhat.openshift.versions="v4.6"
 
 COPY bundle/manifests /manifests/
 COPY bundle/metadata /metadata/

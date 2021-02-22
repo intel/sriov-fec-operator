@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package daemon
 
@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,11 +27,6 @@ func compareFiles(firstFilepath, secondFilepath string) error {
 		return fmt.Errorf("Different files: %s and %s", firstFilepath, secondFilepath)
 	}
 	return nil
-}
-
-func TestMain(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Main suite")
 }
 
 var _ = Describe("bbdevconfig", func() {
