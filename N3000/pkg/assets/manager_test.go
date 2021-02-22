@@ -24,37 +24,37 @@ type InvalidRuntimeType struct {
 }
 
 func (*InvalidRuntimeType) GetNamespace() string                                   { return "" }
-func (*InvalidRuntimeType) SetNamespace(namespace string)                          { return }
+func (*InvalidRuntimeType) SetNamespace(namespace string)                          {}
 func (*InvalidRuntimeType) GetName() string                                        { return "" }
-func (*InvalidRuntimeType) SetName(name string)                                    { return }
+func (*InvalidRuntimeType) SetName(name string)                                    {}
 func (*InvalidRuntimeType) GetGenerateName() string                                { return "" }
-func (*InvalidRuntimeType) SetGenerateName(name string)                            { return }
+func (*InvalidRuntimeType) SetGenerateName(name string)                            {}
 func (*InvalidRuntimeType) GetUID() types.UID                                      { return "" }
-func (*InvalidRuntimeType) SetUID(uid types.UID)                                   { return }
+func (*InvalidRuntimeType) SetUID(uid types.UID)                                   {}
 func (*InvalidRuntimeType) GetResourceVersion() string                             { return "" }
-func (*InvalidRuntimeType) SetResourceVersion(version string)                      { return }
+func (*InvalidRuntimeType) SetResourceVersion(version string)                      {}
 func (*InvalidRuntimeType) GetGeneration() int64                                   { return 0 }
-func (*InvalidRuntimeType) SetGeneration(generation int64)                         { return }
+func (*InvalidRuntimeType) SetGeneration(generation int64)                         {}
 func (*InvalidRuntimeType) GetSelfLink() string                                    { return "" }
-func (*InvalidRuntimeType) SetSelfLink(selfLink string)                            { return }
+func (*InvalidRuntimeType) SetSelfLink(selfLink string)                            {}
 func (*InvalidRuntimeType) GetCreationTimestamp() v1.Time                          { return v1.Now() }
-func (*InvalidRuntimeType) SetCreationTimestamp(timestamp v1.Time)                 { return }
+func (*InvalidRuntimeType) SetCreationTimestamp(timestamp v1.Time)                 {}
 func (*InvalidRuntimeType) GetDeletionTimestamp() *v1.Time                         { return nil }
-func (*InvalidRuntimeType) SetDeletionTimestamp(timestamp *v1.Time)                { return }
+func (*InvalidRuntimeType) SetDeletionTimestamp(timestamp *v1.Time)                {}
 func (*InvalidRuntimeType) GetDeletionGracePeriodSeconds() *int64                  { return nil }
-func (*InvalidRuntimeType) SetDeletionGracePeriodSeconds(*int64)                   { return }
+func (*InvalidRuntimeType) SetDeletionGracePeriodSeconds(*int64)                   {}
 func (*InvalidRuntimeType) GetLabels() map[string]string                           { return nil }
-func (*InvalidRuntimeType) SetLabels(labels map[string]string)                     { return }
+func (*InvalidRuntimeType) SetLabels(labels map[string]string)                     {}
 func (*InvalidRuntimeType) GetAnnotations() map[string]string                      { return nil }
-func (*InvalidRuntimeType) SetAnnotations(annotations map[string]string)           { return }
+func (*InvalidRuntimeType) SetAnnotations(annotations map[string]string)           {}
 func (*InvalidRuntimeType) GetFinalizers() []string                                { return nil }
-func (*InvalidRuntimeType) SetFinalizers(finalizers []string)                      { return }
+func (*InvalidRuntimeType) SetFinalizers(finalizers []string)                      {}
 func (*InvalidRuntimeType) GetOwnerReferences() []v1.OwnerReference                { return nil }
-func (*InvalidRuntimeType) SetOwnerReferences([]v1.OwnerReference)                 { return }
+func (*InvalidRuntimeType) SetOwnerReferences([]v1.OwnerReference)                 {}
 func (*InvalidRuntimeType) GetClusterName() string                                 { return "" }
-func (*InvalidRuntimeType) SetClusterName(clusterName string)                      { return }
+func (*InvalidRuntimeType) SetClusterName(clusterName string)                      {}
 func (*InvalidRuntimeType) GetManagedFields() []v1.ManagedFieldsEntry              { return nil }
-func (*InvalidRuntimeType) SetManagedFields(managedFields []v1.ManagedFieldsEntry) { return }
+func (*InvalidRuntimeType) SetManagedFields(managedFields []v1.ManagedFieldsEntry) {}
 
 func (i *InvalidRuntimeType) GetObjectKind() schema.ObjectKind {
 	return schema.EmptyObjectKind
