@@ -18,7 +18,7 @@ import (
 )
 
 type AcceleratorDiscoveryConfig struct {
-	VendorID  string
+	VendorID  map[string]string
 	Class     string
 	SubClass  string
 	Devices   map[string]string
@@ -88,7 +88,8 @@ func findAccelerator(cfg *AcceleratorDiscoveryConfig) (bool, error) {
 	}
 
 	for _, device := range devices {
-		if !(device.Vendor.ID == cfg.VendorID &&
+		_, exist := cfg.VendorID[device.Vendor.ID]
+		if !(exist &&
 			device.Class.ID == cfg.Class &&
 			device.Subclass.ID == cfg.SubClass) {
 			continue

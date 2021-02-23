@@ -1,5 +1,7 @@
 {
-  "VendorID": "0000",
+  "VendorID": {"0000": "test",
+    "0001": "test1"
+  },
   "Class": "00",
   "SubClass": "00",
   "Devices": {

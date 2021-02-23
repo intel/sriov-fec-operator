@@ -80,7 +80,7 @@ var _ = Describe("Labeler", func() {
 			cfg, err := loadConfig("testdata/valid.json")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cfg).To(Equal(AcceleratorDiscoveryConfig{
-				VendorID:  "0000",
+				VendorID:  map[string]string{"0000": "test", "0001": "test1"},
 				Class:     "00",
 				SubClass:  "00",
 				Devices:   map[string]string{"test": "test"},

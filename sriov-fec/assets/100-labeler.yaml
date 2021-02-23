@@ -43,7 +43,10 @@ metadata:
 data:
   accelerators.json: |
     {
-      "VendorID": "8086",
+      "VendorID": {
+        "8086": "Intel Corporation",
+        "1172": "Altera Corporation"
+      },
       "Class": "12",
       "SubClass": "00",
       "Devices": {
