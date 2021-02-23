@@ -119,8 +119,8 @@ function build_image {
 # Replace the redhat registry if a custom one is requested
 if [ -n "${REGISTRY}" ]
 then
-    sed -i "s#registry.redhat.io/n3000#${REGISTRY}/n3000#g" N3000/bundle/manifests/n3000.clusterserviceversion.yaml
-    sed -i "s#registry.redhat.io/sriov#${REGISTRY}/sriov#g" sriov-fec/bundle/manifests/sriov-fec.clusterserviceversion.yaml
+    sed -i "s#registry.connect.redhat.com/intel/n3000#${REGISTRY}/n3000#g" N3000/bundle/manifests/n3000.clusterserviceversion.yaml
+    sed -i "s#registry.connect.redhat.com/intel/sriov#${REGISTRY}/sriov#g" sriov-fec/bundle/manifests/sriov-fec.clusterserviceversion.yaml
 fi
 
 ### BUILD N3000 Bundle
@@ -137,8 +137,8 @@ fi
 
 if [ -n "${REGISTRY}" ]
 then
-    sed -i "s#${REGISTRY}/n3000#registry.redhat.io/n3000#g" N3000/bundle/manifests/n3000.clusterserviceversion.yaml
-    sed -i "s#${REGISTRY}/sriov#registry.redhat.io/sriov#g" sriov-fec/bundle/manifests/sriov-fec.clusterserviceversion.yaml
+    sed -i "s#${REGISTRY}/n3000#registry.connect.redhat.com/intel/n3000#g" N3000/bundle/manifests/n3000.clusterserviceversion.yaml
+    sed -i "s#${REGISTRY}/sriov#registry.connect.redhat.com/intel/sriov#g" sriov-fec/bundle/manifests/sriov-fec.clusterserviceversion.yaml
 fi
 
 if [ -n "${REGISTRY}" ]

@@ -143,7 +143,6 @@ spec:
         ports:
         - name: metrics
           containerPort: 42222
-          hostPort: 42222
         resources:
          requests:
            memory: 100Mi
