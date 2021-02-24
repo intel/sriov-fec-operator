@@ -15,7 +15,6 @@ import (
 const (
 	acceleratorClass    = "12"
 	acceleratorSubclass = "00"
-	vendorID            = "8086"
 )
 
 type deviceInfo struct {
@@ -24,6 +23,11 @@ type deviceInfo struct {
 }
 
 var (
+	vendorIDWhitelist = map[string]string{
+		"8086": "Intel Corporation",
+		"1172": "Altera Corporation",
+	}
+
 	deviceIDWhitelist = map[string]deviceInfo{
 		"0d8f": {"0d90", "FPGA_5GNR"},
 		"5052": {"5050", "FPGA_LTE"},
@@ -50,7 +54,8 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 	}
 
 	for _, device := range devices {
-		if !(device.Vendor.ID == vendorID &&
+		_, isWhitelisted := vendorIDWhitelist[device.Vendor.ID]
+		if !(isWhitelisted &&
 			device.Class.ID == acceleratorClass &&
 			device.Subclass.ID == acceleratorSubclass) {
 			continue
