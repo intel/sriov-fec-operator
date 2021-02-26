@@ -15,5 +15,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: sriov-fec-operator
-  newName: sriov-fec-operator
+  newName: registry.connect.redhat.com/intel/sriov-fec-operator
   newTag: v1.0.0

@@ -10,9 +10,18 @@ CHANNELS ?= stable
 # Default channel
 DEFAULT_CHANNEL ?= stable
 
+# Operator image registry
+IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
+# Add suffix directly to IMAGE_REGISTRY to enable empty registry(local images)
+ifneq ($(strip $(IMAGE_REGISTRY)),)
+IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
+endif
+# tls verify flag for pushing images
+TLS_VERIFY ?= true
+
 # Default bundle image tag
-BUNDLE_IMG ?= controller-bundle:$(VERSION)
-# Options for 'bundle-build'
+BUNDLE_IMG ?= $(IMAGE_REGISTRY)sriov-fec-bundle:$(VERSION)
+# Options for 'image-bundle'
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
 endif
@@ -21,8 +30,13 @@ BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
-# Image URL to use all building/pushing image targets
-IMG ?= sriov-fec-operator:v1.0.0
+IMG_VERSION := v$(VERSION)
+
+# Images URLs to use for all building/pushing image targets
+export SRIOV_FEC_OPERATOR_IMAGE ?= $(IMAGE_REGISTRY)sriov-fec-operator:$(IMG_VERSION)
+export SRIOV_FEC_DAEMON_IMAGE ?= $(IMAGE_REGISTRY)sriov-fec-daemon:$(IMG_VERSION)
+export SRIOV_FEC_LABELER_IMAGE ?= $(IMAGE_REGISTRY)n3000-labeler:$(IMG_VERSION)
+
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -64,10 +78,8 @@ uninstall: manifests kustomize
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image sriov-fec-operator=${IMG}
-	# In hack/env.sh we store variables related to asset deployment such as daemon url and tag
-	# these vars are substituted stored as operator's env vars and later substituted during asset deployment
-	source hack/env.sh && $(KUSTOMIZE) build config/default | envsubst | $(CLI_EXEC) apply -f -
+	cd config/manager && $(KUSTOMIZE) edit set image sriov-fec-operator=$(SRIOV_FEC_OPERATOR_IMAGE)
+	$(KUSTOMIZE) build config/default | envsubst | $(CLI_EXEC) apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
@@ -85,13 +97,6 @@ vet:
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-# Build the docker image
-docker-build: test
-	docker build -t ${IMG} .
-
-# Push the docker image
-docker-push:
-	docker push ${IMG}
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -117,16 +122,47 @@ KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
 
+# Build/Push daemon image
+.PHONY: image-sriov-fec-daemon
+image-sriov-fec-daemon:
+	cp ../LICENSE TEMP_LICENSE_COPY
+	podman build . -f Dockerfile.daemon -t $(SRIOV_FEC_DAEMON_IMAGE) --build-arg=VERSION=$(IMG_VERSION)
+
+.PHONY: push-sriov-fec-daemon
+push-sriov-fec-daemon:
+	podman push $(SRIOV_FEC_DAEMON_IMAGE) --tls-verify=$(TLS_VERIFY)
+
+# Build/Push operator image
+.PHONY: image-sriov-fec-operator
+image-sriov-fec-operator:
+	cp ../LICENSE TEMP_LICENSE_COPY
+	podman build . -t $(SRIOV_FEC_OPERATOR_IMAGE)
+
+.PHONY: push-sriov-fec-operator
+push-sriov-fec-operator:
+	podman push $(SRIOV_FEC_OPERATOR_IMAGE) --tls-verify=$(TLS_VERIFY)
+
+# Build all the images
+.PHONY: image
+image: image-sriov-fec-daemon image-sriov-fec-operator image-bundle
+
+# Push all the images
+.PHONY: push
+push: push-sriov-fec-daemon push-sriov-fec-operator push-bundle
 
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
 bundle: manifests kustomize
 	operator-sdk generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image sriov-fec-operator=$(IMG)
-	source hack/env.sh && $(KUSTOMIZE) build config/manifests | envsubst | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	cd config/manager && $(KUSTOMIZE) edit set image sriov-fec-operator=$(SRIOV_FEC_OPERATOR_IMAGE)
+	$(KUSTOMIZE) build config/manifests | envsubst | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 
-# Build the bundle image.
-.PHONY: bundle-build
-bundle-build:
-	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+# Build/Push the bundle image.
+.PHONY: image-bundle
+image-bundle:
+	podman build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+.PHONY: push-bundle
+push-bundle:
+	podman push $(BUNDLE_IMG) --tls-verify=$(TLS_VERIFY)

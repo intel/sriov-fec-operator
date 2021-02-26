@@ -271,7 +271,21 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
-                image: controller:latest
+                env:
+                - name: SRIOV_FEC_DAEMON_IMAGE
+                  value: registry.connect.redhat.com/intel/sriov-fec-daemon:v1.0.0
+                - name: SRIOV_FEC_LABELER_IMAGE
+                  value: registry.connect.redhat.com/intel/n3000-labeler:v1.0.0
+                - name: NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                image: registry.connect.redhat.com/intel/sriov-fec-operator:v1.0.0
+                imagePullPolicy: IfNotPresent
                 livenessProbe:
                   httpGet:
                     path: /healthz
