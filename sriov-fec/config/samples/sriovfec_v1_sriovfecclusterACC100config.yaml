@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
+
+apiVersion: sriovfec.intel.com/v1
+kind: SriovFecClusterConfig
+metadata:
+  name: config
+spec:
+  nodes:
+    - nodeName: ""
+      physicalFunctions:
+        - pciAddress: ""
+          pfDriver: "pci-pf-stub"
+          vfDriver: "vfio-pci"
+          vfAmount: 2
+          bbDevConfig:
+            acc100:
+              # Programming mode: 0 = VF Programming, 1 = PF Programming
+              pfMode: true
+              numVfBundles: 16
+              maxQueueSize: 1024
+              uplink4G:
+                numQueueGroups: 0
+                numAqsPerGroups: 16
+                aqDepthLog2: 4
+              downlink4G:
+                numQueueGroups: 0
+                numAqsPerGroups: 16
+                aqDepthLog2: 4
+              uplink5G:
+                numQueueGroups: 4
+                numAqsPerGroups: 16
+                aqDepthLog2: 4
+              downlink5G:
+                numQueueGroups: 4
+                numAqsPerGroups: 16
+                aqDepthLog2: 4

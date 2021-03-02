@@ -251,9 +251,9 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec
 			}
 		}
 
-		if pf.BBDevConfig.N3000 != nil {
+		if pf.BBDevConfig.N3000 != nil || pf.BBDevConfig.ACC100 != nil {
 			bbdevConfigFilepath := filepath.Join(workdir, fmt.Sprintf("%s.ini", pf.PCIAddress))
-			if err := generateN3000BBDevConfigFile(pf.BBDevConfig.N3000, bbdevConfigFilepath); err != nil {
+			if err := generateBBDevConfigFile(pf.BBDevConfig, bbdevConfigFilepath); err != nil {
 				log.Error(err, "failed to create bbdev config file", "pci", pf.PCIAddress)
 				return err
 			}
@@ -269,7 +269,7 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec
 				return err
 			}
 		} else {
-			log.Info("N3000 BBDevConfig is nil - queues will not be (re)configured")
+			log.Info("N3000 and ACC100 BBDevConfig are nil - queues will not be (re)configured")
 		}
 
 		if pciStubRegex.MatchString(pf.PFDriver) {

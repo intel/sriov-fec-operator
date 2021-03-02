@@ -31,6 +31,7 @@ var (
 	deviceIDWhitelist = map[string]deviceInfo{
 		"0d8f": {"0d90", "FPGA_5GNR"},
 		"5052": {"5050", "FPGA_LTE"},
+		"0d5c": {"0d5d", "ACC100"},
 		"0b32": {"", ""}, // Factory dummy
 	}
 )

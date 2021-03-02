@@ -6,42 +6,39 @@ kind: SriovFecNodeConfig
 metadata:
   name: sriovfecnodeconfig-sample
 spec:
-  oneCardConfigForAll: true
-  cards:
+  physicalFunctions:
   - pci_addr: ""
-    vendor_id: "8086"
-    pf_device_id: "0d8f"
     pf_driver: "pci-pf-stub"
-    vf_device_id: "0d90"
     vf_driver: "vfio-pci"
     vf_amount: 2
-    queues:
-      # Network Type: either "FPGA_5GNR" or "FPGA_LTE"
-      networkType: "FPGA_5GNR"
-      # Programming mode: 0 = VF Programming, 1 = PF Programming
-      pf_mode_en: 0
-      flr_time_out: 610
-      downlink:
-        bandwidth: 3
-        load_balance: 128
-        queues:
-          vf0: 16
-          vf1: 16
-          vf2: 0
-          vf3: 0
-          vf4: 0
-          vf5: 0
-          vf6: 0
-          vf7: 0
-      uplink:
-        bandwidth: 3
-        load_balance: 128
-        queues:
-          vf0: 16
-          vf1: 16
-          vf2: 0
-          vf3: 0
-          vf4: 0
-          vf5: 0
-          vf6: 0
-          vf7: 0
+    bbDevConfig:
+      n3000:
+        # Network Type: either "FPGA_5GNR" or "FPGA_LTE"
+        networkType: "FPGA_5GNR"
+        # Programming mode: 0 = VF Programming, 1 = PF Programming
+        pfMode: true
+        flrTimeout: 610
+        downlink:
+          bandwidth: 3
+          loadBalance: 128
+          queues:
+            vf0: 16
+            vf1: 16
+            vf2: 0
+            vf3: 0
+            vf4: 0
+            vf5: 0
+            vf6: 0
+            vf7: 0
+        uplink:
+          bandwidth: 3
+          loadBalance: 128
+          queues:
+            vf0: 16
+            vf1: 16
+            vf2: 0
+            vf3: 0
+            vf4: 0
+            vf5: 0
+            vf6: 0
+            vf7: 0

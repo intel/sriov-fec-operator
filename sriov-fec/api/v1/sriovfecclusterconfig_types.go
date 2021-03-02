@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package v1
 
@@ -112,9 +112,63 @@ type N3000BBDevConfig struct {
 	Uplink UplinkDownlink `json:"uplink"`
 }
 
+type QueueGroupConfig struct {
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=8
+
+	NumQueueGroups int `json:"numQueueGroups"`
+
+	// +kubebuilder:validation:Minimum=16
+	// +kubebuilder:validation:Maximum=16
+
+	NumAqsPerGroups int `json:"numAqsPerGroups"`
+
+	// +kubebuilder:validation:Minimum=4
+	// +kubebuilder:validation:Maximum=4
+
+	AqDepthLog2 int `json:"aqDepthLog2"`
+}
+
+// ACC100BBDevConfig specifies variables to configure ACC100 with
+type ACC100BBDevConfig struct {
+	// +kubebuilder:validation:Required
+
+	PFMode bool `json:"pfMode"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=16
+	// +kubebuilder:validation:Maximum=16
+
+	NumVfBundles int `json:"numVfBundles"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1024
+	// +kubebuilder:validation:Maximum=1024
+
+	MaxQueueSize int `json:"maxQueueSize"`
+
+	// +kubebuilder:validation:Required
+
+	Uplink4G QueueGroupConfig `json:"uplink4G"`
+
+	// +kubebuilder:validation:Required
+
+	Downlink4G QueueGroupConfig `json:"downlink4G"`
+
+	// +kubebuilder:validation:Required
+
+	Uplink5G QueueGroupConfig `json:"uplink5G"`
+
+	// +kubebuilder:validation:Required
+
+	Downlink5G QueueGroupConfig `json:"downlink5G"`
+}
+
 // BBDevConfig is a struct containing configuration for various FEC cards
 type BBDevConfig struct {
 	N3000 *N3000BBDevConfig `json:"n3000,omitempty"`
+
+	ACC100 *ACC100BBDevConfig `json:"acc100,omitempty"`
 }
 
 // PhysicalFunctionConfig defines a possible configuration of a single Physical Function (PF), i.e. card

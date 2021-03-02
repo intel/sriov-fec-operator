@@ -54,6 +54,105 @@ spec:
                     bbDevConfig:
                       description: BBDevConfig is a config for PF's queues
                       properties:
+                        acc100:
+                          description: ACC100BBDevConfig specifies variables to configure
+                            ACC100 with
+                          properties:
+                            downlink4G:
+                              properties:
+                                aqDepthLog2:
+                                  maximum: 4
+                                  minimum: 4
+                                  type: integer
+                                numAqsPerGroups:
+                                  maximum: 16
+                                  minimum: 16
+                                  type: integer
+                                numQueueGroups:
+                                  maximum: 8
+                                  minimum: 0
+                                  type: integer
+                              required:
+                              - aqDepthLog2
+                              - numAqsPerGroups
+                              - numQueueGroups
+                              type: object
+                            downlink5G:
+                              properties:
+                                aqDepthLog2:
+                                  maximum: 4
+                                  minimum: 4
+                                  type: integer
+                                numAqsPerGroups:
+                                  maximum: 16
+                                  minimum: 16
+                                  type: integer
+                                numQueueGroups:
+                                  maximum: 8
+                                  minimum: 0
+                                  type: integer
+                              required:
+                              - aqDepthLog2
+                              - numAqsPerGroups
+                              - numQueueGroups
+                              type: object
+                            maxQueueSize:
+                              maximum: 1024
+                              minimum: 1024
+                              type: integer
+                            numVfBundles:
+                              maximum: 16
+                              minimum: 16
+                              type: integer
+                            pfMode:
+                              type: boolean
+                            uplink4G:
+                              properties:
+                                aqDepthLog2:
+                                  maximum: 4
+                                  minimum: 4
+                                  type: integer
+                                numAqsPerGroups:
+                                  maximum: 16
+                                  minimum: 16
+                                  type: integer
+                                numQueueGroups:
+                                  maximum: 8
+                                  minimum: 0
+                                  type: integer
+                              required:
+                              - aqDepthLog2
+                              - numAqsPerGroups
+                              - numQueueGroups
+                              type: object
+                            uplink5G:
+                              properties:
+                                aqDepthLog2:
+                                  maximum: 4
+                                  minimum: 4
+                                  type: integer
+                                numAqsPerGroups:
+                                  maximum: 16
+                                  minimum: 16
+                                  type: integer
+                                numQueueGroups:
+                                  maximum: 8
+                                  minimum: 0
+                                  type: integer
+                              required:
+                              - aqDepthLog2
+                              - numAqsPerGroups
+                              - numQueueGroups
+                              type: object
+                          required:
+                          - downlink4G
+                          - downlink5G
+                          - maxQueueSize
+                          - numVfBundles
+                          - pfMode
+                          - uplink4G
+                          - uplink5G
+                          type: object
                         n3000:
                           description: N3000BBDevConfig specifies variables to configure
                             N3000 with
