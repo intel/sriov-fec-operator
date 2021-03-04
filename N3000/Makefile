@@ -25,8 +25,6 @@ ifneq ($(strip $(IMAGE_REGISTRY)),)
 IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
 endif
 
-
-
 # tls verify flag for pushing images
 TLS_VERIFY ?= true
 
@@ -181,7 +179,6 @@ image-n3000-operator:
 push-n3000-operator:
 	podman push $(N3000_OPERATOR_IMAGE) --tls-verify=$(TLS_VERIFY)
 
-
 # Build/Push labeler image
 # TODO: Remove this section together with separtion of labler from N3000
 .PHONY: image-n3000-labeler
@@ -201,13 +198,20 @@ image: image-n3000-driver image-n3000-daemon image-n3000-operator image-bundle
 .PHONY: push
 push: push-n3000-driver push-n3000-daemon push-n3000-operator push-bundle
 
+check-operator-sdk-version:
+	(cd .. && make check-operator-sdk-version)
+
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
-bundle: manifests kustomize
+bundle: check-operator-sdk-version manifests kustomize
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image n3000-operator=$(N3000_OPERATOR_IMAGE)
 	$(KUSTOMIZE) build config/manifests | envsubst | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
+	FOLDER=. COPYRIGHT_FILE=../COPYRIGHT ../copyright.sh
+	cat ../COPYRIGHT bundle.Dockerfile >bundle.tmp
+	printf "\nCOPY TEMP_LICENSE_COPY /licenses/LICENSE\n" >> bundle.tmp
+	mv bundle.tmp bundle.Dockerfile
 
 # Build/Push the bundle image.
 .PHONY: image-bundle

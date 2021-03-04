@@ -150,13 +150,20 @@ image: image-sriov-fec-daemon image-sriov-fec-operator image-bundle
 .PHONY: push
 push: push-sriov-fec-daemon push-sriov-fec-operator push-bundle
 
+check-operator-sdk-version:
+	(cd .. && make check-operator-sdk-version)
+
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
-bundle: manifests kustomize
+bundle: check-operator-sdk-version manifests kustomize
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image sriov-fec-operator=$(SRIOV_FEC_OPERATOR_IMAGE)
 	$(KUSTOMIZE) build config/manifests | envsubst | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
+	FOLDER=. COPYRIGHT_FILE=../COPYRIGHT ../copyright.sh
+	cat ../COPYRIGHT bundle.Dockerfile >bundle.tmp
+	printf "\nCOPY TEMP_LICENSE_COPY /licenses/LICENSE\n" >> bundle.tmp
+	mv bundle.tmp bundle.Dockerfile
 
 # Build/Push the bundle image.
 .PHONY: image-bundle
