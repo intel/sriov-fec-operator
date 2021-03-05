@@ -14,7 +14,7 @@ DEFAULT_CHANNEL ?= stable
 IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
 # Add suffix directly to IMAGE_REGISTRY to enable empty registry(local images)
 ifneq ($(strip $(IMAGE_REGISTRY)),)
-IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
+override IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
 endif
 # tls verify flag for pushing images
 TLS_VERIFY ?= true
@@ -97,7 +97,6 @@ vet:
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
@@ -167,9 +166,11 @@ bundle: check-operator-sdk-version manifests kustomize
 
 # Build/Push the bundle image.
 .PHONY: image-bundle
-image-bundle:
+image-bundle: bundle
 	podman build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 .PHONY: push-bundle
 push-bundle:
 	podman push $(BUNDLE_IMG) --tls-verify=$(TLS_VERIFY)
+
+build_all: all image push

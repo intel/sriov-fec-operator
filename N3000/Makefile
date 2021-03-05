@@ -12,7 +12,7 @@ DEFAULT_CHANNEL ?= stable
 # Current OPAE package version
 OPAE_VERSION ?= 1.3.8-2
 # Kernel version for driver container
-KERNEL_VERSION ?= 4.18.0-193.28.1.rt13.77.el8_2.x86_64
+KERNEL_VERSION ?= 4.18.0-193.41.1.el8_2.x86_64
 # Where to get the kernel dependencies from
 # Possible values:
 #  yum - download the dependencies from upstream repositories
@@ -22,7 +22,7 @@ KERNEL_SOURCE ?= yum
 IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
 # Add suffix directly to IMAGE_REGISTRY to enable empty registry(local images)
 ifneq ($(strip $(IMAGE_REGISTRY)),)
-IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
+override IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
 endif
 
 # tls verify flag for pushing images
@@ -41,7 +41,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 IMG_VERSION := v$(VERSION)
 
-# Images URLs to use for all building/pushing image targets
+# Images URLs to use for all building/pushing image targets (in assets/*.yaml files)
 export N3000_OPERATOR_IMAGE ?= $(IMAGE_REGISTRY)n3000-operator:$(IMG_VERSION)
 export N3000_OPAE_IMAGE ?= opae:$(OPAE_VERSION)
 export N3000_DRIVER_CONTAINER_IMAGE ?= $(IMAGE_REGISTRY)n3000-driver:$(IMG_VERSION)--$(OPAE_VERSION)
@@ -192,11 +192,11 @@ push-n3000-labeler:
 
 # Build all the images
 .PHONY: image
-image: image-n3000-driver image-n3000-daemon image-n3000-operator image-bundle
+image: image-n3000-driver image-n3000-daemon image-n3000-operator image-n3000-labeler image-bundle
 
 # Push all the images
 .PHONY: push
-push: push-n3000-driver push-n3000-daemon push-n3000-operator push-bundle
+push: push-n3000-driver push-n3000-daemon push-n3000-operator push-n3000-labeler push-bundle
 
 check-operator-sdk-version:
 	(cd .. && make check-operator-sdk-version)
@@ -215,9 +215,11 @@ bundle: check-operator-sdk-version manifests kustomize
 
 # Build/Push the bundle image.
 .PHONY: image-bundle
-image-bundle:
+image-bundle: bundle
 	podman build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 .PHONY: push-bundle
 push-bundle:
 	podman push $(BUNDLE_IMG) --tls-verify=$(TLS_VERIFY)
+
+build_all: all image push

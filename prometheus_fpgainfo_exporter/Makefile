@@ -10,7 +10,7 @@ IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
 
 # Add suffix directly to IMAGE_REGISTRY to enable empty registry(local images)
 ifneq ($(strip $(IMAGE_REGISTRY)),)
-IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
+override IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
 endif
 
 # tls verify flag for pushing images
@@ -20,7 +20,6 @@ IMG_VERSION := v$(VERSION)
 
 # Images URLs to use for all building/pushing image targets
 export N3000_MONITORING_IMAGE ?= $(IMAGE_REGISTRY)n3000-monitoring:$(IMG_VERSION)--$(OPAE_VERSION)
-
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -51,7 +50,6 @@ fmt:
 vet:
 	go vet ./...
 
-
 # Build/push exporter image
 .PHONY: image-n3000-monitoring
 image-n3000-monitoring:
@@ -62,3 +60,4 @@ image-n3000-monitoring:
 push-n3000-monitoring:
 	podman push $(N3000_MONITORING_IMAGE) --tls-verify=$(TLS_VERIFY)
 
+build_all: all image-n3000-monitoring push-n3000-monitoring
