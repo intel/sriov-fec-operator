@@ -22,7 +22,7 @@ if [[ ${ret} != 0 ]]; then
   exit ${ret}
 fi
 
-if echo "${out}" | grep -qiE "error|fail"; then
+if echo "${out}" | grep -qiE "error|fail|unavailable"; then
   echo "'fpgainfo phy' found issues"
   exit 1
 fi
