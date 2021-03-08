@@ -65,6 +65,15 @@ data:
                     "devices": ["0d90"],
                     "drivers": ["pci-pf-stub", "vfio-pci"]
                 }
+            },
+            {
+                "resourceName": "intel_fec_acc100",
+                "deviceType": "accelerator",
+                "selectors": {
+                    "vendors": ["8086"],
+                    "devices": ["0d5d"],
+                    "drivers": ["pci-pf-stub", "vfio-pci"]
+                }
             }
         ]
     }
