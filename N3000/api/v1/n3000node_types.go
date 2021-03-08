@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 /*
 
@@ -25,12 +25,10 @@ import (
 
 // N3000NodeSpec defines the desired state of N3000Node
 type N3000NodeSpec struct {
-	FPGA      []N3000Fpga    `json:"fpga,omitempty"`
-	Fortville N3000Fortville `json:"fortville,omitempty"`
-	// +kubebuilder:validation:Optional
-	DryRun bool `json:"dryRun,omitempty"`
-	// +kubebuilder:validation:Optional
-	DrainSkip bool `json:"drainSkip,omitempty"`
+	FPGA      []N3000Fpga     `json:"fpga,omitempty"`
+	Fortville *N3000Fortville `json:"fortville,omitempty"`
+	DryRun    bool            `json:"dryRun,omitempty"`
+	DrainSkip bool            `json:"drainSkip,omitempty"`
 }
 
 // N3000NodeStatus defines the observed state of N3000Node

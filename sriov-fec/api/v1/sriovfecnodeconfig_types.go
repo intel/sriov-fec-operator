@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 type VF struct {
 	PCIAddress string `json:"pciAddress"`
@@ -31,12 +28,9 @@ type NodeInventory struct {
 
 // SriovFecNodeConfigSpec defines the desired state of SriovFecNodeConfig
 type SriovFecNodeConfigSpec struct {
-	// +kubebuilder:validation:Required
-
 	// List of PhysicalFunctions configs
 	PhysicalFunctions []PhysicalFunctionConfig `json:"physicalFunctions"`
-	// +kubebuilder:validation:Optional
-	DrainSkip bool `json:"drainSkip,omitempty"`
+	DrainSkip         bool                     `json:"drainSkip,omitempty"`
 }
 
 // SriovFecNodeConfigStatus defines the observed state of SriovFecNodeConfig

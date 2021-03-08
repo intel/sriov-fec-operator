@@ -109,7 +109,8 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				Spec: fpgav1.N3000ClusterSpec{
 					Nodes: []fpgav1.N3000ClusterNode{
 						{
-							NodeName: "dummy",
+							NodeName:  "dummy",
+							Fortville: &fpgav1.N3000Fortville{},
 						},
 					},
 				},
@@ -325,7 +326,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			var noFirmwareUrlNode fpgav1.N3000Node
 
-			noFirmwareUrlNode.Spec.Fortville = fpgav1.N3000Fortville{
+			noFirmwareUrlNode.Spec.Fortville = &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "00:00:00:00:00:00",
@@ -497,45 +498,6 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		var _ = It("will fail because of FPGA url missing", func() {
-			var err error
-
-			n3000node.Spec.FPGA = []fpgav1.N3000Fpga{
-				{
-					PCIAddr:      "ffff:ff:01.1",
-					UserImageURL: "",
-				},
-			}
-
-			err = k8sClient.Create(context.Background(), n3000node)
-			Expect(err).ToNot(HaveOccurred())
-
-			// simulate creation of cluster config by the user
-			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
-
-			log = klogr.New().WithName("N3000NodeReconciler-Test")
-			request = ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: namespace,
-					Name:      "n3000node-gf",
-				},
-			}
-
-			reconciler = N3000NodeReconciler{Client: k8sClient, log: log,
-				namespace: request.NamespacedName.Namespace,
-				nodeName:  "gf",
-				fortville: FortvilleManager{
-					Log: log.WithName("fortvilleManager"),
-				},
-				fpga: FPGAManager{
-					Log: log.WithName("fpgaManager"),
-				},
-			}
-
-			_, err = (reconciler).Reconcile(context.TODO(), request)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
 		var _ = It("will fail with wrong FPGA preconditions", func() {
 			var err error
 
@@ -578,7 +540,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			var err error
 
 			n3000node.Spec.FPGA = nil
-			n3000node.Spec.Fortville = fpgav1.N3000Fortville{
+			n3000node.Spec.Fortville = &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "00:00:00:00:00:00",
@@ -619,7 +581,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			var err error
 
 			n3000node.Spec.FPGA = nil
-			n3000node.Spec.Fortville = fpgav1.N3000Fortville{
+			n3000node.Spec.Fortville = &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "64:4c:36:11:1b:a8",

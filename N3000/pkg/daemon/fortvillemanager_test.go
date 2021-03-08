@@ -261,7 +261,7 @@ var _ = Describe("Fortville Manager", func() {
 	f := FortvilleManager{Log: ctrl.Log.WithName("daemon-test")}
 	sampleOneFortville := fpgav1.N3000Node{
 		Spec: fpgav1.N3000NodeSpec{
-			Fortville: fpgav1.N3000Fortville{
+			Fortville: &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "64:4c:36:11:1b:a8",
@@ -273,7 +273,7 @@ var _ = Describe("Fortville Manager", func() {
 	}
 	sampleWrongMACFortville := fpgav1.N3000Node{
 		Spec: fpgav1.N3000NodeSpec{
-			Fortville: fpgav1.N3000Fortville{
+			Fortville: &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "ff:ff:ff:ff:ff:aa",
@@ -285,7 +285,7 @@ var _ = Describe("Fortville Manager", func() {
 	}
 	sampleOneFortvilleDryRun := fpgav1.N3000Node{
 		Spec: fpgav1.N3000NodeSpec{
-			Fortville: fpgav1.N3000Fortville{
+			Fortville: &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "64:4c:36:11:1b:a8",
@@ -298,7 +298,7 @@ var _ = Describe("Fortville Manager", func() {
 	}
 	sampleOneFortvilleNoURL := fpgav1.N3000Node{
 		Spec: fpgav1.N3000NodeSpec{
-			Fortville: fpgav1.N3000Fortville{
+			Fortville: &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "64:4c:36:11:1b:a8",
@@ -309,7 +309,7 @@ var _ = Describe("Fortville Manager", func() {
 	}
 	sampleOneFortvilleInvalidChecksum := fpgav1.N3000Node{
 		Spec: fpgav1.N3000NodeSpec{
-			Fortville: fpgav1.N3000Fortville{
+			Fortville: &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "64:4c:36:11:1b:a8",

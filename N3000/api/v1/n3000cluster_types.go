@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 /*
 
@@ -41,47 +41,38 @@ var (
 
 type N3000Fpga struct {
 	// +kubebuilder:validation:Pattern=[a-zA-Z0-9\.\-\/]+
-	UserImageURL string `json:"userImageURL,omitempty"`
+	UserImageURL string `json:"userImageURL"`
 	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[01][a-fA-F0-9]\.[0-7]$`
-	PCIAddr string `json:"PCIAddr,omitempty"`
-	// +kubebuilder:validation:Optional
+	PCIAddr string `json:"PCIAddr"`
 	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{32}$`
 	CheckSum string `json:"checksum,omitempty"`
 }
 
 type N3000Fortville struct {
-	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Pattern=[a-zA-Z0-9\.\-\/]+
-	FirmwareURL string `json:"firmwareURL,omitempty"`
-	// +kubebuilder:validation:Optional
-	MACs []FortvilleMAC `json:"MACs,omitempty"`
-	// +kubebuilder:validation:Optional
+	FirmwareURL string         `json:"firmwareURL"`
+	MACs        []FortvilleMAC `json:"MACs"`
 	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{32}$`
 	CheckSum string `json:"checksum,omitempty"`
 }
 
 type FortvilleMAC struct {
 	// +kubebuilder:validation:Pattern=`^[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}$`
-	MAC string `json:"MAC,omitempty"`
+	MAC string `json:"MAC"`
 }
 
 type N3000ClusterNode struct {
 	// +kubebuilder:validation:Pattern=[a-z0-9\.\-]+
-	NodeName  string         `json:"nodeName"`
-	FPGA      []N3000Fpga    `json:"fpga,omitempty"`
-	Fortville N3000Fortville `json:"fortville,omitempty"`
+	NodeName  string          `json:"nodeName"`
+	FPGA      []N3000Fpga     `json:"fpga,omitempty"`
+	Fortville *N3000Fortville `json:"fortville,omitempty"`
 }
 
 // N3000ClusterSpec defines the desired state of N3000Cluster
 type N3000ClusterSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	Nodes []N3000ClusterNode `json:"nodes"`
-	// +kubebuilder:validation:Optional
-	DryRun bool `json:"dryrun,omitempty"`
-	// +kubebuilder:validation:Optional
-	DrainSkip bool `json:"drainSkip,omitempty"`
+	Nodes     []N3000ClusterNode `json:"nodes"`
+	DryRun    bool               `json:"dryrun,omitempty"`
+	DrainSkip bool               `json:"drainSkip,omitempty"`
 }
 
 // N3000ClusterStatus defines the observed state of N3000Cluster

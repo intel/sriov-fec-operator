@@ -204,7 +204,7 @@ func (r *N3000NodeReconciler) verifySpec(n *fpgav1.N3000Node) error {
 		}
 	}
 
-	if len(n.Spec.Fortville.MACs) > 0 {
+	if n.Spec.Fortville != nil && len(n.Spec.Fortville.MACs) > 0 {
 		if n.Spec.Fortville.FirmwareURL == "" {
 			return errors.New("Missing Fortville FirmwareURL")
 		}
@@ -245,7 +245,7 @@ func (r *N3000NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil
 	}
 
-	if n3000node.Spec.FPGA == nil && n3000node.Spec.Fortville.MACs == nil {
+	if n3000node.Spec.FPGA == nil && n3000node.Spec.Fortville == nil {
 		log.Info("Nothing to do")
 		r.updateFlashCondition(n3000node, metav1.ConditionFalse, FlashNotRequested, "Inventory up to date")
 		return ctrl.Result{}, nil
@@ -271,7 +271,7 @@ func (r *N3000NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
-	if n3000node.Spec.Fortville.MACs != nil {
+	if n3000node.Spec.Fortville != nil {
 		err = r.fortville.verifyPreconditions(n3000node)
 		if err != nil {
 			r.updateFlashCondition(n3000node, metav1.ConditionFalse, FlashFailed, err.Error())
@@ -290,7 +290,7 @@ func (r *N3000NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			}
 		}
 
-		if n3000node.Spec.Fortville.MACs != nil {
+		if n3000node.Spec.Fortville != nil {
 			err = r.fortville.flash(n3000node)
 			if err != nil {
 				log.Error(err, "Unable to flash Fortville")

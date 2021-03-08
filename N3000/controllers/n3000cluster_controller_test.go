@@ -56,7 +56,7 @@ var _ = Describe("ExampleTest", func() {
 				Nodes: []fpgav1.N3000ClusterNode{
 					{
 						NodeName: "dummy",
-						Fortville: fpgav1.N3000Fortville{
+						Fortville: &fpgav1.N3000Fortville{
 							FirmwareURL: "http://exampleurl.com",
 						},
 					},
@@ -100,6 +100,7 @@ var _ = Describe("ExampleTest", func() {
 
 			// simulate creation of cluster config by the user
 			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
+			clusterConfig.Spec.Nodes[0].Fortville.MACs = []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}}
 			err = k8sClient.Create(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -154,6 +155,7 @@ var _ = Describe("ExampleTest", func() {
 
 			// create on node dummy (1st)
 			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
+			clusterConfig.Spec.Nodes[0].Fortville.MACs = []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}}
 			err = k8sClient.Create(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -188,10 +190,16 @@ var _ = Describe("ExampleTest", func() {
 				Nodes: []fpgav1.N3000ClusterNode{
 					{
 						NodeName: "dummynode2",
+						Fortville: &fpgav1.N3000Fortville{
+							FirmwareURL: "/tmp/dummy.bin",
+							MACs:        []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}},
+						},
 					},
 				},
 			}
+
 			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummynode2.bin"
+			clusterConfig.Spec.Nodes[0].Fortville.MACs = []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}}
 			err = k8sClient.Update(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
 			_, rec_err = reconciler.Reconcile(context.TODO(), request)
@@ -220,6 +228,7 @@ var _ = Describe("ExampleTest", func() {
 			Expect(len(nodes.Items)).To(Equal(1))
 
 			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
+			clusterConfig.Spec.Nodes[0].Fortville.MACs = []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}}
 			err = k8sClient.Create(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -277,6 +286,8 @@ var _ = Describe("ExampleTest", func() {
 
 			// create on node dummy (1st)
 			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
+			clusterConfig.Spec.Nodes[0].Fortville.MACs = []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}}
+
 			err = k8sClient.Create(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -307,14 +318,17 @@ var _ = Describe("ExampleTest", func() {
 			// switch nodes
 			err = k8sClient.Get(context.TODO(), namespacedName, clusterConfig)
 			Expect(err).NotTo(HaveOccurred())
-			clusterConfig.Spec = fpgav1.N3000ClusterSpec{
-				Nodes: []fpgav1.N3000ClusterNode{
-					{
-						NodeName: "dummynode2",
+
+			clusterConfig.Spec.Nodes = []fpgav1.N3000ClusterNode{
+				{
+					NodeName: "dummynode2",
+					Fortville: &fpgav1.N3000Fortville{
+						FirmwareURL: "/tmp/dummy.bin",
+						MACs:        []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}},
 					},
 				},
 			}
-			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummynode2.bin"
+
 			err = k8sClient.Update(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
 			_, rec_err = reconciler.Reconcile(context.TODO(), request)
@@ -370,6 +384,9 @@ var _ = Describe("ExampleTest", func() {
 			err := k8sClient.Create(context.TODO(), node)
 			Expect(err).ToNot(HaveOccurred())
 
+			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
+			clusterConfig.Spec.Nodes[0].Fortville.MACs = []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}}
+
 			// simulate creation of cluster config by the user
 			err = k8sClient.Create(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
@@ -405,6 +422,7 @@ var _ = Describe("ExampleTest", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
+			clusterConfig.Spec.Nodes[0].Fortville.MACs = []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}}
 			// simulate creation of cluster config by the user
 			err = k8sClient.Create(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
@@ -482,13 +500,19 @@ var _ = Describe("ExampleTest", func() {
 			clusterConfig.Spec.Nodes = []fpgav1.N3000ClusterNode{
 				{
 					NodeName: "dummy",
+					Fortville: &fpgav1.N3000Fortville{
+						FirmwareURL: "/tmp/dummy.bin",
+						MACs:        []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}},
+					},
 				},
 				{
 					NodeName: "dummy2",
+					Fortville: &fpgav1.N3000Fortville{
+						FirmwareURL: "/tmp/dummy2.bin",
+						MACs:        []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}},
+					},
 				},
 			}
-			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
-			clusterConfig.Spec.Nodes[1].Fortville.FirmwareURL = "/tmp/dummy2.bin"
 
 			// simulate creation of cluster config by the user
 			err = k8sClient.Create(context.TODO(), clusterConfig)
@@ -534,13 +558,19 @@ var _ = Describe("ExampleTest", func() {
 			clusterConfig.Spec.Nodes = []fpgav1.N3000ClusterNode{
 				{
 					NodeName: "dummy",
+					Fortville: &fpgav1.N3000Fortville{
+						FirmwareURL: "/tmp/dummy.bin",
+						MACs:        []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}},
+					},
 				},
 				{
 					NodeName: "dummy2",
+					Fortville: &fpgav1.N3000Fortville{
+						FirmwareURL: "/tmp/dummy2.bin",
+						MACs:        []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}},
+					},
 				},
 			}
-			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
-			clusterConfig.Spec.Nodes[1].Fortville.FirmwareURL = "/tmp/dummy2.bin"
 
 			// simulate creation of cluster config by the user
 			err = k8sClient.Create(context.TODO(), clusterConfig)
@@ -586,13 +616,19 @@ var _ = Describe("ExampleTest", func() {
 			clusterConfig.Spec.Nodes = []fpgav1.N3000ClusterNode{
 				{
 					NodeName: "dummy",
+					Fortville: &fpgav1.N3000Fortville{
+						FirmwareURL: "/tmp/dummy.bin",
+						MACs:        []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}},
+					},
 				},
 				{
 					NodeName: "dummy2",
+					Fortville: &fpgav1.N3000Fortville{
+						FirmwareURL: "/tmp/dummy2.bin",
+						MACs:        []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}},
+					},
 				},
 			}
-			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
-			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy2.bin"
 
 			// simulate creation of cluster config by the user
 			err = k8sClient.Create(context.TODO(), clusterConfig)
@@ -638,6 +674,7 @@ var _ = Describe("ExampleTest", func() {
 
 			// simulate creation of cluster config by the user
 			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
+			clusterConfig.Spec.Nodes[0].Fortville.MACs = []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}}
 			err = k8sClient.Create(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -684,6 +721,7 @@ var _ = Describe("ExampleTest", func() {
 			namespacedName.Name = invalidName
 			clusterConfig.ObjectMeta.Name = invalidName
 			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
+			clusterConfig.Spec.Nodes[0].Fortville.MACs = []fpgav1.FortvilleMAC{fpgav1.FortvilleMAC{MAC: "00:00:00:00:00:00"}}
 			err = k8sClient.Create(context.TODO(), clusterConfig)
 			Expect(err).ToNot(HaveOccurred())
 
