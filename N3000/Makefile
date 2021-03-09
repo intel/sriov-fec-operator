@@ -68,11 +68,10 @@ test: manifests generate fmt vet ## Run tests.
 	mkdir -p $(ENVTEST_ASSETS_DIR)
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.0/hack/setup-envtest.sh
 	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); NAMESPACE=default go test ./... -coverprofile cover.out
-	cd labeler; source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); NAMESPACE=default go test ./... -coverprofile cover.out; cd ..
 
 test-cov: generate fmt vet manifests
 	mkdir -p $(ENVTEST_ASSETS_DIR)
-	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/master/hack/setup-envtest.sh
+	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.0/hack/setup-envtest.sh
 	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); NAMESPACE=default ginkgo -v -r -cover -coverprofile=coverage.out -outputdir=.
 	sed '1!{/^mode/d;)' coverage.out > coverage.out.fix
 	go tool cover -html=coverage.out.fix
@@ -179,24 +178,13 @@ image-n3000-operator:
 push-n3000-operator:
 	podman push $(N3000_OPERATOR_IMAGE) --tls-verify=$(TLS_VERIFY)
 
-# Build/Push labeler image
-# TODO: Remove this section together with separtion of labler from N3000
-.PHONY: image-n3000-labeler
-image-n3000-labeler:
-	cp ../LICENSE labeler/TEMP_LICENSE_COPY
-	cd labeler && podman build . -t $(N3000_LABELER_IMAGE) --build-arg=VERSION=$(IMG_VERSION)
-
-.PHONY: push-n3000-labeler
-push-n3000-labeler:
-	podman push $(N3000_LABELER_IMAGE) --tls-verify=$(TLS_VERIFY)
-
 # Build all the images
 .PHONY: image
-image: image-n3000-driver image-n3000-daemon image-n3000-operator image-n3000-labeler image-bundle
+image: image-n3000-driver image-n3000-daemon image-n3000-operator image-bundle
 
 # Push all the images
 .PHONY: push
-push: push-n3000-driver push-n3000-daemon push-n3000-operator push-n3000-labeler push-bundle
+push: push-n3000-driver push-n3000-daemon push-n3000-operator push-bundle
 
 check-operator-sdk-version:
 	(cd .. && make check-operator-sdk-version)

@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/exec"
 
-	dh "github.com/otcshare/openshift-operator/N3000/pkg/drainhelper"
+	dh "github.com/otcshare/openshift-operator/common/pkg/drainhelper"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

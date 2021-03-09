@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2020-2021 Intel Corporation
 
-package assets
+package drainhelper
 
 import (
 	"path/filepath"
@@ -17,34 +17,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
-	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// +kubebuilder:scaffold:imports
 )
 
 var cfg *rest.Config
 var k8sClient client.Client
-var fakeOwner metav1.Object
-
 var testEnv *envtest.Environment
-
-var fakeAssetFile string
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	RunSpecsWithDefaultAndCustomReporters(t,
-		"N3000 assets Suite",
+		"N3000 drainhelper Suite",
 		[]Reporter{printer.NewlineReporter{}})
 }
 
 var _ = BeforeSuite(func(done Done) {
 	var err error
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-
-	fakeAssetFile = "test/101-fake-labeler.yaml"
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -55,18 +45,11 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
-	err = fpgav1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
 	// +kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())
 	Expect(k8sClient).ToNot(BeNil())
-
-	fakeOwner = &appsv1.Deployment{}
-	fakeOwner.SetUID("123")
-	fakeOwner.SetName("123")
 
 	close(done)
 }, 60)

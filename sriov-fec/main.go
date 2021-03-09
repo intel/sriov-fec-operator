@@ -37,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/otcshare/openshift-operator/N3000/pkg/assets"
+	"github.com/otcshare/openshift-operator/common/pkg/assets"
 	sriovfecv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
 	"github.com/otcshare/openshift-operator/sriov-fec/controllers"
 	// +kubebuilder:scaffold:imports

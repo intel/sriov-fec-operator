@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 
-	dh "github.com/otcshare/openshift-operator/N3000/pkg/drainhelper"
+	dh "github.com/otcshare/openshift-operator/common/pkg/drainhelper"
 
 	"github.com/go-logr/logr"
 	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"

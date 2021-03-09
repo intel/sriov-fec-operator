@@ -24,7 +24,7 @@ import (
 
 	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
 	"github.com/otcshare/openshift-operator/N3000/controllers"
-	"github.com/otcshare/openshift-operator/N3000/pkg/assets"
+	"github.com/otcshare/openshift-operator/common/pkg/assets"
 	// +kubebuilder:scaffold:imports
 )
 
