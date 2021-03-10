@@ -25,17 +25,27 @@ import (
 
 // N3000NodeSpec defines the desired state of N3000Node
 type N3000NodeSpec struct {
-	FPGA      []N3000Fpga     `json:"fpga,omitempty"`
+	// FPGA devices to be updated
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	FPGA []N3000Fpga `json:"fpga,omitempty"`
+	// Fortville devices to be updated
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Fortville *N3000Fortville `json:"fortville,omitempty"`
 	DryRun    bool            `json:"dryRun,omitempty"`
-	DrainSkip bool            `json:"drainSkip,omitempty"`
+	// Allows for updating devices without draining the node
+	DrainSkip bool `json:"drainSkip,omitempty"`
 }
 
 // N3000NodeStatus defines the observed state of N3000Node
 type N3000NodeStatus struct {
-	Conditions []metav1.Condition     `json:"conditions,omitempty"`
-	FPGA       []N3000FpgaStatus      `json:"fpga,omitempty"`
-	Fortville  []N3000FortvilleStatus `json:"fortville,omitempty"`
+	// Provides information about device update status
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// Provides information about FPGA inventory on the node
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	FPGA []N3000FpgaStatus `json:"fpga,omitempty"`
+	// Provides information about N3000 Fortville invetory on the node
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	Fortville []N3000FortvilleStatus `json:"fortville,omitempty"`
 }
 
 type N3000FpgaStatus struct {
@@ -69,6 +79,7 @@ type N3000FortvilleStatusModules struct {
 // +kubebuilder:printcolumn:name="Flash",type=string,JSONPath=`.status.conditions[?(@.type=="Flashed")].reason`
 
 // N3000Node is the Schema for the n3000nodes API
+// +operator-sdk:csv:customresourcedefinitions:displayName="N3000Node",resources={{N3000Node,v1,node}}
 type N3000Node struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

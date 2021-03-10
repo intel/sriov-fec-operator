@@ -4,7 +4,16 @@
 apiVersion: fpga.intel.com/v1
 kind: N3000Node
 metadata:
-  name: sample
+  name: worker-0
+  namespace: n3000-operators-resources
 spec:
-  # Add fields here
-  foo: bar
+  # Managed by n3000-controller-manager
+  fpga:
+    - userImageURL: "http://server:8000/userimage.bin"
+      PCIAddr: "0000:09:00.0"
+  fortville:
+    firmwareURL: "http://server:8000/nvmupdate.tar.gz"
+    MACs:
+      - MAC: "aa:bb:cc:dd:ee:fd"
+      - MAC: "aa:bb:cc:dd:ee:fe"
+      - MAC: "aa:bb:cc:dd:ee:ff"

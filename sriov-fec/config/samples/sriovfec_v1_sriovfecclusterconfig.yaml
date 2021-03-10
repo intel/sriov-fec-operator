@@ -5,6 +5,7 @@ apiVersion: sriovfec.intel.com/v1
 kind: SriovFecClusterConfig
 metadata:
   name: config
+  namespace: n3000-operators-resources
 spec:
   nodes:
     - nodeName: ""

@@ -29,14 +29,18 @@ type NodeInventory struct {
 // SriovFecNodeConfigSpec defines the desired state of SriovFecNodeConfig
 type SriovFecNodeConfigSpec struct {
 	// List of PhysicalFunctions configs
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	PhysicalFunctions []PhysicalFunctionConfig `json:"physicalFunctions"`
 	DrainSkip         bool                     `json:"drainSkip,omitempty"`
 }
 
 // SriovFecNodeConfigStatus defines the observed state of SriovFecNodeConfig
 type SriovFecNodeConfigStatus struct {
+	// Provides information about device update status
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	Inventory  NodeInventory      `json:"inventory,omitempty"`
+	// Provides information about FPGA inventory on the node
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	Inventory NodeInventory `json:"inventory,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -44,6 +48,7 @@ type SriovFecNodeConfigStatus struct {
 // +kubebuilder:printcolumn:name="Configured",type=string,JSONPath=`.status.conditions[?(@.type=="Configured")].status`
 
 // SriovFecNodeConfig is the Schema for the sriovfecnodeconfigs API
+// +operator-sdk:csv:customresourcedefinitions:displayName="SriovFecNodeConfig",resources={{SriovFecNodeConfig,v1,node}}
 type SriovFecNodeConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

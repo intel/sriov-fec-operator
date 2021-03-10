@@ -23,9 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 type SyncStatus string
 
 var (
@@ -44,6 +41,7 @@ type N3000Fpga struct {
 	UserImageURL string `json:"userImageURL"`
 	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[01][a-fA-F0-9]\.[0-7]$`
 	PCIAddr string `json:"PCIAddr"`
+	// MD5 checksum verified against calculated one from downloaded user image. Optional.
 	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{32}$`
 	CheckSum string `json:"checksum,omitempty"`
 }
@@ -52,6 +50,7 @@ type N3000Fortville struct {
 	// +kubebuilder:validation:Pattern=[a-zA-Z0-9\.\-\/]+
 	FirmwareURL string         `json:"firmwareURL"`
 	MACs        []FortvilleMAC `json:"MACs"`
+	// MD5 checksum verified against calculated one from downloaded nvmupdate package. Optional.
 	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{32}$`
 	CheckSum string `json:"checksum,omitempty"`
 }
@@ -70,6 +69,8 @@ type N3000ClusterNode struct {
 
 // N3000ClusterSpec defines the desired state of N3000Cluster
 type N3000ClusterSpec struct {
+	// List of the nodes with their devices to be updated
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Nodes     []N3000ClusterNode `json:"nodes"`
 	DryRun    bool               `json:"dryrun,omitempty"`
 	DrainSkip bool               `json:"drainSkip,omitempty"`
@@ -77,6 +78,8 @@ type N3000ClusterSpec struct {
 
 // N3000ClusterStatus defines the observed state of N3000Cluster
 type N3000ClusterStatus struct {
+	// Indicates the synchronization status of the CR
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	SyncStatus    SyncStatus `json:"syncStatus,omitempty"`
 	LastSyncError string     `json:"lastSyncError,omitempty"`
 }
@@ -85,6 +88,7 @@ type N3000ClusterStatus struct {
 // +kubebuilder:subresource:status
 
 // N3000Cluster is the Schema for the n3000clusters API
+// +operator-sdk:csv:customresourcedefinitions:displayName="N3000Cluster",resources={{N3000Node,v1,node}}
 type N3000Cluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

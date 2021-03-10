@@ -4,7 +4,8 @@
 apiVersion: sriovfec.intel.com/v1
 kind: SriovFecNodeConfig
 metadata:
-  name: sriovfecnodeconfig-sample
+  name: worker-0
+  namespace: n3000-operators-resources
 spec:
   physicalFunctions:
   - pci_addr: ""

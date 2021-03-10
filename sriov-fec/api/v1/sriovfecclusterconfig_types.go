@@ -125,18 +125,22 @@ type NodeConfig struct {
 	// Name of the node
 	NodeName string `json:"nodeName"`
 	// List of physical functions (cards) configs
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	PhysicalFunctions []PhysicalFunctionConfig `json:"physicalFunctions"`
 }
 
 // SriovFecClusterConfigSpec defines the desired state of SriovFecClusterConfig
 type SriovFecClusterConfigSpec struct {
 	// List of node configurations
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Nodes     []NodeConfig `json:"nodes"`
 	DrainSkip bool         `json:"drainSkip,omitempty"`
 }
 
 // SriovFecClusterConfigStatus defines the observed state of SriovFecClusterConfig
 type SriovFecClusterConfigStatus struct {
+	// Indicates the synchronization status of the CR
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	SyncStatus    SyncStatus `json:"syncStatus,omitempty"`
 	LastSyncError string     `json:"lastSyncError,omitempty"`
 }
@@ -146,6 +150,7 @@ type SriovFecClusterConfigStatus struct {
 // +kubebuilder:printcolumn:name="SyncStatus",type=string,JSONPath=`.status.syncStatus`
 
 // SriovFecClusterConfig is the Schema for the sriovfecclusterconfigs API
+// +operator-sdk:csv:customresourcedefinitions:displayName="SriovFecClusterConfig",resources={{SriovFecNodeConfig,v1,node}}
 type SriovFecClusterConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
