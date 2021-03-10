@@ -127,7 +127,7 @@ var _ = Describe("ExampleTest", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(len(nodeConfigs.Items)).To(Equal(1))
-			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("n3000node-dummy"))
+			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("dummy"))
 		})
 
 		var _ = It("will update config to use another node", func() {
@@ -181,7 +181,7 @@ var _ = Describe("ExampleTest", func() {
 			err = k8sClient.List(context.TODO(), nodeConfigs)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(nodeConfigs.Items)).To(Equal(1))
-			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("n3000node-dummy"))
+			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("dummy"))
 
 			// switch nodes
 			err = k8sClient.Get(context.TODO(), namespacedName, clusterConfig)
@@ -209,7 +209,7 @@ var _ = Describe("ExampleTest", func() {
 			err = k8sClient.List(context.TODO(), nodeConfigs)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(nodeConfigs.Items)).To(Equal(1))
-			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("n3000node-dummynode2"))
+			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("dummynode2"))
 
 			// cleanup
 			err = k8sClient.Delete(context.TODO(), node2)
@@ -254,7 +254,7 @@ var _ = Describe("ExampleTest", func() {
 			err = k8sClient.List(context.TODO(), nodeConfigs)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(nodeConfigs.Items)).To(Equal(1))
-			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("n3000node-dummy"))
+			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("dummy"))
 
 			err = k8sClient.Get(context.TODO(), namespacedName, clusterConfig)
 			Expect(err).NotTo(HaveOccurred())
@@ -313,7 +313,7 @@ var _ = Describe("ExampleTest", func() {
 			err = k8sClient.List(context.TODO(), nodeConfigs)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(nodeConfigs.Items)).To(Equal(1))
-			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("n3000node-dummy"))
+			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("dummy"))
 
 			// switch nodes
 			err = k8sClient.Get(context.TODO(), namespacedName, clusterConfig)
@@ -449,7 +449,7 @@ var _ = Describe("ExampleTest", func() {
 			err = k8sClient.List(context.TODO(), nodeConfigs)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(nodeConfigs.Items)).To(Equal(1))
-			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("n3000node-dummy"))
+			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("dummy"))
 		})
 
 		var _ = It("will 0 nodes", func() {
@@ -545,7 +545,7 @@ var _ = Describe("ExampleTest", func() {
 			err = k8sClient.List(context.TODO(), nodeConfigs)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(nodeConfigs.Items)).To(Equal(1))
-			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("n3000node-dummy"))
+			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("dummy"))
 		})
 
 		var _ = It("will leave 2nd node of 2", func() {
@@ -603,7 +603,7 @@ var _ = Describe("ExampleTest", func() {
 			err = k8sClient.List(context.TODO(), nodeConfigs)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(nodeConfigs.Items)).To(Equal(1))
-			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("n3000node-dummy2"))
+			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("dummy2"))
 		})
 
 		var _ = It("will leave none of 2 nodes", func() {

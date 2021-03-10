@@ -96,7 +96,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			n3000node = &fpgav1.N3000Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "n3000node-gf",
+					Name:      "gf",
 					Namespace: namespace,
 				},
 			}
@@ -169,7 +169,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			n3000node = &fpgav1.N3000Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "n3000node-gfgf",
+					Name:      "gfgf",
 					Namespace: namespace,
 				},
 			}
@@ -240,7 +240,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			var err error
 			n3000node = &fpgav1.N3000Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "n3000node-gf2",
+					Name:      "gf2",
 					Namespace: namespace,
 				},
 			}
@@ -270,7 +270,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			n3000node = &fpgav1.N3000Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "n3000node-gfgf",
+					Name:      "gfgf",
 					Namespace: namespace,
 				},
 			}
@@ -389,7 +389,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			request = ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: namespace,
-					Name:      "n3000node-gf",
+					Name:      "gf",
 				},
 			}
 
@@ -479,7 +479,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			request = ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: namespace,
-					Name:      "n3000node-gf",
+					Name:      "gf",
 				},
 			}
 
@@ -518,7 +518,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			request = ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: namespace,
-					Name:      "n3000node-gf",
+					Name:      "gf",
 				},
 			}
 
@@ -559,7 +559,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			request = ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: namespace,
-					Name:      "n3000node-gf",
+					Name:      "gf",
 				},
 			}
 
@@ -600,7 +600,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			request = ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: namespace,
-					Name:      "n3000node-gf",
+					Name:      "gf",
 				},
 			}
 

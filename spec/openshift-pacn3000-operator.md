@@ -146,13 +146,13 @@ To get all the nodes containing the Intel® FPGA PAC N3000 card run the followin
 [user@ctrl1 /home]# oc get n3000node
 
 NAME                       FLASH
-n3000node-node1            NotRequested
+node1                      NotRequested
 ```
 
 To get the information about the card on each node run:
 
 ```shell
-[user@ctrl1 /home]# oc get n3000node n3000node-node1 -o yaml
+[user@ctrl1 /home]# oc get n3000node node1 -o yaml
 
 ***
 status:
@@ -218,7 +218,7 @@ After provisioning of appropriate user image (ie. 5G FEC image - '2x2x25G-5GLDPC
 [user@ctrl1 /home]# oc get n3000node
 
 NAME                       FLASH
-n3000node-node1            InProgress
+node1                      InProgress
 ```
 
 The logs similar to the output below will be created in the N3000 daemon's pod:
@@ -243,13 +243,13 @@ Once the FPGA user image update is complete, the following status is reported:
 ```shell
 [user@ctrl1 /home]# oc get n3000node
 NAME                       FLASH
-n3000node-node1            Succeeded
+node1                      Succeeded
 ```
 
 The user can observe the changed BitStream ID of the card:
 
 ```yaml
-[user@ctrl1 /home]# oc get n3000node n3000node-node1 -o yaml
+[user@ctrl1 /home]# oc get n3000node node1 -o yaml
 
 ***
 
@@ -304,13 +304,13 @@ To get all the nodes containing the Intel® FPGA PAC N3000 card run the followin
 [user@ctrl1 /home]# oc get n3000node
 
 NAME                       FLASH
-n3000node-node1            NotRequested
+node1                      NotRequested
 ```
 
 To find the NIC devices belonging to the Intel® FPGA PAC N3000 run following command, the user can detect the device information of the NICs from the output:
 
 ```shell
-[user@ctrl1 /home]# oc get n3000node n3000node-node1 -o yaml
+[user@ctrl1 /home]# oc get n3000node node1 -o yaml
 
 ***
 status:
@@ -377,7 +377,7 @@ After provisioning of appropriate NVM NIC firmware package, and a creation of th
 [user@ctrl1 /home]# oc get n3000node
 
 NAME                       FLASH
-n3000node-node1            InProgress
+node1                      InProgress
 ```
 
 Once the NVM firmware update is complete, the following status is reported:
@@ -385,13 +385,13 @@ Once the NVM firmware update is complete, the following status is reported:
 ```shell
 [user@ctrl1 /home]# oc get n3000node
 NAME                       FLASH
-n3000node-node1            Succeeded
+node1                      Succeeded
 ```
 
 The user can observe the change of the cards' NICs firmware:
 
 ```yaml
-[user@ctrl1 /home]# oc get n3000node n3000node-node1 -o yaml
+[user@ctrl1 /home]# oc get n3000node node1 -o yaml
 
 ***
 

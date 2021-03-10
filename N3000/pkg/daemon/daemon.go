@@ -6,7 +6,6 @@ package daemon
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	dh "github.com/otcshare/openshift-operator/common/pkg/drainhelper"
 
@@ -20,10 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-)
-
-const (
-	crNameTemplate = "n3000node-%s"
 )
 
 type FlashConditionReason string
@@ -108,13 +103,12 @@ func (r *N3000NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // If invoked before manager's Start, it'll need a direct API client
 // (Manager's/Controller's client is cached and cache is not initialized yet).
 func (r *N3000NodeReconciler) CreateEmptyN3000NodeIfNeeded(c client.Client) error {
-	name := fmt.Sprintf(crNameTemplate, r.nodeName)
-	log := r.log.WithName("CreateEmptyN3000NodeIfNeeded").WithValues("name", name, "namespace", r.namespace)
+	log := r.log.WithName("CreateEmptyN3000NodeIfNeeded").WithValues("name", r.nodeName, "namespace", r.namespace)
 
 	n3000node := &fpgav1.N3000Node{}
 	err := c.Get(context.Background(),
 		client.ObjectKey{
-			Name:      name,
+			Name:      r.nodeName,
 			Namespace: r.namespace,
 		},
 		n3000node)
@@ -129,7 +123,7 @@ func (r *N3000NodeReconciler) CreateEmptyN3000NodeIfNeeded(c client.Client) erro
 
 		n3000node = &fpgav1.N3000Node{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      r.nodeName,
 				Namespace: r.namespace,
 			},
 		}
@@ -223,8 +217,8 @@ func (r *N3000NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil
 	}
 
-	if req.Name != fmt.Sprintf(crNameTemplate, r.nodeName) {
-		log.Info("CR intended for another node - ignoring", "expected name", fmt.Sprintf(crNameTemplate, r.nodeName))
+	if req.Name != r.nodeName {
+		log.Info("CR intended for another node - ignoring", "expected name", r.nodeName)
 		return ctrl.Result{}, nil
 	}
 

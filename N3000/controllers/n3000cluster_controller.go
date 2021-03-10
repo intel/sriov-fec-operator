@@ -176,7 +176,7 @@ func (r *N3000ClusterReconciler) splitClusterIntoNodes(ctx context.Context,
 			if res.NodeName == node.Name {
 				nodeRes := &fpgav1.N3000Node{}
 				nodeRes.ObjectMeta = metav1.ObjectMeta{
-					Name:      "n3000node-" + res.NodeName,
+					Name:      res.NodeName,
 					Namespace: namespace,
 				}
 				nodeRes.Spec.FPGA = res.FPGA
