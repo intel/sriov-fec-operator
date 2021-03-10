@@ -5,6 +5,8 @@ package daemon
 
 import (
 	"context"
+	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	dh "github.com/otcshare/openshift-operator/common/pkg/drainhelper"
@@ -19,10 +21,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
 	conditionConfigured = "Configured"
+	conditionInProgress = "InProgress"
+	resyncPeriod        = time.Minute
 )
 
 type NodeConfigReconciler struct {
@@ -63,14 +68,9 @@ func (r *NodeConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&sriovv1.SriovFecNodeConfig{}).
 		WithEventFilter(predicate.Funcs{
 			CreateFunc: func(e event.CreateEvent) bool {
-				nodeConfig, ok := e.Object.(*sriovv1.SriovFecNodeConfig)
+				_, ok := e.Object.(*sriovv1.SriovFecNodeConfig)
 				if !ok {
 					r.log.Info("Failed to convert e.Object to sriovv1.SriovFecNodeConfig", "e.Object", e.Object)
-					return false
-				}
-				cond := meta.FindStatusCondition(nodeConfig.Status.Conditions, conditionConfigured)
-				if cond != nil && cond.ObservedGeneration == e.Object.GetGeneration() {
-					r.log.Info("Created object was handled previously, ignoring")
 					return false
 				}
 				return true
@@ -92,24 +92,32 @@ func (r *NodeConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	if req.Namespace != r.namespace {
 		log.Info("unexpected namespace - ignoring", "expected namespace", r.namespace)
-		return ctrl.Result{}, nil
+		return reconcile.Result{}, nil
 	}
 
 	if req.Name != r.nodeName {
 		log.Info("CR intended for another node - ignoring", "expected name", r.nodeName)
-		return ctrl.Result{}, nil
+		return reconcile.Result{}, nil
 	}
 
 	nodeConfig := &sriovv1.SriovFecNodeConfig{}
 	if err := r.Client.Get(ctx, req.NamespacedName, nodeConfig); err != nil {
 		if k8serrors.IsNotFound(err) {
 			log.Info("not found - creating")
-			return ctrl.Result{}, r.CreateEmptyNodeConfigIfNeeded(r.Client)
+			return reconcile.Result{}, r.CreateEmptyNodeConfigIfNeeded(r.Client)
 		}
 		log.Error(err, "Get() failed")
-		return ctrl.Result{}, err
+		return reconcile.Result{}, err
 	}
 	log.Info("obtained nodeConfig", "generation", nodeConfig.GetGeneration())
+
+	inProgressCondition := metav1.Condition{
+		Type:               conditionInProgress,
+		Status:             metav1.ConditionFalse,
+		Message:            "Configuring",
+		ObservedGeneration: nodeConfig.GetGeneration(),
+		Reason:             "StatusDoesNotMatchConfig",
+	}
 
 	configuredCondition := metav1.Condition{
 		Type:               conditionConfigured,
@@ -121,6 +129,26 @@ func (r *NodeConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	skipStatusUpdate := false
 	if len(nodeConfig.Spec.PhysicalFunctions) > 0 {
+		inv, err := getSriovInventory(log)
+		if err != nil {
+			log.Error(err, "failed to obtain sriov inventory for the node")
+			return reconcile.Result{}, err
+		}
+
+		configuredConditionGeneration := meta.FindStatusCondition(nodeConfig.Status.Conditions, conditionConfigured)
+		if configuredConditionGeneration != nil {
+			if reflect.DeepEqual(*inv, nodeConfig.Status.Inventory) && configuredConditionGeneration.ObservedGeneration == nodeConfig.GetGeneration() {
+				log.Info("status matches existing config, nothing to do")
+				return reconcile.Result{RequeueAfter: resyncPeriod}, nil
+			}
+		}
+
+		meta.SetStatusCondition(&nodeConfig.Status.Conditions, inProgressCondition)
+		if err := r.Status().Update(context.Background(), nodeConfig); err != nil {
+			log.Error(err, "failed to update NodeConfig status")
+			return reconcile.Result{}, err
+		}
+
 		var configurationErr error
 
 		dhErr := r.drainHelper.Run(func(c context.Context) bool {
@@ -177,23 +205,23 @@ func (r *NodeConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	if skipStatusUpdate {
 		log.Info("status update skipped - CR will be handled again after node reboot")
-		return ctrl.Result{}, nil
+		return reconcile.Result{}, nil
 	}
 
 	meta.SetStatusCondition(&nodeConfig.Status.Conditions, configuredCondition)
 
 	if err := r.updateInventory(nodeConfig); err != nil {
-		return ctrl.Result{}, err
+		return reconcile.Result{}, err
 	}
 
 	if err := r.Status().Update(context.Background(), nodeConfig); err != nil {
 		log.Error(err, "failed to update NodeConfig status")
-		return ctrl.Result{}, err
+		return reconcile.Result{}, err
 	}
 
 	log.Info("Reconciled")
 
-	return ctrl.Result{}, nil
+	return reconcile.Result{RequeueAfter: resyncPeriod}, nil
 }
 
 func (r *NodeConfigReconciler) restartDevicePlugin() error {
