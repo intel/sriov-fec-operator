@@ -124,8 +124,6 @@ spec:
       hostNetwork: true
       containers:
       - name: sriov-fec-daemon
-        securityContext:
-          readOnlyRootFilesystem: true
         image: "{{ .SRIOV_FEC_DAEMON_IMAGE }}"
         imagePullPolicy: IfNotPresent
         args:
@@ -138,6 +136,10 @@ spec:
           mountPath: /sys/bus/pci
         - name: workdir-volume
           mountPath: /sriov_artifacts
+        - name: tmp-volume
+          mountPath: /tmp
+        - name: run-volume
+          mountPath: /run
         env:
           - name: NAMESPACE
             valueFrom:
@@ -152,6 +154,7 @@ spec:
           - name: LEASE_DURATION_SECONDS
             value: "600"
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: true
       volumes:
       - name: host
@@ -161,4 +164,8 @@ spec:
         hostPath:
           path: /sys/bus/pci
       - name: workdir-volume
+        emptyDir: {}
+      - name: tmp-volume
+        emptyDir: {}
+      - name: run-volume
         emptyDir: {}

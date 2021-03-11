@@ -106,10 +106,9 @@ spec:
         imagePullPolicy: IfNotPresent
         securityContext:
           readOnlyRootFilesystem: true
+          privileged: true
         args:
         - --log-level=10
-        securityContext:
-          privileged: true
         volumeMounts:
         - name: devicesock
           mountPath: /var/lib/kubelet/

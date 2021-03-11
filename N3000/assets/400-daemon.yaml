@@ -126,8 +126,6 @@ spec:
       - image: "{{ .N3000_DAEMON_IMAGE }}"
         imagePullPolicy: IfNotPresent
         name: n3000-daemon
-        securityContext:
-          readOnlyRootFilesystem: true
         volumeMounts:
           - name: devchar
             mountPath: /dev/char
@@ -159,6 +157,10 @@ spec:
             mountPath: /sys/module
           - name: cache-volume
             mountPath: /n3000-workdir
+          - name: tmp-volume
+            mountPath: /tmp
+          - name: run-volume
+            mountPath: /run
         env:
           - name: NAMESPACE
             valueFrom:
@@ -174,6 +176,7 @@ spec:
             value: "600"
         securityContext:
           privileged: true
+          readOnlyRootFilesystem: true
           seLinuxOptions:
             level: "s0"
       volumes:
@@ -220,4 +223,8 @@ spec:
           hostPath:
             path: /sys/module
         - name: cache-volume
+          emptyDir: {}
+        - name: tmp-volume
+          emptyDir: {}
+        - name: run-volume
           emptyDir: {}
