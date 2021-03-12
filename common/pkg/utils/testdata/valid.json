@@ -1,0 +1,11 @@
+{
+  "VendorID": {"0000": "test",
+    "0001": "test1"
+  },
+  "Class": "00",
+  "SubClass": "00",
+  "Devices": {
+    "test": "test"
+  },
+  "NodeLabel": "LABEL"
+}
