@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package daemon
 
@@ -263,7 +263,7 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec
 				}
 			}()
 
-			deviceName := deviceIDWhitelist[acc.DeviceID].DeviceName
+			deviceName := supportedAccelerators.Devices[acc.DeviceID]
 			if err := runPFConfig(log, deviceName, bbdevConfigFilepath, pf.PCIAddress); err != nil {
 				log.Error(err, "failed to configure device's queues", "pci", pf.PCIAddress)
 				return err

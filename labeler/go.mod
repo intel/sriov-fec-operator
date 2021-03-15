@@ -1,17 +1,16 @@
 module github.com/otcshare/openshift-operator/labeler
 
-go 1.14
+go 1.15
 
 require (
-	github.com/go-logr/logr v0.2.1 // indirect
-	github.com/go-logr/zapr v0.2.0 // indirect
 	github.com/jaypipes/ghw v0.6.1
 	github.com/jaypipes/pcidb v0.5.0
-	github.com/onsi/ginkgo v1.12.1
-	github.com/onsi/gomega v1.10.1
-	k8s.io/api v0.19.3
-	k8s.io/apimachinery v0.19.3
-	k8s.io/client-go v0.19.3
-	k8s.io/kubectl v0.19.3
-	sigs.k8s.io/controller-runtime v0.6.3
+	github.com/onsi/ginkgo v1.14.1
+	github.com/onsi/gomega v1.10.2
+	github.com/otcshare/openshift-operator/common v0.0.0-20210315084110-d12b1ed74a0b
+	k8s.io/api v0.20.2
+	k8s.io/apimachinery v0.20.2
+	k8s.io/client-go v0.20.2
+	k8s.io/kubectl v0.20.2
+	sigs.k8s.io/controller-runtime v0.7.0
 )

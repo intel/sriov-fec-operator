@@ -35,6 +35,7 @@ var _ = Describe("SriovDaemonTest", func() {
 		//configure kernel controller
 		osReleaseFilepath = "testdata/rhcos_os_release"
 		procCmdlineFilePath = "testdata/cmdline_test"
+		configPath = "testdata/accelerators.json"
 
 		//configure node configurator
 		workdir = testTmpFolder

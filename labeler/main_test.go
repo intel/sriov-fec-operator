@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package main
 
@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/otcshare/openshift-operator/common/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -65,29 +66,6 @@ func TestMain(t *testing.T) {
 }
 
 var _ = Describe("Labeler", func() {
-	var _ = Describe("loadConfig", func() {
-		var _ = It("will fail if the file does not exist", func() {
-			cfg, err := loadConfig("notExistingFile.json")
-			Expect(err).To(HaveOccurred())
-			Expect(cfg).To(Equal(AcceleratorDiscoveryConfig{}))
-		})
-		var _ = It("will fail if the file is not json", func() {
-			cfg, err := loadConfig("testdata/invalid.json")
-			Expect(err).To(HaveOccurred())
-			Expect(cfg).To(Equal(AcceleratorDiscoveryConfig{}))
-		})
-		var _ = It("will load the valid config successfully", func() {
-			cfg, err := loadConfig("testdata/valid.json")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(cfg).To(Equal(AcceleratorDiscoveryConfig{
-				VendorID:  map[string]string{"0000": "test", "0001": "test1"},
-				Class:     "00",
-				SubClass:  "00",
-				Devices:   map[string]string{"test": "test"},
-				NodeLabel: "LABEL",
-			}))
-		})
-	})
 	var _ = Describe("getPCIDevices", func() {
 		var _ = It("return PCI devices", func() {
 			devices, err := getPCIDevices()
@@ -105,7 +83,7 @@ var _ = Describe("Labeler", func() {
 		var _ = It("will fail if getPCIDevices fails", func() {
 			getPCIDevices = func() ([]*ghw.PCIDevice, error) { return nil, fmt.Errorf("ErrorStub") }
 
-			cfg, err := loadConfig("testdata/valid.json")
+			cfg, err := utils.LoadDiscoveryConfig("testdata/valid.json")
 			Expect(err).ToNot(HaveOccurred())
 
 			found, err := findAccelerator(&cfg)
@@ -118,7 +96,7 @@ var _ = Describe("Labeler", func() {
 				return []*ghw.PCIDevice{}, nil
 			}
 
-			cfg, err := loadConfig("testdata/valid.json")
+			cfg, err := utils.LoadDiscoveryConfig("testdata/valid.json")
 			Expect(err).ToNot(HaveOccurred())
 
 			found, err := findAccelerator(&cfg)
@@ -162,7 +140,7 @@ var _ = Describe("Labeler", func() {
 				return devices, nil
 			}
 
-			cfg, err := loadConfig("testdata/valid.json")
+			cfg, err := utils.LoadDiscoveryConfig("testdata/valid.json")
 			Expect(err).ToNot(HaveOccurred())
 
 			found, err := findAccelerator(&cfg)

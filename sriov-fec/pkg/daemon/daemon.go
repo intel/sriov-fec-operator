@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	dh "github.com/otcshare/openshift-operator/common/pkg/drainhelper"
+	"github.com/otcshare/openshift-operator/common/pkg/utils"
 	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -40,11 +41,19 @@ type NodeConfigReconciler struct {
 }
 
 var (
-	getSriovInventory = GetSriovInventory
+	configPath            = "/sriov_config/config/accelerators.json"
+	getSriovInventory     = GetSriovInventory
+	supportedAccelerators utils.AcceleratorDiscoveryConfig
 )
 
 func NewNodeConfigReconciler(c client.Client, clientSet *clientset.Clientset, log logr.Logger,
 	nodeName, ns string) (*NodeConfigReconciler, error) {
+
+	var err error
+	supportedAccelerators, err = utils.LoadDiscoveryConfig(configPath)
+	if err != nil {
+		return nil, err
+	}
 
 	kk, err := createKernelController(log.WithName("KernelController"))
 	if err != nil {

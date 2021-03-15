@@ -1,68 +1,26 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/jaypipes/ghw"
+	"github.com/otcshare/openshift-operator/common/pkg/utils"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
-type AcceleratorDiscoveryConfig struct {
-	VendorID  map[string]string
-	Class     string
-	SubClass  string
-	Devices   map[string]string
-	NodeLabel string
-}
-
 const (
-	configPath                 = "/labeler-workspace/config/accelerators.json"
-	configFilesizeLimitInBytes = 10485760 //10 MB
+	configPath = "/labeler-workspace/config/accelerators.json"
 )
 
 var getInclusterConfigFunc = rest.InClusterConfig
-
-func loadConfig(cfgPath string) (AcceleratorDiscoveryConfig, error) {
-	var cfg AcceleratorDiscoveryConfig
-	file, err := os.Open(filepath.Clean(cfgPath))
-	if err != nil {
-		return cfg, fmt.Errorf("Failed to open config: %v", err)
-	}
-	defer file.Close()
-
-	// get file stat
-	stat, err := file.Stat()
-	if err != nil {
-		return cfg, fmt.Errorf("Failed to get file stat: %v", err)
-	}
-
-	// check file size
-	if stat.Size() > configFilesizeLimitInBytes {
-		return cfg, fmt.Errorf("Config file size %d, exceeds limit %d bytes",
-			stat.Size(), configFilesizeLimitInBytes)
-	}
-
-	cfgData := make([]byte, stat.Size())
-	bytesRead, err := file.Read(cfgData)
-	if err != nil || int64(bytesRead) != stat.Size() {
-		return cfg, fmt.Errorf("Unable to read config: %s", filepath.Clean(cfgPath))
-	}
-
-	if err = json.Unmarshal(cfgData, &cfg); err != nil {
-		return cfg, fmt.Errorf("Failed to unmarshal config: %v", err)
-	}
-	return cfg, nil
-}
 
 var getPCIDevices = func() ([]*ghw.PCIDevice, error) {
 	pci, err := ghw.PCI()
@@ -77,7 +35,7 @@ var getPCIDevices = func() ([]*ghw.PCIDevice, error) {
 	return devices, nil
 }
 
-func findAccelerator(cfg *AcceleratorDiscoveryConfig) (bool, error) {
+func findAccelerator(cfg *utils.AcceleratorDiscoveryConfig) (bool, error) {
 	if cfg == nil {
 		return false, fmt.Errorf("config not provided")
 	}
@@ -133,7 +91,7 @@ func setNodeLabel(nodeName, label string, removeLabel bool) error {
 }
 
 func acceleratorDiscovery(cfgPath string) error {
-	cfg, err := loadConfig(cfgPath)
+	cfg, err := utils.LoadDiscoveryConfig(cfgPath)
 	if err != nil {
 		return fmt.Errorf("Failed to load config: %v", err)
 	}

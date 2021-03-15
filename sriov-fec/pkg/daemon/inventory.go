@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package daemon
 
@@ -10,30 +10,6 @@ import (
 	"github.com/intel/sriov-network-device-plugin/pkg/utils"
 	"github.com/jaypipes/ghw"
 	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
-)
-
-const (
-	acceleratorClass    = "12"
-	acceleratorSubclass = "00"
-)
-
-type deviceInfo struct {
-	VFDeviceID string
-	DeviceName string
-}
-
-var (
-	vendorIDWhitelist = map[string]string{
-		"8086": "Intel Corporation",
-		"1172": "Altera Corporation",
-	}
-
-	deviceIDWhitelist = map[string]deviceInfo{
-		"0d8f": {"0d90", "FPGA_5GNR"},
-		"5052": {"5050", "FPGA_LTE"},
-		"0d5c": {"0d5d", "ACC100"},
-		"0b32": {"", ""}, // Factory dummy
-	}
 )
 
 func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
@@ -55,14 +31,15 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 	}
 
 	for _, device := range devices {
-		_, isWhitelisted := vendorIDWhitelist[device.Vendor.ID]
+
+		_, isWhitelisted := supportedAccelerators.VendorID[device.Vendor.ID]
 		if !(isWhitelisted &&
-			device.Class.ID == acceleratorClass &&
-			device.Subclass.ID == acceleratorSubclass) {
+			device.Class.ID == supportedAccelerators.Class &&
+			device.Subclass.ID == supportedAccelerators.SubClass) {
 			continue
 		}
 
-		if _, ok := deviceIDWhitelist[device.Product.ID]; !ok {
+		if _, ok := supportedAccelerators.Devices[device.Product.ID]; !ok {
 			continue
 		}
 

@@ -2,6 +2,30 @@
 # Copyright (c) 2021 Intel Corporation
 
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: supported-accelerators
+  namespace: n3000-operators-resources
+data:
+  accelerators.json: |
+    {
+      "VendorID": {
+        "8086": "Intel Corporation",
+        "1172": "Altera Corporation"
+      },
+      "Class": "12",
+      "SubClass": "00",
+      "Devices": {
+        "0d8f": "FPGA_5GNR",
+        "5052": "FPGA_LTE",
+        "0d5c": "ACC100",
+        "0b32": ""
+      },
+      "NodeLabel": "fpga.intel.com/intel-accelerator-present"
+    }
+
+---
+apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: n3000-discovery
@@ -33,29 +57,6 @@ subjects:
   namespace: n3000-operators-resources
 userNames:
 - system:serviceaccount:n3000-operators-resources:n3000-discovery
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: n3000-labeler-config
-  namespace: n3000-operators-resources
-data:
-  accelerators.json: |
-    {
-      "VendorID": {
-        "8086": "Intel Corporation",
-        "1172": "Altera Corporation"
-      },
-      "Class": "12",
-      "SubClass": "00",
-      "Devices": {
-        "0d8f": "FPGA_5GNR",
-        "5052": "FPGA_LTE",
-        "0b32": ""
-      },
-      "NodeLabel": "fpga.intel.com/intel-accelerator-present"
-    }
 
 ---
 apiVersion: apps/v1
@@ -96,7 +97,7 @@ spec:
       volumes:
         - name: config-volume
           configMap:
-            name: n3000-labeler-config
+            name: supported-accelerators
             items:
             - key: accelerators.json
               path: accelerators.json
