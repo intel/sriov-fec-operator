@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/go-logr/logr"
 )
@@ -120,4 +121,28 @@ func runExec(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
 		return "", err
 	}
 	return string(output), nil
+}
+
+type logWriter struct {
+	logr.Logger
+	stream string
+}
+
+func (l *logWriter) Write(p []byte) (n int, err error) {
+	o := strings.TrimSpace(string(p))
+	// Split the input string to avoid clumping of multiple lines
+	for _, s := range strings.FieldsFunc(o, func(r rune) bool { return r == '\n' || r == '\r' }) {
+		l.Info(strings.TrimSpace(s), "stream", l.stream)
+	}
+	return len(p), nil
+}
+
+func runExecWithLog(cmd *exec.Cmd, log logr.Logger, dryRun bool) error {
+	if dryRun {
+		log.Info("Run exec in dryrun mode", "command", cmd)
+		return nil
+	}
+	cmd.Stdout = &logWriter{log, "stdout"}
+	cmd.Stderr = &logWriter{log, "stderr"}
+	return cmd.Run()
 }

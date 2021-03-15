@@ -25,9 +25,9 @@ var (
 	fpgaUserImageSubfolderPath  = "/n3000-workdir"
 	fpgaUserImageFile           = filepath.Join(fpgaUserImageSubfolderPath, "fpga")
 	fpgasUpdatePath             = "fpgasupdate"
-	fpgasUpdateExec             = runExec
+	fpgasUpdateExec             = runExecWithLog
 	rsuPath                     = "rsu"
-	rsuExec                     = runExec
+	rsuExec                     = runExecWithLog
 	fpgaTemperatureDefaultLimit = 85.0 //in Celsius degrees
 	fpgaTemperatureBottomRange  = 40.0 //in Celsius degrees
 	fpgaTemperatureTopRange     = 95.0 //in Celsius degrees
@@ -133,13 +133,13 @@ func (fpga *FPGAManager) ProgramFPGA(file string, PCIAddr string, dryRun bool) e
 	log := fpga.Log.WithName("ProgramFPGA").WithValues("pci", PCIAddr)
 
 	log.Info("Starting")
-	_, err := fpgasUpdateExec(exec.Command(fpgasUpdatePath, file, PCIAddr), fpga.Log, dryRun)
+	err := fpgasUpdateExec(exec.Command(fpgasUpdatePath, file, PCIAddr), fpga.Log, dryRun)
 	if err != nil {
 		log.Error(err, "Failed to program FPGA")
 		return err
 	}
 	log.Info("Program FPGA completed, start new power cycle N3000 ...")
-	_, err = rsuExec(exec.Command(rsuPath, "bmcimg", PCIAddr), fpga.Log, dryRun)
+	err = rsuExec(exec.Command(rsuPath, "bmcimg", PCIAddr), fpga.Log, dryRun)
 	if err != nil {
 		log.Error(err, "Failed to execute rsu")
 		return err

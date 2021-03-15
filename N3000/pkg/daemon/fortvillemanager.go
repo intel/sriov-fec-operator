@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	nvmupdateExec = runExec
+	nvmupdateExec = runExecWithLog
 	fpgadiagExec  = runExec
 	ethtoolExec   = runExec
 	tarExec       = runExec
@@ -240,7 +240,7 @@ func (fm *FortvilleManager) flashMac(mac string, dryRun bool) error {
 		cmd := exec.Command(nvmupdate64e, "-i")
 		cmd.SysProcAttr = rootAttr
 		cmd.Dir = nvmupdate64ePath
-		_, err := nvmupdateExec(cmd, log, dryRun)
+		err := nvmupdateExec(cmd, log, dryRun)
 		if err != nil {
 			return err
 		}
@@ -251,7 +251,7 @@ func (fm *FortvilleManager) flashMac(mac string, dryRun bool) error {
 		cmd = exec.Command(nvmupdate64e, "-u", "-m", m, "-c", configFile, "-o", updateOutFile, "-l")
 		cmd.SysProcAttr = rootAttr
 		cmd.Dir = nvmupdate64ePath
-		_, err = nvmupdateExec(cmd, log, dryRun)
+		err = nvmupdateExec(cmd, log, dryRun)
 		if err != nil {
 			return err
 		}
@@ -397,7 +397,7 @@ func (fm *FortvilleManager) powerCycle(pcis []string, dryRun bool) error {
 	log := fm.Log.WithName("powerCycle")
 	for _, p := range pcis {
 		log.Info("Power cycling N3000 device", "pci", p)
-		_, err := rsuExec(exec.Command(rsuPath, "bmcimg", p), log, dryRun)
+		err := rsuExec(exec.Command(rsuPath, "bmcimg", p), log, dryRun)
 		if err != nil {
 			log.Error(err, "Failed to power cycle N3000 device")
 		}

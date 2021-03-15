@@ -199,13 +199,13 @@ func mockFortvilleEnv() {
 	Expect(err).ToNot(HaveOccurred())
 }
 
-func fakeNvmupdate(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
+func fakeNvmupdate(cmd *exec.Cmd, log logr.Logger, dryRun bool) error {
 	if strings.Contains(cmd.String(), "nvmupdate64e -i") {
-		return "", fakeNvmupdateFirstErrReturn
+		return fakeNvmupdateFirstErrReturn
 	} else if strings.Contains(cmd.String(), "nvmupdate64e -u -m") {
-		return "", fakeNvmupdateSecondErrReturn
+		return fakeNvmupdateSecondErrReturn
 	}
-	return "", fmt.Errorf("Unsupported command: %s", cmd)
+	return fmt.Errorf("Unsupported command: %s", cmd)
 }
 
 func fakeFpgadiag(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
@@ -418,7 +418,7 @@ var _ = Describe("Fortville Manager", func() {
 			nvmupdateExec = fakeNvmupdate
 			fpgaInfoExec = fakeFpgaInfo
 			fpgadiagExec = fakeFpgadiag
-			rsuExec = runExec
+			rsuExec = runExecWithLog
 
 			err := f.flash(&sampleOneFortville)
 			Expect(err).ToNot(HaveOccurred())
@@ -428,7 +428,7 @@ var _ = Describe("Fortville Manager", func() {
 			nvmupdateExec = fakeNvmupdate
 			fpgaInfoExec = fakeFpgaInfo
 			fpgadiagExec = fakeFpgadiag
-			rsuExec = runExec
+			rsuExec = runExecWithLog
 
 			err := f.flash(&sampleOneFortvilleDryRun)
 			Expect(err).ToNot(HaveOccurred())

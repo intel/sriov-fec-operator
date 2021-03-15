@@ -44,15 +44,15 @@ func setupManagers() {
 }
 func cleanUpHandlers() {
 	// Restore original Fortville handlers
-	nvmupdateExec = runExec
+	nvmupdateExec = runExecWithLog
 	fpgadiagExec = runExec
 	ethtoolExec = runExec
 	tarExec = runExec
 
 	// Restore original FPGA manager handlers
 	fpgaInfoExec = runExec
-	fpgasUpdateExec = runExec
-	rsuExec = runExec
+	fpgasUpdateExec = runExecWithLog
+	rsuExec = runExecWithLog
 }
 
 var reportErrorIn = 0
