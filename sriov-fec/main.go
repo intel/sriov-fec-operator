@@ -112,7 +112,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	namespace := os.Getenv("NAMESPACE")
+	namespace := os.Getenv("SRIOV_FEC_NAMESPACE")
 	owner := &appsv1.Deployment{}
 	err = c.Get(context.Background(), client.ObjectKey{
 		Namespace: namespace,

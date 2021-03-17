@@ -58,7 +58,7 @@ spec:
           value: $SRIOV_FEC_DAEMON_IMAGE
         - name: SRIOV_FEC_LABELER_IMAGE
           value: $SRIOV_FEC_LABELER_IMAGE
-        - name: NAMESPACE
+        - name: SRIOV_FEC_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace

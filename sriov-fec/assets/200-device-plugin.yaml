@@ -5,14 +5,14 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: sriov-device-plugin
-  namespace: n3000-operators-resources
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: sriov-plugin
-  namespace: n3000-operators-resources
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
 rules:
   - apiGroups:
       - security.openshift.io
@@ -28,7 +28,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: sriov-device-plugin
-  namespace: n3000-operators-resources
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -36,14 +36,14 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: sriov-device-plugin
-    namespace: n3000-operators-resources
+    namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
 
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: sriovdp-config
-  namespace: n3000-operators-resources
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
 data:
   config.json: |
     {
@@ -83,7 +83,7 @@ kind: DaemonSet
 apiVersion: apps/v1
 metadata:
   name: sriov-device-plugin
-  namespace: n3000-operators-resources
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
   labels:
     app: sriov-device-plugin-daemonset
 spec:

@@ -44,7 +44,7 @@ const (
 )
 
 var log = ctrl.Log.WithName("N3000ClusterController")
-var namespace = os.Getenv("NAMESPACE")
+var namespace = os.Getenv("N3000_NAMESPACE")
 
 func (r *N3000ClusterReconciler) updateStatus(n3000cluster *fpgav1.N3000Cluster,
 	status fpgav1.SyncStatus, reason string) {

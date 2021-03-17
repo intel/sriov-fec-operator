@@ -78,7 +78,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 	var reconciler N3000NodeReconciler
 
 	const tempNamespaceName = "n3000node"
-	var namespace = os.Getenv("NAMESPACE")
+	var namespace = os.Getenv("N3000_NAMESPACE")
 
 	log := klogr.New()
 	doDeconf := false

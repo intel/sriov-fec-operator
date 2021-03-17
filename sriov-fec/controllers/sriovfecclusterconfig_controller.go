@@ -41,7 +41,7 @@ const (
 	DEFAULT_CLUSTER_CONFIG_NAME = "config"
 )
 
-var NAMESPACE = os.Getenv("NAMESPACE")
+var NAMESPACE = os.Getenv("SRIOV_FEC_NAMESPACE")
 
 // SriovFecClusterConfigReconciler reconciles a SriovFecClusterConfig object
 type SriovFecClusterConfigReconciler struct {

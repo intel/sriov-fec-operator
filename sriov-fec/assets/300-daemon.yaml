@@ -5,14 +5,14 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: sriov-fec-daemon
-  namespace: n3000-operators-resources
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: sriov-fec-daemon
-  namespace: n3000-operators-resources
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
 rules:
 - apiGroups:
   - sriovfec.intel.com
@@ -41,18 +41,18 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: sriov-fec-daemon
-  namespace: n3000-operators-resources
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: sriov-fec-daemon
-  namespace: n3000-operators-resources
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
 subjects:
 - kind: ServiceAccount
   name: sriov-fec-daemon
-  namespace: n3000-operators-resources
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
 userNames:
-- system:serviceaccount:n3000-operators-resources:sriov-fec-daemon
+- system:serviceaccount:{{ .SRIOV_FEC_NAMESPACE }}:sriov-fec-daemon
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -81,12 +81,12 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: sriov-fec-daemon
-  namespace: n3000-operators-resources
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
 roleRef:
   kind: ClusterRole
   name: sriov-fec-daemon
   apiGroup: rbac.authorization.k8s.io
-  namespace: n3000-operators-resources
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
 
 ---
 apiVersion: apps/v1
@@ -95,7 +95,7 @@ metadata:
   labels:
     app: sriov-fec-daemonset
   name: sriov-fec-daemonset
-  namespace: n3000-operators-resources
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
   annotations:
     openshift.io/scc: sriov-fec-daemon
 spec:
@@ -144,7 +144,7 @@ spec:
           mountPath: /sriov_config/config
           readOnly: true
         env:
-          - name: NAMESPACE
+          - name: SRIOV_FEC_NAMESPACE
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace

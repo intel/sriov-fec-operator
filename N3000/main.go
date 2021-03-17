@@ -103,7 +103,7 @@ func main() {
 	}
 
 	owner := &appsv1.Deployment{}
-	namespace := os.Getenv("NAMESPACE")
+	namespace := os.Getenv("N3000_NAMESPACE")
 	err = c.Get(context.Background(), client.ObjectKey{
 		Namespace: namespace,
 		Name:      operatorDeploymentName,

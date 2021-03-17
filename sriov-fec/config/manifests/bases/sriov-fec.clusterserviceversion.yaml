@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020-2021 Intel Corporation
-
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
@@ -19,7 +18,7 @@ spec:
       name: sriovfecclusterconfigs.sriovfec.intel.com
       resources:
       - kind: SriovFecNodeConfig
-        name: worker
+        name: node
         version: v1
       specDescriptors:
       - description: List of node configurations
@@ -34,9 +33,13 @@ spec:
         path: syncStatus
       version: v1
     - description: SriovFecNodeConfig is the Schema for the sriovfecnodeconfigs API
-      displayName: Sriov Fec Node Config
+      displayName: SriovFecNodeConfig
       kind: SriovFecNodeConfig
       name: sriovfecnodeconfigs.sriovfec.intel.com
+      resources:
+      - kind: SriovFecNodeConfig
+        name: node
+        version: v1
       specDescriptors:
       - description: List of PhysicalFunctions configs
         displayName: Physical Functions

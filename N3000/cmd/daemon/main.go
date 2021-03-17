@@ -42,9 +42,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	namespace := os.Getenv("NAMESPACE")
+	namespace := os.Getenv("N3000_NAMESPACE")
 	if namespace == "" {
-		setupLog.Error(nil, "NAMESPACE environment variable is empty")
+		setupLog.Error(nil, "N3000_NAMESPACE environment variable is empty")
 		os.Exit(1)
 	}
 

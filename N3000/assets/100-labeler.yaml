@@ -5,7 +5,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: supported-accelerators
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 data:
   accelerators.json: |
     {
@@ -28,14 +28,14 @@ data:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: n3000-discovery
-  namespace: n3000-operators-resources
+  name: accelerator-discovery
+  namespace: "{{ .N3000_NAMESPACE }}"
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: n3000-discovery
+  name: accelerator-discovery
 rules:
 - apiGroups: [""]
   resources: ["nodes"]
@@ -45,44 +45,44 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: n3000-discovery
+  name: accelerator-discovery
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: n3000-discovery
-  namespace: n3000-operators-resources
+  name: accelerator-discovery
+  namespace: "{{ .N3000_NAMESPACE }}"
 subjects:
 - kind: ServiceAccount
-  name: n3000-discovery
-  namespace: n3000-operators-resources
+  name: accelerator-discovery
+  namespace: "{{ .N3000_NAMESPACE }}"
 userNames:
-- system:serviceaccount:n3000-operators-resources:n3000-discovery
+- system:serviceaccount:{{ .N3000_NAMESPACE }}:accelerator-discovery
 
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   labels:
-    app: n3000-discovery
-  name: n3000-discovery
-  namespace: n3000-operators-resources
+    app: accelerator-discovery
+  name: accelerator-discovery
+  namespace: "{{ .N3000_NAMESPACE }}"
 spec:
   minReadySeconds: 10
   selector:
     matchLabels:
-      app: n3000-discovery
+      app: accelerator-discovery
   template:
     metadata:
       labels:
-        app: n3000-discovery
-      name: n3000-discovery
+        app: accelerator-discovery
+      name: accelerator-discovery
     spec:
-      serviceAccount: n3000-discovery
-      serviceAccountName: n3000-discovery
+      serviceAccount: accelerator-discovery
+      serviceAccountName: accelerator-discovery
       containers:
       - image: "{{ .N3000_LABELER_IMAGE }}"
         imagePullPolicy: IfNotPresent
-        name: n3000-discovery
+        name: accelerator-discovery
         securityContext:
           readOnlyRootFilesystem: true
         volumeMounts:

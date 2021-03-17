@@ -18,7 +18,7 @@ spec:
       name: n3000clusters.fpga.intel.com
       resources:
       - kind: N3000Node
-        name: n3000-worker
+        name: node
         version: v1
       specDescriptors:
       - description: List of the nodes with their devices to be updated
@@ -30,9 +30,13 @@ spec:
         path: syncStatus
       version: v1
     - description: N3000Node is the Schema for the n3000nodes API
-      displayName: N3000 Node
+      displayName: N3000Node
       kind: N3000Node
       name: n3000nodes.fpga.intel.com
+      resources:
+      - kind: N3000Node
+        name: node
+        version: v1
       specDescriptors:
       - description: Fortville devices to be updated
         displayName: Fortville

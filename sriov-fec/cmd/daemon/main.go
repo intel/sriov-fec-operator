@@ -42,9 +42,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	ns := os.Getenv("NAMESPACE")
+	ns := os.Getenv("SRIOV_FEC_NAMESPACE")
 	if ns == "" {
-		setupLog.Error(nil, "NAMESPACE environment variable is empty")
+		setupLog.Error(nil, "SRIOV_FEC_NAMESPACE environment variable is empty")
 		os.Exit(1)
 	}
 
