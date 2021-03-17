@@ -22,6 +22,7 @@ rules:
   - nodes
   verbs:
   - list
+  - watch
 - apiGroups:
   - apps
   resources:

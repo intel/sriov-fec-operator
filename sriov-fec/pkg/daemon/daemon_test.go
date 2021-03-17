@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -276,6 +277,41 @@ var _ = Describe("SriovDaemonTest", func() {
 			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
 			Expect(nodeConfigs.Items).To(HaveLen(1))
 			Expect(osExecMock.verify()).To(Succeed())
+		})
+
+		var _ = It("will update status condition", func() {
+
+			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
+			Expect(k8sClient.Create(context.TODO(), &data.SriovFecNodeConfig)).To(Succeed())
+
+			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
+
+			nodeConfig := &sriov.SriovFecNodeConfig{}
+			nn := data.GetNamespacedName()
+			Expect(k8sClient.Get(context.TODO(), nn, nodeConfig)).To(Succeed())
+
+			reconciler.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationUnknown, "test unknown")
+
+			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
+			Expect(nodeConfigs.Items).To(HaveLen(1))
+			Expect(nodeConfigs.Items[0].Status.Conditions).To(HaveLen(1))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Type).To(Equal(ConfigurationCondition))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Reason).To(Equal(string(ConfigurationUnknown)))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Message).To(Equal("test unknown"))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].ObservedGeneration).To(Equal(int64(1)))
+
+			reconciler.updateCondition(nodeConfig, metav1.ConditionTrue, ConfigurationSucceeded, "test succeeded")
+
+			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
+			Expect(nodeConfigs.Items).To(HaveLen(1))
+			Expect(nodeConfigs.Items[0].Status.Conditions).To(HaveLen(1))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Type).To(Equal(ConfigurationCondition))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Reason).To(Equal(string(ConfigurationSucceeded)))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Message).To(Equal("test succeeded"))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].ObservedGeneration).To(Equal(int64(1)))
 		})
 	})
 

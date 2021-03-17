@@ -26,10 +26,57 @@ import (
 )
 
 const (
-	conditionConfigured = "Configured"
-	conditionInProgress = "InProgress"
-	resyncPeriod        = time.Minute
+	resyncPeriod = time.Minute
 )
+
+type ConfigurationConditionReason string
+
+const (
+	ConfigurationCondition    string                       = "Configured"
+	ConfigurationUnknown      ConfigurationConditionReason = "Unknown"
+	ConfigurationInProgress   ConfigurationConditionReason = "InProgress"
+	ConfigurationFailed       ConfigurationConditionReason = "Failed"
+	ConfigurationNotRequested ConfigurationConditionReason = "NotRequested"
+	ConfigurationSucceeded    ConfigurationConditionReason = "Succeeded"
+)
+
+func (r *NodeConfigReconciler) updateCondition(nc *sriovv1.SriovFecNodeConfig, status metav1.ConditionStatus,
+	reason ConfigurationConditionReason, msg string) {
+	log := r.log.WithName("updateCondition")
+	c := metav1.Condition{
+		Type:               ConfigurationCondition,
+		Status:             status,
+		Reason:             string(reason),
+		Message:            msg,
+		ObservedGeneration: nc.GetGeneration(),
+	}
+	if err := r.updateStatus(nc, []metav1.Condition{c}); err != nil {
+		log.Error(err, "failed to update SriovFecNodeConfig condition")
+	}
+}
+
+func (r *NodeConfigReconciler) updateStatus(nc *sriovv1.SriovFecNodeConfig, c []metav1.Condition) error {
+	log := r.log.WithName("updateStatus")
+
+	inv, err := getSriovInventory(log)
+	if err != nil {
+		log.Error(err, "failed to obtain sriov inventory for the node")
+		return err
+	}
+	nodeStatus := sriovv1.SriovFecNodeConfigStatus{Inventory: *inv}
+
+	for _, condition := range c {
+		meta.SetStatusCondition(&nodeStatus.Conditions, condition)
+	}
+
+	nc.Status = nodeStatus
+	if err := r.Status().Update(context.Background(), nc); err != nil {
+		log.Error(err, "failed to update SriovFecNode status")
+		return err
+	}
+
+	return nil
+}
 
 type NodeConfigReconciler struct {
 	client.Client
@@ -118,116 +165,99 @@ func (r *NodeConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		log.Error(err, "Get() failed")
 		return reconcile.Result{}, err
 	}
-	log.Info("obtained nodeConfig", "generation", nodeConfig.GetGeneration())
-
-	inProgressCondition := metav1.Condition{
-		Type:               conditionInProgress,
-		Status:             metav1.ConditionFalse,
-		Message:            "Configuring",
-		ObservedGeneration: nodeConfig.GetGeneration(),
-		Reason:             "StatusDoesNotMatchConfig",
-	}
-
-	configuredCondition := metav1.Condition{
-		Type:               conditionConfigured,
-		Status:             metav1.ConditionTrue,
-		Message:            "Configured successfully",
-		ObservedGeneration: nodeConfig.GetGeneration(),
-		Reason:             "ConfigurationSucceeded",
-	}
-
 	skipStatusUpdate := false
-	if len(nodeConfig.Spec.PhysicalFunctions) > 0 {
-		inv, err := getSriovInventory(log)
-		if err != nil {
-			log.Error(err, "failed to obtain sriov inventory for the node")
+
+	if len(nodeConfig.Spec.PhysicalFunctions) == 0 {
+		log.Info("Nothing to do")
+		r.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationNotRequested, "Inventory up to date")
+		return reconcile.Result{}, nil
+	}
+
+	inv, err := getSriovInventory(log)
+	if err != nil {
+		log.Error(err, "failed to obtain sriov inventory for the node")
+		r.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationFailed, err.Error())
+		return reconcile.Result{}, err
+	}
+
+	currentCondition := meta.FindStatusCondition(nodeConfig.Status.Conditions, ConfigurationCondition)
+	if currentCondition != nil {
+		if reflect.DeepEqual(*inv, nodeConfig.Status.Inventory) && currentCondition.ObservedGeneration == nodeConfig.GetGeneration() {
+			return reconcile.Result{RequeueAfter: resyncPeriod}, nil
+		}
+
+		currentCondition.Status = metav1.ConditionFalse
+		currentCondition.Reason = string(ConfigurationInProgress)
+		currentCondition.Message = "Configuration started"
+		if err := r.updateStatus(nodeConfig, []metav1.Condition{*currentCondition}); err != nil {
+			log.Error(err, "failed to update current SriovFecNode configuration condition")
 			return reconcile.Result{}, err
-		}
-
-		configuredConditionGeneration := meta.FindStatusCondition(nodeConfig.Status.Conditions, conditionConfigured)
-		if configuredConditionGeneration != nil {
-			if reflect.DeepEqual(*inv, nodeConfig.Status.Inventory) && configuredConditionGeneration.ObservedGeneration == nodeConfig.GetGeneration() {
-				log.Info("status matches existing config, nothing to do")
-				return reconcile.Result{RequeueAfter: resyncPeriod}, nil
-			}
-		}
-
-		meta.SetStatusCondition(&nodeConfig.Status.Conditions, inProgressCondition)
-		if err := r.Status().Update(context.Background(), nodeConfig); err != nil {
-			log.Error(err, "failed to update NodeConfig status")
-			return reconcile.Result{}, err
-		}
-
-		var configurationErr error
-
-		dhErr := r.drainHelper.Run(func(c context.Context) bool {
-			missingParams, err := r.nodeConfigurator.isAnyKernelParamsMissing()
-			if err != nil {
-				log.Error(err, "failed to check for missing params")
-				configurationErr = err
-				return true
-			}
-
-			if missingParams {
-				log.Info("missing kernel params")
-
-				err := r.nodeConfigurator.addMissingKernelParams()
-				if err != nil {
-					log.Error(err, "failed to add missing params")
-					configurationErr = err
-					return true
-				}
-
-				log.Info("added kernel params - rebooting")
-				if err := r.nodeConfigurator.rebootNode(); err != nil {
-					log.Error(err, "failed to request a node reboot")
-					configurationErr = err
-					return true
-				}
-				skipStatusUpdate = true
-				return false // leave node cordoned & keep the leadership
-			}
-			if err := r.nodeConfigurator.applyConfig(nodeConfig.Spec); err != nil {
-				log.Error(err, "failed applying new PF/VF configuration")
-				configurationErr = err
-				return true
-			}
-
-			configurationErr = r.restartDevicePlugin()
-			return true
-		}, !nodeConfig.Spec.DrainSkip)
-
-		if dhErr != nil {
-			log.Error(dhErr, "drainhelper returned an error")
-			configuredCondition.Status = metav1.ConditionFalse
-			configuredCondition.Reason = "Unknown"
-			configuredCondition.Message = dhErr.Error()
-		}
-
-		if configurationErr != nil {
-			log.Error(configurationErr, "error during configuration")
-			configuredCondition.Status = metav1.ConditionFalse
-			configuredCondition.Reason = "ConfigurationFailed"
-			configuredCondition.Message = configurationErr.Error()
 		}
 	}
+
+	var configurationErr, dhErr error
+
+	dhErr = r.drainHelper.Run(func(c context.Context) bool {
+		missingParams, err := r.nodeConfigurator.isAnyKernelParamsMissing()
+		if err != nil {
+			log.Error(err, "failed to check for missing params")
+			configurationErr = err
+			return true
+		}
+
+		if missingParams {
+			log.Info("missing kernel params")
+
+			err := r.nodeConfigurator.addMissingKernelParams()
+			if err != nil {
+				log.Error(err, "failed to add missing params")
+				configurationErr = err
+				return true
+			}
+
+			log.Info("added kernel params - rebooting")
+			if err := r.nodeConfigurator.rebootNode(); err != nil {
+				log.Error(err, "failed to request a node reboot")
+				configurationErr = err
+				return true
+			}
+			skipStatusUpdate = true
+			return false // leave node cordoned & keep the leadership
+		}
+		if err := r.nodeConfigurator.applyConfig(nodeConfig.Spec); err != nil {
+			log.Error(err, "failed applying new PF/VF configuration")
+			configurationErr = err
+			return true
+		}
+
+		configurationErr = r.restartDevicePlugin()
+		return true
+	}, !nodeConfig.Spec.DrainSkip)
 
 	if skipStatusUpdate {
 		log.Info("status update skipped - CR will be handled again after node reboot")
 		return reconcile.Result{}, nil
 	}
 
-	meta.SetStatusCondition(&nodeConfig.Status.Conditions, configuredCondition)
+	if dhErr != nil {
+		log.Error(dhErr, "drainhelper returned an error")
+		r.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationUnknown, dhErr.Error())
+		return reconcile.Result{}, err
+	}
+
+	if configurationErr != nil {
+		log.Error(configurationErr, "error during configuration")
+		r.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationFailed, configurationErr.Error())
+		return reconcile.Result{}, err
+	}
 
 	if err := r.updateInventory(nodeConfig); err != nil {
+		log.Error(err, "error during updateInventory")
+		r.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationFailed, err.Error())
 		return reconcile.Result{}, err
 	}
 
-	if err := r.Status().Update(context.Background(), nodeConfig); err != nil {
-		log.Error(err, "failed to update NodeConfig status")
-		return reconcile.Result{}, err
-	}
-
+	r.updateCondition(nodeConfig, metav1.ConditionTrue, ConfigurationSucceeded, "Configured successfully")
 	log.Info("Reconciled")
 
 	return reconcile.Result{RequeueAfter: resyncPeriod}, nil
