@@ -161,7 +161,7 @@ bundle: check-operator-sdk-version manifests kustomize
 	operator-sdk bundle validate ./bundle
 	FOLDER=. COPYRIGHT_FILE=../COPYRIGHT ../copyright.sh
 	cat ../COPYRIGHT bundle.Dockerfile >bundle.tmp
-	printf "\nLABEL com.redhat.openshift.versions=\"v4.6\"\n" >> bundle.tmp
+	printf "\nLABEL com.redhat.openshift.versions=\"=v4.6\"\n" >> bundle.tmp
 	printf "\nCOPY TEMP_LICENSE_COPY /licenses/LICENSE\n" >> bundle.tmp
 	mv bundle.tmp bundle.Dockerfile
 
