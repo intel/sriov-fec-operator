@@ -60,4 +60,4 @@ image-n3000-monitoring:
 push-n3000-monitoring:
 	podman push $(N3000_MONITORING_IMAGE) --tls-verify=$(TLS_VERIFY)
 
-build_all: all image-n3000-monitoring push-n3000-monitoring
+build_all: image-n3000-monitoring push-n3000-monitoring

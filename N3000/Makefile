@@ -211,4 +211,4 @@ image-bundle: bundle
 push-bundle:
 	podman push $(BUNDLE_IMG) --tls-verify=$(TLS_VERIFY)
 
-build_all: all image push
+build_all: image push
