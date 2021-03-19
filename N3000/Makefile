@@ -172,7 +172,7 @@ push-n3000-daemon:
 .PHONY: image-n3000-operator
 image-n3000-operator:
 	cp ../LICENSE TEMP_LICENSE_COPY
-	podman build . -t $(N3000_OPERATOR_IMAGE)
+	podman build . -t $(N3000_OPERATOR_IMAGE) --build-arg=VERSION=$(IMG_VERSION)
 
 .PHONY: push-n3000-operator
 push-n3000-operator:

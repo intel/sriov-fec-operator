@@ -28,7 +28,7 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-all: exporter image-n3000-monitoring
+all: exporter image
 
 # Run tests
 test: fmt vet
@@ -51,13 +51,13 @@ vet:
 	go vet ./...
 
 # Build/push exporter image
-.PHONY: image-n3000-monitoring
-image-n3000-monitoring:
+.PHONY: image
+image:
 	cp ../LICENSE TEMP_LICENSE_COPY
 	podman build . -t $(N3000_MONITORING_IMAGE) --build-arg=OPAE_VERSION=$(OPAE_VERSION) --build-arg=VERSION=$(IMG_VERSION)
 
-.PHONY: push-n3000-monitoring
-push-n3000-monitoring:
+.PHONY: push-image
+push-image:
 	podman push $(N3000_MONITORING_IMAGE) --tls-verify=$(TLS_VERIFY)
 
-build_all: image-n3000-monitoring push-n3000-monitoring
+build_all: image push-image

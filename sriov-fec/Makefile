@@ -135,7 +135,7 @@ push-sriov-fec-daemon:
 .PHONY: image-sriov-fec-operator
 image-sriov-fec-operator:
 	cp ../LICENSE TEMP_LICENSE_COPY
-	podman build . -t $(SRIOV_FEC_OPERATOR_IMAGE)
+	podman build . -t $(SRIOV_FEC_OPERATOR_IMAGE) --build-arg=VERSION=$(IMG_VERSION)
 
 .PHONY: push-sriov-fec-operator
 push-sriov-fec-operator:
