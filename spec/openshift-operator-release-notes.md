@@ -17,6 +17,7 @@ This document provides high-level system features, issues, and limitations infor
 
 # Release history 
 1. OpenNESS Operator for Intel® FPGA PAC N3000 v1.0.0  
+2. OpenNESS Operator for Intel® FPGA PAC N3000 v1.1.0  
 
    
 # Features for Release 
@@ -31,18 +32,26 @@ This document provides high-level system features, issues, and limitations infor
 	  - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
    - Prometheus fpgainfo exporter 
    	  - Deploys an instance of Prometheus exporter which collects metrics from the Intel® FPGA PAC N3000 card
+1. **OpenNESS Operator for Intel® FPGA PAC N3000 v1.1.0**
+   ***TODO***
 
 # Changes to Existing Features
 - **OpenNESS Operator for Intel® FPGA PAC N3000 v1.0.0**
   - There are no unsupported or discontinued features relevant to this release.
+- **OpenNESS Operator for Intel® FPGA PAC N3000 v1.1.0**
+  - ***TODO***
 
 # Fixed Issues
 - **OpenNESS Operator for Intel® FPGA PAC N3000 v1.0.0**
   - n/a - this is the first release.
+- **OpenNESS Operator for Intel® FPGA PAC N3000 v1.1.0**
+  - ***TODO***
 
 # Known Issues and Limitations
 - **OpenNESS Operator for Intel® FPGA PAC N3000 v1.0.0**
   - There are no known issues relevant to this release.
+- **OpenNESS Operator for Intel® FPGA PAC N3000 v1.1.0**
+  - ***TODO***
 
 # Release Content
 - **OpenNESS Operator for Intel® FPGA PAC N3000 v1.0.0**:
@@ -51,6 +60,8 @@ This document provides high-level system features, issues, and limitations infor
   - Prometheus fpgainfo exporter
   - Documentation
 
+- **OpenNESS Operator for Intel® FPGA PAC N3000 v1.1.0**:
+  - ***TODO***
 # Hardware and Software Compatibility
 The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - [Intel® FPGA PAC N3000 card](https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html)
@@ -69,6 +80,14 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - RTL Image: 20ww27.5-2x2x25G-5GLDPC-v1.6.1-3.0.0_unsigned.bin
 - NVM Package: v7.30
 
+**OpenNESS Operator for Intel® FPGA PAC N3000 v1.1.0** was tested using the following:
+- OpenShift: 4.6.16
+- OS: Red Hat Enterprise Linux CoreOS 46.82.202101301821-0
+- Kubernetes: v1.19.0+e49167a
+- RT Kernel: 4.18.0-193.41.1.rt13.91.el8_2.x86_64
+- OPAE: n3000-1.3.8-2-rte-el8
+- RTL Image: 20ww27.5-2x2x25G-5GLDPC-v1.6.1-3.0.0_unsigned.bin
+- NVM Package: v7.30
 # Package Versions 
 Package:
 - Prometheus: 1.7.1

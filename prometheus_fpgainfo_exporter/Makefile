@@ -2,7 +2,7 @@
 # Copyright (c) 2021 Intel Corporation
 
 # Current exporter  version
-VERSION ?= 1.0.0
+VERSION ?= 1.1.0
 # Current OPAE package version
 OPAE_VERSION ?= 1.3.8-2
 # Image registry

@@ -30,7 +30,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: sriov-fec-operator:v1.0.0
+        image: sriov-fec-operator:v1.1.0
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
