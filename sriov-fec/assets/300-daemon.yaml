@@ -122,6 +122,7 @@ spec:
       serviceAccountName: sriov-fec-daemon
       hostPID: true
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: sriov-fec-daemon
         image: "{{ .SRIOV_FEC_DAEMON_IMAGE }}"
