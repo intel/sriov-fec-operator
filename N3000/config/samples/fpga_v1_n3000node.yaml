@@ -5,7 +5,7 @@ apiVersion: fpga.intel.com/v1
 kind: N3000Node
 metadata:
   name: worker-0
-  namespace: n3000-operators-resources
+  namespace: vran-acceleration-operators
 spec:
   # Managed by n3000-controller-manager
   fpga:

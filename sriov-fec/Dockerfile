@@ -25,15 +25,12 @@ FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="OpenNESS SRIOV-FEC Operator for Intel® FPGA PAC N3000" \
+LABEL name="OpenNESS SR-IOV FEC Operator for Intel® FPGA PAC N3000 and Intel® vRAN Dedicated Accelerator ACC100" \
     vendor="Intel Corporation" \
     version=$VERSION \
     release="1" \
-    summary="OpenNESS Operator for Intel® FPGA PAC N3000 for 5G Cloudnative/vRAN deployment" \
-    description="OpenNESS Operator for Intel® FPGA PAC N3000 for 5G Cloudnative/vRAN \
-deployment supports high perofrmance Networking interface for 5G gNB Fronthaul and Midhaul \
-and 5G Forward Error Correction offload. SR-IOV FEC container is used for configuring the \
-Virtual Functions and the Queues realted to FEC IP in the Intel® FPGA PAC N3000 for 5G."
+    summary="OpenNESS SR-IOV FEC Operator for Intel® FPGA PAC N3000 and Intel® vRAN Dedicated Accelerator ACC100 for 5G Cloudnative/vRAN deployment" \
+    description="OpenNESS SR-IOV FEC Operator for Intel® FPGA PAC N3000 and Intel® vRAN Dedicated Accelerator ACC100 for 5G Cloudnative/vRAN deployment"
 
 COPY TEMP_LICENSE_COPY /licenses/LICENSE
 

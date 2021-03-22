@@ -141,7 +141,7 @@ Once the operator/daemon detects a change to a CR related to the update of the F
 
 As an example for the vRAN use-case, the card is to be programmed with an FEC image for either Turbo (4G) or LDPC (5G) - [see the product table](https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html).
 
-To get all the nodes containing the Intel® FPGA PAC N3000 card run the following command (all the commands are run in the `n3000-operators-resources` namespace):
+To get all the nodes containing the Intel® FPGA PAC N3000 card run the following command (all the commands are run in the `vran-acceleration-operators` namespace):
 ```shell
 [user@ctrl1 /home]# oc get n3000node
 
@@ -196,7 +196,7 @@ apiVersion: fpga.intel.com/v1
 kind: N3000Cluster
 metadata:
   name: n3000
-  namespace: n3000-operators-resources
+  namespace: vran-acceleration-operators
 spec:
   nodes:
     - nodeName: "node1"
@@ -299,7 +299,7 @@ For extra verification user can check the FEC PCI devices from the node and expe
 
 Once the operator/daemon detects a change to a CR related to the update of the Intel® XL710 firmware, it tries to perform an update. It checks whether the card is already programmed with the current firmware, and accordingly either continues with an update and takes the node out of commission, if required, or reports back to the user that the firmware version loaded is up to date. The firmware for the Intel® XL710 NICs is expected to be provided by the user. The user is also responsible to verify that the firmware version is compatible with the device, see [the NVM utility link](https://downloadcenter.intel.com/download/24769/Non-Volatile-Memory-NVM-Update-Utility-for-Intel-Ethernet-Network-Adapter-700-Series). The user is required to place the firmware on an accessible HTTP server and provide an URL for it in the CR. If the file is provided correctly and the firmware is to be updated, the N3000 Daemon will update the Intel® XL710 NICs with the NVM utility provided.
 
-To get all the nodes containing the Intel® FPGA PAC N3000 card run the following command (all the commands are run in the `n3000-operators-resources` namespace):
+To get all the nodes containing the Intel® FPGA PAC N3000 card run the following command (all the commands are run in the `vran-acceleration-operators` namespace):
 ```shell
 [user@ctrl1 /home]# oc get n3000node
 
@@ -354,7 +354,7 @@ apiVersion: fpga.intel.com/v1
 kind: N3000Cluster
 metadata:
   name: n3000
-  namespace: n3000-operators-resources
+  namespace: vran-acceleration-operators
 spec:
   nodes:
     - nodeName: "node1"
@@ -440,7 +440,7 @@ apiVersion: sriovfec.intel.com/v1
 kind: SriovFecClusterConfig
 metadata:
   name: config
-  namespace: n3000-operators-resources
+  namespace: vran-acceleration-operators
 spec:
   nodes:
     - nodeName: <NODE_NAME>
@@ -489,7 +489,7 @@ The workflow of the SRIOV FEC operator is shown in the following diagram:
 
 The Intel® FPGA PAC N3000 correctly programmed with a vRAN image exposes a FEC PF device which is to be bound to PCI-PF-STUB driver in order to enable creation of the FEC VF devices. Once the FEC PF is bound to the correct driver, the user can create up to 8 VF devices to be used in Cloud Native deployment of vRAN to accelerate FEC. Once these devices are created they are to be bound to a user-space driver such as VFIO-PCI in order for them to work and be consumed in vRAN application pods. Before the VF device is used by the application, the VF's encoding and decoding queues also need to be configured - this is done via pf-bb-config application with the input from the CR used as a configuration. Each FEC PF device provides a total of 64 queues to be configured, 32 queues for uplink and 32 queues for downlink. The queues would be typically distributed evenly across the VFs.
 
-To get all the nodes containing the Intel® FPGA PAC N3000 card run the following command (all the commands are run in the `n3000-operators-resources` namespace):
+To get all the nodes containing the Intel® FPGA PAC N3000 card run the following command (all the commands are run in the `vran-acceleration-operators` namespace):
 ```shell
 [user@ctrl1 /home]# oc get sriovfecnodeconfig
 NAME             CONFIGURED
@@ -527,7 +527,7 @@ apiVersion: sriovfec.intel.com/v1
 kind: SriovFecClusterConfig
 metadata:
   name: config
-  namespace: n3000-operators-resources
+  namespace: vran-acceleration-operators
 spec:
   nodes:
     - nodeName: node1
@@ -863,10 +863,10 @@ To install the PACN3000 operator bundle perform the following steps:
 Create the project:
 
 ```shell
-[user@ctrl1 /home]# oc new-project n3000-operators-resources
+[user@ctrl1 /home]# oc new-project vran-acceleration-operators
 ```
 
-Create an operator group and the subscriptions (all the commands are run in the `n3000-operators-resources` namespace):
+Create an operator group and the subscriptions (all the commands are run in the `vran-acceleration-operators` namespace):
 
 ```shell
 [user@ctrl1 /home]#  cat <<EOF | oc apply -f -
@@ -874,10 +874,10 @@ apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
   name: n3000-operators
-  namespace: n3000-operators-resources
+  namespace: vran-acceleration-operators
 spec:
   targetNamespaces:
-    - n3000-operators-resources
+    - vran-acceleration-operators
 EOF
 ```
 
@@ -887,7 +887,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
   name: n3000-subscription
-  namespace: n3000-operators-resources 
+  namespace: vran-acceleration-operators 
 spec:
   channel: stable
   name: n3000
@@ -902,7 +902,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
   name: sriov-fec-subscription
-  namespace: n3000-operators-resources 
+  namespace: vran-acceleration-operators 
 spec:
   channel: stable
   name: sriov-fec
@@ -982,7 +982,7 @@ If the operator has been previously installed, the user needs to perform the fol
 Use the following command to identify items to delete:
 
 ```shell
-[user@ctrl1 /home]# oc get csv -n n3000-operators-resources
+[user@ctrl1 /home]# oc get csv -n vran-acceleration-operators
 
 NAME               DISPLAY                                        VERSION   REPLACES   PHASE
 n3000.v1.0.0       Intel® FPGA PAC N3000 Operator                 1.0.0                Succeeded
@@ -993,7 +993,7 @@ Then delete the items and the namespace:
 
 ```shell
 [user@ctrl1 /home]# oc delete csv n3000.v1.0.0 sriov-fec.v1.0.0
-[user@ctrl1 /home]# oc delete ns n3000-operators-resources
+[user@ctrl1 /home]# oc delete ns vran-acceleration-operators
 ```
 
 ### Setting Up Operator Registry Locally

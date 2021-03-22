@@ -5,7 +5,7 @@ apiVersion: sriovfec.intel.com/v1
 kind: SriovFecNodeConfig
 metadata:
   name: worker-0
-  namespace: n3000-operators-resources
+  namespace: vran-acceleration-operators
 spec:
   physicalFunctions:
   - pci_addr: ""

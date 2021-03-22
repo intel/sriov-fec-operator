@@ -2,7 +2,7 @@
 # Copyright (c) 2020-2021 Intel Corporation
 
 # Adds namespace to all resources.
-namespace: n3000-operators-resources
+namespace: vran-acceleration-operators
 
 # Value of this field is prepended to the
 # names of all resources, e.g. a deployment named
