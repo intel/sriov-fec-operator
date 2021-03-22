@@ -55,7 +55,9 @@ type UplinkDownlinkQueues struct {
 }
 
 type UplinkDownlink struct {
+	// +kubebuilder:validation:Minimum=0
 	Bandwidth   int                  `json:"bandwidth"`
+	// +kubebuilder:validation:Minimum=0
 	LoadBalance int                  `json:"loadBalance"`
 	Queues      UplinkDownlinkQueues `json:"queues"`
 }
@@ -115,7 +117,6 @@ type PhysicalFunctionConfig struct {
 	VFDriver string `json:"vfDriver"`
 	// VFAmount is an amount of VFs to be created
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=8
 	VFAmount int `json:"vfAmount"`
 	// BBDevConfig is a config for PF's queues
 	BBDevConfig BBDevConfig `json:"bbDevConfig"`
