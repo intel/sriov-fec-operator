@@ -1,6 +1,6 @@
 ```text
 SPDX-License-Identifier: Apache-2.0
-Copyright (c) 2020 Intel Corporation
+Copyright (c) 2020-2021 Intel Corporation
 ```
 <!-- omit in toc -->
 # OpenNESS Operator for Intel® FPGA PAC N3000
@@ -15,7 +15,7 @@ Copyright (c) 2020 Intel Corporation
     - [N3000 Daemon](#n3000-daemon)
       - [OPAE RTL Update](#opae-rtl-update)
       - [NVM Update](#nvm-update)
-  - [OpenNESS Operator for Intel® FPGA PAC N3000 (Management)](#openness-operator-for-intel-fpga-pac-n3000-management)
+  - [OpenNESS Operator for Intel® FPGA PAC N3000 (Wireless FEC Acceleration)](#openness-operator-for-intel-fpga-pac-n3000-wireless-fec-acceleration)
     - [FEC Configuration](#fec-configuration)
     - [SRIOV Device Plugin](#sriov-device-plugin)
 - [Managing NIC Devices](#managing-nic-devices)
@@ -73,7 +73,7 @@ The role of the operator for the Intel® FPGA PAC N3000 card is to orchestrate a
 The operator design for PAC N3000 is a bundle operator consisting of two distinct operators:
 
 * OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)
-* OpenNESS Operator for Intel® FPGA PAC N3000 (Management)
+* OpenNESS Operator for Intel® FPGA PAC N3000 (Wireless FEC Acceleration)
 
 It is expected that both of the operators are deployed.
 
@@ -96,7 +96,7 @@ apiVersion: fpga.intel.com/v1
 kind: N3000Cluster
 metadata:
   name: n3000
-  namespace: n3000-operator-resources
+  namespace: vran-acceleration-operators
 spec:
   nodes:
     - nodeName: node1.png.intel.com
@@ -431,7 +431,7 @@ status:
     deviceId: "0x0b30
 ```
 
-### OpenNESS Operator for Intel® FPGA PAC N3000 (Management)
+### OpenNESS Operator for Intel® FPGA PAC N3000 (Wireless FEC Acceleration)
 
 This operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications - the FEC devices are provided by Intel® FPGA PAC N3000 card programmed for the vRAN use-case. It provides functionality to create desired VFs (Virtual Functions) for the FEC device, binds them to appropriate drivers and configures the VF's queues for desired functionality in 4G or 5G deployment. It also deploys an instance of the K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources. The user interacts with the operator by providing a CR. The operator constantly monitors the state of the CR to detect any changes and acts based on the changes detected. The CR is provided per cluster configuration. The components for individual nodes can be configured by specifying appropriate values for each component per "nodeName". Once the CR is applied or updated, the operator/daemon checks if the configuration is already applied, and, if not it binds the PFs to driver, creates desired amount of VFs, binds them to driver and runs the [pf-bb-config utility](https://github.com/intel/pf-bb-config) to configure the VF queues to the desired configuration.
 
@@ -762,7 +762,6 @@ spec:
           - SYS_NICE
     name: bbdev-sample-app
     image: bbdev-sample-app:1.0
-    imagePullPolicy: Never
     command: [ "sudo", "/bin/bash", "-c", "--" ]
     args: [ "while true; do sleep 300000; done;" ]
     volumeMounts:
@@ -919,8 +918,8 @@ Verify that the operators are installed and pods are running:
 [user@ctrl1 /home]# oc get csv
 
 NAME               DISPLAY                                        VERSION   REPLACES   PHASE
-n3000.v1.0.0       Intel® FPGA PAC N3000 Operator                 1.0.0                Succeeded
-sriov-fec.v1.0.0   SRIOV-FEC Operator for Intel® FPGA PAC N3000   1.0.0                Succeeded
+n3000.v1.1.0       Intel® FPGA PAC N3000 Operator                 1.1.0                Succeeded
+sriov-fec.v1.1.0   SRIOV-FEC Operator for Intel® FPGA PAC N3000   1.1.0                Succeeded
 ```
 
 ```shell
@@ -967,7 +966,8 @@ spec:
 ```
 
 ## Hardware Validation Environment 
-- Intel® FPGA PAC N3000-2 
+- Intel® FPGA PAC N3000-2
+- Intel® FPGA PAC N3000-N
 - 2nd Generation Intel® Xeon® processor platform
 
 ## Summary
@@ -987,14 +987,14 @@ Use the following command to identify items to delete:
 [user@ctrl1 /home]# oc get csv -n vran-acceleration-operators
 
 NAME               DISPLAY                                        VERSION   REPLACES   PHASE
-n3000.v1.0.0       Intel® FPGA PAC N3000 Operator                 1.0.0                Succeeded
-sriov-fec.v1.0.0   SRIOV-FEC Operator for Intel® FPGA PAC N3000   1.0.0                Succeeded
+n3000.v1.1.0       Intel® FPGA PAC N3000 Operator                 1.1.0                Succeeded
+sriov-fec.v1.1.0   SRIOV-FEC Operator for Intel® FPGA PAC N3000   1.1.0                Succeeded
 ```
 
 Then delete the items and the namespace:
 
 ```shell
-[user@ctrl1 /home]# oc delete csv n3000.v1.0.0 sriov-fec.v1.0.0
+[user@ctrl1 /home]# oc delete csv n3000.v1.1.0 sriov-fec.v1.1.0
 [user@ctrl1 /home]# oc delete ns vran-acceleration-operators
 ```
 
@@ -1004,29 +1004,12 @@ If needed the user can set up a local registry for the operators' images.
 
 Prerequisite: Make sure that the images used by the operator are pushed to LOCAL_REGISTRY
 
-```shell
-# KERNEL_VERSION=<VER> ./build_images.sh -r ${LOCAL_REGISTRY} -t
-```
-
 The operator-sdk CLI is required - see [Getting started with the Operator SDK](https://docs.openshift.com/container-platform/4.6/operators/operator_sdk/osdk-getting-started.html#osdk-installing-cli_osdk-getting-started).
-
-Build and upload the bundle from the source code repository:
-
-```shell
-# cd N3000
-# N3000_IMAGE_REGISTRY=${LOCAL_REGISTRY} make bundle IMG=${LOCAL_REGISTRY}/n3000-operator:v1.0.0
-# podman build  -f bundle.Dockerfile -t n3000-operator-bundle:1.0.0 .
-# podman push n3000-operator-bundle:1.0.0 ${LOCAL_REGISTRY}/n3000-operator-bundle:1.0.0 --tls-verify=false
-# cd ../sriov-fec
-# N3000_IMAGE_REGISTRY=${LOCAL_REGISTRY} make bundle IMG=${LOCAL_REGISTRY}/sriov-fec-operator:v1.0.0
-# podman build  -f bundle.Dockerfile -t sriov-fec-operator-bundle:1.0.0 .
-# podman push sriov-fec-operator-bundle:1.0.0 ${LOCAL_REGISTRY}/sriov-fec-operator-bundle:1.0.0 --tls-verify=false
-```
 
 Install OPM (if not already installed):
 
 ```shell
-# RELEASE_VERSION=v1.15.2
+# RELEASE_VERSION=v1.15.3
 # curl -LO https://github.com/operator-framework/operator-registry/releases/download/${RELEASE_VERSION}/linux-amd64-opm
 # chmod +x linux-amd64-opm
 # sudo mkdir -p /usr/local/bin/
@@ -1034,31 +1017,62 @@ Install OPM (if not already installed):
 # rm -f linux-amd64-opm
 ```
 
+Determine local registry address:
+
+```shell
+# export LOCAL_IMAGE_REGISTRY=<IP_ADDRESS>:<PORT>
+```
+
+Determine OS kernel version running on the node containing the card:
+
+```shell
+# export TEST_KERNEL_VERSION=<KERNEL_VERSION>
+```
+
+Determine path to operator repository:
+
+```shell
+# export TEST_OPERATOR_REPO_PATH=`readlink -f openshift-operator/`
+```
+
+Navigate to operator repository path:
+
+```shell
+# cd ${TEST_OPERATOR_REPO_PATH}
+```
+
+Copy OPAE installation file into ${TEST_OPERATOR_REPO_PATH}/files/opae and/or custom kernel RPM into ${TEST_OPERATOR_REPO_PATH}/files/kernel if desired (Set and pass the `KERNEL_SOURCE=file` environmental variable when using custom kernel RPM with `make build all`).
+
+Build and push images to local registry:
+
+```shell
+# IMAGE_REGISTRY=${LOCAL_IMAGE_REGISTRY} TLS_VERIFY=false KERNEL_VERSION=${TEST_KERNEL_VERSION} make build_all
+```
+
 Create and push the index image:
 
 ```shell
-# opm index add --bundles ${LOCAL_REGISTRY}/n3000-operator-bundle:1.0.0,${LOCAL_REGISTRY}/sriov-fec-operator-bundle:1.0.0 --tag ${LOCAL_REGISTRY}/n3000-operators-index:1.0.0 --skip-tls
-# podman push ${LOCAL_REGISTRY}/n3000-operators-index:1.0.0 --tls-verify=false
+# IMAGE_REGISTRY=${LOCAL_IMAGE_REGISTRY} TLS_VERIFY=false make build_index
 ```
 
-Add index to the cluster by creating a CatalogSource:
+Create the catalog source:
 
 ```shell
-cat <<EOF | oc apply -f -
+# cat <<EOF | oc apply -f -
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-    name: certified-operators
+    name: intel-operators
     namespace: openshift-marketplace
 spec:
     sourceType: grpc
-    image: ${LOCAL_REGISTRY}/n3000-operators-index:1.0.0
+    image: ${LOCAL_REGISTRY}/n3000-operators-index:1.1.0
     publisher: Intel
     displayName: N3000 operators(Local)
 EOF
 ```
 
-Wait for `packagemanifest` to be available: 
+Wait for `packagemanifest` to be available:
 
 ```shell
 [user@ctrl1 /home]# oc get packagemanifests n3000 sriov-fec
