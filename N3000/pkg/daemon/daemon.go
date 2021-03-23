@@ -77,12 +77,12 @@ func (r *N3000NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			CreateFunc: func(e event.CreateEvent) bool {
 				n3000node, ok := e.Object.(*fpgav1.N3000Node)
 				if !ok {
-					r.log.Info("Failed to convert e.Object to fpgav1.N3000Node", "e.Object", e.Object)
+					r.log.V(2).Info("Failed to convert e.Object to fpgav1.N3000Node", "e.Object", e.Object)
 					return false
 				}
 				cond := meta.FindStatusCondition(n3000node.Status.Conditions, FlashCondition)
 				if cond != nil && cond.ObservedGeneration == e.Object.GetGeneration() {
-					r.log.Info("Created object was handled previously, ignoring")
+					r.log.V(4).Info("Created object was handled previously, ignoring")
 					return false
 				}
 				return true
@@ -90,7 +90,7 @@ func (r *N3000NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 			UpdateFunc: func(e event.UpdateEvent) bool {
 				if e.ObjectOld.GetGeneration() == e.ObjectNew.GetGeneration() {
-					r.log.Info("Update ignored, generation unchanged")
+					r.log.V(4).Info("Update ignored, generation unchanged")
 					return false
 				}
 				return true
@@ -114,12 +114,12 @@ func (r *N3000NodeReconciler) CreateEmptyN3000NodeIfNeeded(c client.Client) erro
 		n3000node)
 
 	if err == nil {
-		log.Info("already exists")
+		log.V(4).Info("already exists")
 		return nil
 	}
 
 	if k8serrors.IsNotFound(err) {
-		log.Info("not found - creating")
+		log.V(2).Info("not found - creating")
 
 		n3000node = &fpgav1.N3000Node{
 			ObjectMeta: metav1.ObjectMeta{
@@ -213,19 +213,19 @@ func (r *N3000NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// N3000Node is between Operator & Daemon so we're in control of this communication channel.
 
 	if req.Namespace != r.namespace {
-		log.Info("unexpected namespace - ignoring", "expected namespace", r.namespace)
+		log.V(4).Info("unexpected namespace - ignoring", "expected namespace", r.namespace)
 		return ctrl.Result{}, nil
 	}
 
 	if req.Name != r.nodeName {
-		log.Info("CR intended for another node - ignoring", "expected name", r.nodeName)
+		log.V(4).Info("CR intended for another node - ignoring", "expected name", r.nodeName)
 		return ctrl.Result{}, nil
 	}
 
 	n3000node := &fpgav1.N3000Node{}
 	if err := r.Client.Get(ctx, req.NamespacedName, n3000node); err != nil {
 		if k8serrors.IsNotFound(err) {
-			log.Info("reconciled n3000node not found")
+			log.V(2).Info("reconciled n3000node not found")
 			return ctrl.Result{}, r.CreateEmptyN3000NodeIfNeeded(r.Client)
 		}
 		log.Error(err, "Get(n3000node) failed")
@@ -240,7 +240,7 @@ func (r *N3000NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	if n3000node.Spec.FPGA == nil && n3000node.Spec.Fortville == nil {
-		log.Info("Nothing to do")
+		log.V(4).Info("Nothing to do")
 		r.updateFlashCondition(n3000node, metav1.ConditionFalse, FlashNotRequested, "Inventory up to date")
 		return ctrl.Result{}, nil
 	}
@@ -307,6 +307,6 @@ func (r *N3000NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		r.updateFlashCondition(n3000node, metav1.ConditionTrue, FlashSucceeded, "Flashed successfully")
 	}
 
-	log.Info("Reconciled")
+	log.V(2).Info("Reconciled")
 	return ctrl.Result{}, nil
 }

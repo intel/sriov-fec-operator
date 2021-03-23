@@ -74,13 +74,13 @@ type N3000ClusterReconciler struct {
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=get;create;update
 
 func (r *N3000ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log.Info("Reconciling N3000ClusterReconciler", "name", req.Name, "namespace", req.Namespace)
+	log.V(2).Info("Reconciling N3000ClusterReconciler", "name", req.Name, "namespace", req.Namespace)
 
 	clusterConfig := &fpgav1.N3000Cluster{}
 	err := r.Client.Get(ctx, req.NamespacedName, clusterConfig)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
-			log.Info("N3000Cluster config not found", "namespacedName", req.NamespacedName)
+			log.V(2).Info("N3000Cluster config not found", "namespacedName", req.NamespacedName)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -89,7 +89,7 @@ func (r *N3000ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// To simplify things, only specific CR is honored (Name: DEFAULT_N3000_CONFIG_NAME, Namespace: namespace)
 	// Any other N3000Cluster config is ignored
 	if req.Namespace != namespace || req.Name != DEFAULT_N3000_CONFIG_NAME {
-		log.Info("received N3000Cluster, but it not an expected one - it'll be ignored",
+		log.V(2).Info("received N3000Cluster, but it not an expected one - it'll be ignored",
 			"expectedNamespace", namespace, "expectedName", DEFAULT_N3000_CONFIG_NAME)
 
 		r.updateStatus(clusterConfig, fpgav1.IgnoredSync, fmt.Sprintf(
@@ -129,7 +129,7 @@ func (r *N3000ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 func (r *N3000ClusterReconciler) updateOrCreateNodeConfig(nodeCfg *fpgav1.N3000Node) error {
 	log := r.Log.WithName("updateOrCreateNodeConfig")
-	log.Info("syncing node config", "name", nodeCfg.Name)
+	log.V(2).Info("syncing node config", "name", nodeCfg.Name)
 
 	prev := &fpgav1.N3000Node{}
 
@@ -138,7 +138,7 @@ func (r *N3000ClusterReconciler) updateOrCreateNodeConfig(nodeCfg *fpgav1.N3000N
 		types.NamespacedName{Namespace: nodeCfg.Namespace, Name: nodeCfg.Name}, prev); err != nil {
 
 		if errors.IsNotFound(err) {
-			log.Info("old NodeConfig not found - creating", "name", nodeCfg.Name)
+			log.V(4).Info("old NodeConfig not found - creating", "name", nodeCfg.Name)
 			if err := r.Create(context.TODO(), nodeCfg); err != nil {
 				log.Error(err, "failed to create NodeConfig", "name", nodeCfg.Name)
 				return err
@@ -148,7 +148,7 @@ func (r *N3000ClusterReconciler) updateOrCreateNodeConfig(nodeCfg *fpgav1.N3000N
 			return err
 		}
 	} else {
-		log.Info("previous NodeConfig found - updating", "name", nodeCfg.Name)
+		log.V(4).Info("previous NodeConfig found - updating", "name", nodeCfg.Name)
 
 		prev.Spec = nodeCfg.Spec
 		if err := r.Update(context.TODO(), prev); err != nil {
@@ -214,7 +214,7 @@ func (r *N3000ClusterReconciler) removeOldNodes(newNodeCfgs []*fpgav1.N3000Node)
 		}
 
 		if del {
-			log.Info("deleting existing N3000Node", "name", node.GetName())
+			log.V(2).Info("deleting existing N3000Node", "name", node.GetName())
 			if err := r.Delete(context.TODO(), &node, &client.DeleteOptions{}); err != nil {
 				log.Error(err, "failed to delete existing N3000Node", "name", node.GetName())
 				return err

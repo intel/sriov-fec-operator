@@ -127,6 +127,8 @@ spec:
       - image: "{{ .N3000_DAEMON_IMAGE }}"
         imagePullPolicy: IfNotPresent
         name: n3000-daemon
+        args:
+        - --zap-log-level=4
         volumeMounts:
           - name: devchar
             mountPath: /dev/char

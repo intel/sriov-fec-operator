@@ -85,10 +85,10 @@ func (m *Manager) Load(ctx context.Context, setKernelVar bool) error {
 		log.Error(err, "failed to build template vars")
 		return err
 	}
-	log.Info("template vars", "tv", tv)
+	log.V(2).Info("template vars", "tv", tv)
 
 	for idx := range m.Assets {
-		log.Info("loading asset", "path", m.Assets[idx].Path)
+		log.V(4).Info("loading asset", "path", m.Assets[idx].Path)
 
 		m.Assets[idx].log = m.Log.WithName("asset")
 		m.Assets[idx].substitutions = tv
@@ -98,7 +98,7 @@ func (m *Manager) Load(ctx context.Context, setKernelVar bool) error {
 			return err
 		}
 
-		log.Info("asset loaded successfully", "path", m.Assets[idx].Path, "objects", len(m.Assets[idx].objects))
+		log.V(2).Info("asset loaded successfully", "path", m.Assets[idx].Path, "objects", len(m.Assets[idx].objects))
 	}
 
 	return nil
@@ -109,7 +109,7 @@ func (m *Manager) Deploy(ctx context.Context) error {
 	log := m.Log.WithName("Deploy()")
 
 	for _, asset := range m.Assets {
-		log.Info("deploying asset", "path", asset.Path, "retries",
+		log.V(4).Info("deploying asset", "path", asset.Path, "retries",
 			asset.BlockingReadiness.Retries, "delay", asset.BlockingReadiness.Delay.String(),
 			"objects", len(asset.objects))
 
@@ -118,7 +118,7 @@ func (m *Manager) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		log.Info("asset created successfully", "path", asset.Path)
+		log.V(2).Info("asset created successfully", "path", asset.Path)
 
 		if err := asset.waitUntilReady(ctx, m.Client); err != nil {
 			log.Error(err, "waitUntilReady")

@@ -21,7 +21,7 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 
 	devices := pci.ListDevices()
 	if len(devices) == 0 {
-		log.Info("got 0 pci devices")
+		log.V(4).Info("got 0 pci devices")
 		err := errors.New("pci.ListDevices() returned 0 devices")
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 
 		driver, err := utils.GetDriverName(device.Address)
 		if err != nil {
-			log.Info("unable to get driver for device", "pci", device.Address, "reason", err.Error())
+			log.V(4).Info("unable to get driver for device", "pci", device.Address, "reason", err.Error())
 			driver = ""
 		}
 
@@ -74,13 +74,13 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 
 			driver, err := utils.GetDriverName(vf)
 			if err != nil {
-				log.Info("failed to get driver name for VF", "pci", vf, "pf", device.Address, "reason", err.Error())
+				log.V(4).Info("failed to get driver name for VF", "pci", vf, "pf", device.Address, "reason", err.Error())
 			} else {
 				vfInfo.Driver = driver
 			}
 
 			if vfDeviceInfo := pci.GetDevice(vf); vfDeviceInfo == nil {
-				log.Info("failed to get device info for vf", "pci", vf)
+				log.V(4).Info("failed to get device info for vf", "pci", vf)
 			} else {
 				vfInfo.DeviceID = vfDeviceInfo.Product.ID
 			}

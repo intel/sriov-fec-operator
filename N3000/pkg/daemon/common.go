@@ -77,7 +77,7 @@ func getImage(path, url, checksum string, log logr.Logger) error {
 			return err
 		}
 		if ret {
-			log.Info("Image already downloaded", "path", path)
+			log.V(4).Info("Image already downloaded", "path", path)
 			return nil
 		}
 		err = os.Remove(path)
@@ -89,7 +89,7 @@ func getImage(path, url, checksum string, log logr.Logger) error {
 		return err
 	}
 
-	log.Info("Downloading image", "url", url)
+	log.V(4).Info("Downloading image", "url", url)
 	if err := downloadImage(path, url, checksum); err != nil {
 		log.Error(err, "Unable to download Image")
 		return err
@@ -102,7 +102,7 @@ func createFolder(path string, log logr.Logger) error {
 	if os.IsNotExist(err) {
 		errDir := os.MkdirAll(path, 0777)
 		if errDir != nil {
-			log.Info("Unable to create", "path", path)
+			log.V(4).Info("Unable to create", "path", path)
 			return err
 		}
 	}
@@ -111,12 +111,12 @@ func createFolder(path string, log logr.Logger) error {
 
 func runExec(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
 	if dryRun {
-		log.Info("Run exec in dryrun mode", "command", cmd)
+		log.V(2).Info("Run exec in dryrun mode", "command", cmd)
 		return "", nil
 	}
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Info("Executed unsuccessfully", "cmd", cmd,
+		log.V(2).Info("Executed unsuccessfully", "cmd", cmd,
 			"output", string(output))
 		return "", err
 	}
@@ -132,14 +132,14 @@ func (l *logWriter) Write(p []byte) (n int, err error) {
 	o := strings.TrimSpace(string(p))
 	// Split the input string to avoid clumping of multiple lines
 	for _, s := range strings.FieldsFunc(o, func(r rune) bool { return r == '\n' || r == '\r' }) {
-		l.Info(strings.TrimSpace(s), "stream", l.stream)
+		l.V(2).Info(strings.TrimSpace(s), "stream", l.stream)
 	}
 	return len(p), nil
 }
 
 func runExecWithLog(cmd *exec.Cmd, log logr.Logger, dryRun bool) error {
 	if dryRun {
-		log.Info("Run exec in dryrun mode", "command", cmd)
+		log.V(2).Info("Run exec in dryrun mode", "command", cmd)
 		return nil
 	}
 	cmd.Stdout = &logWriter{log, "stdout"}

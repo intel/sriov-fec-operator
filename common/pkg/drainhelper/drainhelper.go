@@ -34,7 +34,7 @@ type logWriter struct {
 }
 
 func (w logWriter) Write(p []byte) (n int, err error) {
-	w.log.Info(strings.TrimSuffix(string(p), "\n"))
+	w.log.V(4).Info(strings.TrimSuffix(string(p), "\n"))
 	return len(p), nil
 }
 
@@ -62,7 +62,7 @@ func NewDrainHelper(l logr.Logger, cs *clientset.Clientset, nodeName, namespace 
 			drainTimeout = val
 		}
 	}
-	log.Info("drain settings", "timeout seconds", drainTimeout)
+	log.V(2).Info("drain settings", "timeout seconds", drainTimeout)
 
 	leaseDur := leaseDurationDefault
 	leaseDurStr := os.Getenv(leaseDurationEnvVarName)
@@ -75,7 +75,7 @@ func NewDrainHelper(l logr.Logger, cs *clientset.Clientset, nodeName, namespace 
 			leaseDur = val
 		}
 	}
-	log.Info("lease settings", "duration seconds", leaseDur)
+	log.V(2).Info("lease settings", "duration seconds", leaseDur)
 
 	lock := &resourcelock.LeaseLock{
 		LeaseMeta: metav1.ObjectMeta{
@@ -142,7 +142,7 @@ func (dh *DrainHelper) Run(f func(context.Context) bool, drain bool) error {
 		// This however is not critical - if the leader will not refresh the lease,
 		// another node will take it after some time.
 
-		dh.log.Info("releasing the lock (bug mitigation)")
+		dh.log.V(4).Info("releasing the lock (bug mitigation)")
 
 		leaderElectionRecord, _, err := dh.leaseLock.Get(context.Background())
 		if err != nil {
@@ -163,7 +163,7 @@ func (dh *DrainHelper) Run(f func(context.Context) bool, drain bool) error {
 	lec := dh.leaderElectionConfig
 	lec.Callbacks = leaderelection.LeaderCallbacks{
 		OnStartedLeading: func(ctx context.Context) {
-			log.Info("started leading")
+			log.V(2).Info("started leading")
 
 			uncordonAndFreeLeadership := func() {
 				// always try to uncordon the node
@@ -188,9 +188,9 @@ func (dh *DrainHelper) Run(f func(context.Context) bool, drain bool) error {
 				}
 			}
 
-			log.Info("worker function - start")
+			log.V(4).Info("worker function - start")
 			performUncordon := f(ctx)
-			log.Info("worker function - end", "performUncordon", performUncordon)
+			log.V(4).Info("worker function - end", "performUncordon", performUncordon)
 			if drain && performUncordon {
 				uncordonAndFreeLeadership()
 			}
@@ -233,13 +233,13 @@ func (dh *DrainHelper) cordonAndDrain(ctx context.Context) error {
 	backoff := wait.Backoff{Steps: 5, Duration: 15 * time.Second, Factor: 2}
 	f := func() (bool, error) {
 		if err := drain.RunCordonOrUncordon(dh.drainer, node, true); err != nil {
-			log.Info("failed to cordon the node - retrying", "nodeName", dh.nodeName, "reason", err.Error())
+			log.V(2).Info("failed to cordon the node - retrying", "nodeName", dh.nodeName, "reason", err.Error())
 			e = err
 			return false, nil
 		}
 
 		if err := drain.RunNodeDrain(dh.drainer, dh.nodeName); err != nil {
-			log.Info("failed to drain the node - retrying", "nodeName", dh.nodeName, "reason", err.Error())
+			log.V(2).Info("failed to drain the node - retrying", "nodeName", dh.nodeName, "reason", err.Error())
 			e = err
 			return false, nil
 		}
@@ -247,7 +247,7 @@ func (dh *DrainHelper) cordonAndDrain(ctx context.Context) error {
 		return true, nil
 	}
 
-	log.Info("starting drain attempts")
+	log.V(4).Info("starting drain attempts")
 	if err := wait.ExponentialBackoff(backoff, f); err != nil {
 		if err == wait.ErrWaitTimeout {
 			log.Error(e, "failed to drain node - timed out")
@@ -257,7 +257,7 @@ func (dh *DrainHelper) cordonAndDrain(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("node drained")
+	log.V(2).Info("node drained")
 	return nil
 }
 
@@ -282,7 +282,7 @@ func (dh *DrainHelper) uncordon(ctx context.Context) error {
 		return true, nil
 	}
 
-	log.Info("starting uncordon attempts")
+	log.V(4).Info("starting uncordon attempts")
 	if err := wait.ExponentialBackoff(backoff, f); err != nil {
 		if err == wait.ErrWaitTimeout {
 			log.Error(e, "failed to uncordon node - timed out")
@@ -291,6 +291,7 @@ func (dh *DrainHelper) uncordon(ctx context.Context) error {
 		log.Error(err, "failed to uncordon node")
 		return err
 	}
+	log.V(2).Info("node uncordoned")
 
 	return nil
 }

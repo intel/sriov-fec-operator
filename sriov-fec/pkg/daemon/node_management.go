@@ -103,14 +103,14 @@ func (n *NodeConfigurator) bindDeviceToDriver(pciAddress, driver string) error {
 	}
 
 	driverOverridePath := filepath.Join(sysBusPciDevices, pciAddress, "driver_override")
-	n.Log.Info("device's driver_override path", "path", driverOverridePath)
+	n.Log.V(2).Info("device's driver_override path", "path", driverOverridePath)
 	if err := ioutil.WriteFile(driverOverridePath, []byte(driver), os.ModeAppend); err != nil {
 		n.Log.Error(err, "failed to override driver", "path", driverOverridePath, "driver", driver)
 		return err
 	}
 
 	driverBindPath := filepath.Join(sysBusPciDrivers, driver, "bind")
-	n.Log.Info("driver bind path", "path", driverBindPath)
+	n.Log.V(2).Info("driver bind path", "path", driverBindPath)
 	err := ioutil.WriteFile(driverBindPath, []byte(pciAddress), os.ModeAppend)
 	if err != nil {
 		n.Log.Error(err, "failed to bind driver to device", "pciAddress", pciAddress, "driverBindPath", driverBindPath)
@@ -141,7 +141,7 @@ func (n *NodeConfigurator) enableMasterBus(pciAddr string) error {
 	}
 
 	if v&MASTER_BUS_BIT == MASTER_BUS_BIT {
-		log.Info("MasterBus already set for " + pciAddr)
+		log.V(4).Info("MasterBus already set for " + pciAddr)
 		return nil
 	}
 
@@ -153,7 +153,7 @@ func (n *NodeConfigurator) enableMasterBus(pciAddr string) error {
 		return err
 	}
 
-	log.Info("MasterBus set", "pci", pciAddr, "output", out)
+	log.V(2).Info("MasterBus set", "pci", pciAddr, "output", out)
 	return nil
 }
 
@@ -204,7 +204,7 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec
 		return err
 	}
 
-	log.Info("current node status", "inventory", inv)
+	log.V(4).Info("current node status", "inventory", inv)
 	pciStubRegex := regexp.MustCompile("pci[-_]pf[-_]stub")
 	for _, pf := range nodeConfig.PhysicalFunctions {
 		acc, exists := getMatchingExistingAccelerator(inv, pf.PCIAddress)
@@ -213,7 +213,7 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec
 			return fmt.Errorf("unknown (%s not present in inventory) PciAddress", pf.PCIAddress)
 		}
 
-		log.Info("configuring PF", "requestedConfig", pf)
+		log.V(4).Info("configuring PF", "requestedConfig", pf)
 
 		if err := n.loadModule(pf.PFDriver); err != nil {
 			log.Info("failed to load module for PF driver", "driver", pf.PFDriver)
@@ -269,7 +269,7 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec
 				return err
 			}
 		} else {
-			log.Info("N3000 and ACC100 BBDevConfig are nil - queues will not be (re)configured")
+			log.V(4).Info("N3000 and ACC100 BBDevConfig are nil - queues will not be (re)configured")
 		}
 
 		if pciStubRegex.MatchString(pf.PFDriver) {

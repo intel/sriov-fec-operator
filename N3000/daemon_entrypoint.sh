@@ -28,4 +28,4 @@ if echo "${out}" | grep -qiE "error|fail|unavailable"; then
 fi
 
 echo "Starting the daemon..."
-/n3000_daemon
+/n3000_daemon "${@}"

@@ -129,13 +129,13 @@ func (a *Asset) setOwner(owner metav1.Object, obj runtime.Object, s *runtime.Sch
 	}
 
 	if owner.GetNamespace() == metaObj.GetNamespace() {
-		a.log.Info("setOwner for object", "owner", owner.GetName()+"."+owner.GetNamespace(),
+		a.log.V(4).Info("set owner for object", "owner", owner.GetName()+"."+owner.GetNamespace(),
 			"object", metaObj.GetName()+"."+metaObj.GetNamespace())
 		if err := controllerutil.SetControllerReference(owner, metaObj, s); err != nil {
 			return err
 		}
 	} else {
-		a.log.Info("Unsupported owner for object...skipping", "owner", owner.GetName()+"."+owner.GetNamespace(),
+		a.log.V(4).Info("Unsupported owner for object...skipping", "owner", owner.GetName()+"."+owner.GetNamespace(),
 			"object", metaObj.GetName()+"."+metaObj.GetNamespace())
 	}
 	return nil
@@ -143,7 +143,7 @@ func (a *Asset) setOwner(owner metav1.Object, obj runtime.Object, s *runtime.Sch
 
 func (a *Asset) createOrUpdate(ctx context.Context, c client.Client, o metav1.Object, s *runtime.Scheme) error {
 	for _, obj := range a.objects {
-		a.log.Info("createOrUpdate", "asset", a.Path, "kind", obj.GetObjectKind())
+		a.log.V(4).Info("create or update", "asset", a.Path, "kind", obj.GetObjectKind())
 
 		err := a.setOwner(o, obj, s)
 		if err != nil {
@@ -159,7 +159,7 @@ func (a *Asset) createOrUpdate(ctx context.Context, c client.Client, o metav1.Ob
 			return err
 		}
 
-		a.log.Info("CreateOrUpdate", "result", result)
+		a.log.V(2).Info("created or updated", "result", result)
 	}
 
 	return nil
@@ -172,7 +172,7 @@ func (a *Asset) waitUntilReady(ctx context.Context, apiReader client.Reader) err
 
 	for _, obj := range a.objects {
 		if obj.GetObjectKind().GroupVersionKind().Kind == "DaemonSet" {
-			a.log.Info("waiting until daemonset is ready", "asset", a.Path)
+			a.log.V(2).Info("waiting until daemonset is ready", "asset", a.Path)
 
 			backoff := wait.Backoff{
 				Steps:    a.BlockingReadiness.Retries,
@@ -187,7 +187,7 @@ func (a *Asset) waitUntilReady(ctx context.Context, apiReader client.Reader) err
 					return false, err
 				}
 
-				a.log.Info("daemonset status", "name", ds.GetName(),
+				a.log.V(4).Info("daemonset status", "name", ds.GetName(),
 					"NumberUnavailable", ds.Status.NumberUnavailable,
 					"DesiredNumberScheduled", ds.Status.DesiredNumberScheduled)
 
