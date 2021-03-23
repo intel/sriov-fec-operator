@@ -423,13 +423,8 @@ github.com/onsi/gomega v1.10.2/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1y
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/openshift/api v3.9.0+incompatible h1:fJ/KsefYuZAjmrr3+5U9yZIZbTOpVkDDLDLFresAeYs=
 github.com/openshift/api v3.9.0+incompatible/go.mod h1:dh9o4Fs58gpFXGSYfnVxGR9PnV53I8TW84pQaJDdGiY=
-github.com/otcshare/openshift-operator v0.0.0-20210311084129-a03a27548bb9 h1:D0Ri0ZN0cw5ImBcwdfNlwjduXgiASKqszQI+QFHdeeU=
-github.com/otcshare/openshift-operator v0.0.0-20210312140005-c0464f444b0b h1:RLKfwlYx00+cdRqaBMSQLjBlvhq1Kl9DU4l8dlByshM=
-github.com/otcshare/openshift-operator/common v0.0.0-20210309091601-f98f7258338e h1:L3mV+ohdMXhuvMqjaOUpAqKeGfEyZuCzxypkhb0M/mA=
-github.com/otcshare/openshift-operator/common v0.0.0-20210309091601-f98f7258338e/go.mod h1:P4J8gt44yxJ/gqmELdMl8ent+bXhnvDQuU8GkNK3CRg=
-github.com/otcshare/openshift-operator/common v0.0.0-20210311084129-a03a27548bb9 h1:I2ZznWr097C5MvBlkTdLi4X2uG5ZVLk+goefzdlqo6k=
-github.com/otcshare/openshift-operator/common v0.0.0-20210312140005-c0464f444b0b h1:xoc8tMODtA4rA4ce2hlnGOxuwBXDoSnsfgR0sUrX34w=
-github.com/otcshare/openshift-operator/common v0.0.0-20210312140005-c0464f444b0b/go.mod h1:P4J8gt44yxJ/gqmELdMl8ent+bXhnvDQuU8GkNK3CRg=
+github.com/otcshare/openshift-operator/common v0.0.0-20210323132014-4e738dfabe91 h1:687fH3wycqtv7JfcyQEho0eIlRe81JajshTTW93EXPY=
+github.com/otcshare/openshift-operator/common v0.0.0-20210323132014-4e738dfabe91/go.mod h1:P4J8gt44yxJ/gqmELdMl8ent+bXhnvDQuU8GkNK3CRg=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
