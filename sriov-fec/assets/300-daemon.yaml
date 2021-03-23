@@ -128,7 +128,6 @@ spec:
         image: "{{ .SRIOV_FEC_DAEMON_IMAGE }}"
         imagePullPolicy: IfNotPresent
         args:
-        - --zap-devel
         - --zap-log-level=4
         volumeMounts:
         - name: host

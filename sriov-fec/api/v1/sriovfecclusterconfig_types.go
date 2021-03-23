@@ -56,7 +56,7 @@ type UplinkDownlinkQueues struct {
 
 type UplinkDownlink struct {
 	// +kubebuilder:validation:Minimum=0
-	Bandwidth   int                  `json:"bandwidth"`
+	Bandwidth int `json:"bandwidth"`
 	// +kubebuilder:validation:Minimum=0
 	LoadBalance int                  `json:"loadBalance"`
 	Queues      UplinkDownlinkQueues `json:"queues"`

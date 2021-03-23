@@ -51,10 +51,10 @@ func (n *NodeConfigurator) loadModule(module string) error {
 func (n *NodeConfigurator) rebootNode() error {
 	log := n.Log.WithName("rebootNode")
 	// systemd-run command borrowed from openshift/sriov-network-operator
-	_, err := runExecCmd([]string{"chroot", "/host",
+	_, err := runExecCmd([]string{"chroot", "--userspec", "0", "/host",
 		"systemd-run",
 		"--unit", "sriov-fec-daemon-reboot",
-		"--description", fmt.Sprintf("sriov-fec-daemon reboot"),
+		"--description", "sriov-fec-daemon reboot",
 		"/bin/sh", "-c", "systemctl stop kubelet.service; reboot"}, log)
 
 	return err

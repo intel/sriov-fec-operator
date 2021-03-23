@@ -154,11 +154,11 @@ var _ = Describe("SriovDaemonTest", func() {
 		var _ = It("will create cr with node config and failed reboot", func() {
 			execCmdMock := new(runExecCmdMock)
 			execCmdMock.
-				onCall([]string{"chroot", "/host/", "rpm-ostree", "kargs"}).Return("", nil).
-				onCall([]string{"chroot", "/host/", "rpm-ostree", "kargs", "--append", "intel_iommu=on"}).Return("", nil).
-				onCall([]string{"chroot", "/host/", "rpm-ostree", "kargs", "--append", "iommu=pt"}).Return("", nil).
+				onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs"}).Return("", nil).
+				onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs", "--append", "intel_iommu=on"}).Return("", nil).
+				onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs", "--append", "iommu=pt"}).Return("", nil).
 				onCall([]string{
-					"chroot", "/host", "systemd-run", "--unit", "sriov-fec-daemon-reboot", "--description", "sriov-fec-daemon reboot",
+					"chroot", "--userspec", "0", "/host", "systemd-run", "--unit", "sriov-fec-daemon-reboot", "--description", "sriov-fec-daemon reboot",
 					"/bin/sh", "-c", "systemctl stop kubelet.service; reboot",
 				}).
 				Return("", fmt.Errorf("error"))

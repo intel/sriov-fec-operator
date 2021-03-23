@@ -94,7 +94,7 @@ func grubbyBasedKernelArgsSetter(log logr.Logger) error {
 }
 
 func rpmostreeBasedKernelArgsSetter(log logr.Logger) error {
-	kargs, err := runExecCmd([]string{"chroot", "/host/", "rpm-ostree", "kargs"}, log)
+	kargs, err := runExecCmd([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs"}, log)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func rpmostreeBasedKernelArgsSetter(log logr.Logger) error {
 	for _, param := range kernelParams {
 		if !strings.Contains(kargs, param) {
 			log.V(2).Info("missing param - adding", "param", param)
-			_, err = runExecCmd([]string{"chroot", "/host/", "rpm-ostree", "kargs", "--append", param}, log)
+			_, err = runExecCmd([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs", "--append", param}, log)
 			if err != nil {
 				return err
 			}

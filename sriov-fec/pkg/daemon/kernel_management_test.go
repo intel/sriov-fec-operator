@@ -156,8 +156,8 @@ var _ = Describe("Test kernelController", func() {
 					Expect(kk.isAnyKernelParamsMissing()).To(BeTrue())
 				})
 				It("update should not error", func() {
-					readArgsCommand := []string{"chroot", "/host/", "rpm-ostree", "kargs"}
-					addArgCommand := []string{"chroot", "/host/", "rpm-ostree", "kargs", "--append"}
+					readArgsCommand := []string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs"}
+					addArgCommand := []string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs", "--append"}
 
 					execCmdMock := new(runExecCmdMock)
 					execCmdMock.onCall(readArgsCommand).Return("", nil)
