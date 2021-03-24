@@ -485,7 +485,7 @@ spec:
 ```
 
 The workflow of the SRIOV FEC operator is shown in the following diagram:
-![SRIOV FEC Operator Design](images/sriov_fec_operator.png)
+![SRIOV FEC Operator Design](images/sriov_fec_operator_n3000.png)
 
 #### FEC Configuration
 
