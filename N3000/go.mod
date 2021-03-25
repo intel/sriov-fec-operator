@@ -7,7 +7,7 @@ require (
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
 	github.com/openshift/api v3.9.0+incompatible
-	github.com/otcshare/openshift-operator/common v0.0.0-20210323132014-4e738dfabe91
+	github.com/otcshare/openshift-operator/common v0.0.0-20210325115051-f854f89c4d5d
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.45.0
 	k8s.io/api v0.20.4

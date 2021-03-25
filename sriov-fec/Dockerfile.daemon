@@ -30,11 +30,11 @@ FROM registry.access.redhat.com/ubi8:latest
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="OpenNESS SR-IOV FEC Operator for Intel® FPGA PAC N3000 and Intel® vRAN Dedicated Accelerator ACC100 daemonset container" \
+LABEL name="OpenNESS SR-IOV Operator for Intel Wireless FEC Accelerators daemonset" \
     vendor="Intel Corporation" \
     version=$VERSION \
     release="1" \
-    summary="Manages SRIOV-FEC resources of Intel® FPGA PAC N3000 and Intel® vRAN Dedicated Accelerator ACC100" \
+    summary="Manages SR-IOV resources on Intel Wireless FEC Accelerators" \
     description="The daemonset container is responsible for building the nodes inventory and configuring the SRIOV-FEC portion of the supported accelerators"
 
 RUN mkdir -p /usr/share/misc/ && \

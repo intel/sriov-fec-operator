@@ -83,4 +83,5 @@ spec:
   provider:
     name: Intel Corporation
     url: https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html
+  replaces: n3000.v1.0.0
   version: 0.0.0
