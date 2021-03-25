@@ -23,11 +23,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"k8s.io/apimachinery/pkg/api/equality"
+	apierr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
-	ctrl "sigs.k8s.io/controller-runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -150,16 +151,34 @@ func (a *Asset) createOrUpdate(ctx context.Context, c client.Client, o metav1.Ob
 			return err
 		}
 
-		result, err := ctrl.CreateOrUpdate(ctx, c, obj, func() error {
-			return nil
-		})
+		gvk := obj.GetObjectKind().GroupVersionKind()
+		old := &unstructured.Unstructured{}
+		old.SetGroupVersionKind(gvk)
+		key := client.ObjectKeyFromObject(obj)
+		if err := c.Get(ctx, key, old); err != nil {
+			if !apierr.IsNotFound(err) {
+				a.log.Error(err, "Failed to get an object", "key", key, "GroupVersionKind", gvk)
+				return err
+			}
 
-		if err != nil {
-			a.log.Error(err, "CreateOrUpdate")
-			return err
+			// Object does not exist
+			if err := c.Create(ctx, obj); err != nil {
+				a.log.Error(err, "Create failed", "key", key, "GroupVersionKind", gvk)
+				return err
+			}
+			a.log.V(2).Info("Object created", "key", key, "GroupVersionKind", gvk)
+		} else {
+			if !equality.Semantic.DeepDerivative(obj, old) {
+				obj.SetResourceVersion(old.GetResourceVersion())
+				if err := c.Update(ctx, obj); err != nil {
+					a.log.Error(err, "Update failed", "key", key, "GroupVersionKind", gvk)
+					return err
+				}
+				a.log.V(2).Info("Object updated", "key", key, "GroupVersionKind", gvk)
+			} else {
+				a.log.V(4).Info("Object has not changed", "key", key, "GroupVersionKind", gvk)
+			}
 		}
-
-		a.log.V(2).Info("created or updated", "result", result)
 	}
 
 	return nil
