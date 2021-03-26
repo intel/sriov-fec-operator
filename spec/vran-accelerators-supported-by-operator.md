@@ -15,7 +15,7 @@ Copyright (c) 2020-2021 Intel Corporation
 
 ## Overview
 
-This document details the Intel's vRAN accelerator devices/hardware supported by the `OpenNESS Operator for Intel Wireless FEC Accelerators` and/or `OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)` in Red Hat's OpenShift Container Platform, using a Special Resource Operator framework based on the Operator SDK project.
+This document details the Intel's vRAN accelerator devices/hardware supported by the [OpenNESS Operator for Intel Wireless FEC Accelerators](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md) and/or [OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-pacn3000-operator.md) in Red Hat's OpenShift Container Platform, using a Special Resource Operator framework based on the Operator SDK project.
 
 ## Intel® PAC N3000 for vRAN Acceleration
 
@@ -58,7 +58,7 @@ The role of the operator for the Intel® FPGA PAC N3000 card is to orchestrate a
 The operator design for PAC N3000 is a bundle operator consisting of two distinct operators:
 
 * [OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-pacn3000-operator.md)
-* [OpenNESS Operator for Intel Wireless FEC Accelerators](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-acc100-operator.md)
+* [OpenNESS Operator for Intel Wireless FEC Accelerators](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md)
 
 It is expected that both of the operators are deployed.
 
@@ -110,4 +110,4 @@ Intel® vRAN Dedicated Accelerator ACC100 card used in the FlexRAN solution expo
 The role of the operator for the Intel® vRAN Dedicated Accelerator ACC100 card is to orchestrate and manage the resources/devices exposed by the card within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
 The operator design for Intel® vRAN Dedicated Accelerator ACC100 consist of:
 
-* [OpenNESS Operator for Intel Wireless FEC Accelerators](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-acc100-operator.md)
+* [OpenNESS Operator for Intel Wireless FEC Accelerators](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md)
