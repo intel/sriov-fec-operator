@@ -162,42 +162,15 @@ sriov-fec-daemonset-h4jf8                      1/1     Running   0          19h
 [user@ctrl1 /home]# oc logs sriov-fec-daemonset-h4jf8
 
 ***
-2021-03-19T11:46:20.402Z        INFO    daemon.drainhelper.cordonAndDrain()     node drained
-2021-03-19T11:46:20.402Z        INFO    daemon.drainhelper.Run()        worker function - start
-2021-03-19T11:46:20.489Z        INFO    daemon.NodeConfigurator.applyConfig     current node status     {"inventory": {"sriovAccelerators":[{"vendorID":"8086","deviceID":"0d5c","pciAddress":"0000:af:00.0","driver":"pci-pf-stub","maxVirtualFunctions":16,"virtualFunctions":[{"pciAddress":"0000:b0:00.0","driver":"vfio-pci","deviceID":"0d5d"}]}]}}
-2021-03-19T11:46:20.489Z        INFO    daemon.NodeConfigurator.applyConfig     configuring PF  {"requestedConfig": {"pciAddress":"0000:af:00.0","pfDriver":"pci-pf-stub","vfDriver":"vfio-pci","vfAmount":16,"bbDevConfig":{"acc100":{"pfMode":false,"numVfBundles":16,"maxQueueSize":1024,"uplink4G":{"numQueueGroups":0,"numAqsPerGroups":16,"aqDepthLog2":4},"downlink4G":{"numQueueGroups":0,"numAqsPerGroups":16,"aqDepthLog2":4},"uplink5G":{"numQueueGroups":4,"numAqsPerGroups":16,"aqDepthLog2":4},"downlink5G":{"numQueueGroups":4,"numAqsPerGroups":16,"aqDepthLog2":4}}}}}
-2021-03-19T11:46:20.489Z        INFO    daemon.NodeConfigurator.loadModule      executing command       {"cmd": "/usr/sbin/chroot /host/ modprobe pci-pf-stub"}
-2021-03-19T11:46:20.492Z        INFO    daemon.NodeConfigurator.loadModule      commands output {"output": ""}
-2021-03-19T11:46:20.492Z        INFO    daemon.NodeConfigurator.loadModule      executing command       {"cmd": "/usr/sbin/chroot /host/ modprobe vfio-pci"}
-2021-03-19T11:46:20.495Z        INFO    daemon.NodeConfigurator.loadModule      commands output {"output": ""}
-2021-03-19T11:46:21.532Z        LEVEL(-2)       daemon.NodeConfigurator device is bound to driver       {"path": "/sys/bus/pci/devices/0000:af:00.0/driver"}
-2021-03-19T11:46:21.532Z        LEVEL(-2)       daemon.NodeConfigurator driver to unbound device from   {"pciAddress": "0000:af:00.0", "driver": "/sys/bus/pci/drivers/pci-pf-stub"}
-2021-03-19T11:46:21.532Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:af:00.0/driver_override"}
-2021-03-19T11:46:21.532Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/pci-pf-stub/bind"}
-2021-03-19T11:46:21.703Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:b0:00.0/driver_override"}
-2021-03-19T11:46:21.703Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/vfio-pci/bind"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:b0:00.1/driver_override"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/vfio-pci/bind"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:b0:00.2/driver_override"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/vfio-pci/bind"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:b0:00.3/driver_override"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/vfio-pci/bind"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:b0:00.4/driver_override"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/vfio-pci/bind"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator.applyConfig     executing command       {"cmd": "/sriov_workdir/pf_bb_config ACC100 -c /sriov_artifacts/0000:af:00.0.ini -p 0000:af:00.0"}
-2021-03-19T11:46:22.483Z        INFO    daemon.NodeConfigurator.applyConfig     commands output {"output": "Queue Groups: 4 5GUL, 4 5GDL, 0 4GUL, 0 4GDL\nNumber of 5GUL engines 8\nConfiguration in VF mode\nPF ACC100 configuration complete\nACC100 PF [0000:af:00.0] configuration complete!\n\n"}
-2021-03-19T11:46:22.483Z        INFO    daemon.NodeConfigurator.enableMasterBus executing command       {"cmd": "/usr/sbin/chroot /host/ setpci -v -s 0000:af:00.0 COMMAND"}
-2021-03-19T11:46:22.506Z        INFO    daemon.NodeConfigurator.enableMasterBus commands output {"output": "0000:af:00.0 @04 = 0146\n"}
-2021-03-19T11:46:22.506Z        INFO    daemon.NodeConfigurator.enableMasterBus MasterBus already set for 0000:af:00.0
-2021-03-19T11:46:22.513Z        INFO    daemon.drainhelper.Run()        worker function - end   {"performUncordon": true}
-2021-03-19T11:46:22.513Z        LEVEL(-4)       daemon.drainhelper.Run()        uncordoning node
-2021-03-19T11:46:22.516Z        INFO    daemon.drainhelper.uncordon()   starting uncordon attempts
-2021-03-19T11:46:22.525Z        LEVEL(-4)       daemon.drainhelper.Run()        cancelling the context to finish the leadership
-2021-03-19T11:46:22.532Z        LEVEL(-4)       daemon.drainhelper.Run()        stopped leading
-2021-03-19T11:46:22.532Z        INFO    daemon.drainhelper      releasing the lock (bug mitigation)
-2021-03-19T11:46:22.627Z        INFO    daemon.updateInventory  obtained inventory      {"inv": {"sriovAccelerators":[{"vendorID":"8086","deviceID":"0d5c","pciAddress":"0000:af:00.0","driver":"pci-pf-stub","maxVirtualFunctions":16,"virtualFunctions":[{"pciAddress":"0000:b0:00.0","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.1","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.2","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.3","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.4","driver":"vfio-pci","deviceID":"0d5d"}]}]}}
-2021-03-19T11:46:22.714Z        INFO    daemon.Reconcile        Reconciled      {"namespace": "vran-acceleration-operators", "name": "node1"}
-2021-03-19T11:46:22.715Z        INFO    daemon  Update ignored, generation unchanged
+{"level":"Level(-2)","ts":1616798129.251027,"logger":"daemon.drainhelper.cordonAndDrain()","msg":"node drained"}
+{"level":"Level(-4)","ts":1616798129.2510319,"logger":"daemon.drainhelper.Run()","msg":"worker function - start"}
+{"level":"Level(-4)","ts":1616798129.341839,"logger":"daemon.NodeConfigurator.applyConfig","msg":"current node status","inventory":{"sriovAccelerators":[{"vendorID":"8086","deviceID":"0b32","pciAddress":"0000:20:00.0","driver":"pci-pf-stub","maxVirtualFunctions":1,"virtualFunctions":[{"pciAddress":"0000:20:00.1","driver":"vfio-pci","deviceID":"0b33"}]},{"vendorID":"8086","deviceID":"0d5c","pciAddress":"0000:af:00.0","driver":"pci-pf-stub","maxVirtualFunctions":16,"virtualFunctions":[{"pciAddress":"0000:b0:00.0","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.1","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.2","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.3","driver":"vfio-pci","deviceID":"0d5d"}]}]}}
+{"level":"Level(-4)","ts":1616798129.3419566,"logger":"daemon.NodeConfigurator.applyConfig","msg":"configuring PF","requestedConfig":{"pciAddress":"0000:20:00.0","pfDriver":"pci-pf-stub","vfDriver":"vfio-pci","vfAmount":1,"bbDevConfig":{"n3000":{"networkType":"FPGA_5GNR","pfMode":false,"flrTimeout":610,"downlink":{"bandwidth":3,"loadBalance":128,"queues":{"vf0":16,"vf1":16,"vf2":0,"vf3":0,"vf4":0,"vf5":0,"vf6":0,"vf7":0}},"uplink":{"bandwidth":3,"loadBalance":128,"queues":{"vf0":16,"vf1":16,"vf2":0,"vf3":0,"vf4":0,"vf5":0,"vf6":0,"vf7":0}}}}}}
+{"level":"Level(-4)","ts":1616798129.3419993,"logger":"daemon.NodeConfigurator.loadModule","msg":"executing command","cmd":"/usr/sbin/chroot /host/ modprobe pci-pf-stub"}
+{"level":"Level(-4)","ts":1616798129.3458664,"logger":"daemon.NodeConfigurator.loadModule","msg":"commands output","output":""}
+{"level":"Level(-4)","ts":1616798129.345896,"logger":"daemon.NodeConfigurator.loadModule","msg":"executing command","cmd":"/usr/sbin/chroot /host/ modprobe vfio-pci"}
+{"level":"Level(-4)","ts":1616798129.3490586,"logger":"daemon.NodeConfigurator.loadModule","msg":"commands output","output":""}
+{"level":"Level(-2)","ts":1616798130.3972273,"logger":"daemon.NodeConfigurator","msg":"device is bound to driver","path":"/sys/bus/pci/devices/0000:20:00.0/driver"}
 ```
 
 The user can observe the change of the cards FEC configuration. The created devices should appear similar to the following output (The '0d5c' is a PF of the FEC device and the '0d5d' is a VF of the FEC device). For a list of sample status output for applicable devices see:
@@ -422,8 +395,8 @@ Verify that the operators are installed and pods are running:
 
 ```shell
 [user@ctrl1 /home]# oc get csv
-NAME               DISPLAY                                        VERSION   REPLACES   PHASE
-sriov-fec.v1.1.0   SRIOV-FEC Operator for Intel® FPGA PAC N3000   1.1.0                Succeeded
+NAME               DISPLAY                                                        VERSION   REPLACES   PHASE
+sriov-fec.v1.1.0   OpenNESS SR-IOV Operator for Intel Wireless FEC Accelerators   1.1.0                Succeeded
 ```
 
 ```shell
@@ -785,40 +758,39 @@ status:
 #### Sample Daemon log for Wireless FEC (ACC100)
 
 ```shell
-2021-03-19T11:46:20.402Z        INFO    daemon.drainhelper.cordonAndDrain()     node drained
-2021-03-19T11:46:20.402Z        INFO    daemon.drainhelper.Run()        worker function - start
-2021-03-19T11:46:20.489Z        INFO    daemon.NodeConfigurator.applyConfig     current node status     {"inventory": {"sriovAccelerators":[{"vendorID":"8086","deviceID":"0d5c","pciAddress":"0000:af:00.0","driver":"pci-pf-stub","maxVirtualFunctions":16,"virtualFunctions":[{"pciAddress":"0000:b0:00.0","driver":"vfio-pci","deviceID":"0d5d"}]}]}}
-2021-03-19T11:46:20.489Z        INFO    daemon.NodeConfigurator.applyConfig     configuring PF  {"requestedConfig": {"pciAddress":"0000:af:00.0","pfDriver":"pci-pf-stub","vfDriver":"vfio-pci","vfAmount":16,"bbDevConfig":{"acc100":{"pfMode":false,"numVfBundles":16,"maxQueueSize":1024,"uplink4G":{"numQueueGroups":0,"numAqsPerGroups":16,"aqDepthLog2":4},"downlink4G":{"numQueueGroups":0,"numAqsPerGroups":16,"aqDepthLog2":4},"uplink5G":{"numQueueGroups":4,"numAqsPerGroups":16,"aqDepthLog2":4},"downlink5G":{"numQueueGroups":4,"numAqsPerGroups":16,"aqDepthLog2":4}}}}}
-2021-03-19T11:46:20.489Z        INFO    daemon.NodeConfigurator.loadModule      executing command       {"cmd": "/usr/sbin/chroot /host/ modprobe pci-pf-stub"}
-2021-03-19T11:46:20.492Z        INFO    daemon.NodeConfigurator.loadModule      commands output {"output": ""}
-2021-03-19T11:46:20.492Z        INFO    daemon.NodeConfigurator.loadModule      executing command       {"cmd": "/usr/sbin/chroot /host/ modprobe vfio-pci"}
-2021-03-19T11:46:20.495Z        INFO    daemon.NodeConfigurator.loadModule      commands output {"output": ""}
-2021-03-19T11:46:21.532Z        LEVEL(-2)       daemon.NodeConfigurator device is bound to driver       {"path": "/sys/bus/pci/devices/0000:af:00.0/driver"}
-2021-03-19T11:46:21.532Z        LEVEL(-2)       daemon.NodeConfigurator driver to unbound device from   {"pciAddress": "0000:af:00.0", "driver": "/sys/bus/pci/drivers/pci-pf-stub"}
-2021-03-19T11:46:21.532Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:af:00.0/driver_override"}
-2021-03-19T11:46:21.532Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/pci-pf-stub/bind"}
-2021-03-19T11:46:21.703Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:b0:00.0/driver_override"}
-2021-03-19T11:46:21.703Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/vfio-pci/bind"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:b0:00.1/driver_override"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/vfio-pci/bind"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:b0:00.2/driver_override"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/vfio-pci/bind"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:b0:00.3/driver_override"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/vfio-pci/bind"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:b0:00.4/driver_override"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/vfio-pci/bind"}
-2021-03-19T11:46:21.704Z        INFO    daemon.NodeConfigurator.applyConfig     executing command       {"cmd": "/sriov_workdir/pf_bb_config ACC100 -c /sriov_artifacts/0000:af:00.0.ini -p 0000:af:00.0"}
-2021-03-19T11:46:22.483Z        INFO    daemon.NodeConfigurator.applyConfig     commands output {"output": "Queue Groups: 4 5GUL, 4 5GDL, 0 4GUL, 0 4GDL\nNumber of 5GUL engines 8\nConfiguration in VF mode\nPF ACC100 configuration complete\nACC100 PF [0000:af:00.0] configuration complete!\n\n"}
-2021-03-19T11:46:22.483Z        INFO    daemon.NodeConfigurator.enableMasterBus executing command       {"cmd": "/usr/sbin/chroot /host/ setpci -v -s 0000:af:00.0 COMMAND"}
-2021-03-19T11:46:22.506Z        INFO    daemon.NodeConfigurator.enableMasterBus commands output {"output": "0000:af:00.0 @04 = 0146\n"}
-2021-03-19T11:46:22.506Z        INFO    daemon.NodeConfigurator.enableMasterBus MasterBus already set for 0000:af:00.0
-2021-03-19T11:46:22.513Z        INFO    daemon.drainhelper.Run()        worker function - end   {"performUncordon": true}
-2021-03-19T11:46:22.513Z        LEVEL(-4)       daemon.drainhelper.Run()        uncordoning node
-2021-03-19T11:46:22.516Z        INFO    daemon.drainhelper.uncordon()   starting uncordon attempts
-2021-03-19T11:46:22.525Z        LEVEL(-4)       daemon.drainhelper.Run()        cancelling the context to finish the leadership
-2021-03-19T11:46:22.532Z        LEVEL(-4)       daemon.drainhelper.Run()        stopped leading
-2021-03-19T11:46:22.532Z        INFO    daemon.drainhelper      releasing the lock (bug mitigation)
-2021-03-19T11:46:22.627Z        INFO    daemon.updateInventory  obtained inventory      {"inv": {"sriovAccelerators":[{"vendorID":"8086","deviceID":"0d5c","pciAddress":"0000:af:00.0","driver":"pci-pf-stub","maxVirtualFunctions":16,"virtualFunctions":[{"pciAddress":"0000:b0:00.0","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.1","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.2","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.3","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.4","driver":"vfio-pci","deviceID":"0d5d"}]}]}}
-2021-03-19T11:46:22.714Z        INFO    daemon.Reconcile        Reconciled      {"namespace": "vran-acceleration-operators", "name": "node1"}
-2021-03-19T11:46:22.715Z        INFO    daemon  Update ignored, generation unchanged
+{"level":"Level(-2)","ts":1616794345.4786215,"logger":"daemon.drainhelper.cordonAndDrain()","msg":"node drained"}
+{"level":"Level(-4)","ts":1616794345.4786265,"logger":"daemon.drainhelper.Run()","msg":"worker function - start"}
+{"level":"Level(-4)","ts":1616794345.5762916,"logger":"daemon.NodeConfigurator.applyConfig","msg":"current node status","inventory":{"sriovAccelerat
+ors":[{"vendorID":"8086","deviceID":"0b32","pciAddress":"0000:20:00.0","driver":"","maxVirtualFunctions":1,"virtualFunctions":[]},{"vendorID":"8086"
+,"deviceID":"0d5c","pciAddress":"0000:af:00.0","driver":"","maxVirtualFunctions":16,"virtualFunctions":[]}]}}
+{"level":"Level(-4)","ts":1616794345.5763638,"logger":"daemon.NodeConfigurator.applyConfig","msg":"configuring PF","requestedConfig":{"pciAddress":"
+0000:af:00.0","pfDriver":"pci-pf-stub","vfDriver":"vfio-pci","vfAmount":2,"bbDevConfig":{"acc100":{"pfMode":false,"numVfBundles":16,"maxQueueSize":1
+024,"uplink4G":{"numQueueGroups":4,"numAqsPerGroups":16,"aqDepthLog2":4},"downlink4G":{"numQueueGroups":4,"numAqsPerGroups":16,"aqDepthLog2":4},"uplink5G":{"numQueueGroups":0,"numAqsPerGroups":16,"aqDepthLog2":4},"downlink5G":{"numQueueGroups":0,"numAqsPerGroups":16,"aqDepthLog2":4}}}}}
+{"level":"Level(-4)","ts":1616794345.5774765,"logger":"daemon.NodeConfigurator.loadModule","msg":"executing command","cmd":"/usr/sbin/chroot /host/ modprobe pci-pf-stub"}
+{"level":"Level(-4)","ts":1616794345.5842702,"logger":"daemon.NodeConfigurator.loadModule","msg":"commands output","output":""}
+{"level":"Level(-4)","ts":1616794345.5843055,"logger":"daemon.NodeConfigurator.loadModule","msg":"executing command","cmd":"/usr/sbin/chroot /host/ modprobe vfio-pci"}
+{"level":"Level(-4)","ts":1616794345.6090655,"logger":"daemon.NodeConfigurator.loadModule","msg":"commands output","output":""}
+{"level":"Level(-2)","ts":1616794345.6091156,"logger":"daemon.NodeConfigurator","msg":"device's driver_override path","path":"/sys/bus/pci/devices/0000:af:00.0/driver_override"}
+{"level":"Level(-2)","ts":1616794345.6091807,"logger":"daemon.NodeConfigurator","msg":"driver bind path","path":"/sys/bus/pci/drivers/pci-pf-stub/bind"}
+{"level":"Level(-2)","ts":1616794345.7488534,"logger":"daemon.NodeConfigurator","msg":"device's driver_override path","path":"/sys/bus/pci/devices/0000:b0:00.0/driver_override"}
+{"level":"Level(-2)","ts":1616794345.748938,"logger":"daemon.NodeConfigurator","msg":"driver bind path","path":"/sys/bus/pci/drivers/vfio-pci/bind"}
+{"level":"Level(-2)","ts":1616794345.7492096,"logger":"daemon.NodeConfigurator","msg":"device's driver_override path","path":"/sys/bus/pci/devices/0000:b0:00.1/driver_override"}
+{"level":"Level(-2)","ts":1616794345.7492566,"logger":"daemon.NodeConfigurator","msg":"driver bind path","path":"/sys/bus/pci/drivers/vfio-pci/bind"}
+{"level":"Level(-4)","ts":1616794345.74968,"logger":"daemon.NodeConfigurator.applyConfig","msg":"executing command","cmd":"/sriov_workdir/pf_bb_config ACC100 -c /sriov_artifacts/0000:af:00.0.ini -p 0000:af:00.0"}
+{"level":"Level(-4)","ts":1616794346.5203931,"logger":"daemon.NodeConfigurator.applyConfig","msg":"commands output","output":"Queue Groups: 0 5GUL, 0 5GDL, 4 4GUL, 4 4GDL\nNumber of 5GUL engines 8\nConfiguration in VF mode\nPF ACC100 configuration complete\nACC100 PF [0000:af:00.0] configuration complete!\n\n"}
+{"level":"Level(-4)","ts":1616794346.520459,"logger":"daemon.NodeConfigurator.enableMasterBus","msg":"executing command","cmd":"/usr/sbin/chroot /host/ setpci -v -s 0000:af:00.0 COMMAND"}
+{"level":"Level(-4)","ts":1616794346.5458736,"logger":"daemon.NodeConfigurator.enableMasterBus","msg":"commands output","output":"0000:af:00.0 @04 = 0142\n"}
+{"level":"Level(-4)","ts":1616794346.5459251,"logger":"daemon.NodeConfigurator.enableMasterBus","msg":"executing command","cmd":"/usr/sbin/chroot /host/ setpci -v -s 0000:af:00.0 COMMAND=0146"}
+{"level":"Level(-4)","ts":1616794346.5795262,"logger":"daemon.NodeConfigurator.enableMasterBus","msg":"commands output","output":"0000:af:00.0 @04 0146\n"}
+{"level":"Level(-2)","ts":1616794346.5795407,"logger":"daemon.NodeConfigurator.enableMasterBus","msg":"MasterBus set","pci":"0000:af:00.0","output":"0000:af:00.0 @04 0146\n"}
+{"level":"Level(-4)","ts":1616794346.6867144,"logger":"daemon.drainhelper.Run()","msg":"worker function - end","performUncordon":true}
+{"level":"Level(-4)","ts":1616794346.6867719,"logger":"daemon.drainhelper.Run()","msg":"uncordoning node"}
+{"level":"Level(-4)","ts":1616794346.6896322,"logger":"daemon.drainhelper.uncordon()","msg":"starting uncordon attempts"}
+{"level":"Level(-2)","ts":1616794346.69735,"logger":"daemon.drainhelper.uncordon()","msg":"node uncordoned"}
+{"level":"Level(-4)","ts":1616794346.6973662,"logger":"daemon.drainhelper.Run()","msg":"cancelling the context to finish the leadership"}
+{"level":"Level(-4)","ts":1616794346.7029872,"logger":"daemon.drainhelper.Run()","msg":"stopped leading"}
+{"level":"Level(-4)","ts":1616794346.7030034,"logger":"daemon.drainhelper","msg":"releasing the lock (bug mitigation)"}
+{"level":"Level(-4)","ts":1616794346.8040674,"logger":"daemon.updateInventory","msg":"obtained inventory","inv":{"sriovAccelerators":[{"vendorID":"8086","deviceID":"0b32","pciAddress":"0000:20:00.0","driver":"","maxVirtualFunctions":1,"virtualFunctions":[]},{"vendorID":"8086","deviceID":"0d5c","pciAddress":"0000:af:00.0","driver":"pci-pf-stub","maxVirtualFunctions":16,"virtualFunctions":[{"pciAddress":"0000:b0:00.0","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.1","driver":"vfio-pci","deviceID":"0d5d"}]}]}}
+{"level":"Level(-4)","ts":1616794346.9058325,"logger":"daemon","msg":"Update ignored, generation unchanged"}
+{"level":"Level(-2)","ts":1616794346.9065044,"logger":"daemon.Reconcile","msg":"Reconciled","namespace":"vran-acceleration-operators","name":"pg-itengdvs02r.altera.com"}
 ```

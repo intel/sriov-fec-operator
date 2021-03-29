@@ -424,20 +424,19 @@ Verify that the operators are installed and pods are running:
 [user@ctrl1 /home]# oc get csv
 
 NAME               DISPLAY                                        VERSION   REPLACES   PHASE
-n3000.v1.1.0       Intel® FPGA PAC N3000 Operator                 1.1.0                Succeeded
+n3000.v1.1.0       OpenNESS Operator for Intel® FPGA PAC N3000    1.1.0                Succeeded
 ```
 
 ```shell
 [user@ctrl1 /home]# oc get pod
-
-NAME                                            READY   STATUS    RESTARTS   AGE                                                                              
-fpga-driver-daemonset-pkc6m                     1/1     Running   0          43s                                                                              
-fpgainfo-exporter-gmsnk                         1/1     Running   0          44s                                                                              
-n3000-controller-manager-6f6cfdbf6d-5sv5x       2/2     Running   0          52s                                                                              
-n3000-daemonset-4lf7q                           1/1     Running   0          44s                                                                              
-n3000-discovery-4zx49                           1/1     Running   0          44s                                                                              
-n3000-discovery-sq25x                           1/1     Running   0          44s                                                                              
-n3000-discovery-zfg6g                           1/1     Running   0          44s                                        
+NAME                                            READY   STATUS    RESTARTS   AGE
+accelerator-discovery-jv9ds                     1/1     Running   0          56m
+accelerator-discovery-sdfd2                     1/1     Running   0          56m
+accelerator-discovery-xc2kc                     1/1     Running   0          56m
+fpga-driver-daemonset-zhphd                     1/1     Running   0          28m
+fpgainfo-exporter-4t5f4                         1/1     Running   0          28m
+n3000-controller-manager-798d8f7bdd-xmls6       2/2     Running   0          25m
+n3000-daemonset-zkk4k                           1/1     Running   0          28m
 ```
 
 ### Applying Custom Resources
@@ -490,7 +489,7 @@ Use the following command to identify items to delete:
 [user@ctrl1 /home]# oc get csv -n vran-acceleration-operators
 
 NAME               DISPLAY                                        VERSION   REPLACES   PHASE
-n3000.v1.1.0       Intel® FPGA PAC N3000 Operator                 1.1.0                Succeeded
+n3000.v1.1.0       OpenNESS Operator for Intel® FPGA PAC N3000    1.1.0                Succeeded
 ```
 
 Then delete the items and the namespace:
@@ -661,10 +660,10 @@ status:
 #### Sample Daemon log for N3000 programming (N3000)
 
 ```shell
-{"level":"info","ts":1608054338.8866854,"logger":"daemon.drainhelper.cordonAndDrain()","msg":"node drained"}
-{"level":"info","ts":1608054338.8867319,"logger":"daemon.drainhelper.Run()","msg":"worker function - start"}
-{"level":"info","ts":1608054338.9003832,"logger":"daemon.fpgaManager.ProgramFPGAs","msg":"Start program","PCIAddr":"0000:1b:00.0"}
-{"level":"info","ts":1608054338.9004142,"logger":"daemon.fpgaManager.ProgramFPGA","msg":"Starting","pci":"0000:1b:00.0"}
-{"level":"info","ts":1608056309.9367146,"logger":"daemon.fpgaManager.ProgramFPGA","msg":"Program FPGA completed, start new power cycle N3000 ...","pci":"0000:1b:00.0"}
-{"level":"info","ts":1608056333.3528838,"logger":"daemon.drainhelper.Run()","msg":"worker function - end","performUncordon":true}
+{"level":"Level(-2)","ts":1616680106.7447836,"logger":"daemon.drainhelper.cordonAndDrain()","msg":"node drained"}
+{"level":"Level(-4)","ts":1616680106.7447906,"logger":"daemon.drainhelper.Run()","msg":"worker function - start"}
+{"level":"Level(-4)","ts":1616680106.761882,"logger":"daemon.fpgaManager.ProgramFPGAs","msg":"Start program","PCIAddr":"0000:1b:00.0"}
+{"level":"Level(-4)","ts":1616680106.7619035,"logger":"daemon.fpgaManager.ProgramFPGA","msg":"Starting","pci":"0000:1b:00.0"}
+{"level":"Level(-4)","ts":1616682096.9367146,"logger":"daemon.fpgaManager.ProgramFPGA","msg":"Program FPGA completed, start new power cycle N3000 ...","pci":"0000:1b:00.0"}
+{"level":"Level(-2)","ts":1616682122.3528838,"logger":"daemon.drainhelper.Run()","msg":"worker function - end","performUncordon":true}
 ```
