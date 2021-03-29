@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/klog/v2/klogr"
@@ -153,6 +154,98 @@ var _ = Describe("DrainHelper Tests", func() {
 
 			pod := corev1.Pod{}
 			dh.drainer.OnPodDeletedOrEvicted(&pod, true)
+		})
+
+		var _ = It("Drain and cordon the node", func() {
+			var err error
+			log = klogr.New().WithName("N3000DrainHelper-Test")
+
+			// Create a Node
+			node := &corev1.Node{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "dummy",
+				},
+			}
+
+			err = k8sClient.Create(context.Background(), node)
+			Expect(err).ToNot(HaveOccurred())
+
+			cset, err := clientset.NewForConfig(cfg)
+			Expect(err).ToNot(HaveOccurred())
+
+			dh := NewDrainHelper(log, cset, "dummy", "namespace")
+			Expect(dh).ToNot(Equal(nil))
+
+			err = dh.cordonAndDrain(context.Background())
+			Expect(err).ToNot(HaveOccurred())
+
+			// Cleanup
+			err = k8sClient.Delete(context.TODO(), node)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		var _ = It("Drain, cordon and uncordon the node", func() {
+			var err error
+			log = klogr.New().WithName("N3000DrainHelper-Test")
+
+			// Create a Node
+			node := &corev1.Node{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "dummy",
+				},
+			}
+
+			err = k8sClient.Create(context.Background(), node)
+			Expect(err).ToNot(HaveOccurred())
+
+			cset, err := clientset.NewForConfig(cfg)
+			Expect(err).ToNot(HaveOccurred())
+
+			dh := NewDrainHelper(log, cset, "dummy", "namespace")
+			Expect(dh).ToNot(Equal(nil))
+
+			err = dh.cordonAndDrain(context.Background())
+			Expect(err).ToNot(HaveOccurred())
+
+			err = dh.uncordon(context.Background())
+			Expect(err).ToNot(HaveOccurred())
+
+			// Cleanup
+			err = k8sClient.Delete(context.TODO(), node)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		var _ = It("Create and run simple DrainHelper", func() {
+			var err error
+			log = klogr.New().WithName("N3000DrainHelper-Test")
+			// Create a Node
+			node := &corev1.Node{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "dummy",
+				},
+			}
+
+			err = k8sClient.Create(context.Background(), node)
+			Expect(err).ToNot(HaveOccurred())
+
+			cset, err := clientset.NewForConfig(cfg)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = os.Setenv("DRAIN_TIMEOUT_SECONDS", "5")
+			Expect(err).ToNot(HaveOccurred())
+
+			err = os.Setenv("LEASE_DURATION_SECONDS", "16")
+			Expect(err).ToNot(HaveOccurred())
+
+			dh := NewDrainHelper(log, cset, "dummy", "default")
+			Expect(dh).ToNot(Equal(nil))
+
+			err = dh.Run(func(c context.Context) bool { return true }, true)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Cleanup
+			err = k8sClient.Delete(context.TODO(), node)
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })
