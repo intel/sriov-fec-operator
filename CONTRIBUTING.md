@@ -1,5 +1,7 @@
-# SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020 Intel Corporation
+```text
+SPDX-License-Identifier: Apache-2.0
+Copyright (c) 2020 Intel Corporation
+```
 <!-- omit in toc -->
 # Contribution Guide
 Welcome to the Open Network Edge Services Software (OpenNESS) project. OpenNESS is an open-source solution that is enriched by people like — you. Your contributions drive the network & enterprise edge computing!
@@ -68,10 +70,8 @@ Below are some useful resources for getting started with OpenNESS:
 * [OpenNESS release notes](https://github.com/open-ness/specs/blob/master/openness_releasenotes.md)
 * [OpenNESS solution index](https://github.com/open-ness/specs/blob/master/README.md)
 * [OpenNESS architecture and solution overview](https://github.com/open-ness/specs/blob/master/doc/architecture.md)
-* [OpenNESS getting started guide — network edge](https://github.com/open-ness/specs/blob/master/doc/getting-started/network-edge/controller-edge-node-setup.md)
-* [OpenNESS getting started guide — on-premises](https://github.com/open-ness/specs/blob/master/doc/getting-started/on-premises/controller-edge-node-setup.md)
-* [OpenNESS application onboarding — network edge](https://github.com/open-ness/specs/blob/master/doc/applications-onboard/network-edge-applications-onboarding.md)
-* [OpenNESS application onboarding — on-premises](https://github.com/open-ness/specs/blob/master/doc/applications-onboard/on-premises-applications-onboarding.md)
+* [OpenNESS getting started guide](https://github.com/open-ness/specs/blob/master/doc/getting-started/openness-cluster-setup.md)
+* [OpenNESS application onboarding](https://github.com/open-ness/specs/blob/master/doc/applications-onboard/network-edge-applications-onboarding.md)
 * [OpenNESS application development and porting guide](https://github.com/open-ness/specs/blob/master/doc/applications/openness_appguide.md)
 
 ## Style Guide / Coding conventions
