@@ -70,7 +70,7 @@ Below are some useful resources for getting started with OpenNESS:
 * [OpenNESS release notes](https://github.com/open-ness/specs/blob/master/openness_releasenotes.md)
 * [OpenNESS solution index](https://github.com/open-ness/specs/blob/master/README.md)
 * [OpenNESS architecture and solution overview](https://github.com/open-ness/specs/blob/master/doc/architecture.md)
-* [OpenNESS getting started guide](https://github.com/open-ness/specs/blob/master/doc/getting-started/openness-cluster-setup.md)
+* [OpenNESS getting started guide](https://github.com/open-ness/specs/blob/master/doc/getting-started/network-edge/controller-edge-node-setup.md)
 * [OpenNESS application onboarding](https://github.com/open-ness/specs/blob/master/doc/applications-onboard/network-edge-applications-onboarding.md)
 * [OpenNESS application development and porting guide](https://github.com/open-ness/specs/blob/master/doc/applications/openness_appguide.md)
 
