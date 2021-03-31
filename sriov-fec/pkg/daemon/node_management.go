@@ -14,7 +14,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/intel/sriov-network-device-plugin/pkg/utils"
-	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
+	sriovv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
 )
 
 var (

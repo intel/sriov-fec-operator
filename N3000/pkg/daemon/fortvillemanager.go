@@ -14,7 +14,7 @@ import (
 	"syscall"
 
 	"github.com/go-logr/logr"
-	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
+	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
 	"github.com/pkg/errors"
 )
 

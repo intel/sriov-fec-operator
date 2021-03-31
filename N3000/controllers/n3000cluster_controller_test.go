@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
+	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

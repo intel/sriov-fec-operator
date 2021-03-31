@@ -11,7 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
+	sriovv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
 )
 
 func compareFiles(firstFilepath, secondFilepath string) error {
