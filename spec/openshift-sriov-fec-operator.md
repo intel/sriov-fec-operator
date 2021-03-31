@@ -3,10 +3,10 @@ SPDX-License-Identifier: Apache-2.0
 Copyright (c) 2020-2021 Intel Corporation
 ```
 <!-- omit in toc -->
-# OpenNESS Operator for Intel Wireless FEC Accelerators documentation
+# OpenNESS Operator for Wireless FEC Accelerators documentation
 
 - [Overview](#overview)
-- [OpenNESS Operator for Intel Wireless FEC Accelerators](#openness-operator-for-intel-wireless-fec-accelerators)
+- [OpenNESS Operator for Wireless FEC Accelerators](#openness-operator-for-wireless-fec-accelerators)
   - [Wireless FEC Acceleration management](#wireless-fec-acceleration-management)
     - [FEC Configuration](#fec-configuration)
     - [SRIOV Device Plugin](#sriov-device-plugin)
@@ -20,7 +20,7 @@ Copyright (c) 2020-2021 Intel Corporation
 - [Appendix 1 - Developer Notes](#appendix-1---developer-notes)
   - [Uninstalling Previously Installed Operator](#uninstalling-previously-installed-operator)
   - [Setting Up Operator Registry Locally](#setting-up-operator-registry-locally)
-- [Appendix 2 - OpenNESS Operator for Intel Wireless FEC Accelerators Examples](#appendix-2---openness-operator-for-intel-wireless-fec-accelerators-examples)
+- [Appendix 2 - OpenNESS Operator for Wireless FEC Accelerators Examples](#appendix-2---openness-operator-for-wireless-fec-accelerators-examples)
   - [N3000 FEC](#n3000-fec)
     - [Sample CR for Wireless FEC (N3000)](#sample-cr-for-wireless-fec-n3000)
     - [Sample Status for Wireless FEC (N3000)](#sample-status-for-wireless-fec-n3000)
@@ -32,9 +32,9 @@ Copyright (c) 2020-2021 Intel Corporation
 
 ## Overview
 
-This document provides the instructions for using the OpenNESS Operator for Intel Wireless FEC Accelerators in Red Hat's OpenShift Container Platform. This operator was developed with aid of the Special Resource Operator framework based on the Operator SDK project.
+This document provides the instructions for using the OpenNESS Operator for Wireless FEC Accelerators in Red Hat's OpenShift Container Platform. This operator was developed with aid of the Special Resource Operator framework based on the Operator SDK project.
 
-## OpenNESS Operator for Intel Wireless FEC Accelerators
+## OpenNESS Operator for Wireless FEC Accelerators
 
 The role of the OpenNESS Operator for Intel Wireless FEC Accelerator is to orchestrate and manage the resources/devices exposed by a range of Intel's vRAN FEC acceleration devices/hardware within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
 The operator design of the OpenNESS Operator for Intel Wireless FEC Accelerator supports the following vRAN FEC accelerators:
@@ -340,7 +340,7 @@ The management of the NIC SRIOV devices/resources in the OpenShift cluster is ou
 
 ## Technical Requirements and Dependencies
 
-The OpenNESS Operator for Intel Wireless FEC Accelerators has the following requirements:
+The OpenNESS Operator for Wireless FEC Accelerators has the following requirements:
 
 - [Intel® vRAN Dedicated Accelerator ACC100](https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf) (Optional)
 - [Intel® FPGA PAC N3000 card](https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html) (Optional)
@@ -349,11 +349,11 @@ The OpenNESS Operator for Intel Wireless FEC Accelerators has the following requ
 
 ## Deploying the Operator
 
-The OpenNESS Operator for Intel Wireless FEC Accelerators is easily deployable from the OpenShift cluster via provisioning and application of the following YAML spec files:
+The OpenNESS Operator for Wireless FEC Accelerators is easily deployable from the OpenShift cluster via provisioning and application of the following YAML spec files:
 
 ### Install the Bundle
 
-To install the OpenNESS Operator for Intel Wireless FEC Accelerators operator bundle perform the following steps:
+To install the OpenNESS Operator for Wireless FEC Accelerators operator bundle perform the following steps:
 
 Create the project:
 
@@ -396,7 +396,7 @@ Verify that the operators are installed and pods are running:
 ```shell
 [user@ctrl1 /home]# oc get csv
 NAME               DISPLAY                                                        VERSION   REPLACES   PHASE
-sriov-fec.v1.1.0   OpenNESS SR-IOV Operator for Intel Wireless FEC Accelerators   1.1.0                Succeeded
+sriov-fec.v1.1.0   OpenNESS SR-IOV Operator for Wireless FEC Accelerators   1.1.0                Succeeded
 ```
 
 ```shell
@@ -466,7 +466,7 @@ status:
 
 ## Summary
 
-The OpenNESS Operator for Intel Wireless FEC Accelerators is a fully functional tool to manage the vRAN FEC resources autonomously in a Cloud Native OpenShift environment based on the user input.
+The OpenNESS Operator for Wireless FEC Accelerators is a fully functional tool to manage the vRAN FEC resources autonomously in a Cloud Native OpenShift environment based on the user input.
 The operator handles all the necessary actions from creation of FEC resources to configuration and management of the resources within the OpenShift cluster.
 
 ## Appendix 1 - Developer Notes
@@ -495,7 +495,7 @@ Then delete the items and the namespace:
 
 If needed the user can set up a local registry for the operators' images. For more information please see [openshift-pacn3000-operator.md](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-pacn3000-operator.md#setting-up-operator-registry-locally)
 
-## Appendix 2 - OpenNESS Operator for Intel Wireless FEC Accelerators Examples
+## Appendix 2 - OpenNESS Operator for Wireless FEC Accelerators Examples
 
 ### N3000 FEC
 

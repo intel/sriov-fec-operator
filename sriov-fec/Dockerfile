@@ -25,12 +25,12 @@ FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="OpenNESS SR-IOV Operator for Intel Wireless FEC Accelerators" \
+LABEL name="OpenNESS SR-IOV Operator for Wireless FEC Accelerators" \
     vendor="Intel Corporation" \
     version=$VERSION \
     release="1" \
-    summary="OpenNESS SR-IOV Operator for Intel Wireless FEC Accelerators for 5G Cloudnative/vRAN deployment" \
-    description="OpenNESS SR-IOV Operator for Intel Wireless FEC Accelerators ACC100 for 5G Cloudnative/vRAN deployment"
+    summary="OpenNESS SR-IOV Operator for Wireless FEC Accelerators for 5G Cloudnative/vRAN deployment" \
+    description="OpenNESS SR-IOV Operator for Wireless FEC Accelerators ACC100 for 5G Cloudnative/vRAN deployment"
 
 COPY TEMP_LICENSE_COPY /licenses/LICENSE
 

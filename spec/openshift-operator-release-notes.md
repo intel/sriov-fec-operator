@@ -4,7 +4,7 @@ Copyright (c) 2020-2021 Intel Corporation
 ```
 <!-- omit in toc -->
 # Release Notes 
-This document provides high-level system features, issues, and limitations information for OpenNESS Operator for Intel® FPGA PAC N3000 and OpenNESS SR-IOV Operator for Intel Wireless FEC Accelerators. 
+This document provides high-level system features, issues, and limitations information for OpenNESS Operator for Intel® FPGA PAC N3000 and OpenNESS SR-IOV Operator for Wireless FEC Accelerators.
 - [Release history](#release-history)
 - [Features for Release](#features-for-release)
 - [Changes to Existing Features](#changes-to-existing-features)
@@ -18,7 +18,7 @@ This document provides high-level system features, issues, and limitations infor
 # Release history 
 ***v1.1.0*** 
 - OpenNESS Operator for Intel® FPGA PAC N3000 
-- OpenNESS SR-IOV Operator for Intel Wireless FEC Accelerators
+- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
   
 ***v1.0.0***
 - OpenNESS Operator for Intel® FPGA PAC N3000
@@ -26,7 +26,7 @@ This document provides high-level system features, issues, and limitations infor
    
 # Features for Release 
 ***v1.1.0***
-- OpenNESS SR-IOV Operator for Intel Wireless FEC Accelerators
+- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
   - Added support for Intel® vRAN Dedicated Accelerator ACC100
   - Independent accelerator discovery mechanism now enables standalone usage
 
@@ -47,7 +47,7 @@ This document provides high-level system features, issues, and limitations infor
 - OpenNESS Operator for Intel® FPGA PAC N3000
   - n3000node- prefix was removed from N3000 resources
   - Flashing process logging improvements
-- OpenNESS SR-IOV Operator for Intel Wireless FEC Accelerators
+- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
   - Added supported vendor: 1172 - Altera Corporation
   - pf-bb-config updated to 21.3
 - Common
@@ -70,7 +70,7 @@ This document provides high-level system features, issues, and limitations infor
 - OpenNESS Operator for Intel® FPGA PAC N3000
   - Daemon in started only after confirmed driver initialization
   - Removed `hostPort:` from `fpgainfo-exporter` pod definition
-- OpenNESS SR-IOV Operator for Intel Wireless FEC Accelerators
+- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
   - Fixed status conditions to match convention introduced in N3000 operator
 - Common
   - Fixed discovery for devices with LTE bitstream
@@ -85,7 +85,7 @@ This document provides high-level system features, issues, and limitations infor
 
 # Release Content
 - OpenNESS Operator for Intel® FPGA PAC N3000 
-- OpenNESS SR-IOV Operator for Intel Wireless FEC Accelerators
+- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
 - Prometheus fpgainfo exporter
 - Documentation
 
