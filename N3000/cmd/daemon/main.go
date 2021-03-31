@@ -6,7 +6,6 @@ package main
 import (
 	"flag"
 	"os"
-	"os/exec"
 
 	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
 	"github.com/open-ness/openshift-operator/N3000/pkg/daemon"
@@ -43,9 +42,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	namespace := os.Getenv("NAMESPACE")
+	namespace := os.Getenv("N3000_NAMESPACE")
 	if namespace == "" {
-		setupLog.Error(nil, "NAMESPACE environment variable is empty")
+		setupLog.Error(nil, "N3000_NAMESPACE environment variable is empty")
 		os.Exit(1)
 	}
 
@@ -60,13 +59,6 @@ func main() {
 	directClient, err := client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		setupLog.Error(err, "failed to create direct client")
-		os.Exit(1)
-	}
-
-	// Check if we are able to iterate the cards
-	_, err = exec.Command("fpgainfo", "bmc").CombinedOutput()
-	if err != nil {
-		setupLog.Error(err, "fpgainfo bmc failed to run")
 		os.Exit(1)
 	}
 

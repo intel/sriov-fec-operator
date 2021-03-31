@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2021 Intel Corporation
+NAME="Red Hat Enterprise Linux CoreOS"
+VERSION="4.5"
+VERSION_ID="4.5"
+OPENSHIFT_VERSION="4.5"
+RHEL_VERSION="8.2"
+PRETTY_NAME="Red Hat Enterprise Linux CoreOS 4.5 (Ootpa)"
+ID="rhcos"
+ID_LIKE="rhel fedora"
+ANSI_COLOR="0;31"
+HOME_URL="https://www.redhat.com/"
+BUG_REPORT_URL="https://bugzilla.redhat.com/"
+REDHAT_BUGZILLA_PRODUCT="OpenShift Container Platform"
+REDHAT_BUGZILLA_PRODUCT_VERSION="4.5"
+REDHAT_SUPPORT_PRODUCT="OpenShift Container Platform"
+REDHAT_SUPPORT_PRODUCT_VERSION="4.5"
+OSTREE_VERSION='46.82.202006152120-0'

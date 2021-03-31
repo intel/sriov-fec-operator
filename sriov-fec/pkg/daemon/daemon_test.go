@@ -1,396 +1,416 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package daemon
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
-	"sort"
-
 	"path/filepath"
+
+	sriov "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	sriovv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
-	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var (
-	fakeGetKargsErrReturn       error = nil
-	fakeAppendKargsErrReturn    error = nil
-	fakeModprobeErrReturn       error = nil
-	fakeSystemdErrReturn        error = nil
-	fakeSriovInventoryErrReturn error = nil
-	fakePFConfigErrReturn       error = nil
-	fakeGetVFListReturn         error = nil
-	fakeSetpciErrReturn         error = nil
-	fakeGetKargsOutput          string
-	fakeSriovInventoryOutput    *sriovv1.NodeInventory
-	fakeGetVFconfiguredOutput   int
-	fakeGetVFListOutput         []string
-	fakeSetpciOutput            string
-	lastRunExec                 string
+	pciAddress = "0000:14:00.1"
 )
 
-func clean() {
-	fakeGetKargsErrReturn = nil
-	fakeAppendKargsErrReturn = nil
-	fakeModprobeErrReturn = nil
-	fakeSystemdErrReturn = nil
-	fakeSriovInventoryErrReturn = nil
-	fakeGetVFListReturn = nil
-	fakeSetpciErrReturn = nil
-	fakeSetpciOutput = ""
-	fakeGetKargsOutput = ""
-	fakeGetVFconfiguredOutput = 0
-	fakeGetVFListOutput = nil
-	lastRunExec = ""
-}
+var _ = Describe("SriovDaemonTest", func() {
+	data := new(TestData)
+	reconciler := new(NodeConfigReconciler)
 
-func createFileInFolder(folderPath, fileName string) error {
-	_, err := os.Stat(folderPath)
-	if os.IsNotExist(err) {
+	var _ = BeforeEach(func() {
+		//configure kernel controller
+		osReleaseFilepath = "testdata/rhcos_os_release"
+		procCmdlineFilePath = "testdata/cmdline_test"
+		configPath = "testdata/accelerators.json"
+
+		//configure node configurator
+		workdir = testTmpFolder
+		sysBusPciDevices = testTmpFolder
+		sysBusPciDrivers = testTmpFolder
+		Expect(createFiles(filepath.Join(sysBusPciDevices, pciAddress), "driver_override", vfNumFile)).To(Succeed())
+		Expect(createFiles(filepath.Join(sysBusPciDrivers, "PFdriver"), "bind")).To(Succeed())
+		Expect(createFiles(filepath.Join(sysBusPciDrivers, "pci-pf-stub"), "bind")).To(Succeed())
+
+		getVFconfigured = func(string) int {
+			return 0
+		}
+		getVFList = func(string) ([]string, error) {
+			return nil, nil
+		}
+		getSriovInventory = func(_ logr.Logger) (*sriov.NodeInventory, error) {
+			return &data.NodeInventory, nil
+		}
+	})
+
+	var _ = Context("Reconciler", func() {
+		BeforeEach(func() {
+			data = new(TestData)
+			Expect(readAndUnmarshall("testdata/node_config.json", data)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			nn := data.GetNamespacedName()
+			if err := k8sClient.Get(context.TODO(), nn, &data.SriovFecNodeConfig); err == nil {
+				data.SriovFecNodeConfig.Spec = sriov.SriovFecNodeConfigSpec{
+					PhysicalFunctions: []sriov.PhysicalFunctionConfig{},
+				}
+				Expect(k8sClient.Update(context.TODO(), &data.SriovFecNodeConfig)).NotTo(HaveOccurred())
+				Expect(returnLastArg(reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: nn}))).ToNot(HaveOccurred())
+				Expect(k8sClient.Delete(context.TODO(), &data.SriovFecNodeConfig)).ToNot(HaveOccurred())
+			} else if errors.IsNotFound(err) {
+				log.Info("Requested NodeConfig does not exists", "NodeConfig", &data.SriovFecNodeConfig)
+			} else {
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			Expect(k8sClient.Delete(context.TODO(), &data.Node)).To(Succeed())
+		})
+
+		var _ = It("will create cr without node config", func() {
+			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
+
+			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
+
+			Expect(
+				returnLastArg(
+					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
+				),
+			).To(Succeed())
+
+			//Check if node config was created out of cluster config
+			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
+			Expect(nodeConfigs.Items).To(HaveLen(1))
+		})
+
+		var _ = It("will ignore cr with wrong node name", func() {
+			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
+
+			Expect(initReconciler(reconciler, "wrongName", data.NodeConfigNS())).To(Succeed())
+
+			Expect(
+				returnLastArg(
+					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
+				),
+			).To(Succeed())
+
+			//Check if node config was created out of cluster config
+			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
+			Expect(nodeConfigs.Items).To(BeEmpty())
+		})
+
+		var _ = It("will ignore cr with wrong namespace", func() {
+			Expect(
+				k8sClient.Create(context.TODO(), &data.Node),
+			).To(Succeed())
+
+			Expect(initReconciler(reconciler, data.NodeConfigName(), "wrongNamespace")).To(Succeed())
+
+			Expect(
+				returnLastArg(
+					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
+				),
+			).To(Succeed())
+
+			//Check if node config was created out of cluster config
+			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
+			Expect(nodeConfigs.Items).To(BeEmpty())
+		})
+
+		var _ = It("will fail when namespace will be not handle", func() {
+			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
+			Expect(initReconciler(reconciler, data.NodeConfigName(), "wrongNamespace")).To(Succeed())
+			Expect(
+				returnLastArg(
+					reconciler.Reconcile(context.TODO(),
+						ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "wrongNamespace", Name: data.NodeConfigName()}},
+					),
+				),
+			).To(HaveOccurred())
+
+			//Check if node config was created out of cluster config
+			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
+			Expect(nodeConfigs.Items).To(BeEmpty())
+		})
+
+		var _ = It("will create cr with node config and failed reboot", func() {
+			execCmdMock := new(runExecCmdMock)
+			execCmdMock.
+				onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs"}).Return("", nil).
+				onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs", "--append", "intel_iommu=on"}).Return("", nil).
+				onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs", "--append", "iommu=pt"}).Return("", nil).
+				onCall([]string{
+					"chroot", "--userspec", "0", "/host", "systemd-run", "--unit", "sriov-fec-daemon-reboot", "--description", "sriov-fec-daemon reboot",
+					"/bin/sh", "-c", "systemctl stop kubelet.service; reboot",
+				}).
+				Return("", fmt.Errorf("error"))
+
+			initNodeConfiguratorRunExecCmd(execCmdMock.execute)
+			procCmdlineFilePath = "testdata/cmdline_test_missing_param"
+
+			Expect(
+				k8sClient.Create(context.TODO(), &data.Node),
+			).To(Succeed())
+
+			Expect(
+				k8sClient.Create(context.TODO(), &data.SriovFecNodeConfig),
+			).To(Succeed())
+
+			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
+			Expect(
+				returnLastArg(reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()})),
+			).To(Succeed())
+
+			//Check if node config was created out of cluster config
+			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
+			Expect(nodeConfigs.Items).To(HaveLen(1))
+			Expect(execCmdMock.verify()).To(Succeed())
+		})
+
+		var _ = It("will create cr with node config", func() {
+			osExecMock := new(runExecCmdMock)
+			osExecMock.
+				onCall([]string{"chroot", "/host/", "modprobe", "PFdriver"}).
+				Return("", nil).
+				onCall([]string{"chroot", "/host/", "modprobe", "v"}).
+				Return("", nil).
+				onCall([]string{"/sriov_workdir/pf_bb_config", "FPGA_5GNR", "-c", fmt.Sprintf("%s.ini", filepath.Join(workdir, pciAddress)), "-p", pciAddress}).
+				Return("", nil)
+
+			initNodeConfiguratorRunExecCmd(osExecMock.execute)
+
+			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
+			Expect(k8sClient.Create(context.TODO(), &data.SriovFecNodeConfig)).To(Succeed())
+
+			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
+			Expect(
+				returnLastArg(
+					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
+				),
+			).To(Succeed())
+
+			//Check if node config was created out of cluster config
+			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
+			Expect(nodeConfigs.Items).To(HaveLen(1))
+			Expect(osExecMock.verify()).To(Succeed())
+		})
+
+		var _ = It("will create cr with node config and failed unbind device", func() {
+			osExecMock := new(runExecCmdMock)
+			osExecMock.
+				onCall([]string{"chroot", "/host/", "modprobe", "PFdriver"}).
+				Return("", nil).
+				onCall([]string{"chroot", "/host/", "modprobe", "v"}).
+				Return("", nil)
+
+			initNodeConfiguratorRunExecCmd(osExecMock.execute)
+
+			Expect(createFiles(filepath.Join(sysBusPciDevices, pciAddress), "driver")).To(Succeed())
+			defer os.Remove(filepath.Join(sysBusPciDevices, pciAddress, "driver"))
+
+			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
+			Expect(k8sClient.Create(context.TODO(), &data.SriovFecNodeConfig)).To(Succeed())
+
+			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
+			Expect(returnLastArg(reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}))).To(Succeed())
+
+			//Check if node config was created out of cluster config
+			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
+			Expect(nodeConfigs.Items).To(HaveLen(1))
+			Expect(osExecMock.verify()).To(Succeed())
+		})
+
+		var _ = It("will create cr with node config and enable master bus", func() {
+			driver := "pci-pf-stub"
+			expectedSetpciCommandOutput := fmt.Sprintf("%s = 1", pciAddress)
+
+			data.SriovFecNodeConfig.Spec.PhysicalFunctions[0].PFDriver = driver
+
+			osExecMock := new(runExecCmdMock).
+				onCall([]string{"chroot", "/host/", "modprobe", driver}).Return("", nil).
+				onCall([]string{"chroot", "/host/", "modprobe", "v"}).Return("", nil).
+				onCall(
+					[]string{
+						"/sriov_workdir/pf_bb_config", "FPGA_5GNR", "-c", fmt.Sprintf("%s.ini", filepath.Join(workdir, pciAddress)), "-p", pciAddress,
+					},
+				).Return("", nil).
+				onCall([]string{"chroot", "/host/", "setpci", "-v", "-s", pciAddress, "COMMAND"}).Return(expectedSetpciCommandOutput, nil).
+				onCall([]string{"chroot", "/host/", "setpci", "-v", "-s", pciAddress, "COMMAND=05"}).Return(expectedSetpciCommandOutput, nil).
+				build()
+
+			initNodeConfiguratorRunExecCmd(osExecMock.execute)
+
+			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
+			Expect(k8sClient.Create(context.TODO(), &data.SriovFecNodeConfig)).To(Succeed())
+
+			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
+
+			Expect(
+				returnLastArg(
+					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
+				),
+			).To(Succeed())
+
+			//Check if node config was created out of cluster config
+			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
+			Expect(nodeConfigs.Items).To(HaveLen(1))
+			Expect(osExecMock.verify()).To(Succeed())
+		})
+
+		var _ = It("will update status condition", func() {
+
+			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
+			Expect(k8sClient.Create(context.TODO(), &data.SriovFecNodeConfig)).To(Succeed())
+
+			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
+
+			nodeConfig := &sriov.SriovFecNodeConfig{}
+			nn := data.GetNamespacedName()
+			Expect(k8sClient.Get(context.TODO(), nn, nodeConfig)).To(Succeed())
+
+			reconciler.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationUnknown, "test unknown")
+
+			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
+			Expect(nodeConfigs.Items).To(HaveLen(1))
+			Expect(nodeConfigs.Items[0].Status.Conditions).To(HaveLen(1))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Type).To(Equal(ConfigurationCondition))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Reason).To(Equal(string(ConfigurationUnknown)))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Message).To(Equal("test unknown"))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].ObservedGeneration).To(Equal(int64(1)))
+
+			reconciler.updateCondition(nodeConfig, metav1.ConditionTrue, ConfigurationSucceeded, "test succeeded")
+
+			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
+			Expect(nodeConfigs.Items).To(HaveLen(1))
+			Expect(nodeConfigs.Items[0].Status.Conditions).To(HaveLen(1))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Type).To(Equal(ConfigurationCondition))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Reason).To(Equal(string(ConfigurationSucceeded)))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Message).To(Equal("test succeeded"))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].ObservedGeneration).To(Equal(int64(1)))
+		})
+	})
+
+	var _ = Describe("Reconciler manager", func() {
+		var _ = It("setup with invalid manager", func() {
+			var m ctrl.Manager
+			Expect(new(NodeConfigReconciler).SetupWithManager(m)).To(HaveOccurred())
+		})
+	})
+})
+
+func createFiles(folderPath string, filesToBeCreated ...string) error {
+	if _, err := os.Stat(folderPath); os.IsNotExist(err) {
 		errDir := os.MkdirAll(folderPath, 0777)
 		if errDir != nil {
 			return err
 		}
 	}
-	filePath := filepath.Join(folderPath, fileName)
-	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
+	for _, name := range filesToBeCreated {
+		filePath := filepath.Join(folderPath, name)
+		f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return err
+		}
+		if err = f.Close(); err != nil {
+			return err
+		}
 	}
-	f.Close()
 	return nil
 }
 
-func fakeGetVFconfigured(pf string) int {
-	return fakeGetVFconfiguredOutput
+func readAndUnmarshall(filepath string, target interface{}) error {
+	bytes, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(bytes, target)
 }
 
-func fakeGetVFList(pf string) ([]string, error) {
-	return fakeGetVFListOutput, fakeGetVFListReturn
+type TestData struct {
+	SriovFecNodeConfig sriov.SriovFecNodeConfig `json:"sriov_fec_node_config"`
+	NodeInventory      sriov.NodeInventory      `json:"node_inventory"`
+	Node               core.Node                `json:"node"`
 }
 
-func fakeRunExecCmd(args []string, log logr.Logger) (string, error) {
-	sort.Strings(args)
-	if i := sort.SearchStrings(args, "systemd-run"); i < len(args) {
-		lastRunExec = "systemd-run"
-		return "", fakeSystemdErrReturn
+func (d *TestData) SetPcieAddress(addr string) {
+	for _, f := range d.SriovFecNodeConfig.Spec.PhysicalFunctions {
+		f.PCIAddress = addr
 	}
-	if i := sort.SearchStrings(args, "setpci"); i < len(args) {
-		lastRunExec = "setpci"
-		return fakeSetpciOutput, fakeSetpciErrReturn
-	}
-	if i := sort.SearchStrings(args, "rpm-ostree"); i < len(args) {
-		if i := sort.SearchStrings(args, "--append"); i < len(args) {
-			lastRunExec = "rpm-ostree --append"
-			return "", fakeAppendKargsErrReturn
+
+	for _, a := range d.NodeInventory.SriovAccelerators {
+		a.PCIAddress = addr
+		for _, vf := range a.VFs {
+			vf.PCIAddress = addr
 		}
-		lastRunExec = "rpm-ostree get"
-		return fakeGetKargsOutput, fakeGetKargsErrReturn
 	}
-	if i := sort.SearchStrings(args, "modprobe"); i < len(args) {
-		lastRunExec = "modprobe"
-		return "", fakeModprobeErrReturn
-	}
-	if i := sort.SearchStrings(args, pfConfigAppFilepath); i < len(args) {
-		lastRunExec = "pfConfigAppFile"
-		return "", fakePFConfigErrReturn
-	}
-	lastRunExec = "Unsupported"
-	return "", fmt.Errorf("Unsupported command")
 }
 
-func fakeGetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
-	return fakeSriovInventoryOutput, fakeSriovInventoryErrReturn
+func (d *TestData) PcieAddress() string {
+	for _, a := range d.NodeInventory.SriovAccelerators {
+		return a.PCIAddress
+	}
+	panic("PcieAddress is not defined")
 }
 
-var (
-	node           *corev1.Node
-	nodeConfig     *sriovv1.SriovFecNodeConfig
-	request        ctrl.Request
-	reconciler     *NodeConfigReconciler
-	log            = ctrl.Log.WithName("SriovDaemon-test")
-	doDeconf       = true
-	nodeName       = "config"
-	NAMESPACE      = "default"
-	PCIAddress     = "0000:14:00.1"
-	namespacedName = types.NamespacedName{
-		Name:      nodeName,
-		Namespace: NAMESPACE,
+func (d *TestData) GetNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: d.SriovFecNodeConfig.Namespace,
+		Name:      d.SriovFecNodeConfig.Name,
 	}
-)
+}
 
-func createCRWithNodeConfig(addNodeConfig bool, name, namespace string, req ctrl.Request) error {
-	getSriovInventory = fakeGetSriovInventory
-	getVFconfigured = fakeGetVFconfigured
-	getVFList = fakeGetVFList
+func (d *TestData) NodeConfigName() string {
+	return d.SriovFecNodeConfig.Name
+}
 
-	err := k8sClient.Create(context.TODO(), node)
-	Expect(err).ToNot(HaveOccurred())
+func (d *TestData) NodeConfigNS() string {
+	return d.SriovFecNodeConfig.Namespace
+}
 
-	if addNodeConfig {
-		// simulate creation of cluster config by the user
-		err = k8sClient.Create(context.TODO(), nodeConfig)
-		Expect(err).ToNot(HaveOccurred())
-	}
-
-	Expect(config).ToNot(BeNil())
+func initReconciler(toBeInitialized *NodeConfigReconciler, nodeName, namespace string) error {
 	cset, err := clientset.NewForConfig(config)
-	Expect(err).ToNot(HaveOccurred())
+	if err != nil {
+		return err
+	}
 
-	reconciler = NewNodeConfigReconciler(k8sClient, cset,
-		log, name, namespace)
+	r, err := NewNodeConfigReconciler(k8sClient, cset, log, nodeName, namespace)
+	if err != nil {
+		return err
+	}
 
-	_, err = reconciler.Reconcile(req)
-	return err
+	*toBeInitialized = *r
+	return nil
 }
 
-var _ = Describe("SriovDaemonTest", func() {
-	var _ = Context("Reconciler", func() {
+func initNodeConfiguratorRunExecCmd(f func([]string, logr.Logger) (string, error)) {
+	runExecCmd = f
+}
 
-		BeforeEach(func() {
-			workdir = testTmpFolder
-			redhatReleaseFilepath = "testdata/redhat-release_test"
-			procCmdlineFilePath = "testdata/cmdline_test"
-			sysBusPciDevices = testTmpFolder
-			sysBusPciDrivers = testTmpFolder
-			clean()
-			runExecCmd = fakeRunExecCmd
-			doDeconf = true
-
-			request = ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: NAMESPACE,
-					Name:      nodeName,
-				},
-			}
-
-			err := createFileInFolder(filepath.Join(sysBusPciDevices, PCIAddress), "driver_override")
-			Expect(err).ToNot(HaveOccurred())
-			err = createFileInFolder(filepath.Join(sysBusPciDevices, PCIAddress), vfNumFile)
-			Expect(err).ToNot(HaveOccurred())
-			err = createFileInFolder(filepath.Join(sysBusPciDrivers, "PFdriver"), "bind")
-			Expect(err).ToNot(HaveOccurred())
-			err = createFileInFolder(filepath.Join(sysBusPciDrivers, "pci-pf-stub"), "bind")
-			Expect(err).ToNot(HaveOccurred())
-
-			fakeSriovInventoryOutput = &sriovv1.NodeInventory{
-				SriovAccelerators: []sriovv1.SriovAccelerator{
-					{
-						VendorID:   "1",
-						DeviceID:   "0d8f",
-						Driver:     "D3",
-						MaxVFs:     1,
-						PCIAddress: PCIAddress,
-						VFs: []sriovv1.VF{
-							{
-								PCIAddress: PCIAddress,
-								Driver:     "D3",
-								DeviceID:   "0d8f",
-							},
-						},
-					},
-				},
-			}
-
-			node = &corev1.Node{
-				ObjectMeta: v1.ObjectMeta{
-					Name: nodeName,
-					Labels: map[string]string{
-						"fpga.intel.com/intel-accelerator-present": "",
-					},
-				},
-			}
-			nodeConfig = &sriovv1.SriovFecNodeConfig{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      nodeName,
-					Namespace: NAMESPACE,
-				},
-				Spec: sriovv1.SriovFecNodeConfigSpec{
-					PhysicalFunctions: []sriovv1.PhysicalFunctionConfig{
-						{
-							PCIAddress: PCIAddress,
-							PFDriver:   "PFdriver",
-							VFDriver:   "v",
-							VFAmount:   5,
-							BBDevConfig: sriovv1.BBDevConfig{
-								N3000: &sriovv1.N3000BBDevConfig{
-									NetworkType: "FPGA_LTE",
-									PFMode:      false,
-									FLRTimeOut:  10,
-									Downlink: sriovv1.UplinkDownlink{
-										Bandwidth:   3,
-										LoadBalance: 3,
-										Queues: sriovv1.UplinkDownlinkQueues{
-											VF0: 0,
-											VF1: 1,
-											VF2: 2,
-											VF3: 3,
-											VF4: 4,
-											VF5: 5,
-											VF6: 6,
-											VF7: 7,
-										},
-									},
-									Uplink: sriovv1.UplinkDownlink{
-										Bandwidth:   2,
-										LoadBalance: 2,
-										Queues: sriovv1.UplinkDownlinkQueues{
-											VF0: 0,
-											VF1: 1,
-											VF2: 2,
-											VF3: 3,
-											VF4: 4,
-											VF5: 5,
-											VF6: 6,
-											VF7: 7,
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			}
-		})
-		AfterEach(func() {
-			var err error
-			if doDeconf {
-				err = k8sClient.Get(context.TODO(), namespacedName, nodeConfig)
-				Expect(err).NotTo(HaveOccurred())
-				nodeConfig.Spec = sriovv1.SriovFecNodeConfigSpec{
-					PhysicalFunctions: []sriovv1.PhysicalFunctionConfig{},
-				}
-				err = k8sClient.Update(context.TODO(), nodeConfig)
-				Expect(err).NotTo(HaveOccurred())
-
-				_, err = reconciler.Reconcile(request)
-				Expect(err).ToNot(HaveOccurred())
-
-				err = k8sClient.Delete(context.TODO(), nodeConfig)
-				Expect(err).ToNot(HaveOccurred())
-			}
-			err = k8sClient.Delete(context.TODO(), node)
-			Expect(err).ToNot(HaveOccurred())
-		})
-		var _ = It("will create cr without node config", func() {
-			err := createCRWithNodeConfig(false, nodeName, NAMESPACE, request)
-			Expect(err).ToNot(HaveOccurred())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriovv1.SriovFecNodeConfigList{}
-			err = k8sClient.List(context.TODO(), nodeConfigs)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(nodeConfigs.Items)).To(Equal(1))
-			Expect(lastRunExec).To(Equal(""))
-		})
-		var _ = It("will ignore cr with wrong node name", func() {
-			err := createCRWithNodeConfig(false, "wrongName", NAMESPACE, request)
-			Expect(err).ToNot(HaveOccurred())
-
-			doDeconf = false
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriovv1.SriovFecNodeConfigList{}
-			err = k8sClient.List(context.TODO(), nodeConfigs)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(nodeConfigs.Items)).To(Equal(0))
-		})
-		var _ = It("will ignore cr with wrong namespace", func() {
-			err := createCRWithNodeConfig(false, nodeName, "wrongNamespace", request)
-			Expect(err).ToNot(HaveOccurred())
-			doDeconf = false
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriovv1.SriovFecNodeConfigList{}
-			err = k8sClient.List(context.TODO(), nodeConfigs)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(nodeConfigs.Items)).To(Equal(0))
-		})
-		var _ = It("will fail when namespace will be not handle", func() {
-			request = ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "wrongNamespace",
-					Name:      nodeName,
-				},
-			}
-			err := createCRWithNodeConfig(false, nodeName, "wrongNamespace", request)
-			Expect(err).To(HaveOccurred())
-			doDeconf = false
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriovv1.SriovFecNodeConfigList{}
-			err = k8sClient.List(context.TODO(), nodeConfigs)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(nodeConfigs.Items)).To(Equal(0))
-		})
-		var _ = It("will create cr with node config and failed reboot", func() {
-			fakeSystemdErrReturn = fmt.Errorf("error")
-			procCmdlineFilePath = "testdata/cmdline_test_missing_param"
-			err := createCRWithNodeConfig(true, nodeName, NAMESPACE, request)
-			Expect(err).ToNot(HaveOccurred())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriovv1.SriovFecNodeConfigList{}
-			err = k8sClient.List(context.TODO(), nodeConfigs)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(nodeConfigs.Items)).To(Equal(1))
-			Expect(lastRunExec).To(Equal("systemd-run"))
-		})
-		var _ = It("will create cr with node config", func() {
-			err := createCRWithNodeConfig(true, nodeName, NAMESPACE, request)
-			Expect(err).ToNot(HaveOccurred())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriovv1.SriovFecNodeConfigList{}
-			err = k8sClient.List(context.TODO(), nodeConfigs)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(nodeConfigs.Items)).To(Equal(1))
-			Expect(lastRunExec).To(Equal("pfConfigAppFile"))
-		})
-		var _ = It("will create cr with node config and failed unbind device", func() {
-			err := createFileInFolder(filepath.Join(sysBusPciDevices, PCIAddress), "driver")
-			Expect(err).ToNot(HaveOccurred())
-
-			err = createCRWithNodeConfig(true, nodeName, NAMESPACE, request)
-			Expect(err).ToNot(HaveOccurred())
-
-			err = os.Remove(filepath.Join(sysBusPciDevices, PCIAddress, "driver"))
-			Expect(err).ToNot(HaveOccurred())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriovv1.SriovFecNodeConfigList{}
-			err = k8sClient.List(context.TODO(), nodeConfigs)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(nodeConfigs.Items)).To(Equal(1))
-			Expect(lastRunExec).To(Equal("systemd-run"))
-		})
-		var _ = It("will create cr with node config and enable master bus", func() {
-			fakeSetpciOutput = PCIAddress + " = " + "1"
-			nodeConfig.Spec.PhysicalFunctions[0].PFDriver = "pci-pf-stub"
-			err := createCRWithNodeConfig(true, nodeName, NAMESPACE, request)
-			Expect(err).ToNot(HaveOccurred())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriovv1.SriovFecNodeConfigList{}
-			err = k8sClient.List(context.TODO(), nodeConfigs)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(nodeConfigs.Items)).To(Equal(1))
-			Expect(lastRunExec).To(Equal("setpci"))
-		})
-	})
-	var _ = Describe("Reconciler manager", func() {
-		var _ = It("setup with invalid manager", func() {
-			var m ctrl.Manager
-			var reconciler NodeConfigReconciler
-			err := reconciler.SetupWithManager(m)
-			Expect(err).To(HaveOccurred())
-		})
-	})
-})
+func returnLastArg(args ...interface{}) interface{} {
+	return args[len(args)-1]
+}

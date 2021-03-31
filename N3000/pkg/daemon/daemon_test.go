@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package daemon
 
@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/exec"
 
-	dh "github.com/open-ness/openshift-operator/N3000/pkg/drainhelper"
+	dh "github.com/open-ness/openshift-operator/common/pkg/drainhelper"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -44,15 +44,15 @@ func setupManagers() {
 }
 func cleanUpHandlers() {
 	// Restore original Fortville handlers
-	nvmupdateExec = runExec
+	nvmupdateExec = runExecWithLog
 	fpgadiagExec = runExec
 	ethtoolExec = runExec
 	tarExec = runExec
 
 	// Restore original FPGA manager handlers
 	fpgaInfoExec = runExec
-	fpgasUpdateExec = runExec
-	rsuExec = runExec
+	fpgasUpdateExec = runExecWithLog
+	rsuExec = runExecWithLog
 }
 
 var reportErrorIn = 0
@@ -78,7 +78,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 	var reconciler N3000NodeReconciler
 
 	const tempNamespaceName = "n3000node"
-	var namespace = os.Getenv("NAMESPACE")
+	var namespace = os.Getenv("N3000_NAMESPACE")
 
 	log := klogr.New()
 	doDeconf := false
@@ -96,7 +96,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			n3000node = &fpgav1.N3000Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "n3000node-gf",
+					Name:      "gf",
 					Namespace: namespace,
 				},
 			}
@@ -109,7 +109,8 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				Spec: fpgav1.N3000ClusterSpec{
 					Nodes: []fpgav1.N3000ClusterNode{
 						{
-							NodeName: "dummy",
+							NodeName:  "dummy",
+							Fortville: &fpgav1.N3000Fortville{},
 						},
 					},
 				},
@@ -127,7 +128,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 				err = k8sClient.Update(context.TODO(), clusterConfig)
 				Expect(err).NotTo(HaveOccurred())
-				_, err = (reconciler).Reconcile(request)
+				_, err = (reconciler).Reconcile(context.TODO(), request)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
@@ -168,7 +169,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			n3000node = &fpgav1.N3000Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "n3000node-gfgf",
+					Name:      "gfgf",
 					Namespace: namespace,
 				},
 			}
@@ -239,7 +240,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			var err error
 			n3000node = &fpgav1.N3000Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "n3000node-gf2",
+					Name:      "gf2",
 					Namespace: namespace,
 				},
 			}
@@ -269,7 +270,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			n3000node = &fpgav1.N3000Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "n3000node-gfgf",
+					Name:      "gfgf",
 					Namespace: namespace,
 				},
 			}
@@ -325,7 +326,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			var noFirmwareUrlNode fpgav1.N3000Node
 
-			noFirmwareUrlNode.Spec.Fortville = fpgav1.N3000Fortville{
+			noFirmwareUrlNode.Spec.Fortville = &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "00:00:00:00:00:00",
@@ -374,7 +375,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				namespace: request.NamespacedName.Namespace,
 				nodeName:  "dummy"}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -388,7 +389,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			request = ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: namespace,
-					Name:      "n3000node-gf",
+					Name:      "gf",
 				},
 			}
 
@@ -396,7 +397,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				namespace: request.NamespacedName.Namespace,
 				nodeName:  "gf"}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -417,7 +418,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			reconciler = N3000NodeReconciler{Client: k8sClient, log: log, namespace: request.NamespacedName.Namespace, nodeName: "123NodeName"}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -439,7 +440,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			reconciler = N3000NodeReconciler{Client: k8sClient, log: log, namespace: request.NamespacedName.Namespace}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(reconciler.nodeName).To(Equal(""))
@@ -460,7 +461,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 
 			reconciler = N3000NodeReconciler{Client: k8sClient, log: log}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(request.Namespace).ToNot(Equal(reconciler.namespace))
 		})
@@ -478,7 +479,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			request = ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: namespace,
-					Name:      "n3000node-gf",
+					Name:      "gf",
 				},
 			}
 
@@ -493,46 +494,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				},
 			}
 
-			_, err = (reconciler).Reconcile(request)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		var _ = It("will fail because of FPGA url missing", func() {
-			var err error
-
-			n3000node.Spec.FPGA = []fpgav1.N3000Fpga{
-				{
-					PCIAddr:      "ffff:ff:01.1",
-					UserImageURL: "",
-				},
-			}
-
-			err = k8sClient.Create(context.Background(), n3000node)
-			Expect(err).ToNot(HaveOccurred())
-
-			// simulate creation of cluster config by the user
-			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
-
-			log = klogr.New().WithName("N3000NodeReconciler-Test")
-			request = ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: namespace,
-					Name:      "n3000node-gf",
-				},
-			}
-
-			reconciler = N3000NodeReconciler{Client: k8sClient, log: log,
-				namespace: request.NamespacedName.Namespace,
-				nodeName:  "gf",
-				fortville: FortvilleManager{
-					Log: log.WithName("fortvilleManager"),
-				},
-				fpga: FPGAManager{
-					Log: log.WithName("fpgaManager"),
-				},
-			}
-
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -556,7 +518,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			request = ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: namespace,
-					Name:      "n3000node-gf",
+					Name:      "gf",
 				},
 			}
 
@@ -571,14 +533,14 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				},
 			}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("will fail because of Flash problem", func() {
 			var err error
 
 			n3000node.Spec.FPGA = nil
-			n3000node.Spec.Fortville = fpgav1.N3000Fortville{
+			n3000node.Spec.Fortville = &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "00:00:00:00:00:00",
@@ -597,7 +559,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			request = ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: namespace,
-					Name:      "n3000node-gf",
+					Name:      "gf",
 				},
 			}
 
@@ -612,14 +574,14 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				},
 			}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("will run Reconcile with misconfiugred DrainHelper", func() {
 			var err error
 
 			n3000node.Spec.FPGA = nil
-			n3000node.Spec.Fortville = fpgav1.N3000Fortville{
+			n3000node.Spec.Fortville = &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "64:4c:36:11:1b:a8",
@@ -638,7 +600,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			request = ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: namespace,
-					Name:      "n3000node-gf",
+					Name:      "gf",
 				},
 			}
 
@@ -667,7 +629,7 @@ var _ = Describe("N3000 Daemon Tests", func() {
 				drainHelper: dh.NewDrainHelper(log, cset, "node", "namespace"),
 			}
 
-			_, err = (reconciler).Reconcile(request)
+			_, err = (reconciler).Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
 		})
 

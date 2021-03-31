@@ -1,17 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: fpgainfo-exporter
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: fpgainfo-exporter
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 rules:
 - apiGroups:
   - security.openshift.io
@@ -19,29 +20,31 @@ rules:
   - securitycontextconstraints
   verbs:
   - use
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: fpgainfo-exporter
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: fpgainfo-exporter
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 subjects:
 - kind: ServiceAccount
   name: fpgainfo-exporter
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 userNames:
-- system:serviceaccount:n3000-operators-resources:fpgainfo-exporter
+- system:serviceaccount:{{ .N3000_NAMESPACE }}:fpgainfo-exporter
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: prometheus-k8s
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 rules:
  - apiGroups:
    - ""
@@ -53,12 +56,13 @@ rules:
    - get
    - list
    - watch
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: prometheus-k8s
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -67,11 +71,12 @@ subjects:
 - kind: ServiceAccount
   name: prometheus-k8s
   namespace: openshift-monitoring
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
   name: fpgainfo-exporter
   labels:
     app: fpgainfo-exporter
@@ -86,11 +91,12 @@ spec:
     port: 42222
     targetPort: 42222
     protocol: TCP
+
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
   name: fpgainfo-exporter
   labels:
     app: fpgainfo-exporter
@@ -102,10 +108,11 @@ spec:
   jobLabel: app
   namespaceSelector:
     matchNames:
-    - n3000-operators-resources
+    - {{ .N3000_NAMESPACE }}
   selector:
     matchLabels:
       app: fpgainfo-exporter
+
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -113,7 +120,7 @@ metadata:
   labels:
     app: fpgainfo-exporter
   name: fpgainfo-exporter
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 spec:
   minReadySeconds: 10
   selector:
@@ -136,7 +143,6 @@ spec:
         ports:
         - name: metrics
           containerPort: 42222
-          hostPort: 42222
         resources:
          requests:
            memory: 100Mi

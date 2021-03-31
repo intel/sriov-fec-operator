@@ -1,22 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: n3000-operators-resources
----
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: fpga-driver
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: fpga-driver
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 rules:
 - apiGroups:
   - security.openshift.io
@@ -26,23 +22,25 @@ rules:
   - use
   resourceNames:
   - privileged
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: fpga-driver
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: fpga-driver
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 subjects:
 - kind: ServiceAccount
   name: fpga-driver
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 userNames:
-- system:serviceaccount:n3000-operators-resources:fpga-driver
+- system:serviceaccount:{{ .N3000_NAMESPACE }}:fpga-driver
+
 ---
 # Please edit the object below. Lines beginning with a '#' will be ignored,
 # and an empty file will abort the edit. If an error occurs while saving this file will be
@@ -88,7 +86,7 @@ seccompProfiles:
 supplementalGroups:
   type: RunAsAny
 users:
-- system:serviceaccount:n3000-operators-resources:fpga-driver
+- system:serviceaccount:{{ .N3000_NAMESPACE }}:fpga-driver
 volumes:
 - '*'
 ---
@@ -98,7 +96,7 @@ metadata:
   labels:
     app: fpga-driver-daemonset
   name: fpga-driver-daemonset
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
   annotations:
     openshift.io/scc: fpga-driver
 spec:

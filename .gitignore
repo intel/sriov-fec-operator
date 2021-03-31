@@ -1,12 +1,9 @@
 .vscode
 bundle_tmp*
-N3000/files/
 N3000/docker/driver-container/files/
 N3000/docker/opae-image/files/
-prometheus_fpgainfo_exporter/files/
-sriov-fec/files/
-N3000/labeler/files/
-files/*/*.rpm
-files/*/*.sh
+N3000/files/*/*.rpm
+N3000/files/*/*.sh
 # duplicate license file used in dockerfiles
 TEMP_LICENSE_COPY
+.idea/*

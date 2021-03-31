@@ -21,7 +21,7 @@ func execCmd(args []string, log logr.Logger) (string, error) {
 		cmd = exec.Command(args[0], args[1:]...)
 	}
 
-	log.Info("executing command", "cmd", cmd)
+	log.V(4).Info("executing command", "cmd", cmd)
 
 	out, err := cmd.Output()
 	if err != nil {
@@ -30,6 +30,6 @@ func execCmd(args []string, log logr.Logger) (string, error) {
 	}
 
 	output := string(out)
-	log.Info("commands output", "output", output)
+	log.V(4).Info("commands output", "output", output)
 	return output, nil
 }

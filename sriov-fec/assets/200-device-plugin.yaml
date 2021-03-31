@@ -1,0 +1,131 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020-2021 Intel Corporation
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sriov-device-plugin
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sriov-plugin
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+rules:
+  - apiGroups:
+      - security.openshift.io
+    resourceNames:
+      - privileged
+    resources:
+      - securitycontextconstraints
+    verbs:
+      - use
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sriov-device-plugin
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sriov-plugin
+subjects:
+  - kind: ServiceAccount
+    name: sriov-device-plugin
+    namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sriovdp-config
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+data:
+  config.json: |
+    {
+        "resourceList": [
+            {
+                "resourceName": "intel_fec_lte",
+                "deviceType": "accelerator",
+                "selectors": {
+                    "vendors": ["1172"],
+                    "devices": ["5050"],
+                    "drivers": ["pci-pf-stub", "vfio-pci"]
+                }
+            },
+            {
+                "resourceName": "intel_fec_5g",
+                "deviceType": "accelerator",
+                "selectors": {
+                    "vendors": ["8086"],
+                    "devices": ["0d90"],
+                    "drivers": ["pci-pf-stub", "vfio-pci"]
+                }
+            },
+            {
+                "resourceName": "intel_fec_acc100",
+                "deviceType": "accelerator",
+                "selectors": {
+                    "vendors": ["8086"],
+                    "devices": ["0d5d"],
+                    "drivers": ["pci-pf-stub", "vfio-pci"]
+                }
+            }
+        ]
+    }
+
+---
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: sriov-device-plugin
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+  labels:
+    app: sriov-device-plugin-daemonset
+spec:
+  minReadySeconds: 10
+  selector:
+    matchLabels:
+      app: sriov-device-plugin-daemonset
+  template:
+    metadata:
+      labels:
+        app: sriov-device-plugin-daemonset
+    spec:
+      hostNetwork: true
+      nodeSelector:
+        fpga.intel.com/intel-accelerator-present: ""
+      serviceAccountName: sriov-device-plugin
+      containers:
+      - name: sriov-device-plugin
+        image: registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.6
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          readOnlyRootFilesystem: true
+          privileged: true
+        args:
+        - --log-level=10
+        volumeMounts:
+        - name: devicesock
+          mountPath: /var/lib/kubelet/
+          readOnly: false
+        - name: config-volume
+          mountPath: /etc/pcidp/
+          readOnly: true
+      volumes:
+        - name: devicesock
+          hostPath:
+            path: /var/lib/kubelet/
+        - name: net
+          hostPath:
+            path: /sys/class/net
+        - name: config-volume
+          configMap:
+            name: sriovdp-config
+            items:
+            - key: config.json
+              path: config.json

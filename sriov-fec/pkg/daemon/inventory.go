@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package daemon
 
@@ -12,25 +12,6 @@ import (
 	sriovv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
 )
 
-const (
-	acceleratorClass    = "12"
-	acceleratorSubclass = "00"
-	vendorID            = "8086"
-)
-
-type deviceInfo struct {
-	VFDeviceID string
-	DeviceName string
-}
-
-var (
-	deviceIDWhitelist = map[string]deviceInfo{
-		"0d8f": {"0d90", "FPGA_5GNR"},
-		"5052": {"5050", "FPGA_LTE"},
-		"0b32": {"", ""}, // Factory dummy
-	}
-)
-
 func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 	pci, err := ghw.PCI()
 	if err != nil {
@@ -40,7 +21,7 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 
 	devices := pci.ListDevices()
 	if len(devices) == 0 {
-		log.Info("got 0 pci devices")
+		log.V(4).Info("got 0 pci devices")
 		err := errors.New("pci.ListDevices() returned 0 devices")
 		return nil, err
 	}
@@ -50,13 +31,15 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 	}
 
 	for _, device := range devices {
-		if !(device.Vendor.ID == vendorID &&
-			device.Class.ID == acceleratorClass &&
-			device.Subclass.ID == acceleratorSubclass) {
+
+		_, isWhitelisted := supportedAccelerators.VendorID[device.Vendor.ID]
+		if !(isWhitelisted &&
+			device.Class.ID == supportedAccelerators.Class &&
+			device.Subclass.ID == supportedAccelerators.SubClass) {
 			continue
 		}
 
-		if _, ok := deviceIDWhitelist[device.Product.ID]; !ok {
+		if _, ok := supportedAccelerators.Devices[device.Product.ID]; !ok {
 			continue
 		}
 
@@ -66,7 +49,7 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 
 		driver, err := utils.GetDriverName(device.Address)
 		if err != nil {
-			log.Info("unable to get driver for device", "pci", device.Address, "reason", err.Error())
+			log.V(4).Info("unable to get driver for device", "pci", device.Address, "reason", err.Error())
 			driver = ""
 		}
 
@@ -91,13 +74,13 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 
 			driver, err := utils.GetDriverName(vf)
 			if err != nil {
-				log.Info("failed to get driver name for VF", "pci", vf, "pf", device.Address, "reason", err.Error())
+				log.V(4).Info("failed to get driver name for VF", "pci", vf, "pf", device.Address, "reason", err.Error())
 			} else {
 				vfInfo.Driver = driver
 			}
 
 			if vfDeviceInfo := pci.GetDevice(vf); vfDeviceInfo == nil {
-				log.Info("failed to get device info for vf", "pci", vf)
+				log.V(4).Info("failed to get device info for vf", "pci", vf)
 			} else {
 				vfInfo.DeviceID = vfDeviceInfo.Product.ID
 			}

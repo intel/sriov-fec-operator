@@ -4,7 +4,22 @@
 apiVersion: fpga.intel.com/v1
 kind: N3000Cluster
 metadata:
-  name: n3000cluster-sample
+  name: n3000
+  namespace: vran-acceleration-operators
 spec:
-  # Add fields here
-  foo: bar
+  nodes:
+    - nodeName: worker-0
+      fpga:
+        - userImageURL: "http://server:8000/userimage.bin"
+          PCIAddr: "0000:09:00.0"
+      fortville:
+        firmwareURL: "http://server:8000/nvmupdate.tar.gz"
+        MACs:
+          - MAC: "aa:bb:cc:dd:ee:fd"
+          - MAC: "aa:bb:cc:dd:ee:fe"
+          - MAC: "aa:bb:cc:dd:ee:ff"
+    - nodeName: worker-1
+      fortville:
+        firmwareURL: "http://server:8000/nvmupdate.tar.gz"
+        MACs:
+          - MAC: "aa:bb:cc:dd:ff:ff"

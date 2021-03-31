@@ -25,9 +25,9 @@ var (
 	fpgaUserImageSubfolderPath  = "/n3000-workdir"
 	fpgaUserImageFile           = filepath.Join(fpgaUserImageSubfolderPath, "fpga")
 	fpgasUpdatePath             = "fpgasupdate"
-	fpgasUpdateExec             = runExec
+	fpgasUpdateExec             = runExecWithLog
 	rsuPath                     = "rsu"
-	rsuExec                     = runExec
+	rsuExec                     = runExecWithLog
 	fpgaTemperatureDefaultLimit = 85.0 //in Celsius degrees
 	fpgaTemperatureBottomRange  = 40.0 //in Celsius degrees
 	fpgaTemperatureTopRange     = 95.0 //in Celsius degrees
@@ -132,14 +132,14 @@ type FPGAManager struct {
 func (fpga *FPGAManager) ProgramFPGA(file string, PCIAddr string, dryRun bool) error {
 	log := fpga.Log.WithName("ProgramFPGA").WithValues("pci", PCIAddr)
 
-	log.Info("Starting")
-	_, err := fpgasUpdateExec(exec.Command(fpgasUpdatePath, file, PCIAddr), fpga.Log, dryRun)
+	log.V(4).Info("Starting")
+	err := fpgasUpdateExec(exec.Command(fpgasUpdatePath, file, PCIAddr), fpga.Log, dryRun)
 	if err != nil {
 		log.Error(err, "Failed to program FPGA")
 		return err
 	}
-	log.Info("Program FPGA completed, start new power cycle N3000 ...")
-	_, err = rsuExec(exec.Command(rsuPath, "bmcimg", PCIAddr), fpga.Log, dryRun)
+	log.V(4).Info("Program FPGA completed, start new power cycle N3000 ...")
+	err = rsuExec(exec.Command(rsuPath, "bmcimg", PCIAddr), fpga.Log, dryRun)
 	if err != nil {
 		log.Error(err, "Failed to execute rsu")
 		return err
@@ -157,7 +157,7 @@ func (fpga *FPGAManager) verifyPCIAddrs(fpgaCR []fpgav1.N3000Fpga) error {
 		pciFound := false
 		for i := range currentInventory {
 			if fpgaCR[idx].PCIAddr == currentInventory[i].PciAddr {
-				log.Info("PCIAddr detected", "PciAddr", fpgaCR[idx].PCIAddr)
+				log.V(4).Info("PCIAddr detected", "PciAddr", fpgaCR[idx].PCIAddr)
 				pciFound = true
 				break
 			}
@@ -185,7 +185,7 @@ func (fpga *FPGAManager) verifyPreconditions(n *fpgav1.N3000Node) error {
 			return err
 		}
 		indexStr := strconv.Itoa(i)
-		log.Info("Start downloading", "url", obj.UserImageURL)
+		log.V(4).Info("Start downloading", "url", obj.UserImageURL)
 		err = getImage(fpgaUserImageFile+indexStr+".bin",
 			obj.UserImageURL,
 			obj.CheckSum,
@@ -194,7 +194,7 @@ func (fpga *FPGAManager) verifyPreconditions(n *fpgav1.N3000Node) error {
 			log.Error(err, "Unable to get FPGA Image")
 			return errors.Wrap(err, "FPGA image error:")
 		}
-		log.Info("Image downloaded", "url", obj.UserImageURL)
+		log.V(4).Info("Image downloaded", "url", obj.UserImageURL)
 	}
 	return nil
 }
@@ -207,7 +207,7 @@ func (fpga *FPGAManager) ProgramFPGAs(n *fpgav1.N3000Node) error {
 			return err
 		}
 		indexStr := strconv.Itoa(i)
-		log.Info("Start program", "PCIAddr", obj.PCIAddr)
+		log.V(4).Info("Start program", "PCIAddr", obj.PCIAddr)
 		err = fpga.ProgramFPGA(fpgaUserImageFile+indexStr+".bin", obj.PCIAddr, n.Spec.DryRun)
 		if err != nil {
 			log.Error(err, "Failed to program FPGA:", "pci", obj.PCIAddr)

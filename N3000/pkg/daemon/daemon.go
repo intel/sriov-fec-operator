@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package daemon
 
 import (
 	"context"
 	"errors"
-	"fmt"
 
-	dh "github.com/open-ness/openshift-operator/N3000/pkg/drainhelper"
+	dh "github.com/open-ness/openshift-operator/common/pkg/drainhelper"
 
 	"github.com/go-logr/logr"
 	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
@@ -20,10 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-)
-
-const (
-	crNameTemplate = "n3000node-%s"
 )
 
 type FlashConditionReason string
@@ -82,20 +77,20 @@ func (r *N3000NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			CreateFunc: func(e event.CreateEvent) bool {
 				n3000node, ok := e.Object.(*fpgav1.N3000Node)
 				if !ok {
-					r.log.Info("Failed to convert e.Object to fpgav1.N3000Node", "e.Object", e.Object)
+					r.log.V(2).Info("Failed to convert e.Object to fpgav1.N3000Node", "e.Object", e.Object)
 					return false
 				}
 				cond := meta.FindStatusCondition(n3000node.Status.Conditions, FlashCondition)
-				if cond != nil && cond.ObservedGeneration == e.Meta.GetGeneration() {
-					r.log.Info("Created object was handled previously, ignoring")
+				if cond != nil && cond.ObservedGeneration == e.Object.GetGeneration() {
+					r.log.V(4).Info("Created object was handled previously, ignoring")
 					return false
 				}
 				return true
 
 			},
 			UpdateFunc: func(e event.UpdateEvent) bool {
-				if e.MetaOld.GetGeneration() == e.MetaNew.GetGeneration() {
-					r.log.Info("Update ignored, generation unchanged")
+				if e.ObjectOld.GetGeneration() == e.ObjectNew.GetGeneration() {
+					r.log.V(4).Info("Update ignored, generation unchanged")
 					return false
 				}
 				return true
@@ -108,28 +103,27 @@ func (r *N3000NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // If invoked before manager's Start, it'll need a direct API client
 // (Manager's/Controller's client is cached and cache is not initialized yet).
 func (r *N3000NodeReconciler) CreateEmptyN3000NodeIfNeeded(c client.Client) error {
-	name := fmt.Sprintf(crNameTemplate, r.nodeName)
-	log := r.log.WithName("CreateEmptyN3000NodeIfNeeded").WithValues("name", name, "namespace", r.namespace)
+	log := r.log.WithName("CreateEmptyN3000NodeIfNeeded").WithValues("name", r.nodeName, "namespace", r.namespace)
 
 	n3000node := &fpgav1.N3000Node{}
 	err := c.Get(context.Background(),
 		client.ObjectKey{
-			Name:      name,
+			Name:      r.nodeName,
 			Namespace: r.namespace,
 		},
 		n3000node)
 
 	if err == nil {
-		log.Info("already exists")
+		log.V(4).Info("already exists")
 		return nil
 	}
 
 	if k8serrors.IsNotFound(err) {
-		log.Info("not found - creating")
+		log.V(2).Info("not found - creating")
 
 		n3000node = &fpgav1.N3000Node{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      r.nodeName,
 				Namespace: r.namespace,
 			},
 		}
@@ -204,7 +198,7 @@ func (r *N3000NodeReconciler) verifySpec(n *fpgav1.N3000Node) error {
 		}
 	}
 
-	if len(n.Spec.Fortville.MACs) > 0 {
+	if n.Spec.Fortville != nil && len(n.Spec.Fortville.MACs) > 0 {
 		if n.Spec.Fortville.FirmwareURL == "" {
 			return errors.New("Missing Fortville FirmwareURL")
 		}
@@ -212,28 +206,26 @@ func (r *N3000NodeReconciler) verifySpec(n *fpgav1.N3000Node) error {
 	return nil
 }
 
-func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *N3000NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.log.WithName("Reconcile").WithValues("namespace", req.Namespace, "name", req.Name)
 
 	// Lack of update on namespace/name mismatch (like in N3000ClusterReconciler):
 	// N3000Node is between Operator & Daemon so we're in control of this communication channel.
 
 	if req.Namespace != r.namespace {
-		log.Info("unexpected namespace - ignoring", "expected namespace", r.namespace)
+		log.V(4).Info("unexpected namespace - ignoring", "expected namespace", r.namespace)
 		return ctrl.Result{}, nil
 	}
 
-	if req.Name != fmt.Sprintf(crNameTemplate, r.nodeName) {
-		log.Info("CR intended for another node - ignoring", "expected name", fmt.Sprintf(crNameTemplate, r.nodeName))
+	if req.Name != r.nodeName {
+		log.V(4).Info("CR intended for another node - ignoring", "expected name", r.nodeName)
 		return ctrl.Result{}, nil
 	}
-
-	ctx := context.Background()
 
 	n3000node := &fpgav1.N3000Node{}
 	if err := r.Client.Get(ctx, req.NamespacedName, n3000node); err != nil {
 		if k8serrors.IsNotFound(err) {
-			log.Info("reconciled n3000node not found")
+			log.V(2).Info("reconciled n3000node not found")
 			return ctrl.Result{}, r.CreateEmptyN3000NodeIfNeeded(r.Client)
 		}
 		log.Error(err, "Get(n3000node) failed")
@@ -247,8 +239,8 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, nil
 	}
 
-	if n3000node.Spec.FPGA == nil && n3000node.Spec.Fortville.MACs == nil {
-		log.Info("Nothing to do")
+	if n3000node.Spec.FPGA == nil && n3000node.Spec.Fortville == nil {
+		log.V(4).Info("Nothing to do")
 		r.updateFlashCondition(n3000node, metav1.ConditionFalse, FlashNotRequested, "Inventory up to date")
 		return ctrl.Result{}, nil
 	}
@@ -273,7 +265,7 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	}
 
-	if n3000node.Spec.Fortville.MACs != nil {
+	if n3000node.Spec.Fortville != nil {
 		err = r.fortville.verifyPreconditions(n3000node)
 		if err != nil {
 			r.updateFlashCondition(n3000node, metav1.ConditionFalse, FlashFailed, err.Error())
@@ -292,7 +284,7 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			}
 		}
 
-		if n3000node.Spec.Fortville.MACs != nil {
+		if n3000node.Spec.Fortville != nil {
 			err = r.fortville.flash(n3000node)
 			if err != nil {
 				log.Error(err, "Unable to flash Fortville")
@@ -315,6 +307,6 @@ func (r *N3000NodeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		r.updateFlashCondition(n3000node, metav1.ConditionTrue, FlashSucceeded, "Flashed successfully")
 	}
 
-	log.Info("Reconciled")
+	log.V(2).Info("Reconciled")
 	return ctrl.Result{}, nil
 }

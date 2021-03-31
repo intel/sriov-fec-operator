@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package daemon
 
@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,11 +27,6 @@ func compareFiles(firstFilepath, secondFilepath string) error {
 		return fmt.Errorf("Different files: %s and %s", firstFilepath, secondFilepath)
 	}
 	return nil
-}
-
-func TestMain(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Main suite")
 }
 
 var _ = Describe("bbdevconfig", func() {
@@ -68,6 +62,63 @@ var _ = Describe("bbdevconfig", func() {
 		},
 		FLRTimeOut: 21,
 	}
+	sampleBBDevConfig1 := sriovv1.ACC100BBDevConfig{
+		PFMode:       true,
+		NumVfBundles: 16,
+		MaxQueueSize: 1024,
+		Uplink4G: sriovv1.QueueGroupConfig{
+			NumQueueGroups:  2,
+			NumAqsPerGroups: 16,
+			AqDepthLog2:     4,
+		},
+		Downlink4G: sriovv1.QueueGroupConfig{
+			NumQueueGroups:  2,
+			NumAqsPerGroups: 16,
+			AqDepthLog2:     4,
+		},
+		Uplink5G: sriovv1.QueueGroupConfig{
+			NumQueueGroups:  2,
+			NumAqsPerGroups: 16,
+			AqDepthLog2:     4,
+		},
+		Downlink5G: sriovv1.QueueGroupConfig{
+			NumQueueGroups:  2,
+			NumAqsPerGroups: 16,
+			AqDepthLog2:     4,
+		},
+	}
+	sampleBBDevConfig2 := sriovv1.ACC100BBDevConfig{
+		PFMode:       true,
+		NumVfBundles: 16,
+		MaxQueueSize: 1024,
+		Uplink4G: sriovv1.QueueGroupConfig{
+			NumQueueGroups:  4,
+			NumAqsPerGroups: 16,
+			AqDepthLog2:     4,
+		},
+		Downlink4G: sriovv1.QueueGroupConfig{
+			NumQueueGroups:  4,
+			NumAqsPerGroups: 16,
+			AqDepthLog2:     4,
+		},
+		Uplink5G: sriovv1.QueueGroupConfig{
+			NumQueueGroups:  4,
+			NumAqsPerGroups: 16,
+			AqDepthLog2:     4,
+		},
+		Downlink5G: sriovv1.QueueGroupConfig{
+			NumQueueGroups:  4,
+			NumAqsPerGroups: 16,
+			AqDepthLog2:     4,
+		},
+	}
+	sampleBBDevConfig3 := sriovv1.BBDevConfig{
+		N3000: &sampleBBDevConfig0,
+	}
+	sampleBBDevConfig4 := sriovv1.BBDevConfig{
+		ACC100: &sampleBBDevConfig1,
+	}
+	sampleBBDevConfig5 := sriovv1.BBDevConfig{}
 	var _ = Context("generateBBDevConfigFile", func() {
 		var _ = It("will create valid config ", func() {
 			filename := "config.cfg"
@@ -79,6 +130,42 @@ var _ = Describe("bbdevconfig", func() {
 		var _ = It("will return error when config is nil ", func() {
 			filename := "config.cfg"
 			err := generateN3000BBDevConfigFile(nil, filepath.Join(testTmpFolder, filename))
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("will create valid ACC100 config ", func() {
+			filename := "config.cfg"
+			err := generateACC100BBDevConfigFile(&sampleBBDevConfig1, filepath.Join(testTmpFolder, filename))
+			Expect(err).ToNot(HaveOccurred())
+			err = compareFiles(filepath.Join(testTmpFolder, filename), "testdata/bbdevconfig_test2.cfg")
+			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("will return error when ACC100 config is nil ", func() {
+			filename := "config.cfg"
+			err := generateACC100BBDevConfigFile(nil, filepath.Join(testTmpFolder, filename))
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("will return error when total number of queue groups for ACC100 exceeds 8 ", func() {
+			filename := "config.cfg"
+			err := generateACC100BBDevConfigFile(&sampleBBDevConfig2, filepath.Join(testTmpFolder, filename))
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("will create valid N3000 config ", func() {
+			filename := "config.cfg"
+			err := generateBBDevConfigFile(sampleBBDevConfig3, filepath.Join(testTmpFolder, filename))
+			Expect(err).ToNot(HaveOccurred())
+			err = compareFiles(filepath.Join(testTmpFolder, filename), "testdata/bbdevconfig_test1.cfg")
+			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("will create valid ACC100 config ", func() {
+			filename := "config.cfg"
+			err := generateBBDevConfigFile(sampleBBDevConfig4, filepath.Join(testTmpFolder, filename))
+			Expect(err).ToNot(HaveOccurred())
+			err = compareFiles(filepath.Join(testTmpFolder, filename), "testdata/bbdevconfig_test2.cfg")
+			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("will return an error when N3000 and ACC100 configs are nil ", func() {
+			filename := "config.cfg"
+			err := generateBBDevConfigFile(sampleBBDevConfig5, filepath.Join(testTmpFolder, filename))
 			Expect(err).To(HaveOccurred())
 		})
 	})

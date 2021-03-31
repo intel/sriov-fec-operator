@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package main
 
@@ -42,9 +42,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	namespace := os.Getenv("NAMESPACE")
-	if namespace == "" {
-		setupLog.Error(nil, "NAMESPACE environment variable is empty")
+	ns := os.Getenv("SRIOV_FEC_NAMESPACE")
+	if ns == "" {
+		setupLog.Error(nil, "SRIOV_FEC_NAMESPACE environment variable is empty")
 		os.Exit(1)
 	}
 
@@ -65,15 +65,18 @@ func main() {
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
 		LeaderElection:     false,
-		Namespace:          namespace,
+		Namespace:          ns,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
-	daemon := daemon.NewNodeConfigReconciler(mgr.GetClient(), cset,
-		ctrl.Log.WithName("daemon"), nodeName, namespace)
+	daemon, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), cset, ctrl.Log.WithName("daemon"), nodeName, ns)
+	if err != nil {
+		setupLog.Error(err, "unable to create reconciler")
+		os.Exit(1)
+	}
 
 	if err := daemon.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NodeConfig")

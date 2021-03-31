@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 /*
 
@@ -41,7 +41,7 @@ const (
 	DEFAULT_CLUSTER_CONFIG_NAME = "config"
 )
 
-var NAMESPACE = os.Getenv("NAMESPACE")
+var NAMESPACE = os.Getenv("SRIOV_FEC_NAMESPACE")
 
 // SriovFecClusterConfigReconciler reconciles a SriovFecClusterConfig object
 type SriovFecClusterConfigReconciler struct {
@@ -54,21 +54,20 @@ type SriovFecClusterConfigReconciler struct {
 // +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecclusterconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecnodeconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecnodeconfigs/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="",resources=nodes,verbs=list
+// +kubebuilder:rbac:groups="",resources=nodes,verbs=list;watch
 // +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;configmaps,verbs=*
 // +kubebuilder:rbac:groups=apps,resources=daemonsets;deployments;deployments/finalizers,verbs=*
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=*
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=*
 
-func (r *SriovFecClusterConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
+func (r *SriovFecClusterConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("sriovfecclusterconfig", req.NamespacedName)
-	log.Info("Reconciling SriovFecClusterConfig")
+	log.V(2).Info("Reconciling SriovFecClusterConfig")
 
 	clusterConfig := &sriovfecv1.SriovFecClusterConfig{}
 	if err := r.Get(context.TODO(), req.NamespacedName, clusterConfig); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("SriovFecClusterConfig not found", "namespacedName", req.NamespacedName)
+			log.V(2).Info("SriovFecClusterConfig not found", "namespacedName", req.NamespacedName)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -86,7 +85,7 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 	// To simplify things, only specific CR is honored (Name: DEFAULT_CLUSTER_CONFIG_NAME, Namespace: NAMESPACE)
 	// Any other SriovFecClusterConfig is ignored
 	if req.Namespace != NAMESPACE || req.Name != DEFAULT_CLUSTER_CONFIG_NAME {
-		log.Info("received ClusterConfig, but it not an expected one - it'll be ignored",
+		log.V(2).Info("received ClusterConfig, but it not an expected one - it'll be ignored",
 			"expectedNamespace", NAMESPACE, "expectedName", DEFAULT_CLUSTER_CONFIG_NAME)
 
 		updateStatus(sriovfecv1.IgnoredSync, fmt.Sprintf(
@@ -103,7 +102,7 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 		return reconcile.Result{}, err
 	}
 
-	log.Info("nodes with intel accelerator", "nodes", func() []string {
+	log.V(2).Info("nodes with intel accelerator", "nodes", func() []string {
 		names := []string{}
 		for _, n := range nodeList.Items {
 			names = append(names, n.Name)
@@ -148,7 +147,7 @@ func (r *SriovFecClusterConfigReconciler) renderNodeConfigs(clusterConfig *sriov
 	nodeList *corev1.NodeList) []sriovfecv1.SriovFecNodeConfig {
 
 	log := r.Log.WithName("renderNodeConfigs")
-	log.Info("rendering new node configs")
+	log.V(2).Info("rendering new node configs")
 
 	nodeConfigs := []sriovfecv1.SriovFecNodeConfig{}
 
@@ -165,7 +164,7 @@ func (r *SriovFecClusterConfigReconciler) renderNodeConfigs(clusterConfig *sriov
 
 	for _, nodeConfigSpec := range clusterConfig.Spec.Nodes {
 		if !nodeHasAccelerator(nodeConfigSpec.NodeName) {
-			log.Info("received config for node that has no accelerator - NodeConfig spec will not be generated",
+			log.V(2).Info("received config for node that has no accelerator - NodeConfig spec will not be generated",
 				"nodeName", nodeConfigSpec.NodeName)
 			continue
 		}
@@ -183,7 +182,7 @@ func (r *SriovFecClusterConfigReconciler) renderNodeConfigs(clusterConfig *sriov
 		nodeCfg.SetName(nodeConfigSpec.NodeName)
 		nodeCfg.SetNamespace(NAMESPACE)
 
-		log.Info("creating nodeConfig", "nodeName", nodeConfigSpec.NodeName)
+		log.V(2).Info("creating nodeConfig", "nodeName", nodeConfigSpec.NodeName)
 
 		nodeConfigs = append(nodeConfigs, nodeCfg)
 	}
@@ -193,7 +192,7 @@ func (r *SriovFecClusterConfigReconciler) renderNodeConfigs(clusterConfig *sriov
 
 func (r *SriovFecClusterConfigReconciler) syncNodeConfigs(nodeCfgs []sriovfecv1.SriovFecNodeConfig) error {
 	log := r.Log.WithName("syncNodeConfigs")
-	log.Info("syncing node configs")
+	log.V(4).Info("syncing node configs")
 
 	if err := r.removeOldNodeConfigs(nodeCfgs); err != nil {
 		return err
@@ -210,7 +209,7 @@ func (r *SriovFecClusterConfigReconciler) syncNodeConfigs(nodeCfgs []sriovfecv1.
 
 func (r *SriovFecClusterConfigReconciler) updateOrCreateNodeConfig(nodeCfg sriovfecv1.SriovFecNodeConfig) error {
 	log := r.Log.WithName("updateOrCreateNodeConfig")
-	log.Info("syncing node config", "name", nodeCfg.Name)
+	log.V(2).Info("syncing node config", "name", nodeCfg.Name)
 
 	prev := &sriovfecv1.SriovFecNodeConfig{}
 
@@ -219,7 +218,7 @@ func (r *SriovFecClusterConfigReconciler) updateOrCreateNodeConfig(nodeCfg sriov
 		types.NamespacedName{Namespace: nodeCfg.Namespace, Name: nodeCfg.Name}, prev); err != nil {
 
 		if errors.IsNotFound(err) {
-			log.Info("old NodeConfig not found - creating", "name", nodeCfg.Name)
+			log.V(4).Info("old NodeConfig not found - creating", "name", nodeCfg.Name)
 			if err := r.Create(context.TODO(), &nodeCfg); err != nil {
 				log.Error(err, "failed to create NodeConfig", "name", nodeCfg.Name)
 				return err
@@ -229,7 +228,7 @@ func (r *SriovFecClusterConfigReconciler) updateOrCreateNodeConfig(nodeCfg sriov
 			return err
 		}
 	} else {
-		log.Info("previous NodeConfig found - updating", "name", nodeCfg.Name)
+		log.V(4).Info("previous NodeConfig found - updating", "name", nodeCfg.Name)
 
 		prev.Spec = nodeCfg.Spec
 		if err := r.Update(context.TODO(), prev); err != nil {
@@ -263,7 +262,7 @@ func (r *SriovFecClusterConfigReconciler) removeOldNodeConfigs(newNodeCfgs []sri
 		}
 
 		if deleteNC {
-			log.Info("deleting existing NodeConfig", "name", nc.GetName())
+			log.V(2).Info("deleting existing NodeConfig", "name", nc.GetName())
 			if err := r.Delete(context.TODO(), &nc, &client.DeleteOptions{}); err != nil {
 				log.Error(err, "failed to delete existing NodeConfig", "name", nc.GetName())
 				return err

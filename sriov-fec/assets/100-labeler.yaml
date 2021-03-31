@@ -1,0 +1,103 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2021 Intel Corporation
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: supported-accelerators
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+data:
+  accelerators.json: |
+    {
+      "VendorID": {
+        "8086": "Intel Corporation",
+        "1172": "Altera Corporation"
+      },
+      "Class": "12",
+      "SubClass": "00",
+      "Devices": {
+        "0d8f": "FPGA_5GNR",
+        "5052": "FPGA_LTE",
+        "0d5c": "ACC100",
+        "0b32": ""
+      },
+      "NodeLabel": "fpga.intel.com/intel-accelerator-present"
+    }
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: accelerator-discovery
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: accelerator-discovery
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "update"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: accelerator-discovery
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: accelerator-discovery
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+subjects:
+- kind: ServiceAccount
+  name: accelerator-discovery
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+userNames:
+- system:serviceaccount:{{ .SRIOV_FEC_NAMESPACE }}:accelerator-discovery
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: accelerator-discovery
+  name: accelerator-discovery
+  namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+spec:
+  minReadySeconds: 10
+  selector:
+    matchLabels:
+      app: accelerator-discovery
+  template:
+    metadata:
+      labels:
+        app: accelerator-discovery
+      name: accelerator-discovery
+    spec:
+      serviceAccount: accelerator-discovery
+      serviceAccountName: accelerator-discovery
+      containers:
+      - image: "{{ .SRIOV_FEC_LABELER_IMAGE }}"
+        imagePullPolicy: IfNotPresent
+        name: accelerator-discovery
+        securityContext:
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: config-volume
+          mountPath: "/labeler-workspace/config"
+          readOnly: true
+        env:
+          - name: NODENAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+      volumes:
+        - name: config-volume
+          configMap:
+            name: supported-accelerators
+            items:
+            - key: accelerators.json
+              path: accelerators.json

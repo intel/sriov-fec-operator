@@ -199,13 +199,13 @@ func mockFortvilleEnv() {
 	Expect(err).ToNot(HaveOccurred())
 }
 
-func fakeNvmupdate(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
+func fakeNvmupdate(cmd *exec.Cmd, log logr.Logger, dryRun bool) error {
 	if strings.Contains(cmd.String(), "nvmupdate64e -i") {
-		return "", fakeNvmupdateFirstErrReturn
+		return fakeNvmupdateFirstErrReturn
 	} else if strings.Contains(cmd.String(), "nvmupdate64e -u -m") {
-		return "", fakeNvmupdateSecondErrReturn
+		return fakeNvmupdateSecondErrReturn
 	}
-	return "", fmt.Errorf("Unsupported command: %s", cmd)
+	return fmt.Errorf("Unsupported command: %s", cmd)
 }
 
 func fakeFpgadiag(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
@@ -261,7 +261,7 @@ var _ = Describe("Fortville Manager", func() {
 	f := FortvilleManager{Log: ctrl.Log.WithName("daemon-test")}
 	sampleOneFortville := fpgav1.N3000Node{
 		Spec: fpgav1.N3000NodeSpec{
-			Fortville: fpgav1.N3000Fortville{
+			Fortville: &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "64:4c:36:11:1b:a8",
@@ -273,7 +273,7 @@ var _ = Describe("Fortville Manager", func() {
 	}
 	sampleWrongMACFortville := fpgav1.N3000Node{
 		Spec: fpgav1.N3000NodeSpec{
-			Fortville: fpgav1.N3000Fortville{
+			Fortville: &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "ff:ff:ff:ff:ff:aa",
@@ -285,7 +285,7 @@ var _ = Describe("Fortville Manager", func() {
 	}
 	sampleOneFortvilleDryRun := fpgav1.N3000Node{
 		Spec: fpgav1.N3000NodeSpec{
-			Fortville: fpgav1.N3000Fortville{
+			Fortville: &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "64:4c:36:11:1b:a8",
@@ -298,7 +298,7 @@ var _ = Describe("Fortville Manager", func() {
 	}
 	sampleOneFortvilleNoURL := fpgav1.N3000Node{
 		Spec: fpgav1.N3000NodeSpec{
-			Fortville: fpgav1.N3000Fortville{
+			Fortville: &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "64:4c:36:11:1b:a8",
@@ -309,7 +309,7 @@ var _ = Describe("Fortville Manager", func() {
 	}
 	sampleOneFortvilleInvalidChecksum := fpgav1.N3000Node{
 		Spec: fpgav1.N3000NodeSpec{
-			Fortville: fpgav1.N3000Fortville{
+			Fortville: &fpgav1.N3000Fortville{
 				MACs: []fpgav1.FortvilleMAC{
 					{
 						MAC: "64:4c:36:11:1b:a8",
@@ -418,7 +418,7 @@ var _ = Describe("Fortville Manager", func() {
 			nvmupdateExec = fakeNvmupdate
 			fpgaInfoExec = fakeFpgaInfo
 			fpgadiagExec = fakeFpgadiag
-			rsuExec = runExec
+			rsuExec = runExecWithLog
 
 			err := f.flash(&sampleOneFortville)
 			Expect(err).ToNot(HaveOccurred())
@@ -428,7 +428,7 @@ var _ = Describe("Fortville Manager", func() {
 			nvmupdateExec = fakeNvmupdate
 			fpgaInfoExec = fakeFpgaInfo
 			fpgadiagExec = fakeFpgadiag
-			rsuExec = runExec
+			rsuExec = runExecWithLog
 
 			err := f.flash(&sampleOneFortvilleDryRun)
 			Expect(err).ToNot(HaveOccurred())

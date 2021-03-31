@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2021 Intel Corporation
 
 package main
 
@@ -19,11 +19,12 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
 	"github.com/open-ness/openshift-operator/N3000/controllers"
-	"github.com/open-ness/openshift-operator/N3000/pkg/assets"
+	"github.com/open-ness/openshift-operator/common/pkg/assets"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -47,11 +48,13 @@ func init() {
 
 func main() {
 	var metricsAddr string
+	var healthProbeAddr string
 	var enableLeaderElection bool
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
+	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(&healthProbeAddr, "health-probe-bind-address", ":8081", "The address the controller binds to for serving health probes.")
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
@@ -60,11 +63,12 @@ func main() {
 
 	config := ctrl.GetConfigOrDie()
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		Port:               9443,
-		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "f3417634.intel.com",
+		Scheme:                 scheme,
+		MetricsBindAddress:     metricsAddr,
+		HealthProbeBindAddress: healthProbeAddr,
+		Port:                   9443,
+		LeaderElection:         enableLeaderElection,
+		LeaderElectionID:       "f3417634.intel.com",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -81,6 +85,15 @@ func main() {
 	}
 	// +kubebuilder:scaffold:builder
 
+	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
+
 	c, err := client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		setupLog.Error(err, "failed to create client")
@@ -88,7 +101,7 @@ func main() {
 	}
 
 	owner := &appsv1.Deployment{}
-	namespace := os.Getenv("NAMESPACE")
+	namespace := os.Getenv("N3000_NAMESPACE")
 	err = c.Get(context.Background(), client.ObjectKey{
 		Namespace: namespace,
 		Name:      operatorDeploymentName,
@@ -139,7 +152,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager")
+	setupLog.V(2).Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)

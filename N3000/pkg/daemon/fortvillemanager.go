@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	nvmupdateExec = runExec
+	nvmupdateExec = runExecWithLog
 	fpgadiagExec  = runExec
 	ethtoolExec   = runExec
 	tarExec       = runExec
@@ -184,7 +184,7 @@ func (fm *FortvilleManager) getInventory() ([]fpgav1.N3000FortvilleStatus, error
 
 func (fm *FortvilleManager) installNvmupdate() error {
 	log := fm.Log.WithName("installNvmupdate")
-	log.Info("Extracting nvmupdate package")
+	log.V(4).Info("Extracting nvmupdate package")
 	_, err := tarExec(exec.Command("tar", "xzfv", nvmPackageDestination, "-C", nvmInstallDest), log, false)
 	return err
 }
@@ -240,24 +240,24 @@ func (fm *FortvilleManager) flashMac(mac string, dryRun bool) error {
 		cmd := exec.Command(nvmupdate64e, "-i")
 		cmd.SysProcAttr = rootAttr
 		cmd.Dir = nvmupdate64ePath
-		_, err := nvmupdateExec(cmd, log, dryRun)
+		err := nvmupdateExec(cmd, log, dryRun)
 		if err != nil {
 			return err
 		}
 
-		log.Info("Updating", "MAC", mac)
+		log.V(2).Info("Updating", "MAC", mac)
 		m := strings.Replace(mac, ":", "", -1)
 		m = strings.ToUpper(m)
 		cmd = exec.Command(nvmupdate64e, "-u", "-m", m, "-c", configFile, "-o", updateOutFile, "-l")
 		cmd.SysProcAttr = rootAttr
 		cmd.Dir = nvmupdate64ePath
-		_, err = nvmupdateExec(cmd, log, dryRun)
+		err = nvmupdateExec(cmd, log, dryRun)
 		if err != nil {
 			return err
 		}
 
 		if dryRun {
-			log.Info("Dry run device update succeeded", "MAC", mac)
+			log.V(2).Info("Dry run device update succeeded", "MAC", mac)
 			break
 		} else {
 			us, err := getDeviceUpdateFromFile(updateOutFile)
@@ -287,15 +287,15 @@ func (fm *FortvilleManager) flashMac(mac string, dryRun bool) error {
 
 			step++
 			if us.NextUpdateAvailable == 1 {
-				log.Info("Device updated", "MAC", mac, "Modules", moduleVersions)
+				log.V(2).Info("Device updated", "MAC", mac, "Modules", moduleVersions)
 				if updateStepCount == step {
-					log.Info("Next update available", "MAC", mac)
-					log.Info("Maximum step count reached - ending...", "MAC", mac)
+					log.V(2).Info("Next update available", "MAC", mac)
+					log.V(2).Info("Maximum step count reached - ending...", "MAC", mac)
 					break
 				}
-				log.Info("Next update available - updating", "MAC", mac)
+				log.V(2).Info("Next update available - updating", "MAC", mac)
 			} else {
-				log.Info("Device updated to latest firmware", "MAC", mac, "Modules", moduleVersions)
+				log.V(2).Info("Device updated to latest firmware", "MAC", mac, "Modules", moduleVersions)
 				break
 			}
 		}
@@ -383,12 +383,12 @@ func (fm *FortvilleManager) verifyPreconditions(n *fpgav1.N3000Node) error {
 		return err
 	}
 
-	log.Info("Start downloading", "url", n.Spec.Fortville.FirmwareURL)
+	log.V(4).Info("Start downloading", "url", n.Spec.Fortville.FirmwareURL)
 	err = fm.getNVMUpdate(n)
 	if err != nil {
 		return err
 	}
-	log.Info("Package downloaded and installed", "url", n.Spec.Fortville.FirmwareURL)
+	log.V(4).Info("Package downloaded and installed", "url", n.Spec.Fortville.FirmwareURL)
 
 	return nil
 }
@@ -396,8 +396,8 @@ func (fm *FortvilleManager) verifyPreconditions(n *fpgav1.N3000Node) error {
 func (fm *FortvilleManager) powerCycle(pcis []string, dryRun bool) error {
 	log := fm.Log.WithName("powerCycle")
 	for _, p := range pcis {
-		log.Info("Power cycling N3000 device", "pci", p)
-		_, err := rsuExec(exec.Command(rsuPath, "bmcimg", p), log, dryRun)
+		log.V(2).Info("Power cycling N3000 device", "pci", p)
+		err := rsuExec(exec.Command(rsuPath, "bmcimg", p), log, dryRun)
 		if err != nil {
 			log.Error(err, "Failed to power cycle N3000 device")
 		}

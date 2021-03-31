@@ -104,18 +104,18 @@ func fakeFpgaInfo(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
 	return "", fmt.Errorf("Unsupported command: %s", cmd)
 }
 
-func fakeFpgasUpdate(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
+func fakeFpgasUpdate(cmd *exec.Cmd, log logr.Logger, dryRun bool) error {
 	if strings.Contains(cmd.String(), "fpgasupdate") {
-		return "", fakeFpgasUpdateErrReturn
+		return fakeFpgasUpdateErrReturn
 	}
-	return "", fmt.Errorf("Unsupported command: %s", cmd)
+	return fmt.Errorf("Unsupported command: %s", cmd)
 }
 
-func fakeRsu(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
+func fakeRsu(cmd *exec.Cmd, log logr.Logger, dryRun bool) error {
 	if strings.Contains(cmd.String(), "rsu") && strings.Contains(cmd.String(), "bmcimg") {
-		return "", fakeRsuUpdateErrReturn
+		return fakeRsuUpdateErrReturn
 	}
-	return "", fmt.Errorf("Unsupported command: %s", cmd)
+	return fmt.Errorf("Unsupported command: %s", cmd)
 }
 
 func cleanFPGA() {

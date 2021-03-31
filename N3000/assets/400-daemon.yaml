@@ -1,18 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: n3000-daemon
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: n3000-daemon
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 rules:
 - apiGroups:
   - fpga.intel.com
@@ -41,7 +41,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: n3000-daemon
-  namespace: n3000-operators-resources
 rules:
 - apiGroups: [""]
   resources: ["pods"]
@@ -61,34 +60,33 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: n3000-daemon
-  namespace: n3000-operators-resources
 subjects:
 - kind: ServiceAccount
   name: n3000-daemon
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 roleRef:
   kind: ClusterRole
   name: n3000-daemon
   apiGroup: rbac.authorization.k8s.io
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: n3000-daemon
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: n3000-daemon
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 subjects:
 - kind: ServiceAccount
   name: n3000-daemon
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
 userNames:
-- system:serviceaccount:n3000-operators-resources:n3000-daemon
+- system:serviceaccount:{{ .N3000_NAMESPACE }}:n3000-daemon
 
 ---
 apiVersion: apps/v1
@@ -97,7 +95,7 @@ metadata:
   labels:
     app: n3000-daemonset
   name: n3000-daemonset
-  namespace: n3000-operators-resources
+  namespace: "{{ .N3000_NAMESPACE }}"
   annotations:
     openshift.io/scc: n3000-daemon
 spec:
@@ -124,12 +122,13 @@ spec:
       serviceAccountName: n3000-daemon
       hostPID: true
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
       - image: "{{ .N3000_DAEMON_IMAGE }}"
         imagePullPolicy: IfNotPresent
         name: n3000-daemon
-        securityContext:
-          readOnlyRootFilesystem: true
+        args:
+        - --zap-log-level=4
         volumeMounts:
           - name: devchar
             mountPath: /dev/char
@@ -161,8 +160,12 @@ spec:
             mountPath: /sys/module
           - name: cache-volume
             mountPath: /n3000-workdir
+          - name: tmp-volume
+            mountPath: /tmp
+          - name: run-volume
+            mountPath: /run
         env:
-          - name: NAMESPACE
+          - name: N3000_NAMESPACE
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
@@ -176,6 +179,7 @@ spec:
             value: "600"
         securityContext:
           privileged: true
+          readOnlyRootFilesystem: true
           seLinuxOptions:
             level: "s0"
       volumes:
@@ -222,4 +226,8 @@ spec:
           hostPath:
             path: /sys/module
         - name: cache-volume
+          emptyDir: {}
+        - name: tmp-volume
+          emptyDir: {}
+        - name: run-volume
           emptyDir: {}
