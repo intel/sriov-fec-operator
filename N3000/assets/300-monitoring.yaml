@@ -136,9 +136,13 @@ spec:
       serviceAccountName: fpgainfo-exporter
       containers:
       - image: "{{ .N3000_MONITORING_IMAGE }}"
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         name: fpgainfo-exporter
+        volumeMounts:
+          - name: sysfs
+            mountPath: /sys
         securityContext:
+          privileged: true
           readOnlyRootFilesystem: true
         ports:
         - name: metrics
@@ -152,3 +156,7 @@ spec:
            cpu: 200m
       nodeSelector:
         fpga.intel.com/intel-accelerator-present: ""
+      volumes:
+        - name: sysfs
+          hostPath:
+            path: /sys

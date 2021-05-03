@@ -125,7 +125,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - image: "{{ .N3000_DAEMON_IMAGE }}"
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         name: n3000-daemon
         args:
         - --zap-log-level=4
@@ -144,20 +144,8 @@ spec:
             mountPath: /boot/kernel
           - name: libmodules
             mountPath: /lib/modules
-          - name: classfpga
-            mountPath: /sys/class/fpga
-          - name: classnet
-            mountPath: /sys/class/net
-          - name: pcidrivers
-            mountPath: /sys/bus/pci/drivers
-          - name: pcidevices
-            mountPath: /sys/bus/pci/devices
-          - name: pcislots
-            mountPath: /sys/bus/pci/slots
-          - name: sysdevices
-            mountPath: /sys/devices
-          - name: module
-            mountPath: /sys/module
+          - name: sysfs
+            mountPath: /sys
           - name: cache-volume
             mountPath: /n3000-workdir
           - name: tmp-volume
@@ -204,27 +192,9 @@ spec:
         - name: libmodules
           hostPath:
             path: /lib/modules
-        - name: classfpga
+        - name: sysfs
           hostPath:
-            path: /sys/class/fpga
-        - name: classnet
-          hostPath:
-            path: /sys/class/net
-        - name: pcidrivers
-          hostPath:
-            path: /sys/bus/pci/drivers
-        - name: pcidevices
-          hostPath:
-            path: /sys/bus/pci/devices
-        - name: pcislots
-          hostPath:
-            path: /sys/bus/pci/slots
-        - name: sysdevices
-          hostPath:
-            path: /sys/devices
-        - name: module
-          hostPath:
-            path: /sys/module
+            path: /sys
         - name: cache-volume
           emptyDir: {}
         - name: tmp-volume

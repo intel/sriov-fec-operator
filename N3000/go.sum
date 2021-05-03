@@ -406,6 +406,9 @@ github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7J
 github.com/onsi/gomega v1.10.1/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1ybHNo=
 github.com/onsi/gomega v1.10.2 h1:aY/nuoWlKJud2J6U0E3NWsjlg+0GtwXxgEqthRdzlcs=
 github.com/onsi/gomega v1.10.2/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1ybHNo=
+github.com/open-ness/openshift-operator v0.0.0-20210331183103-74dc4d717390 h1:HAHbFEKZj58QjxDcDjliDWDgVvce3W2QjE2Yagb8GSU=
+github.com/open-ness/openshift-operator/common v0.0.0-20210331133825-661f430b5d9f h1:IhwLH9V/LIuZM3jFaa7V7hMFFLoBfWfeXHqbTSlaBIA=
+github.com/open-ness/openshift-operator/common v0.0.0-20210331133825-661f430b5d9f/go.mod h1:fBndHQObxhZp00oa4CJNOMzucNpPY6uqW7EqkB+NTHw=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/openshift/api v3.9.0+incompatible h1:fJ/KsefYuZAjmrr3+5U9yZIZbTOpVkDDLDLFresAeYs=
 github.com/openshift/api v3.9.0+incompatible/go.mod h1:dh9o4Fs58gpFXGSYfnVxGR9PnV53I8TW84pQaJDdGiY=

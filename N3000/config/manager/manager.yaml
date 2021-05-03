@@ -23,7 +23,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: n3000-operator:v1.1.0
+        image: quay.io/ryan_raasch/n3000-operator:v1.1.0
         name: manager
         securityContext:
           allowPrivilegeEscalation: false

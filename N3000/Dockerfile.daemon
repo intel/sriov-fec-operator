@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020-2021 Intel Corporation
 
-ARG OPAE_VERSION
+ARG OPAE_RUNTIME_IMAGE
 FROM golang:1.15 as builder
 
 WORKDIR /workspace
@@ -14,7 +14,7 @@ COPY api api/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o n3000_daemon cmd/daemon/main.go
 
-FROM opae:${OPAE_VERSION}
+FROM ${OPAE_RUNTIME_IMAGE}
 
 ARG VERSION
 ### Required OpenShift Labels
@@ -26,11 +26,9 @@ LABEL name="OpenNESS Operator for Intel® FPGA PAC N3000 daemonset container" \
     description="The daemonset container is responsible for building the nodes inventory \
 and configuring the accelerators"
 
-RUN dnf install --disablerepo=* --enablerepo=ubi-8-baseos -y pciutils ethtool
 
 COPY TEMP_LICENSE_COPY /licenses/LICENSE
-WORKDIR /srcrpms
-RUN dnf download --disablerepo=* --enablerepo=ubi-8-baseos --source pciutils ethtool
+
 USER 1001
 WORKDIR /
 COPY daemon_entrypoint.sh .

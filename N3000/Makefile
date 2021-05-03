@@ -1,16 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020-2021 Intel Corporation
+include ../makefile.top
 
 # Default k8s command-line tool exec
-export CLI_EXEC?=oc
-# Current Operator version
-VERSION ?= 1.1.0
 # Supported channels
 CHANNELS ?= stable
 # Default channel
 DEFAULT_CHANNEL ?= stable
-# Current OPAE package version
-OPAE_VERSION ?= 1.3.8-2
 # Kernel version for driver container
 KERNEL_VERSION ?= 4.18.0-193.41.1.el8_2.x86_64
 # Where to get the kernel dependencies from
@@ -18,18 +14,7 @@ KERNEL_VERSION ?= 4.18.0-193.41.1.el8_2.x86_64
 #  yum - download the dependencies from upstream repositories
 #  file - load the RPM dependencies from files/kernel
 KERNEL_SOURCE ?= yum
-# Operator image registry
-IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
-# Add suffix directly to IMAGE_REGISTRY to enable empty registry(local images)
-ifneq ($(strip $(IMAGE_REGISTRY)),)
-override IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
-endif
 
-# tls verify flag for pushing images
-TLS_VERIFY ?= true
-
-# Default bundle image tag
-BUNDLE_IMG ?= $(IMAGE_REGISTRY)n3000-bundle:$(VERSION)
 # Options for 'image-bundle'
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
@@ -39,28 +24,12 @@ BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
-IMG_VERSION := v$(VERSION)
-
-# Images URLs to use for all building/pushing image targets (in assets/*.yaml files)
-export N3000_OPERATOR_IMAGE ?= $(IMAGE_REGISTRY)n3000-operator:$(IMG_VERSION)
-export N3000_OPAE_IMAGE ?= opae:$(OPAE_VERSION)
-export N3000_DRIVER_CONTAINER_IMAGE ?= $(IMAGE_REGISTRY)n3000-driver:$(IMG_VERSION)--$(OPAE_VERSION)
-export N3000_DRIVER_IMAGE ?= $(N3000_DRIVER_CONTAINER_IMAGE)--$(KERNEL_VERSION)
-export N3000_DAEMON_IMAGE ?= $(IMAGE_REGISTRY)n3000-daemon:$(IMG_VERSION)--$(OPAE_VERSION)
-export N3000_LABELER_IMAGE ?= $(IMAGE_REGISTRY)n3000-labeler:$(IMG_VERSION)
-export N3000_MONITORING_IMAGE ?= $(IMAGE_REGISTRY)n3000-monitoring:$(IMG_VERSION)--$(OPAE_VERSION)
-
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
-# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
-else
-GOBIN=$(shell go env GOBIN)
-endif
-
 all: manager daemon
+
+.PHONY: push-n3000-driver image-n3000-daemon push-n3000-daemon image-n3000-operator push-n3000-operator image
 
 # Run tests
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
@@ -141,45 +110,48 @@ kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
 
 # Build opae image
+.PHONY: image-opae-rte
+image-opae-rte:
+	cp -r files docker/opae-image
+	cp ../LICENSE docker/opae-image/TEMP_LICENSE_COPY
+	cd docker/opae-image && $(PODMAN) build . -t $(N3000_OPAE_IMAGE) $(CONTAINER_BUILD_ARGS)
+
+# Build opae image
 .PHONY: image-opae
 image-opae:
 	cp -r files docker/opae-image
 	cp ../LICENSE docker/opae-image/TEMP_LICENSE_COPY
-	cd docker/opae-image && podman build . -t $(N3000_OPAE_IMAGE) --build-arg=OPAE_VERSION=$(OPAE_VERSION)
+	cd docker/opae-image && $(PODMAN) build . $(CONTAINER_BUILD_ARGS) -t $(N3000_OPAE_IMAGE_RHEL) -f Dockerfile.centos
 
 # Build/Push driver image
 .PHONY: image-n3000-driver
-image-n3000-driver: image-opae
+image-n3000-driver:
+ifeq ($(BUILD_DRIVER_CONTAINER),yes)
 	cp -r files docker/driver-container
 	cp ../LICENSE docker/driver-container/TEMP_LICENSE_COPY
-	cd docker/driver-container && podman build . -t $(N3000_DRIVER_IMAGE) --build-arg=VERSION=$(IMG_VERSION) --build-arg=OPAE_VERSION=$(OPAE_VERSION) --build-arg=KERNEL_VERSION=$(KERNEL_VERSION) --build-arg=KERNEL_SOURCE=$(KERNEL_SOURCE)
+	cd docker/driver-container && $(PODMAN) build . -t $(N3000_DRIVER_IMAGE) --build-arg=VERSION=$(IMG_VERSION) --build-arg=OPAE_VERSION=$(OPAE_VERSION) --build-arg=KERNEL_VERSION=$(KERNEL_VERSION) --build-arg=KERNEL_SOURCE=$(KERNEL_SOURCE)
+endif
 
-.PHONY: push-n3000-driver
 push-n3000-driver:
-	podman push $(N3000_DRIVER_IMAGE) --tls-verify=$(TLS_VERIFY)
+ifeq ($(BUILD_DRIVER_CONTAINER),yes)
+	$(PODMAN) push $(N3000_DRIVER_IMAGE) $(CONTAINER_PUSH_ARGS)
+endif
 
-# Build/Push daemon image
-.PHONY: image-n3000-daemon
 image-n3000-daemon: image-opae
 	cp ../LICENSE TEMP_LICENSE_COPY
-	podman build . -f Dockerfile.daemon -t $(N3000_DAEMON_IMAGE) --build-arg=VERSION=$(IMG_VERSION) --build-arg=OPAE_VERSION=$(OPAE_VERSION)
+	$(PODMAN) build . -f Dockerfile.daemon -t $(N3000_DAEMON_IMAGE) $(CONTAINER_BUILD_ARGS)
 
-.PHONY: push-n3000-daemon
 push-n3000-daemon:
-	podman push $(N3000_DAEMON_IMAGE) --tls-verify=$(TLS_VERIFY)
+	$(PODMAN) push $(N3000_DAEMON_IMAGE) $(CONTAINER_PUSH_ARGS)
 
-# Build/Push operator image
-.PHONY: image-n3000-operator
 image-n3000-operator:
 	cp ../LICENSE TEMP_LICENSE_COPY
-	podman build . -t $(N3000_OPERATOR_IMAGE) --build-arg=VERSION=$(IMG_VERSION)
+	$(PODMAN) build . -t $(N3000_OPERATOR_IMAGE) $(CONTAINER_BUILD_ARGS)
 
-.PHONY: push-n3000-operator
 push-n3000-operator:
-	podman push $(N3000_OPERATOR_IMAGE) --tls-verify=$(TLS_VERIFY)
+	$(PODMAN) push $(N3000_OPERATOR_IMAGE) $(CONTAINER_PUSH_ARGS)
 
 # Build all the images
-.PHONY: image
 image: image-n3000-driver image-n3000-daemon image-n3000-operator image-bundle
 
 # Push all the images
@@ -187,14 +159,14 @@ image: image-n3000-driver image-n3000-daemon image-n3000-operator image-bundle
 push: push-n3000-driver push-n3000-daemon push-n3000-operator push-bundle
 
 check-operator-sdk-version:
-	(cd .. && make check-operator-sdk-version)
+	make -C .. check-operator-sdk-version
 
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
 bundle: check-operator-sdk-version manifests kustomize
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image n3000-operator=$(N3000_OPERATOR_IMAGE)
-	$(KUSTOMIZE) build config/manifests | envsubst | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	$(KUSTOMIZE) build config/manifests | envsubst | operator-sdk generate bundle -q --overwrite --version $(subst v,,$(VERSION)) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 	FOLDER=. COPYRIGHT_FILE=../COPYRIGHT ../copyright.sh
 	cat ../COPYRIGHT bundle.Dockerfile >bundle.tmp
@@ -205,10 +177,10 @@ bundle: check-operator-sdk-version manifests kustomize
 # Build/Push the bundle image.
 .PHONY: image-bundle
 image-bundle: bundle
-	podman build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	$(PODMAN) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 .PHONY: push-bundle
 push-bundle:
-	podman push $(BUNDLE_IMG) --tls-verify=$(TLS_VERIFY)
+	$(PODMAN) push $(BUNDLE_IMG) $(CONTAINER_PUSH_ARGS)
 
 build_all: image push

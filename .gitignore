@@ -7,3 +7,5 @@ N3000/files/*/*.sh
 # duplicate license file used in dockerfiles
 TEMP_LICENSE_COPY
 .idea/*
+bin/
+downloads/
