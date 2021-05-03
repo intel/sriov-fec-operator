@@ -5,9 +5,12 @@ IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
 REQUIRED_OPERATOR_SDK_VERSION ?= v1.4.2
 VERSION ?= 1.1.0
 TLS_VERIFY ?= false
+BUILD_SRIO_FEC ?= yes
 
 build_all:
+ifeq ($(BUILD_SRIO_FEC),yes)
 	(cd sriov-fec && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_all)
+endif
 	(cd N3000 && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_all)
 	(cd labeler && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_all)
 	(cd prometheus_fpgainfo_exporter && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_all)
@@ -18,7 +21,9 @@ build_index:
 	podman push localhost/n3000-operators-index:$(VERSION) $(IMAGE_REGISTRY)/n3000-operators-index:$(VERSION) --tls-verify=$(TLS_VERIFY)
 
 image:
+ifeq ($(BUILD_SRIO_FEC),yes)
 	(cd sriov-fec && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) image)
+endif
 	(cd N3000 && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) image)
 	(cd labeler && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) image)
 	(cd prometheus_fpgainfo_exporter && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) image)
