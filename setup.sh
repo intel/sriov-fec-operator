@@ -1,3 +1,9 @@
+#!/bin/bash
+
+set -x
+
+base=$(dirname $(realpath "${BASH_SOURCE[0]}"))
+
 oc delete ns vran-acceleration-operators
 
 sleep 10
@@ -13,8 +19,8 @@ oc adm policy add-scc-to-user privileged -n vran-acceleration-operators -z contr
 
 sleep 2
 
-oc apply -k config/default
+oc apply -k $base/config/default
 
 sleep 60
 
-oc apply -k config/samples/fpga_v1_n3000cluster.yaml
+oc apply -k $base/config/samples/fpga_v1_n3000cluster.yaml
