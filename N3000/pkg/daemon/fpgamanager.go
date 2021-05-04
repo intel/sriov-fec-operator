@@ -5,12 +5,14 @@ package daemon
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
@@ -129,21 +131,46 @@ type FPGAManager struct {
 	Log logr.Logger
 }
 
-func (fpga *FPGAManager) ProgramFPGA(file string, PCIAddr string, dryRun bool) error {
+func (fpga *FPGAManager) ProgramFPGA(file string, PCIAddr string, idx int, dryRun bool) error {
 	log := fpga.Log.WithName("ProgramFPGA").WithValues("pci", PCIAddr)
 
 	log.V(4).Info("Starting")
-	err := fpgasUpdateExec(exec.Command(fpgasUpdatePath, file, PCIAddr), fpga.Log, dryRun)
-	if err != nil {
-		log.Error(err, "Failed to program FPGA")
-		return err
+	_ = ioutil.WriteFile("/sys/module/firmware_class/parameters/path", []byte(fpgaUserImageSubfolderPath), 0666)
+	_ = ioutil.WriteFile("/sys/class/fpga_sec_mgr/fpga_sec0/update/filename", []byte(fmt.Sprintf("fpga%d.bin", idx)), 0666)
+
+	for {
+		content, _ := ioutil.ReadFile("/sys/class/fpga_sec_mgr/fpga_sec0/update/status")
+		if string(content) != "idle" {
+			log.V(4).Info("Done idle")
+			break
+		}
+		time.Sleep(1 * time.Second)
 	}
+
+	for {
+		content, _ := ioutil.ReadFile("/sys/class/fpga_sec_mgr/fpga_sec0/update/status")
+		if string(content) != "preparing" {
+			log.V(4).Info("Done preparing")
+			break
+		}
+		time.Sleep(2 * time.Second)
+	}
+
+	for {
+		content, _ := ioutil.ReadFile("/sys/class/fpga_sec_mgr/fpga_sec0/update/status")
+		if string(content) != "writing" {
+			log.V(4).Info("Done writing")
+			break
+		}
+		time.Sleep(5 * time.Second)
+	}
+
 	log.V(4).Info("Program FPGA completed, start new power cycle N3000 ...")
-	err = rsuExec(exec.Command(rsuPath, "bmcimg", PCIAddr), fpga.Log, dryRun)
+	/*err = rsuExec(exec.Command(rsuPath, "bmcimg", PCIAddr), fpga.Log, dryRun)
 	if err != nil {
 		log.Error(err, "Failed to execute rsu")
 		return err
-	}
+	}*/
 	return nil
 }
 
@@ -168,6 +195,14 @@ func (fpga *FPGAManager) verifyPCIAddrs(fpgaCR []fpgav1.N3000Fpga) error {
 	}
 	return nil
 }
+
+// STATIC fpga_guid valid_GBS_guid = {
+// 	0x58, 0x65, 0x6f, 0x6e,
+// 	0x46, 0x50,
+// 	0x47, 0x41,
+// 	0xb7, 0x47,
+// 	0x42, 0x53, 0x76, 0x30, 0x30, 0x31
+// 	};
 
 func (fpga *FPGAManager) verifyPreconditions(n *fpgav1.N3000Node) error {
 	log := fpga.Log.WithName("verifyPreconditions")
@@ -208,7 +243,7 @@ func (fpga *FPGAManager) ProgramFPGAs(n *fpgav1.N3000Node) error {
 		}
 		indexStr := strconv.Itoa(i)
 		log.V(4).Info("Start program", "PCIAddr", obj.PCIAddr)
-		err = fpga.ProgramFPGA(fpgaUserImageFile+indexStr+".bin", obj.PCIAddr, n.Spec.DryRun)
+		err = fpga.ProgramFPGA(fpgaUserImageFile+indexStr+".bin", obj.PCIAddr, i, n.Spec.DryRun)
 		if err != nil {
 			log.Error(err, "Failed to program FPGA:", "pci", obj.PCIAddr)
 			return err

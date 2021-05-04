@@ -128,7 +128,7 @@ spec:
         imagePullPolicy: Always
         name: n3000-daemon
         args:
-        - --zap-log-level=4
+        - --zap-log-level=10
         volumeMounts:
           - name: devchar
             mountPath: /dev/char
@@ -167,7 +167,7 @@ spec:
             value: "600"
         securityContext:
           privileged: true
-          readOnlyRootFilesystem: true
+          readOnlyRootFilesystem: false
           seLinuxOptions:
             level: "s0"
       volumes:
