@@ -6,9 +6,11 @@ package daemon
 import (
 	"encoding/csv"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"syscall"
@@ -32,8 +34,6 @@ var (
 	ethtoolExec   = runExec
 	tarExec       = runExec
 
-	pciRegex     = regexp.MustCompile(`^([a-f0-9]{4}):([a-f0-9]{2}):([a-f0-9]{2})\.([012357])$`)
-	mactestRegex = regexp.MustCompile(`^(?:\s*)([a-z0-9]+)(?:\s*)([a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2})$`)
 	ethtoolRegex = regexp.MustCompile(`^([a-z-]+?)(?:\s*:\s)(.+)$`)
 
 	nvmInstallDest        = "/n3000-workdir/nvmupdate/"
@@ -73,34 +73,26 @@ func (fm *FortvilleManager) getN3000NICs(bmcPCI string) ([]fpgav1.FortvilleStatu
 
 	var fs []fpgav1.FortvilleStatus
 
-	matches := pciRegex.FindStringSubmatch(bmcPCI)
-	if len(matches) == 5 {
-		out, err := fpgadiagExec(exec.Command(fpgadiagPath, "-m", "mactest", "-S", matches[1], "-B",
-			matches[2], "-D", matches[3], "-F", matches[4]), log, false)
-		if err == nil {
-			for _, line := range strings.Split(out, "\n") {
-				m := mactestRegex.FindStringSubmatch(line)
-				if len(m) == 3 {
-					s := fpgav1.FortvilleStatus{
-						MAC: m[2],
-					}
-					err := fm.addEthtoolInfo(m[1], &s)
-					if err != nil {
-						log.Error(err, "Unable to get ethtool info for", "interface", m[1])
-					}
-					err = fm.addDeviceName(&s)
-					if err != nil {
-						log.Error(err, "Unable to get lspci info for", "interface", m[1])
-					}
-					fs = append(fs, s)
-				}
-			}
-		} else {
-			log.Error(err, "Unable to get fpgadiag -m mactest info for", "PCI", bmcPCI)
-			return fs, err
+	devs, _ := filepath.Glob(fmt.Sprintf("/sys/bus/pci/devices/%s/fpga_region/region*/dfl-fme.0/dfl*/net/*", bmcPCI))
+	for _, f := range devs {
+		mac, err := ioutil.ReadFile(fmt.Sprintf("%s/address", f))
+		if err != nil {
+			fmt.Print(err)
 		}
-	} else {
-		return fs, errors.New("Invalid BMC PCI address: " + bmcPCI)
+		s := fpgav1.FortvilleStatus{
+			MAC:     string(mac),
+			PciAddr: bmcPCI,
+		}
+		netDev := filepath.Base(f)
+		err = fm.addEthtoolInfo(netDev, &s)
+		if err != nil {
+			log.Error(err, "Unable to get ethtool info for", "interface", netDev)
+		}
+		err = fm.addDeviceName(&s)
+		if err != nil {
+			log.Error(err, "Unable to get lspci info for", "interface", netDev)
+		}
+		fs = append(fs, s)
 	}
 	return fs, nil
 }
@@ -113,8 +105,6 @@ func (fm *FortvilleManager) addEthtoolInfo(ifName string, fs *fpgav1.FortvilleSt
 			m := ethtoolRegex.FindStringSubmatch(line)
 			if len(m) == 3 {
 				switch m[1] {
-				case "bus-info":
-					fs.PciAddr = m[2]
 				case "firmware-version":
 					fs.Version = m[2]
 				}
