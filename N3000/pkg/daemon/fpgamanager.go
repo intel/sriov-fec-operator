@@ -131,8 +131,8 @@ type FPGAManager struct {
 	Log logr.Logger
 }
 
-func (fpga *FPGAManager) ProgramFPGA(file string, PCIAddr string, idx int, dryRun bool) error {
-	log := fpga.Log.WithName("ProgramFPGA").WithValues("pci", PCIAddr)
+func (fpga *FPGAManager) UpdateFW(file string, PCIAddr string, idx int, dryRun bool) error {
+	log := fpga.Log.WithName("UpdateFW").WithValues("pci", PCIAddr)
 
 	log.V(4).Info("Starting")
 	_ = ioutil.WriteFile("/sys/module/firmware_class/parameters/path", []byte(fpgaUserImageSubfolderPath), 0666)
@@ -166,11 +166,22 @@ func (fpga *FPGAManager) ProgramFPGA(file string, PCIAddr string, idx int, dryRu
 	}
 
 	log.V(4).Info("Program FPGA completed, start new power cycle N3000 ...")
-	/*err = rsuExec(exec.Command(rsuPath, "bmcimg", PCIAddr), fpga.Log, dryRun)
+	err := rsuExec(exec.Command(rsuPath, "bmcimg", PCIAddr), fpga.Log, dryRun)
 	if err != nil {
 		log.Error(err, "Failed to execute rsu")
 		return err
-	}*/
+	}
+	return nil
+}
+
+func (fpga *FPGAManager) ProgramFPGA(file string, PCIAddr string, idx int, dryRun bool) error {
+	log := fpga.Log.WithName("ProgramFPGA").WithValues("pci", PCIAddr)
+
+	err := fpgasUpdateExec(exec.Command(fpgasUpdatePath, file), fpga.Log, dryRun)
+	if err != nil {
+		log.Error(err, "Failed to execute fpgaupdate")
+		return err
+	}
 	return nil
 }
 
@@ -195,14 +206,6 @@ func (fpga *FPGAManager) verifyPCIAddrs(fpgaCR []fpgav1.N3000Fpga) error {
 	}
 	return nil
 }
-
-// STATIC fpga_guid valid_GBS_guid = {
-// 	0x58, 0x65, 0x6f, 0x6e,
-// 	0x46, 0x50,
-// 	0x47, 0x41,
-// 	0xb7, 0x47,
-// 	0x42, 0x53, 0x76, 0x30, 0x30, 0x31
-// 	};
 
 func (fpga *FPGAManager) verifyPreconditions(n *fpgav1.N3000Node) error {
 	log := fpga.Log.WithName("verifyPreconditions")
@@ -236,17 +239,40 @@ func (fpga *FPGAManager) verifyPreconditions(n *fpgav1.N3000Node) error {
 
 func (fpga *FPGAManager) ProgramFPGAs(n *fpgav1.N3000Node) error {
 	log := fpga.Log.WithName("ProgramFPGAs")
+	data := make([]byte, 128)
+
 	for i, obj := range n.Spec.FPGA {
 		err := checkFPGADieTemperature(obj.PCIAddr, fpga.Log)
 		if err != nil {
 			return err
 		}
-		indexStr := strconv.Itoa(i)
+
 		log.V(4).Info("Start program", "PCIAddr", obj.PCIAddr)
-		err = fpga.ProgramFPGA(fpgaUserImageFile+indexStr+".bin", obj.PCIAddr, i, n.Spec.DryRun)
+		fName := fpgaUserImageFile + strconv.Itoa(i) + ".bin"
+		file, err := os.Open(fName)
 		if err != nil {
-			log.Error(err, "Failed to program FPGA:", "pci", obj.PCIAddr)
-			return err
+			log.V(4).Error(err, "Can't open file")
+			return nil
+		}
+		defer file.Close()
+
+		count, err := file.Read(data)
+		if count != 128 || err != nil {
+			log.V(4).Error(err, "Can't read data")
+			return nil
+		}
+		if data[3] == 0xb6 && data[2] == 0xea && data[1] == 0xfd && data[0] == 0x19 {
+			err = fpga.UpdateFW(fName, obj.PCIAddr, i, n.Spec.DryRun)
+			if err != nil {
+				log.Error(err, "Failed to program FPGA:", "pci", obj.PCIAddr)
+				return err
+			}
+		} else {
+			err = fpga.ProgramFPGA(fName, obj.PCIAddr, i, n.Spec.DryRun)
+			if err != nil {
+				log.Error(err, "Failed to program FPGA:", "pci", obj.PCIAddr)
+				return err
+			}
 		}
 	}
 	return nil
