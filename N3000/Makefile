@@ -163,7 +163,7 @@ check-operator-sdk-version:
 
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
-bundle: check-operator-sdk-version manifests kustomize
+bundle: image check-operator-sdk-version manifests kustomize
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image n3000-operator=$(N3000_OPERATOR_IMAGE)
 	$(KUSTOMIZE) build config/manifests | envsubst | operator-sdk generate bundle -q --overwrite --version $(subst v,,$(VERSION)) $(BUNDLE_METADATA_OPTS)
