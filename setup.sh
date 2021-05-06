@@ -19,8 +19,8 @@ oc adm policy add-scc-to-user privileged -n vran-acceleration-operators -z contr
 
 sleep 2
 
-oc apply -k $base/config/default
+oc apply -k $base/N3000/config/default
 
 sleep 60
 
-oc apply -k $base/config/samples/fpga_v1_n3000cluster.yaml
+oc apply -k $base/N3000/config/samples/fpga_v1_n3000cluster.yaml

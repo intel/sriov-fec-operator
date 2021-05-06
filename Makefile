@@ -2,6 +2,8 @@
 # Copyright (c) 2020-2021 Intel Corporation
 include makefile.top
 
+.PHONY: $(TARGETS)
+
 TARGETS := N3000 labeler prometheus_fpgainfo_exporter
 ifeq ($(BUILD_SRIO_FEC),yes)
 	TARGETS += sriov-fec

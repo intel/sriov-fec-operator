@@ -111,23 +111,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	/*	if err := (&assets.Manager{
-			Client:    c,
-			Log:       ctrl.Log.WithName("asset_manager").WithName("n3000"),
-			EnvPrefix: "N3000_",
-			Scheme:    scheme,
-			Owner:     owner,
-			Assets: []assets.Asset{
-				{
-					Path:              "assets/100-labeler.yaml",
-					BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
-				},
-			},
-		}).LoadAndDeploy(context.Background(), false); err != nil {
-			setupLog.Error(err, "failed to deploy the labeler")
-			os.Exit(1)
-		}
-	*/
 	if err := (&assets.Manager{
 		Client:    c,
 		Log:       ctrl.Log.WithName("asset_manager").WithName("n3000"),
@@ -135,10 +118,27 @@ func main() {
 		Scheme:    scheme,
 		Owner:     owner,
 		Assets: []assets.Asset{
-			/*			{
-						Path:              "assets/200-driver-container.yaml",
-						BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
-					},*/
+			{
+				Path:              "assets/100-labeler.yaml",
+				BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
+			},
+		},
+	}).LoadAndDeploy(context.Background(), false); err != nil {
+		setupLog.Error(err, "failed to deploy the labeler")
+		os.Exit(1)
+	}
+
+	if err := (&assets.Manager{
+		Client:    c,
+		Log:       ctrl.Log.WithName("asset_manager").WithName("n3000"),
+		EnvPrefix: "N3000_",
+		Scheme:    scheme,
+		Owner:     owner,
+		Assets: []assets.Asset{
+			{
+				Path:              "assets/200-driver-container.yaml",
+				BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
+			},
 			{
 				Path: "assets/300-monitoring.yaml",
 			},

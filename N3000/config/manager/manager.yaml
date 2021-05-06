@@ -52,6 +52,8 @@ spec:
           value: quay.io/ryan_raasch/n3000-daemon:v1.1.0
         - name: N3000_MONITORING_IMAGE
           value: quay.io/ryan_raasch/n3000-monitoring:v1.1.0
+        - name: N3000_LABELER_IMAGE
+          value: quay.io/ryan_raasch/n3000-labeler:v1.1.0
         - name: N3000_NAMESPACE
           value: vran-acceleration-operators
         - name: NAME

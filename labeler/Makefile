@@ -1,25 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020 Intel Corporation
 
-VERSION ?= 1.1.0
-IMG_VERSION := v$(VERSION)
-TLS_VERIFY ?= true
-
-# Operator image registry
-IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
-# Add suffix directly to IMAGE_REGISTRY to enable empty registry(local images)
-ifneq ($(strip $(IMAGE_REGISTRY)),)
-override IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
-endif
-
-export LABELER_IMAGE ?= $(IMAGE_REGISTRY)n3000-labeler:$(IMG_VERSION)
-
-# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
-else
-GOBIN=$(shell go env GOBIN)
-endif
+include ../makefile.top
 
 # Build labeler binary
 labeler: fmt vet
@@ -36,11 +18,11 @@ vet:
 # Build the docker image
 image:
 	cp ../LICENSE TEMP_LICENSE_COPY
-	podman build . -t ${LABELER_IMAGE} --build-arg=VERSION=$(IMG_VERSION)
+	$(PODMAN) build . -t $(N3000_LABELER_IMAGE)  $(CONTAINER_BUILD_ARGS)
 
 # Push the docker image
 push:
-	podman push ${LABELER_IMAGE} --tls-verify=$(TLS_VERIFY)
+	$(PODMAN) push $(N3000_LABELER_IMAGE)  $(CONTAINER_PUSH_ARGS)
 
 # Run tests
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
