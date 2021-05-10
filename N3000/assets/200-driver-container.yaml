@@ -5,14 +5,14 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: fpga-driver
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: fpga-driver
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 rules:
 - apiGroups:
   - security.openshift.io
@@ -28,18 +28,18 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: fpga-driver
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: fpga-driver
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 subjects:
 - kind: ServiceAccount
   name: fpga-driver
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 userNames:
-- system:serviceaccount:{{ .N3000_NAMESPACE }}:fpga-driver
+- system:serviceaccount:{{ .INTEL_FPGA_NAMESPACE }}:fpga-driver
 
 ---
 # Please edit the object below. Lines beginning with a '#' will be ignored,
@@ -86,7 +86,7 @@ seccompProfiles:
 supplementalGroups:
   type: RunAsAny
 users:
-- system:serviceaccount:{{ .N3000_NAMESPACE }}:fpga-driver
+- system:serviceaccount:{{ .INTEL_FPGA_NAMESPACE }}:fpga-driver
 volumes:
 - '*'
 ---
@@ -96,7 +96,7 @@ metadata:
   labels:
     app: fpga-driver-daemonset
   name: fpga-driver-daemonset
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
   annotations:
     openshift.io/scc: fpga-driver
 spec:

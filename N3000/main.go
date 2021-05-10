@@ -101,9 +101,8 @@ func main() {
 	}
 
 	owner := &appsv1.Deployment{}
-	namespace := os.Getenv("N3000_NAMESPACE")
 	err = c.Get(context.Background(), client.ObjectKey{
-		Namespace: namespace,
+		Namespace: os.Getenv("INTEL_FPGA_NAMESPACE"),
 		Name:      operatorDeploymentName,
 	}, owner)
 	if err != nil {
@@ -113,8 +112,8 @@ func main() {
 
 	if err := (&assets.Manager{
 		Client:    c,
-		Log:       ctrl.Log.WithName("asset_manager").WithName("n3000"),
-		EnvPrefix: "N3000_",
+		Log:       ctrl.Log.WithName("asset_manager").WithName("intel-fpga"),
+		EnvPrefix: "INTEL_FPGA_",
 		Scheme:    scheme,
 		Owner:     owner,
 		Assets: []assets.Asset{
@@ -130,15 +129,15 @@ func main() {
 
 	if err := (&assets.Manager{
 		Client:    c,
-		Log:       ctrl.Log.WithName("asset_manager").WithName("n3000"),
-		EnvPrefix: "N3000_",
+		Log:       ctrl.Log.WithName("asset_manager").WithName("intel-fpga"),
+		EnvPrefix: "INTEL_FPGA_",
 		Scheme:    scheme,
 		Owner:     owner,
 		Assets: []assets.Asset{
-			{
+			/* 			{
 				Path:              "assets/200-driver-container.yaml",
 				BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
-			},
+			}, */
 			{
 				Path: "assets/300-monitoring.yaml",
 			},

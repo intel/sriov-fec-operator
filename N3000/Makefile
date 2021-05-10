@@ -29,19 +29,19 @@ CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
 all: manager daemon
 
-.PHONY: push-n3000-driver image-n3000-daemon push-n3000-daemon image-n3000-operator push-n3000-operator image
+.PHONY: push-driver image-daemon push-daemon image-operator push-operator image
 
 # Run tests
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 test: manifests generate fmt vet ## Run tests.
 	mkdir -p $(ENVTEST_ASSETS_DIR)
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.0/hack/setup-envtest.sh
-	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); N3000_NAMESPACE=default go test ./... -coverprofile cover.out
+	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); NAMESPACE=default go test ./... -coverprofile cover.out
 
 test-cov: generate fmt vet manifests
 	mkdir -p $(ENVTEST_ASSETS_DIR)
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.0/hack/setup-envtest.sh
-	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); N3000_NAMESPACE=default ginkgo -v -r -cover -coverprofile=coverage.out -outputdir=.
+	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); NAMESPACE=default ginkgo -v -r -cover -coverprofile=coverage.out -outputdir=.
 	sed '1!{/^mode/d;)' coverage.out > coverage.out.fix
 	go tool cover -html=coverage.out.fix
 
@@ -66,7 +66,7 @@ uninstall: manifests kustomize
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image n3000-operator=$(N3000_OPERATOR_IMAGE)
+	cd config/manager && $(KUSTOMIZE) edit set image operator=$(N3000_OPERATOR_IMAGE)
 	$(KUSTOMIZE) build config/default | envsubst | $(CLI_EXEC) apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
@@ -114,49 +114,65 @@ kustomize: ## Download kustomize locally if necessary.
 image-opae-rte:
 	cp -r files docker/opae-image
 	cp ../LICENSE docker/opae-image/TEMP_LICENSE_COPY
-	cd docker/opae-image && $(PODMAN) build . -t $(N3000_OPAE_IMAGE) $(CONTAINER_BUILD_ARGS)
+	cd docker/opae-image && $(PODMAN) build . -t $(OPAE_IMAGE) $(CONTAINER_BUILD_ARGS)
 
 # Build opae image
 .PHONY: image-opae
 image-opae:
 	cp -r files docker/opae-image
 	cp ../LICENSE docker/opae-image/TEMP_LICENSE_COPY
-	cd docker/opae-image && $(PODMAN) build . $(CONTAINER_BUILD_ARGS) -t $(N3000_OPAE_IMAGE_RHEL) -f Dockerfile.centos
+	cd docker/opae-image && $(PODMAN) build . $(CONTAINER_BUILD_ARGS) -t $(OPAE_IMAGE_RHEL) -f Dockerfile.centos
 
 # Build/Push driver image
-.PHONY: image-n3000-driver
-image-n3000-driver:
+.PHONY: image-driver
+image-driver:
 ifeq ($(BUILD_DRIVER_CONTAINER),yes)
 	cp -r files docker/driver-container
 	cp ../LICENSE docker/driver-container/TEMP_LICENSE_COPY
-	cd docker/driver-container && $(PODMAN) build . -t $(N3000_DRIVER_IMAGE) --build-arg=VERSION=$(IMG_VERSION) --build-arg=OPAE_VERSION=$(OPAE_VERSION) --build-arg=KERNEL_VERSION=$(KERNEL_VERSION) --build-arg=KERNEL_SOURCE=$(KERNEL_SOURCE)
+	cd docker/driver-container && $(PODMAN) build . -t $(DRIVER_IMAGE) --build-arg=VERSION=$(IMG_VERSION) --build-arg=OPAE_VERSION=$(OPAE_VERSION) --build-arg=KERNEL_VERSION=$(KERNEL_VERSION) --build-arg=KERNEL_SOURCE=$(KERNEL_SOURCE)
 endif
 
-push-n3000-driver:
+push-driver:
 ifeq ($(BUILD_DRIVER_CONTAINER),yes)
-	$(PODMAN) push $(N3000_DRIVER_IMAGE) $(CONTAINER_PUSH_ARGS)
+	$(PODMAN) push $(DRIVER_IMAGE) $(CONTAINER_PUSH_ARGS)
 endif
 
-image-n3000-daemon: image-opae
+image-daemon: image-opae
 	cp ../LICENSE TEMP_LICENSE_COPY
-	$(PODMAN) build . -f Dockerfile.daemon -t $(N3000_DAEMON_IMAGE) $(CONTAINER_BUILD_ARGS)
+	$(PODMAN) build . -f Dockerfile.daemon -t $(DAEMON_IMAGE) $(CONTAINER_BUILD_ARGS)
 
-push-n3000-daemon:
-	$(PODMAN) push $(N3000_DAEMON_IMAGE) $(CONTAINER_PUSH_ARGS)
+push-daemon:
+	$(PODMAN) push $(DAEMON_IMAGE) $(CONTAINER_PUSH_ARGS)
 
-image-n3000-operator:
+image-labeler: image-opae
 	cp ../LICENSE TEMP_LICENSE_COPY
-	$(PODMAN) build . -t $(N3000_OPERATOR_IMAGE) $(CONTAINER_BUILD_ARGS)
+	$(PODMAN) build . -f Dockerfile.daemon -t $(LABELER_IMAGE) $(CONTAINER_BUILD_ARGS)
 
-push-n3000-operator:
-	$(PODMAN) push $(N3000_OPERATOR_IMAGE) $(CONTAINER_PUSH_ARGS)
+push-labeler:
+	$(PODMAN) push $(LABELER_IMAGE) $(CONTAINER_PUSH_ARGS)
+
+image-operator:
+	cp ../LICENSE TEMP_LICENSE_COPY
+	$(PODMAN) build . -t $(OPERATOR_IMAGE) $(CONTAINER_BUILD_ARGS)
+
+image-fpgainfo_exporter:
+	cp ../LICENSE TEMP_LICENSE_COPY
+	$(PODMAN) build . -t $(MONITORING_IMAGE) $(CONTAINER_BUILD_ARGS)
+
+push-fpgainfo_exporter:
+	cp ../LICENSE TEMP_LICENSE_COPY
+	$(PODMAN) push $(MONITORING_IMAGE) $(CONTAINER_PUSH_ARGS)
+
+push-operator:
+	$(PODMAN) push $(OPERATOR_IMAGE) $(CONTAINER_PUSH_ARGS)
 
 # Build all the images
-image: image-n3000-driver image-n3000-daemon image-n3000-operator image-bundle
+image: image-driver image-daemon image-operator image-labeler image-bundle image-fpgainfo_exporter
+image-bundle: image-driver image-daemon image-operator image-labeler push-fpgainfo_exporter
 
 # Push all the images
 .PHONY: push
-push: push-n3000-driver push-n3000-daemon push-n3000-operator push-bundle
+push: push-driver push-daemon push-operator push-labeler push-bundle push-fpgainfo_exporter
 
 check-operator-sdk-version:
 	make -C .. check-operator-sdk-version
@@ -165,7 +181,7 @@ check-operator-sdk-version:
 .PHONY: bundle
 bundle: image check-operator-sdk-version manifests kustomize
 	operator-sdk generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image n3000-operator=$(N3000_OPERATOR_IMAGE)
+	cd config/manager && $(KUSTOMIZE) edit set image operator=$(OPERATOR_IMAGE)
 	$(KUSTOMIZE) build config/manifests | envsubst | operator-sdk generate bundle -q --overwrite --version $(subst v,,$(VERSION)) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 	FOLDER=. COPYRIGHT_FILE=../COPYRIGHT ../copyright.sh

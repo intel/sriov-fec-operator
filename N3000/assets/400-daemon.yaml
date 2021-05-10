@@ -4,15 +4,15 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: n3000-daemon
-  namespace: "{{ .N3000_NAMESPACE }}"
+  name: intel-fpga-daemon
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: n3000-daemon
-  namespace: "{{ .N3000_NAMESPACE }}"
+  name: intel-fpga-daemon
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 rules:
 - apiGroups:
   - fpga.intel.com
@@ -40,7 +40,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: n3000-daemon
+  name: intel-fpga-daemon
 rules:
 - apiGroups: [""]
   resources: ["pods"]
@@ -59,49 +59,49 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: n3000-daemon
+  name: intel-fpga-daemon
 subjects:
 - kind: ServiceAccount
-  name: n3000-daemon
-  namespace: "{{ .N3000_NAMESPACE }}"
+  name: intel-fpga-daemon
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 roleRef:
   kind: ClusterRole
-  name: n3000-daemon
+  name: intel-fpga-daemon
   apiGroup: rbac.authorization.k8s.io
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: n3000-daemon
-  namespace: "{{ .N3000_NAMESPACE }}"
+  name: intel-fpga-daemon
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: n3000-daemon
-  namespace: "{{ .N3000_NAMESPACE }}"
+  name: intel-fpga-daemon
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 subjects:
 - kind: ServiceAccount
-  name: n3000-daemon
-  namespace: "{{ .N3000_NAMESPACE }}"
+  name: intel-fpga-daemon
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 userNames:
-- system:serviceaccount:{{ .N3000_NAMESPACE }}:n3000-daemon
+- system:serviceaccount:{{ .INTEL_FPGA_NAMESPACE }}:intel-fpga-daemon
 
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   labels:
-    app: n3000-daemonset
-  name: n3000-daemonset
-  namespace: "{{ .N3000_NAMESPACE }}"
+    app: intel-fpga-daemonset
+  name: intel-fpga-daemonset
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
   annotations:
-    openshift.io/scc: n3000-daemon
+    openshift.io/scc: intel-fpga-daemon
 spec:
   selector:
     matchLabels:
-      app: n3000-daemonset
+      app: intel-fpga-daemonset
   template:
     metadata:
       # Mark this pod as a critical add-on; when enabled, the critical add-on scheduler
@@ -110,7 +110,7 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ""
       labels:
-        app: n3000-daemonset
+        app: intel-fpga-daemonset
     spec:
       nodeSelector:
         fpga.intel.com/intel-accelerator-present: ""
@@ -118,15 +118,15 @@ spec:
       - key: intel.com/fpga
         operator: Exists
         effect: NoSchedule
-      serviceAccount: n3000-daemon
-      serviceAccountName: n3000-daemon
+      serviceAccount: intel-fpga-daemon
+      serviceAccountName: intel-fpga-daemon
       hostPID: true
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
-      - image: "{{ .N3000_DAEMON_IMAGE }}"
+      - image: "{{ .INTEL_FPGA_DAEMON_IMAGE }}"
         imagePullPolicy: Always
-        name: n3000-daemon
+        name: intel-fpga-daemon
         args:
         - --zap-log-level=10
         volumeMounts:
@@ -147,13 +147,13 @@ spec:
           - name: sysfs
             mountPath: /sys
           - name: cache-volume
-            mountPath: /n3000-workdir
+            mountPath: /intel-fpga-workdir
           - name: tmp-volume
             mountPath: /tmp
           - name: run-volume
             mountPath: /run
         env:
-          - name: N3000_NAMESPACE
+          - name: INTEL_FPGA_NAMESPACE
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace

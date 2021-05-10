@@ -5,14 +5,14 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: fpgainfo-exporter
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: fpgainfo-exporter
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 rules:
 - apiGroups:
   - security.openshift.io
@@ -26,25 +26,25 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: fpgainfo-exporter
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: fpgainfo-exporter
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 subjects:
 - kind: ServiceAccount
   name: fpgainfo-exporter
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 userNames:
-- system:serviceaccount:{{ .N3000_NAMESPACE }}:fpgainfo-exporter
+- system:serviceaccount:{{ .INTEL_FPGA_NAMESPACE }}:fpgainfo-exporter
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: prometheus-k8s
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 rules:
  - apiGroups:
    - ""
@@ -62,7 +62,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: prometheus-k8s
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -76,7 +76,7 @@ subjects:
 apiVersion: v1
 kind: Service
 metadata:
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
   name: fpgainfo-exporter
   labels:
     app: fpgainfo-exporter
@@ -96,7 +96,7 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
   name: fpgainfo-exporter
   labels:
     app: fpgainfo-exporter
@@ -108,7 +108,7 @@ spec:
   jobLabel: app
   namespaceSelector:
     matchNames:
-    - {{ .N3000_NAMESPACE }}
+    - {{ .INTEL_FPGA_NAMESPACE }}
   selector:
     matchLabels:
       app: fpgainfo-exporter
@@ -120,7 +120,7 @@ metadata:
   labels:
     app: fpgainfo-exporter
   name: fpgainfo-exporter
-  namespace: "{{ .N3000_NAMESPACE }}"
+  namespace: "{{ .INTEL_FPGA_NAMESPACE }}"
 spec:
   minReadySeconds: 10
   selector:
@@ -132,10 +132,11 @@ spec:
         app: fpgainfo-exporter
       name: fpgainfo-exporter
     spec:
+      hostNetwork: true
       serviceAccount: fpgainfo-exporter
       serviceAccountName: fpgainfo-exporter
       containers:
-      - image: "{{ .N3000_MONITORING_IMAGE }}"
+      - image: "{{ .INTEL_FPGA_MONITORING_IMAGE }}"
         imagePullPolicy: Always
         name: fpgainfo-exporter
         volumeMounts:
