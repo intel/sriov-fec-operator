@@ -70,7 +70,7 @@ spec:
     type: AllNamespaces
   keywords:
   - N3000
-  - N3000-2
+  - intel-fpga-2
   - vRAN
   - ORAN
   - fpga accelerator

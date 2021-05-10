@@ -10,13 +10,17 @@ if $(oc get ns -A | grep -q vran-acceleration-operators) ; then
     oc delete ns vran-acceleration-operators
 fi
 
-if $(oc get ns -A | grep -q vran-acceleration-operators) ; then
+if $(oc get ns -A | grep -q nfd) ; then
     oc delete ns nfd
+fi
+
+if $(oc get ns -A | grep -q intel-fpga-operators) ; then
+    oc delete ns intel-fpga-operators
 fi
 
 sleep 10
 
-oc create ns vran-acceleration-operators
+oc create ns intel-fpga-operators
 
 releases=/net/bohr/var/fiberblaze/releases/LightningCreek/ofs-fim/N5010
 install_dir=/disks/openshift-provision/install_dir

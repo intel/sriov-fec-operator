@@ -5,7 +5,7 @@ apiVersion: fpga.intel.com/v1
 kind: N3000Cluster
 metadata:
   name: n3000
-  namespace: vran-acceleration-operators
+  namespace: intel-fpga-operators
 spec:
   nodes:
     - nodeName: worker1

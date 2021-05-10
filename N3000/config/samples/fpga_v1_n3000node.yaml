@@ -5,9 +5,9 @@ apiVersion: fpga.intel.com/v1
 kind: N3000Node
 metadata:
   name: worker-0
-  namespace: vran-acceleration-operators
+  namespace: intel-fpga-operators
 spec:
-  # Managed by n3000-controller-manager
+  # Managed by intel-fpga-controller-manager
   fpga:
     - userImageURL: "http://server:8000/userimage.bin"
       PCIAddr: "0000:09:00.0"

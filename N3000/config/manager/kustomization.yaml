@@ -14,6 +14,6 @@ configMapGenerator:
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
-- name: n3000-operator
-  newName: quay.io/ryan_raasch/n3000-operator
+- name: intel-fpga-operator
+  newName: quay.io/ryan_raasch/intel-fpga-operator
   newTag: v1.1.0

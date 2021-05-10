@@ -11,5 +11,5 @@ roleRef:
   name: leader-election-role
 subjects:
 - kind: ServiceAccount
-  name: n3000-controller-manager
-  namespace: vran-acceleration-operators
+  name: intel-fpga-controller-manager
+  namespace: intel-fpga-operators
