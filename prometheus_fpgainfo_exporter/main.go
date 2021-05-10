@@ -288,7 +288,8 @@ func init() {
 }
 
 func main() {
-	flag.Parse()
+
+	//flag.Parse()
 
 	_, err := fpgaInfoExec("bmc")
 	if err != nil {
