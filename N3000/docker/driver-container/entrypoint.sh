@@ -3,20 +3,38 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020 Intel Corporation
 
-modules=(regmap-mmio-mod intel-fpga-pci ifpga-sec-mgr fpga-mgr-mod
-    spi-bitbang-mod i2c-altera intel-fpga-fme pac_n3000_net
-    intel-max10 intel-fpga-pac-iopll intel-fpga-afu intel-on-chip-flash
-    c827_retimer avmmi-bmc intel-fpga-pac-hssi
-    spi-altera-mod spi-nor-mod altera-asmip2 intel-generic-qspi)
+modules=(regmap-indirect-register
+            regmap-spi-avmm \
+            dfl-pci \
+            dfl-afu \
+            dfl-fme \
+            dfl \
+            dfl-spi-altera \
+            dfl-fme-br \
+            dfl-fme-mgr \
+            dfl-fme-region \
+            dfl-intel-s10-iopll \
+            fpga-mgr \
+            fpga_bridge \
+            intel-m10-bmc \
+            intel-s10-phy \
+            intel-m10-bmc-hwmon \
+            intel-m10-bmc-secure \
+            n5010-phy \
+            n5010-hssi \
+            s10hssi \
+            spi-altera)
 
 modules_reverse_order=$(printf '%s\n' "${modules[@]}" | tac | tr '\n' ' ')
 
 modprobe_failed=0
 
+KVER=$(ls /lib/modules/*)
+
 load_drivers() {
     echo "Inserting modules: ${modules[@]}"
     for mod in "${modules[@]}"; do
-        modprobe ${mod} || modprobe_failed=1
+        modprobe -S ${KVER} ${mod} || modprobe_failed=1
     done
 }
 
@@ -26,18 +44,6 @@ unload_drivers() {
         modprobe -r ${mod}
     done
 }
-
-mkdir -p /lib/modules/$(uname -r)/extra
-
-# Link OPAE drivers
-ln -s /opae-drivers/"$(uname -r)"/*.ko "/lib/modules/$(uname -r)/extra"
-
-# Link mtd from host
-ln -s /host_driver_mtd/mtd.ko.xz "/lib/modules/$(uname -r)/extra"
-
-depmod
-
-modprobe mtd || exit 1
 
 trap unload_drivers EXIT
 

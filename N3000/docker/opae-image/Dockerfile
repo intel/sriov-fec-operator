@@ -1,33 +1,63 @@
-# SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020 Intel Corporation
+ARG CENTOS_VER=docker.io/centos:8.2.2004
+FROM ${CENTOS_VER}
 
-FROM registry.access.redhat.com/ubi8:latest
+WORKDIR /root
 
-RUN dnf install --disablerepo=*  --enablerepo=ubi-8-appstream --enablerepo=ubi-8-baseos -y \
-     python3 json-c procps-ng cpio
+RUN rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+RUN yum install -y dnf-plugins-core epel-release
+RUN yum config-manager --set-enabled PowerTools
 
-WORKDIR /srcrpms
-RUN dnf download --disablerepo=* --enablerepo=ubi-8-appstream --enablerepo=ubi-8-baseos --source procps-ng cpio
+RUN yum install -y \
+        python3 \
+        python3-pip \
+        python3-devel \
+        python3-pybind11 \
+        make \
+        libuuid-devel \
+        json-c-devel \
+        gcc \
+        clang \
+        gcc-c++ \
+        hwloc-devel \
+        tbb-devel \
+        rpm-build \
+        rpmdevtools \
+        git \
+        libedit-devel \
+        epel-release
 
-RUN pip3 install intelhex
+RUN yum install -y cmake3
 
-ARG OPAE_VERSION
-ENV OPAE_VERSION=${OPAE_VERSION}
+RUN python3 -m pip install setuptools --upgrade
+RUN python3 -m pip install wheel
+RUN python3 -m pip install python-pkcs11 cython pyyaml
+WORKDIR /root
+RUN git clone -b hundeboll/feature/fpga_smartnic_n5010 https://github.com/OPAE/opae-sdk.git /root/opae-sdk
 
-COPY TEMP_LICENSE_COPY /licenses/LICENSE
+WORKDIR /root/opae-sdk/build
+RUN cmake .. --warn-uninitialized -Wno-dev \
+             -DCMAKE_INSTALL_PREFIX=/opae \
+             -DCMAKE_BUILD_TYPE=Release \
+             -DCMAKE_CXX_STANDARD=11 \
+             -DSPDLOG_BUILD_EXAMPLE=ON \
+             -DSPDLOG_BUILD_EXAMPLE_HO=ON \
+             -DSPDLOG_BUILD_WARNINGS=ON \
+             -DSPDLOG_BUILD_BENCH=OFF \
+             -DSPDLOG_BUILD_TESTS=ON \
+             -DCOMPILER_SUPPORTS_CXX14=no \
+             -DSPDLOG_BUILD_TESTS_HO=OFF \
+             -DSPDLOG_SANITIZE_ADDRESS=On && \
+    make VERBOSE=1 install -j4
 
-WORKDIR /opae
+RUN cd /root/opae-sdk/python/opae.admin && python3 setup.py install --single-version-externally-managed --root=/opae
+RUN cd /root/opae-sdk/python/opae.io && python3 setup.py install --single-version-externally-managed --root=/opae
+RUN cd /root/opae-sdk/python/pacsign && python3 setup.py install --single-version-externally-managed --root=/opae
+RUN cd /root/opae-sdk/tools/extra/fpgadiag && python3 setup.py install --single-version-externally-managed --root=/opae
 
-COPY files/opae/n3000-${OPAE_VERSION}-rte-el8-setup.sh .
+FROM registry.access.redhat.com/ubi8/ubi-minimal
 
-# We extract the package instead of installing directly,
-# because there's no way to ignore driver package (and its deps are not fulfilled [dkms])
-RUN ./n3000-${OPAE_VERSION}-rte-el8-setup.sh extract && \
-     pushd n3000-${OPAE_VERSION}-rte/opae && \
-     rpm2cpio opae-tools-extra*.rpm | cpio -idv ./usr/bin/fpgadiag ./usr/bin/mactest && \
-     mv ./usr/bin/* /usr/bin/ && rm -rf ./usr/ && \
-     dnf install --disablerepo=* --enablerepo=ubi-8-appstream --enablerepo=ubi-8-baseos -y \
-     $(find . \( -iname '*.rpm' -a -not -iname '*driver*' -a -not -iname '*sign*' -a -not -iname '*opae-tools-extra*' \)) && \
-     dnf clean all && \
-     popd && \
-     rm -rf ./n3000*
+RUN microdnf install -y python3 python3-pip pciutils rsync kmod net-tools ethtool
+
+COPY --from=0 /opae/bin/* /bin/
+COPY --from=0 /opae/lib64/* /usr/lib64/
+COPY --from=0 /opae/usr/local /usr/local

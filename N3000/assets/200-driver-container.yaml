@@ -122,10 +122,9 @@ spec:
       serviceAccountName: fpga-driver
       hostPID: true
       containers:
-      - image: quay.io/ryan_raasch/dfl-kmod:eea9cbc-4.18.0-193.el8.x86_64
+      - image: "{{ .INTEL_FPGA_DRIVER_IMAGE }}"
         imagePullPolicy: IfNotPresent
         name: fpga-driver
-        command: ["/insmod-drivers.sh"]
         securityContext:
           privileged: true
           seLinuxOptions:
