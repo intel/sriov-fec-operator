@@ -93,13 +93,10 @@ spec:
         name: accelerator-discovery
         securityContext:
           readOnlyRootFilesystem: true
-          priveliged: true
         volumeMounts:
         - name: config-volume
           mountPath: "/labeler-workspace/config"
           readOnly: true
-        - name: sysfs
-          mountPath: /sys
         env:
           - name: NODENAME
             valueFrom:
@@ -112,6 +109,3 @@ spec:
             items:
             - key: accelerators.json
               path: accelerators.json
-        - name: sysfs
-          hostPath:
-            path: /sys
