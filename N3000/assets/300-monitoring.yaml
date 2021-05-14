@@ -139,9 +139,6 @@ spec:
       - image: "{{ .INTEL_FPGA_MONITORING_IMAGE }}"
         imagePullPolicy: Always
         name: fpgainfo-exporter
-        volumeMounts:
-          - name: sysfs
-            mountPath: /sys
         securityContext:
           privileged: true
           readOnlyRootFilesystem: true
@@ -157,7 +154,3 @@ spec:
            cpu: 200m
       nodeSelector:
         fpga.intel.com/intel-accelerator-present: ""
-      volumes:
-        - name: sysfs
-          hostPath:
-            path: /sys
