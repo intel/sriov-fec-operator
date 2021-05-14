@@ -29,7 +29,7 @@ modules_reverse_order=$(printf '%s\n' "${modules[@]}" | tac | tr '\n' ' ')
 
 modprobe_failed=0
 
-KVER=$(ls /lib/modules/*)
+KVER=$(ls /lib/modules/)
 
 load_drivers() {
     echo "Inserting modules: ${modules[@]}"
