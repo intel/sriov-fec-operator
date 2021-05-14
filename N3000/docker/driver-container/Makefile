@@ -1,5 +1,7 @@
 .PHONY: all image push
 
+include ../../../makefile.top
+
 KMODVER := eea9cbc
 KVER_RHEL82 = 4.18.0-193.el8.x86_64
 KVER_RHEL83 = 4.18.0-240.el8.x86_64
@@ -11,22 +13,21 @@ BUILD_ARGS_RHEL83 = --build-arg CENTOS_VER=docker.io/centos:8.3.2011 --build-arg
 
 BUILDTOOL ?= podman
 IMAGE_NAME := dfl-kmod
-REPOS ?= quay.io/ryan_raasch
 
-BUILD_ARGS := $(BUILD_ARGS_RHEL82)
+CONTAINER_BUILD_ARGS += $(BUILD_ARGS_RHEL82)
 TAG := $(KMODVER)-$(KVER_RHEL82)
-IMAGE := $(REPOS)/$(IMAGE_NAME):$(TAG)
+IMAGE := $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(TAG)
 
 ifeq ($(RHEL_VER),rhel83)
 TAG := $(KMODVER)-$(KVER_RHEL83)
-IMAGE := $(REPOS)/$(IMAGE_NAME):$(TAG)
+IMAGE := $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(TAG)
 BUILD_ARGS := $(BUILD_ARGS_RHEL83)
 endif
 
 all: image push
 
 image:
-	$(BUILDTOOL) build . $(BUILD_ARGS) -t $(IMAGE)
+	$(BUILDTOOL) build . $(CONTAINER_BUILD_ARGS) -t $(IMAGE)
 
 push: image
-	$(BUILDTOOL) push $(IMAGE)
+	$(BUILDTOOL) push $(IMAGE) $(CONTAINER_PUSH_ARGS)
