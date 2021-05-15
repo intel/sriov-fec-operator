@@ -138,10 +138,10 @@ check-operator-sdk-version:
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
 bundle: image check-operator-sdk-version manifests kustomize
-	operator-sdk generate kustomize manifests -q
+	../bin/operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image operator=$(OPERATOR_IMAGE)
-	$(KUSTOMIZE) build config/manifests | envsubst | operator-sdk generate bundle -q --overwrite --version $(subst v,,$(VERSION)) $(BUNDLE_METADATA_OPTS)
-	operator-sdk bundle validate ./bundle
+	$(KUSTOMIZE) build config/manifests | envsubst | ../bin/operator-sdk generate bundle -q --overwrite --version $(subst v,,$(VERSION)) $(BUNDLE_METADATA_OPTS)
+	../bin/operator-sdk bundle validate ./bundle
 	FOLDER=. COPYRIGHT_FILE=../COPYRIGHT ../copyright.sh
 	cat ../COPYRIGHT bundle.Dockerfile >bundle.tmp
 	printf "\nLABEL com.redhat.openshift.versions=\"=v4.6\"\n" >> bundle.tmp
