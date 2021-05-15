@@ -85,66 +85,24 @@ vet:
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-# go-get-tool will 'go get' any package $2 and install it to $1.
-PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-define go-get-tool
-@[ -f $(1) ] || { \
-set -e ;\
-TMP_DIR=$$(mktemp -d) ;\
-cd $$TMP_DIR ;\
-go mod init tmp ;\
-echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
-rm -rf $$TMP_DIR ;\
-}
-endef
-
 # find or download controller-gen
 # download controller-gen if necessary
-CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1)
+CONTROLLER_GEN = $(shell pwd)/../bin/controller-gen
+controller-gen:
+	make -C .. check-operator-sdk-version
 
-KUSTOMIZE = $(shell pwd)/bin/kustomize
-kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
+KUSTOMIZE = $(shell pwd)/../bin/kustomize
+kustomize:
+	make -C .. check-operator-sdk-version
 
-# Build opae image
-.PHONY: image-opae-rte
-image-opae-rte:
-	cp -r files docker/opae-image
-	cp ../LICENSE docker/opae-image/TEMP_LICENSE_COPY
-	cd docker/opae-image && $(PODMAN) build . -t $(OPAE_IMAGE) $(CONTAINER_BUILD_ARGS)
-
-# Build opae image
-.PHONY: image-opae
-image-opae:
-	cp -r files docker/opae-image
-	cp ../LICENSE docker/opae-image/TEMP_LICENSE_COPY
-	cd docker/opae-image && $(PODMAN) build . $(CONTAINER_BUILD_ARGS) -t $(OPAE_IMAGE_RHEL) -f Dockerfile.centos
-
-# Build/Push driver image
-.PHONY: image-driver
-image-driver:
-ifeq ($(BUILD_DRIVER_CONTAINER),yes)
-	cp -r files docker/driver-container
-	cp ../LICENSE docker/driver-container/TEMP_LICENSE_COPY
-	cd docker/driver-container && $(PODMAN) build . -t $(DRIVER_IMAGE) --build-arg=VERSION=$(IMG_VERSION) --build-arg=OPAE_VERSION=$(OPAE_VERSION) --build-arg=KERNEL_VERSION=$(KERNEL_VERSION) --build-arg=KERNEL_SOURCE=$(KERNEL_SOURCE)
-endif
-
-push-driver:
-ifeq ($(BUILD_DRIVER_CONTAINER),yes)
-	$(PODMAN) push $(DRIVER_IMAGE) $(CONTAINER_PUSH_ARGS)
-endif
-
-image-daemon: image-opae
+image-daemon:
 	cp ../LICENSE TEMP_LICENSE_COPY
 	$(PODMAN) build . -f Dockerfile.daemon -t $(DAEMON_IMAGE) $(CONTAINER_BUILD_ARGS)
 
 push-daemon:
 	$(PODMAN) push $(DAEMON_IMAGE) $(CONTAINER_PUSH_ARGS)
 
-image-labeler: image-opae
+image-labeler:
 	cp ../LICENSE TEMP_LICENSE_COPY
 	$(PODMAN) build . -f Dockerfile.daemon -t $(LABELER_IMAGE) $(CONTAINER_BUILD_ARGS)
 
@@ -167,12 +125,12 @@ push-operator:
 	$(PODMAN) push $(OPERATOR_IMAGE) $(CONTAINER_PUSH_ARGS)
 
 # Build all the images
-image: image-driver image-daemon image-operator image-labeler image-bundle image-fpgainfo_exporter
-image-bundle: image-driver image-daemon image-operator image-labeler push-fpgainfo_exporter
+image: image-daemon image-operator image-labeler image-bundle image-fpgainfo_exporter
+image-bundle: image-daemon image-operator image-labeler image-fpgainfo_exporter
 
 # Push all the images
 .PHONY: push
-push: push-driver push-daemon push-operator push-labeler push-bundle push-fpgainfo_exporter
+push: push-daemon push-operator push-labeler push-bundle push-fpgainfo_exporter
 
 check-operator-sdk-version:
 	make -C .. check-operator-sdk-version
