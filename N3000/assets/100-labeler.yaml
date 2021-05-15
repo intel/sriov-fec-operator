@@ -91,6 +91,8 @@ spec:
       - image: "{{ .INTEL_FPGA_LABELER_IMAGE }}"
         imagePullPolicy: IfNotPresent
         name: accelerator-discovery
+        args:
+        - --zap-log-level=10
         securityContext:
           readOnlyRootFilesystem: true
         volumeMounts:

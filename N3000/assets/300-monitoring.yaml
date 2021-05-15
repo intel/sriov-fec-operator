@@ -139,6 +139,8 @@ spec:
       - image: "{{ .INTEL_FPGA_MONITORING_IMAGE }}"
         imagePullPolicy: Always
         name: fpgainfo-exporter
+        args:
+        - --zap-log-level=10
         securityContext:
           privileged: true
           readOnlyRootFilesystem: true
