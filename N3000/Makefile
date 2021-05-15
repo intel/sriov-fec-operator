@@ -125,7 +125,7 @@ push-operator:
 	$(PODMAN) push $(OPERATOR_IMAGE) $(CONTAINER_PUSH_ARGS)
 
 # Build all the images
-image: image-daemon image-operator image-labeler image-bundle image-fpgainfo_exporter
+image: image-daemon image-bundle image-operator image-labeler image-bundle image-fpgainfo_exporter
 image-bundle: image-daemon image-operator image-labeler image-fpgainfo_exporter
 
 # Push all the images
