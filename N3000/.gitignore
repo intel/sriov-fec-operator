@@ -19,7 +19,7 @@ bin
 !vendor/**/zz_generated.*
 
 # operator-sdk generated files
-# config/crd/bases/
+config/crd/bases/
 bundle/
 bundle.Dockerfile
 

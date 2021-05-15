@@ -134,10 +134,10 @@ func main() {
 		Scheme:    scheme,
 		Owner:     owner,
 		Assets: []assets.Asset{
-			/* 			{
+			{
 				Path:              "assets/200-driver-container.yaml",
 				BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
-			}, */
+			},
 			{
 				Path: "assets/300-monitoring.yaml",
 			},

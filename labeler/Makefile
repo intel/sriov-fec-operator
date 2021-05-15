@@ -18,11 +18,11 @@ vet:
 # Build the docker image
 image:
 	cp ../LICENSE TEMP_LICENSE_COPY
-	$(PODMAN) build . -t $(N3000_LABELER_IMAGE)  $(CONTAINER_BUILD_ARGS)
+	$(PODMAN) build . -t $(LABELER_IMAGE)  $(CONTAINER_BUILD_ARGS)
 
 # Push the docker image
 push:
-	$(PODMAN) push $(N3000_LABELER_IMAGE)  $(CONTAINER_PUSH_ARGS)
+	$(PODMAN) push $(LABELER_IMAGE)  $(CONTAINER_PUSH_ARGS)
 
 # Run tests
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
