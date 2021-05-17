@@ -24,6 +24,8 @@ BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
+OPERATOR_SDK = ../bin/operator-sdk
+
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -102,31 +104,24 @@ image-daemon:
 push-daemon:
 	$(PODMAN) push $(DAEMON_IMAGE) $(CONTAINER_PUSH_ARGS)
 
-image-labeler:
-	cp ../LICENSE TEMP_LICENSE_COPY
-	$(PODMAN) build . -f Dockerfile.daemon -t $(LABELER_IMAGE) $(CONTAINER_BUILD_ARGS)
-
 push-labeler:
-	$(PODMAN) push $(LABELER_IMAGE) $(CONTAINER_PUSH_ARGS)
+image-labeler:
+	make -C ../labeler $(subst -labeler,,$@)
+
+push-prometheus_fpgainfo_exporter:
+image-prometheus_fpgainfo_exporter:
+	make -C ../prometheus_fpgainfo_exporter $(subst -prometheus_fpgainfo_exporter,,$@)
 
 image-operator:
 	cp ../LICENSE TEMP_LICENSE_COPY
 	$(PODMAN) build . -t $(OPERATOR_IMAGE) $(CONTAINER_BUILD_ARGS)
 
-image-fpgainfo_exporter:
-	cp ../LICENSE TEMP_LICENSE_COPY
-	$(PODMAN) build . -t $(MONITORING_IMAGE) $(CONTAINER_BUILD_ARGS)
-
-push-fpgainfo_exporter:
-	cp ../LICENSE TEMP_LICENSE_COPY
-	$(PODMAN) push $(MONITORING_IMAGE) $(CONTAINER_PUSH_ARGS)
-
 push-operator:
 	$(PODMAN) push $(OPERATOR_IMAGE) $(CONTAINER_PUSH_ARGS)
 
 # Build all the images
-image: image-daemon image-bundle image-operator image-labeler image-bundle image-fpgainfo_exporter
-image-bundle: image-daemon image-operator image-labeler image-fpgainfo_exporter
+image: image-daemon image-bundle image-operator image-labeler image-bundle image-prometheus_fpgainfo_exporter
+image-bundle: image-daemon image-operator image-labeler image-prometheus_fpgainfo_exporter
 
 # Push all the images
 .PHONY: push
@@ -138,10 +133,10 @@ check-operator-sdk-version:
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
 bundle: image check-operator-sdk-version manifests kustomize
-	../bin/operator-sdk generate kustomize manifests -q
+	$(OPERATOR_SDK) generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image operator=$(OPERATOR_IMAGE)
-	$(KUSTOMIZE) build config/manifests | envsubst | ../bin/operator-sdk generate bundle -q --overwrite --version $(subst v,,$(VERSION)) $(BUNDLE_METADATA_OPTS)
-	../bin/operator-sdk bundle validate ./bundle
+	$(KUSTOMIZE) build config/manifests | envsubst | $(OPERATOR_SDK) generate bundle -q --overwrite --version $(subst v,,$(VERSION)) $(BUNDLE_METADATA_OPTS)
+	$(OPERATOR_SDK) bundle validate ./bundle
 	FOLDER=. COPYRIGHT_FILE=../COPYRIGHT ../copyright.sh
 	cat ../COPYRIGHT bundle.Dockerfile >bundle.tmp
 	printf "\nLABEL com.redhat.openshift.versions=\"=v4.6\"\n" >> bundle.tmp
