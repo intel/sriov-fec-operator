@@ -23,7 +23,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: quay.io/ryan_raasch/intel-fpga-operator:v1.1.0
+        image: quay.io/ryan_raasch/intel-fpga-operator:v2.0.0
         imagePullPolicy: Always
         name: manager
         securityContext:
@@ -49,11 +49,11 @@ spec:
             memory: 20Mi
         env:
         - name: INTEL_FPGA_DAEMON_IMAGE
-          value: quay.io/ryan_raasch/intel-fpga-daemon:v1.1.0
+          value: quay.io/ryan_raasch/intel-fpga-daemon:v2.0.0
         - name: INTEL_FPGA_MONITORING_IMAGE
-          value: quay.io/ryan_raasch/intel-fpga-monitoring:v1.1.0
+          value: quay.io/ryan_raasch/intel-fpga-monitoring:v2.0.0
         - name: INTEL_FPGA_LABELER_IMAGE
-          value: quay.io/ryan_raasch/intel-fpga-labeler:v1.1.0
+          value: quay.io/ryan_raasch/intel-fpga-labeler:v2.0.0
         - name: INTEL_FPGA_NAMESPACE
           value: intel-fpga-operators
         - name: INTEL_FPGA_DRIVER_IMAGE

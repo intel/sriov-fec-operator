@@ -125,7 +125,7 @@ image-bundle: image-daemon image-operator image-labeler image-prometheus_fpgainf
 
 # Push all the images
 .PHONY: push
-push: push-daemon push-operator push-labeler push-bundle push-fpgainfo_exporter
+push: push-daemon push-operator push-labeler push-bundle push-prometheus_fpgainfo_exporter
 
 check-operator-sdk-version:
 	make -C .. check-operator-sdk-version

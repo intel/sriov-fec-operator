@@ -24,8 +24,10 @@ $(PUSH_TARGETS):
 	make -C $(subst -push,,$@) push
 
 build_index: $(TARGETS)
+ifeq ($(BUILD_SRIO_FEC),yes)
 	$(PWD)/bin/opm index add --bundles $(IMAGE_REGISTRY)/sriov-fec-bundle:$(VERSION),$(IMAGE_REGISTRY)/intel-fpga-bundle:$(VERSION) --tag localhost/intel-fpga-operators-index:$(VERSION) $(if ifeq $(TLS_VERIFY) false, --skip-tls) -c podman --mode=semver
 	$(PODMAN) push localhost/intel-fpga-operators-index:$(VERSION) $(IMAGE_REGISTRY)/intel-fpga-operators-index:$(VERSION)
+endif
 
 clean-tools:
 	rm -rf downloads bin

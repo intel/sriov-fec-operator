@@ -10,21 +10,14 @@ data:
   accelerators.json: |
     {
       "VendorID": {
-        "8086": "Intel Corporation",
-        "1172": "Altera Corporation",
         "1c2c": "Silicom"
       },
       "Class": "12",
       "SubClass": "00",
       "Devices": {
-        "0d8f": "FPGA_5GNR",
-        "5052": "FPGA_LTE",
-        "0d5c": "ACC100",
-        "0b32": "",
-        "1000": "LC",
-        "1001": "AC"
+        "1000": "LC"
       },
-      "NodeLabel": "fpga.intel.com/intel-accelerator-present"
+      "NodeLabel": "fpga.intel.com/network-accelerator-n5010"
     }
 
 ---

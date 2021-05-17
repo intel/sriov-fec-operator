@@ -163,7 +163,7 @@ func (r *N3000ClusterReconciler) splitClusterIntoNodes(ctx context.Context,
 	n3000cluster *fpgav1.N3000Cluster) ([]*fpgav1.N3000Node, error) {
 
 	nodes := &corev1.NodeList{}
-	err := r.Client.List(ctx, nodes, &client.MatchingLabels{"fpga.intel.com/intel-accelerator-present": ""})
+	err := r.Client.List(ctx, nodes, &client.MatchingLabels{"fpga.intel.com/network-accelerator-5010": ""})
 	if err != nil {
 		log.Error(err, "Unable to list the nodes")
 		return nil, err
