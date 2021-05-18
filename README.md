@@ -11,3 +11,6 @@ oc apply -k N3000/config/default
 * quay.io/ryan_raasch/dfl-kmod:eea9cbc-4.18.0-193.el8.x86_64
 
 ## namespace: intel-fpga-operators
+
+# Node labels
+oc get node  -l fpga.intel.com/network-accelerator-n5010=
