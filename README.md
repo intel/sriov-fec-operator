@@ -14,3 +14,6 @@ oc apply -k N3000/config/default
 
 # Node labels
 oc get node  -l fpga.intel.com/network-accelerator-n5010=
+
+# Create a green or blue stream update on node
+oc apply -f N3000/config/samples/fpga_v1_n3000cluster.yaml
