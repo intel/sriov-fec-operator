@@ -27,14 +27,14 @@ FROM ${RUNTIME_IMAGE}
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="OpenNESS Operator for Intel® FPGA PAC N3000" \
-    vendor="Intel Corporation" \
+LABEL name="OpenNESS Operator for Silicom® FPGA N5010" \
+    vendor="Silicom Corporation" \
     version=$VERSION \
     release="1" \
-    summary="OpenNESS Operator for Intel® FPGA PAC N3000 for 5G Cloudnative/vRAN deployment" \
-    description="OpenNESS Operator for Intel® FPGA PAC N3000 for 5G Cloudnative/vRAN \
+    summary="OpenNESS Operator for Silicom® FPGA N5010 for 5G Cloudnative/vRAN deployment" \
+    description="OpenNESS Operator for Silicom® FPGA N5010 for 5G Cloudnative/vRAN \
 deployment supports high performance Networking interface for 5G gNB Fronthaul and Midhaul \
-and 5G Forward Error Correction offload. OpenNESS Operator for Intel® FPGA PAC N3000 supports \
+and 5G Forward Error Correction offload. OpenNESS Operator for Silicom® FPGA N5010 supports \
 Detection of the FPGA, Programming FPGA and Ethernet Firmware, Configuration and allocation \
 of SR-IOV resources to the O-DU Pods."
 

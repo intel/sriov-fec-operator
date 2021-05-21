@@ -11,9 +11,3 @@ spec:
   fpga:
     - userImageURL: "http://server:8000/userimage.bin"
       PCIAddr: "0000:09:00.0"
-  fortville:
-    firmwareURL: "http://server:8000/nvmupdate.tar.gz"
-    MACs:
-      - MAC: "aa:bb:cc:dd:ee:fd"
-      - MAC: "aa:bb:cc:dd:ee:fe"
-      - MAC: "aa:bb:cc:dd:ee:ff"

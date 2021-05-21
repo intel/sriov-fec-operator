@@ -18,11 +18,11 @@ FROM ${OPAE_RUNTIME_IMAGE}
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="OpenNESS Operator for Intel® FPGA PAC N3000 daemonset container" \
-    vendor="Intel Corporation" \
+LABEL name="OpenNESS Operator for Silicom® FPGA N5010 daemonset container" \
+    vendor="Silicom Corporation" \
     version=$VERSION \
     release="1" \
-    summary="Container for Intel® FPGA PAC N3000 Operator that manages the accelerators on a node" \
+    summary="Container for Silicom® FPGA N5010 Operator that manages the accelerators on a node" \
     description="The daemonset container is responsible for building the nodes inventory \
 and configuring the accelerators"
 
