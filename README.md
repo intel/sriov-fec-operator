@@ -22,3 +22,23 @@ oc apply -f N3000/config/samples/fpga_v1_n3000cluster.yaml
 oc create ns intel-fpga-operators
 
 operator-sdk run bundle quay.io/ryan_raasch/intel-fpga-bundle:v2.0.0 --verbose -n intel-fpga-operators
+
+
+# Example
+```
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
+
+apiVersion: fpga.intel.com/v1
+kind: N3000Node
+metadata:
+  name: n3000
+  namespace: intel-fpga-operators
+spec:
+  nodes:
+    - nodeName: worker1
+      fpga:
+        - userImageURL: "http://10.100.1.78:8080/N5010/hw/green_bits/N5010_ofs-fim_PR_0_0_1__afu_example_axi_pim_unsigned.bin"
+          PCIAddr: "0000:00:04.0"
+          checksum: "890285f7304e01de546ac5a65574a8ab"
+```
