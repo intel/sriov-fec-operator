@@ -42,7 +42,7 @@ var _ = Describe("ExampleTest", func() {
 			ObjectMeta: v1.ObjectMeta{
 				Name: "dummy",
 				Labels: map[string]string{
-					"fpga.intel.com/intel-accelerator-present": "",
+					"fpga.intel.com/network-accelerator-n5010": "",
 				},
 			},
 		}
@@ -139,7 +139,7 @@ var _ = Describe("ExampleTest", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: "dummynode2",
 					Labels: map[string]string{
-						"fpga.intel.com/intel-accelerator-present": "",
+						"fpga.intel.com/network-accelerator-n5010": "",
 					},
 				},
 			}
