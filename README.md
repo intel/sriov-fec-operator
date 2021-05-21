@@ -20,4 +20,5 @@ oc apply -f N3000/config/samples/fpga_v1_n3000cluster.yaml
 
 # Deployment using operator-sdk and bundle
 oc create ns intel-fpga-operators
+
 operator-sdk run bundle quay.io/ryan_raasch/intel-fpga-bundle:v2.0.0 --verbose -n intel-fpga-operators
