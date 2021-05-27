@@ -40,10 +40,12 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 		}
 
 		if _, ok := supportedAccelerators.Devices[device.Product.ID]; !ok {
+			log.V(4).Info("ignoring unsupported device", "device.Product.ID", device.Product.ID)
 			continue
 		}
 
 		if !utils.IsSriovPF(device.Address) {
+			log.V(4).Info("ignoring non SriovPF capable device", "pci", device.Address)
 			continue
 		}
 
