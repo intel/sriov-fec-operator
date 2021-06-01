@@ -38,6 +38,9 @@ spec:
         name: node
         version: v1
       specDescriptors:
+      - description: Fortville devices to be updated
+        displayName: Fortville
+        path: fortville
       - description: FPGA devices to be updated
         displayName: FPGA
         path: fpga

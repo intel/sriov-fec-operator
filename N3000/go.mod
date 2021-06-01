@@ -1,4 +1,4 @@
-module github.com/open-ness/openshift-operator/N3000
+module github.com/rmr-silicom/openshift-operator/N3000
 
 go 1.15
 
@@ -6,7 +6,7 @@ require (
 	github.com/go-logr/logr v0.3.0
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
-	github.com/open-ness/openshift-operator/common v0.0.0-20210331133825-661f430b5d9f
+	github.com/rmr-silicom/openshift-operator/common optional-fec-build
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.45.0
