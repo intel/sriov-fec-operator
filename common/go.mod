@@ -1,4 +1,4 @@
-module github.com/rmr-silicom/openshift-operator/tree/optional-fec-build/common
+module github.com/rmr-silicom/openshift-operator/common
 go 1.15
 
 require (
