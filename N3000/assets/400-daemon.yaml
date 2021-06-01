@@ -113,7 +113,7 @@ spec:
         app: intel-fpga-daemonset
     spec:
       nodeSelector:
-        fpga.intel.com/intel-accelerator-present: ""
+        fpga.intel.com/network-accelerator-n5010: ""
       tolerations:
       - key: intel.com/fpga
         operator: Exists

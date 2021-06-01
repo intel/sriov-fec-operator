@@ -137,4 +137,4 @@ spec:
           hostPath:
             path: "/lib/modules/{{ .kernel }}/kernel/drivers/mtd"
       nodeSelector:
-        fpga.intel.com/intel-accelerator-present: ""
+        fpga.intel.com/network-accelerator-n5010: ""

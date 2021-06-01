@@ -156,7 +156,7 @@ var _ = Describe("Labeler", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: "nodename",
 					Labels: map[string]string{
-						"fpga.intel.com/intel-accelerator-present": "",
+						"fpga.intel.com/network-accelerator-n5010": "",
 					},
 				},
 			}

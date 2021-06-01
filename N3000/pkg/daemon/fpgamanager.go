@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
 	"github.com/pkg/errors"
+	fpgav1 "github.com/rmr-silicom/openshift-operator/N3000/api/v1"
 )
 
 var (

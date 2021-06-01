@@ -82,7 +82,7 @@ spec:
       serviceAccountName: accelerator-discovery
       containers:
       - image: "{{ .INTEL_FPGA_LABELER_IMAGE }}"
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         name: accelerator-discovery
         args:
         - --zap-log-level=10

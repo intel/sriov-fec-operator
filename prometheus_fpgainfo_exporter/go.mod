@@ -1,4 +1,4 @@
-module github.com/open-ness/openshift-operator/prometheus_fpgainfo_exporter
+module github.com/rmr-silicom/openshift-operator/prometheus_fpgainfo_exporter
 
 go 1.14
 

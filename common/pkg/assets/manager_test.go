@@ -196,7 +196,7 @@ var _ = Describe("Asset Tests", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: "dummy",
 					Labels: map[string]string{
-						"fpga.intel.com/intel-accelerator-present": "",
+						"fpga.intel.com/network-accelerator-n5010": "",
 					},
 				},
 			}

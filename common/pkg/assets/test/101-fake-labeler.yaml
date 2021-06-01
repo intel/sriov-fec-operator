@@ -57,7 +57,7 @@ data:
         "5052": "FPGA_LTE",
         "0b32": ""
       },
-      "NodeLabel": "fpga.intel.com/intel-accelerator-present"
+      "NodeLabel": "fpga.intel.com/network-accelerator-n5010"
     }
 
 ---

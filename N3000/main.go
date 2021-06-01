@@ -22,9 +22,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	fpgav1 "github.com/rmr-silicom/openshift-operator/N3000"
-	"github.com/rmr-silicom/openshift-operator/N3000/common/pkg/assets"
+	fpgav1 "github.com/rmr-silicom/openshift-operator/N3000/api/v1"
 	"github.com/rmr-silicom/openshift-operator/N3000/controllers"
+	"github.com/rmr-silicom/openshift-operator/common/pkg/assets"
 	// +kubebuilder:scaffold:imports
 )
 

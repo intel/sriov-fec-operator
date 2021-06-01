@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/jaypipes/ghw"
-	"github.com/open-ness/openshift-operator/common/pkg/utils"
+	"github.com/rmr-silicom/openshift-operator/common/pkg/utils"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )

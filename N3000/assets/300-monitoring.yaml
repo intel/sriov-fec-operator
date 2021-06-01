@@ -155,4 +155,4 @@ spec:
            memory: 200Mi
            cpu: 200m
       nodeSelector:
-        fpga.intel.com/intel-accelerator-present: ""
+        fpga.intel.com/network-accelerator-n5010: ""
