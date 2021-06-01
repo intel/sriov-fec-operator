@@ -50,7 +50,7 @@ func (m *Manager) buildTemplateVars(ctx context.Context, setKernelVar bool) (map
 		return tp, nil
 	}
 
-	m.log.Info("Looking for nodes with : fpga.intel.com/network-accelerator-n5010")
+	log.V(2).Info("Looking for nodes with : fpga.intel.com/network-accelerator-n5010")
 	nodes := &corev1.NodeList{}
 	err := m.Client.List(ctx, nodes, &client.MatchingLabels{"fpga.intel.com/network-accelerator-n5010": ""})
 	if err != nil {
@@ -58,7 +58,7 @@ func (m *Manager) buildTemplateVars(ctx context.Context, setKernelVar bool) (map
 	}
 
 	if len(nodes.Items) == 0 {
-		m.Log.Error(nil, "received empty node list RYAN")
+		m.Log.Error(nil, "received empty node list")
 		return nil, errors.New("empty node list while building template vars")
 	}
 

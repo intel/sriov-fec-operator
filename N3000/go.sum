@@ -449,8 +449,8 @@ github.com/prometheus/procfs v0.2.0/go.mod h1:lV6e/gmhEcM9IjHGsFOCxxuZ+z1YqCvr4O
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
 github.com/rmr-silicom/openshift-operator v0.0.0-20210331183103-74dc4d717390 h1:YeNwuVzv4ZAjaOqJBWFgl3j4DpO2CjZMIcQYTdTg5+w=
 github.com/rmr-silicom/openshift-operator/ v0.0.0-20210331183103-74dc4d717390 h1:HAHbFEKZj58QjxDcDjliDWDgVvce3W2QjE2Yagb8GSU=
-github.com/rmr-silicom/openshift-operator/common v0.0.0-20210331133825-661f430b5d9f h1:IhwLH9V/LIuZM3jFaa7V7hMFFLoBfWfeXHqbTSlaBIA=
-github.com/rmr-silicom/openshift-operator/common v0.0.0-20210331133825-661f430b5d9f/go.mod h1:fBndHQObxhZp00oa4CJNOMzucNpPY6uqW7EqkB+NTHw=
+github.com/rmr-silicom/openshift-operator/common optional-fec-build h1:j5LvPwajNQEAavzLThw+dUxLiBDO5SPqrnqbD2WpE/k=
+github.com/rmr-silicom/openshift-operator/common optional-fec-build/go.mod h1:3X7xmSkNEMHXxNxDc5iuP7N3cxSsMV7HWbnRpJEiH9M=
 github.com/rmr-silicom/openshift-operator/common v0.0.0-20210601110421-a4a2845e33d3 h1:j5LvPwajNQEAavzLThw+dUxLiBDO5SPqrnqbD2WpE/k=
 github.com/rmr-silicom/openshift-operator/common v0.0.0-20210601110421-a4a2845e33d3/go.mod h1:3X7xmSkNEMHXxNxDc5iuP7N3cxSsMV7HWbnRpJEiH9M=
 github.com/rogpeppe/fastuuid v0.0.0-20150106093220-6724a57986af/go.mod h1:XWv6SoW27p1b0cqNHllgS5HIMJraePCO15w5zCzIWYg=
