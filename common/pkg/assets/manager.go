@@ -51,7 +51,7 @@ func (m *Manager) buildTemplateVars(ctx context.Context, setKernelVar bool) (map
 	}
 
 	nodes := &corev1.NodeList{}
-	err := m.Client.List(ctx, nodes, &client.MatchingLabels{"fpga.intel.com/intel-accelerator-present": ""})
+	err := m.Client.List(ctx, nodes, &client.MatchingLabels{"fpga.intel.com/network-accelerator-n5010": ""})
 	if err != nil {
 		return nil, err
 	}
