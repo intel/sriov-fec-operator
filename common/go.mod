@@ -1,5 +1,4 @@
-module github.com/open-ness/openshift-operator/common
-
+module github.com/rmr-silicom/openshift-operator/tree/optional-fec-build/common
 go 1.15
 
 require (

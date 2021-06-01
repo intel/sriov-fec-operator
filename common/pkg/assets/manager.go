@@ -57,7 +57,7 @@ func (m *Manager) buildTemplateVars(ctx context.Context, setKernelVar bool) (map
 	}
 
 	if len(nodes.Items) == 0 {
-		m.Log.Error(nil, "received empty node list")
+		m.Log.Error(nil, "received empty node list RYAN")
 		return nil, errors.New("empty node list while building template vars")
 	}
 
