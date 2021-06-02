@@ -15,7 +15,10 @@ This document provides high-level system features, issues, and limitations infor
 - [Supported Operating Systems](#supported-operating-systems)
 - [Package Versions](#package-versions)
 
-# Release history 
+# Release history
+***v1.2.0***
+- OpenNESS SR-IOV Operator for Wireless FEC Accelerators 
+
 ***v1.1.0*** 
 - OpenNESS Operator for Intel® FPGA PAC N3000 
 - OpenNESS SR-IOV Operator for Wireless FEC Accelerators
@@ -25,6 +28,10 @@ This document provides high-level system features, issues, and limitations infor
 - OpenNESS SRIOV-FEC Operator for Intel® FPGA PAC N3000
    
 # Features for Release 
+***v1.2.0***
+- OpenNESS SR-IOV Operator for Wireless FEC Accelerators OCP4.7.8 support
+  - validated on ACC100 only
+  
 ***v1.1.0***
 - OpenNESS SR-IOV Operator for Wireless FEC Accelerators
   - Added support for Intel® vRAN Dedicated Accelerator ACC100
@@ -43,6 +50,10 @@ This document provides high-level system features, issues, and limitations infor
     - Deploys an instance of Prometheus exporter which collects metrics from the Intel® FPGA PAC N3000 card
 
 # Changes to Existing Features
+***v1.2.0***
+- OpenNESS Operator for Intel® FPGA PAC N3000
+  - out of validation process 
+
 ***v1.1.0***
 - OpenNESS Operator for Intel® FPGA PAC N3000
   - n3000node- prefix was removed from N3000 resources
@@ -98,6 +109,12 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - RT Kernel (the OPAE Docker images are built for specific kernel version)
 
 # Supported Operating Systems
+***v1.2.0*** was tested using the following:
+- OpenShift: 4.7.8
+- OS: Red Hat Enterprise Linux CoreOS 47.83.202104161442-0
+- Kubernetes: v1.20.0+7d0a2b2
+- RT Kernel: 4.18.0-240.22.1.rt7.77.el8_3.x86_64
+
 ***v1.1.0*** was tested using the following:
 - OpenShift: 4.6.16
 - OS: Red Hat Enterprise Linux CoreOS 46.82.202101301821-0

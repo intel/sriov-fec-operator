@@ -16,4 +16,4 @@ kind: Kustomization
 images:
 - name: n3000-operator
   newName: registry.connect.redhat.com/intel/n3000-operator
-  newTag: v1.1.0
+  newTag: v1.2.0

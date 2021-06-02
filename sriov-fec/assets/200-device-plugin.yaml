@@ -102,7 +102,7 @@ spec:
       serviceAccountName: sriov-device-plugin
       containers:
       - name: sriov-device-plugin
-        image: registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.6
+        image: registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.7
         imagePullPolicy: IfNotPresent
         securityContext:
           readOnlyRootFilesystem: true

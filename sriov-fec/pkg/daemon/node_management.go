@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/intel/sriov-network-device-plugin/pkg/utils"
+	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
 	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
 )
 
