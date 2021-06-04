@@ -34,10 +34,10 @@ This document provides the instructions for using the OpenNESS Operator for Inte
 
 ## OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)
 
-The role of the OpenNESS Operator for Intel® FPGA PAC N3000 (Programming) is to orchestrate and manage the resources/devices exposed by the Intel® FPGA PAC N3000 card within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction. For vRAN use-cases it is expected that the operator is used alongside the [OpenNESS Operator for Intel Wireless FEC Accelerator.](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md)
+The role of the OpenNESS Operator for Intel® FPGA PAC N3000 (Programming) is to orchestrate and manage the resources/devices exposed by the Intel® FPGA PAC N3000 card within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction. For vRAN use-cases it is expected that the operator is used alongside the [OpenNESS Operator for Intel Wireless FEC Accelerator.](https://github.com/open-ness/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md)
 The operator design of the OpenNESS Operator for Intel® FPGA PAC N3000 (Programming) supports the following device:
 
-* [Intel® PAC N3000 for vRAN Acceleration](https://github.com/otcshare/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration)
+* [Intel® PAC N3000 for vRAN Acceleration](https://github.com/open-ness/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration)
 
 ### Intel® FPGA PAC N3000 (Programming)
 

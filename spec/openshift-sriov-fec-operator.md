@@ -39,8 +39,8 @@ This document provides the instructions for using the OpenNESS Operator for Wire
 The role of the OpenNESS Operator for Intel Wireless FEC Accelerator is to orchestrate and manage the resources/devices exposed by a range of Intel's vRAN FEC acceleration devices/hardware within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
 The operator design of the OpenNESS Operator for Intel Wireless FEC Accelerator supports the following vRAN FEC accelerators:
 
-* [Intel® PAC N3000 for vRAN Acceleration](https://github.com/otcshare/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration)
-* [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/otcshare/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100)
+* [Intel® PAC N3000 for vRAN Acceleration](https://github.com/open-ness/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration)
+* [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/open-ness/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100)
 
 ### Wireless FEC Acceleration management
 
@@ -58,9 +58,9 @@ The workflow of the SRIOV FEC operator is shown in the following diagram:
 
 The Intel's vRAN FEC acceleration devices/hardware expose the FEC PF device which is to be bound to PCI-PF-STUB driver in order to enable creation of the FEC VF devices. Once the FEC PF is bound to the correct driver, the user can create a number of devices to be used in Cloud Native deployment of vRAN to accelerate FEC. Once these devices are created they are to be bound to a user-space driver such as VFIO-PCI in order for them to work and be consumed in vRAN application pods. Before the device can be used by the application, the device needs to be configured - notably the mapping of queues exposed to the VFs - this is done via pf-bb-config application with the input from the CR used as a configuration.
 
-> NOTE: For [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/otcshare/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100) it is advised to create all 16 VFs. The card is configured to provide up to 8 queue groups with up to 16 queues per group. The queue groups can be divided between groups allocated to 5G/4G and Uplink/Downlink, it can be configured for 4G or 5G only, or both 4G and 5G at the same time. Each configured VF has access to all the queues. Each of the queue groups has a distinct priority level. The request for given queue group is made from application level (ie. vRAN application leveraging the FEC device).
+> NOTE: For [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/open-ness/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100) it is advised to create all 16 VFs. The card is configured to provide up to 8 queue groups with up to 16 queues per group. The queue groups can be divided between groups allocated to 5G/4G and Uplink/Downlink, it can be configured for 4G or 5G only, or both 4G and 5G at the same time. Each configured VF has access to all the queues. Each of the queue groups has a distinct priority level. The request for given queue group is made from application level (ie. vRAN application leveraging the FEC device).
 
-> NOTE: For [Intel® PAC N3000 for vRAN Acceleration](https://github.com/otcshare/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration) the user can create up to 8 VF devices. Each FEC PF device provides a total of 64 queues to be configured, 32 queues for uplink and 32 queues for downlink. The queues would be typically distributed evenly across the VFs.
+> NOTE: For [Intel® PAC N3000 for vRAN Acceleration](https://github.com/open-ness/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration) the user can create up to 8 VF devices. Each FEC PF device provides a total of 64 queues to be configured, 32 queues for uplink and 32 queues for downlink. The queues would be typically distributed evenly across the VFs.
 
 To get all the nodes containing one of the supported vRAN FEC accelerator devices run the following command (all the commands are run in the `vran-acceleration-operators` namespace):
 ```shell
@@ -493,7 +493,7 @@ Then delete the items and the namespace:
 
 ### Setting Up Operator Registry Locally
 
-If needed the user can set up a local registry for the operators' images. For more information please see [openshift-pacn3000-operator.md](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-pacn3000-operator.md#setting-up-operator-registry-locally)
+If needed the user can set up a local registry for the operators' images. For more information please see [openshift-pacn3000-operator.md](https://github.com/open-ness/openshift-operator/blob/master/spec/openshift-pacn3000-operator.md#setting-up-operator-registry-locally)
 
 ## Appendix 2 - OpenNESS Operator for Wireless FEC Accelerators Examples
 
