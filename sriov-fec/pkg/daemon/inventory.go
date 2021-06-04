@@ -7,8 +7,8 @@ import (
 	"errors"
 
 	"github.com/go-logr/logr"
-	"github.com/intel/sriov-network-device-plugin/pkg/utils"
 	"github.com/jaypipes/ghw"
+	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
 	sriovv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
 )
 
@@ -40,10 +40,12 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 		}
 
 		if _, ok := supportedAccelerators.Devices[device.Product.ID]; !ok {
+			log.V(4).Info("ignoring unsupported device", "device.Product.ID", device.Product.ID)
 			continue
 		}
 
 		if !utils.IsSriovPF(device.Address) {
+			log.V(4).Info("ignoring non SriovPF capable device", "pci", device.Address)
 			continue
 		}
 

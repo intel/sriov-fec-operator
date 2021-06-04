@@ -4,7 +4,7 @@
 # Default k8s command-line tool exec
 export CLI_EXEC?=oc
 # Current Operator version
-VERSION ?= 1.1.0
+VERSION ?= 1.2.0
 # Supported channels
 CHANNELS ?= stable
 # Default channel
