@@ -19,6 +19,13 @@ DRIVER_IMAGE ?= $(DRIVER_CONTAINER_IMAGE)--$(KERNEL_VERSION)
 DAEMON_IMAGE ?= $(IMAGE_REGISTRY)/intel-fpga-daemon:$(VERSION)
 LABELER_IMAGE ?= $(IMAGE_REGISTRY)/intel-fpga-labeler:$(VERSION)
 MONITORING_IMAGE ?= $(IMAGE_REGISTRY)/intel-fpga-monitoring:$(VERSION)
+
+IMAGES_TAR := intel-fpga-operator
+IMAGES_TAR += intel-fpga-daemon
+IMAGES_TAR += intel-fpga-labeler
+IMAGES_TAR += intel-fpga-monitoring
+IMAGES_TAR += intel-fpga-bundle
+
 BUNDLE_IMG ?= $(IMAGE_REGISTRY)/intel-fpga-bundle:$(VERSION)
 
 CONTAINER_BUILD_ARGS := --build-arg=OPAE_RUNTIME_IMAGE=$(OPAE_RUNTIME_IMAGE)

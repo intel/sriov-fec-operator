@@ -2,7 +2,7 @@
 # Copyright (c) 2020-2021 Intel Corporation
 include makefile.top
 
-.PHONY: $(TARGETS)
+.PHONY: $(TARGETS) tar
 
 TARGETS := N3000 labeler prometheus_fpgainfo_exporter
 ifeq ($(BUILD_SRIO_FEC),yes)
@@ -19,6 +19,20 @@ $(TARGETS):
 
 $(IMAGE_TARGETS):
 	make -C $(subst -image,,$@) image
+
+tar-others:
+	- rm -rf archives
+	mkdir archives
+	docker save $(IMAGE_REGISTRY)/dfl-kmod:eea9cbc-4.18.0-193.el8.x86_64 | gzip > archives/dfl-kmod.tar.gz
+	docker pull gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+	docker save gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0 | gzip > archives/kube-rbac-proxy.tar.gz
+
+tar: tar-others
+	for img in $(IMAGES_TAR) ; do \
+	echo $(IMAGE_REGISTRY)/$$img:$(VERSION); \
+	docker save $(IMAGE_REGISTRY)/$$img:$(VERSION) | gzip > archives/$$img.tar.gz ; \
+	done
+	tar -czvf intel-fpga-bundle.tar.gz archives
 
 $(PUSH_TARGETS):
 	make -C $(subst -push,,$@) push

@@ -14,7 +14,7 @@ oc delete ns intel-fpga-operators
 
 oc create ns intel-fpga-operators
 #oc new-project intel-fpga-operators
-operator-sdk run bundle quay.io/ryan_raasch/intel-fpga-bundle:v2.0.0 --verbose -n intel-fpga-operators
+operator-sdk run bundle ryan_raasch/intel-fpga-bundle:v2.0.0 --verbose -n intel-fpga-operators
 
 # oc describe csv n3000.v2.0.0 -n intel-fpga-operator
 # oc describe Clusterserviceversion -n intel-fpga-operators
