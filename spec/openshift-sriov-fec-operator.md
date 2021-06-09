@@ -344,7 +344,7 @@ The OpenNESS Operator for Wireless FEC Accelerators has the following requiremen
 
 - [Intel® vRAN Dedicated Accelerator ACC100](https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf) (Optional)
 - [Intel® FPGA PAC N3000 card](https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html) (Optional)
-- [OpenShift 4.6.16](https://www.redhat.com/en/openshift-4/features?adobe_mc_sdid=SDID%3D3DA5D7008646C094-1B97A001FC92CC4A%7CMCORGID%3D945D02BE532957400A490D4C%40AdobeOrg%7CTS%3D1608134794&adobe_mc_ref=https%3A%2F%2Fwww.google.com%2F&sc_cid=7013a00000260opAAAutm_medium%3DSearch&utm_source=RedHat&utm_content=000040NZ&utm_term=10014427&utm_id=SEM_RHMP_NonBrand_BMM_Openshift%7CGen_NA&utm_campaign=Red-Hat_Openshift&cm_mmc=Search_RedHat-_-Open%20Marketplace_Open%20Marketplace-_-WW_WW-_-SEM_RHMP_NonBrand_BMM_Openshift%7CGen_NA&cm_mmca1=000040NZ&cm_mmca2=10014427&cm_mmca3=Red-Hat_Openshift&gclid=CjwKCAiA_eb-BRB2EiwAGBnXXg0avYbi2BsHdp9wL4DzavziWPcnGpqZbU0fpZ3-xOV2REuyKgQPThoCZ3QQAvD_BwE&gclsrc=aw.ds)
+- [OpenShift 4.7.8](https://docs.openshift.com/container-platform/4.7/release_notes/ocp-4-7-release-notes.html)
 - RT Kernel configured with [Performance Addon Operator](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.6/html/scalability_and_performance/cnf-performance-addon-operator-for-low-latency-nodes).
 
 ## Deploying the Operator
