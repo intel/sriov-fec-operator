@@ -16,6 +16,9 @@ This document provides high-level system features, issues, and limitations infor
 - [Package Versions](#package-versions)
 
 # Release history
+***v1.2.1***
+- Dot release, bugfixes only.
+
 ***v1.2.0***
 - OpenNESS SR-IOV Operator for Wireless FEC Accelerators 
 
@@ -77,6 +80,9 @@ This document provides high-level system features, issues, and limitations infor
 - There are no unsupported or discontinued features relevant to this release.
 
 # Fixed Issues
+***v1.2.1***
+- [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/otcshare/openshift-operator/issues/270)
+
 ***v1.1.0***
 - OpenNESS Operator for Intel® FPGA PAC N3000
   - Daemon in started only after confirmed driver initialization
@@ -109,6 +115,12 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - RT Kernel (the OPAE Docker images are built for specific kernel version)
 
 # Supported Operating Systems
+***v1.2.1*** was tested using the following:
+- OpenShift: 4.7.8
+- OS: Red Hat Enterprise Linux CoreOS 47.83.202104161442-0
+- Kubernetes: v1.20.0+7d0a2b2
+- RT Kernel: 4.18.0-240.22.1.rt7.77.el8_3.x86_64
+
 ***v1.2.0*** was tested using the following:
 - OpenShift: 4.7.8
 - OS: Red Hat Enterprise Linux CoreOS 47.83.202104161442-0
