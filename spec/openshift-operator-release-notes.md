@@ -17,7 +17,7 @@ This document provides high-level system features, issues, and limitations infor
 
 # Release history
 ***v1.2.1***
-- Dot release, bugfixes only.
+- Bugfix release
 
 ***v1.2.0***
 - OpenNESS SR-IOV Operator for Wireless FEC Accelerators 
