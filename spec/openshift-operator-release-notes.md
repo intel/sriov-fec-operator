@@ -16,6 +16,9 @@ This document provides high-level system features, issues, and limitations infor
 - [Package Versions](#package-versions)
 
 # Release history
+***v1.3.0***
+- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
+
 ***v1.2.1***
 - Bugfix release
 
@@ -31,6 +34,10 @@ This document provides high-level system features, issues, and limitations infor
 - OpenNESS SRIOV-FEC Operator for Intel® FPGA PAC N3000
    
 # Features for Release 
+***v1.3.0***
+- OpenNESS SR-IOV Operator for Wireless FEC Accelerators OCP4.8.x support
+  - validated on ACC100 only
+
 ***v1.2.0***
 - OpenNESS SR-IOV Operator for Wireless FEC Accelerators OCP4.7.8 support
   - validated on ACC100 only
@@ -52,7 +59,11 @@ This document provides high-level system features, issues, and limitations infor
   - Prometheus fpgainfo exporter 
     - Deploys an instance of Prometheus exporter which collects metrics from the Intel® FPGA PAC N3000 card
 
-# Changes to Existing Features
+# Changes to Existing Features 
+***v1.3.0***
+- OpenNESS Operator for Intel® FPGA PAC N3000
+  - out of validation process
+
 ***v1.2.0***
 - OpenNESS Operator for Intel® FPGA PAC N3000
   - out of validation process 
