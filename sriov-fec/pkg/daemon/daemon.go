@@ -167,12 +167,6 @@ func (r *NodeConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 	skipStatusUpdate := false
 
-	if len(nodeConfig.Spec.PhysicalFunctions) == 0 {
-		log.V(4).Info("Nothing to do")
-		r.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationNotRequested, "Inventory up to date")
-		return reconcile.Result{}, nil
-	}
-
 	inv, err := getSriovInventory(log)
 	if err != nil {
 		log.Error(err, "failed to obtain sriov inventory for the node")
@@ -182,7 +176,13 @@ func (r *NodeConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	currentCondition := meta.FindStatusCondition(nodeConfig.Status.Conditions, ConfigurationCondition)
 	if currentCondition != nil {
-		if reflect.DeepEqual(*inv, nodeConfig.Status.Inventory) && currentCondition.ObservedGeneration == nodeConfig.GetGeneration() {
+		if !reflect.DeepEqual(*inv, nodeConfig.Status.Inventory) {
+			log.V(4).Info("updating inventory")
+			r.updateCondition(nodeConfig, metav1.ConditionTrue, ConfigurationConditionReason(currentCondition.Reason), currentCondition.Message)
+			return reconcile.Result{RequeueAfter: resyncPeriod}, nil
+		}
+
+		if currentCondition.ObservedGeneration == nodeConfig.GetGeneration() {
 			return reconcile.Result{RequeueAfter: resyncPeriod}, nil
 		}
 
@@ -193,6 +193,12 @@ func (r *NodeConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			log.Error(err, "failed to update current SriovFecNode configuration condition")
 			return reconcile.Result{}, err
 		}
+	}
+
+	if len(nodeConfig.Spec.PhysicalFunctions) == 0 {
+		log.V(4).Info("Nothing to do")
+		r.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationNotRequested, "Inventory up to date")
+		return reconcile.Result{RequeueAfter: resyncPeriod}, nil
 	}
 
 	var configurationErr, dhErr error
