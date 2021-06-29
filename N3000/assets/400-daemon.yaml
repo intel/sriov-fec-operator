@@ -140,8 +140,6 @@ spec:
             mountPath: /dev/io
           - name: devpci
             mountPath: /dev/pci
-          - name: bootkernel
-            mountPath: /boot/kernel
           - name: libmodules
             mountPath: /lib/modules
           - name: classfpga
@@ -198,9 +196,6 @@ spec:
         - name: devpci
           hostPath:
             path: /dev/pci
-        - name: bootkernel
-          hostPath:
-            path: /boot/kernel
         - name: libmodules
           hostPath:
             path: /lib/modules
