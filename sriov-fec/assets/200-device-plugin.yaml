@@ -102,7 +102,7 @@ spec:
       serviceAccountName: sriov-device-plugin
       containers:
       - name: sriov-device-plugin
-        image: "{{ .SRIOV_NETWORK_DEVICE_PLUGIN_IMAGE }}"
+        image: "{{ .SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE }}"
         imagePullPolicy: IfNotPresent
         securityContext:
           readOnlyRootFilesystem: true

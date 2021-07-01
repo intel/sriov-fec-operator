@@ -58,8 +58,8 @@ spec:
           value: $SRIOV_FEC_DAEMON_IMAGE
         - name: SRIOV_FEC_LABELER_IMAGE
           value: $SRIOV_FEC_LABELER_IMAGE
-        - name: SRIOV_NETWORK_DEVICE_PLUGIN_IMAGE
-          value: $SRIOV_NETWORK_DEVICE_PLUGIN_IMAGE
+        - name: SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE
+          value: $SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE
         - name: SRIOV_FEC_NAMESPACE
           valueFrom:
             fieldRef:
