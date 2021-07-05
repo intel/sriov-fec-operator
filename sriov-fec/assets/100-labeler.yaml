@@ -6,6 +6,7 @@ kind: ConfigMap
 metadata:
   name: supported-accelerators
   namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+immutable: false
 data:
   accelerators.json: |
     {

@@ -168,6 +168,18 @@ func (a *Asset) createOrUpdate(ctx context.Context, c client.Client, o metav1.Ob
 			}
 			a.log.V(2).Info("Object created", "key", key, "GroupVersionKind", gvk)
 		} else {
+			if strings.ToLower(old.GetObjectKind().GroupVersionKind().Kind) == "configmap" {
+				isImmutable, ok := old.Object["immutable"].(bool)
+				if !ok {
+					a.log.V(2).Info("Failed to read 'immutable' field.", "key", key, "GroupVersionKind", gvk)
+				} else {
+					if isImmutable {
+						a.log.V(2).Info("Skipping update because it is marked as immutable", "key", key, "GroupVersionKind", gvk)
+						continue
+					}
+				}
+			}
+
 			if !equality.Semantic.DeepDerivative(obj, old) {
 				obj.SetResourceVersion(old.GetResourceVersion())
 				if err := c.Update(ctx, obj); err != nil {

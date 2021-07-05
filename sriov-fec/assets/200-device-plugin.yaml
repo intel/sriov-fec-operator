@@ -41,6 +41,7 @@ subjects:
 ---
 apiVersion: v1
 kind: ConfigMap
+immutable: false
 metadata:
   name: sriovdp-config
   namespace: "{{ .SRIOV_FEC_NAMESPACE }}"

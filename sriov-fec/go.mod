@@ -9,7 +9,7 @@ require (
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
 	github.com/openshift/api v3.9.0+incompatible
-	github.com/otcshare/openshift-operator/common v0.0.0-20210325115051-f854f89c4d5d
+	github.com/otcshare/openshift-operator/common v0.0.0-20210702131132-f8e5bc1e16b3
 	github.com/pkg/errors v0.9.1
 	gopkg.in/ini.v1 v1.62.0
 	k8s.io/api v0.20.2
