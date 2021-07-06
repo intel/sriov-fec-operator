@@ -9,10 +9,8 @@ metadata:
 rules:
 - apiGroups:
   - ""
-  - coordination.k8s.io
   resources:
   - configmaps
-  - leases
   verbs:
   - get
   - list
@@ -22,9 +20,8 @@ rules:
   - patch
   - delete
 - apiGroups:
-  - ""
+  - coordination.k8s.io
   resources:
-  - events
+  - leases
   verbs:
-  - create
-  - patch
+  - get

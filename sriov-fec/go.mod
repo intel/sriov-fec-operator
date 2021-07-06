@@ -15,7 +15,7 @@ require (
 	k8s.io/api v0.20.2
 	k8s.io/apimachinery v0.20.2
 	k8s.io/client-go v0.20.2
-	sigs.k8s.io/controller-runtime v0.7.0
+	sigs.k8s.io/controller-runtime v0.8.3
 )
 
 replace github.com/k8snetworkplumbingwg/sriov-network-device-plugin => github.com/openshift/sriov-network-device-plugin v0.0.0-20201204004339-6d9de398bc37 //4.7

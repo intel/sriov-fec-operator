@@ -2,7 +2,7 @@
 # Copyright (c) 2020-2021 Intel Corporation
 
 IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
-REQUIRED_OPERATOR_SDK_VERSION ?= v1.4.2
+REQUIRED_OPERATOR_SDK_VERSION ?= v1.9.0
 VERSION ?= 1.2.1
 TLS_VERIFY ?= false
 
@@ -21,7 +21,7 @@ build_without_n3000:
 	make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_index
 
 build_index:
-	opm index add --bundles $(IMAGE_REGISTRY)/sriov-fec-bundle:$(VERSION),$(IMAGE_REGISTRY)/n3000-bundle:$(VERSION) --tag localhost/n3000-operators-index:$(VERSION) $(if ifeq $(TLS_VERIFY) false, --skip-tls) -c podman --mode=semver
+	opm index add --bundles $(IMAGE_REGISTRY)/sriov-fec-bundle:v$(VERSION),$(IMAGE_REGISTRY)/n3000-bundle:v$(VERSION) --tag localhost/n3000-operators-index:$(VERSION) $(if ifeq $(TLS_VERIFY) false, --skip-tls) -c podman --mode=semver
 	podman push localhost/n3000-operators-index:$(VERSION) $(IMAGE_REGISTRY)/n3000-operators-index:$(VERSION) --tls-verify=$(TLS_VERIFY)
 
 image:

@@ -3,15 +3,24 @@ layout: go.kubebuilder.io/v3
 projectName: sriov-fec
 repo: github.com/otcshare/openshift-operator/sriov-fec
 resources:
-- crdVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: intel.com
   group: sriovfec
   kind: SriovFecClusterConfig
+  path: github.com/otcshare/openshift-operator/sriov-fec/api/v1
   version: v1
-- crdVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: intel.com
   group: sriovfec
   kind: SriovFecNodeConfig
+  path: github.com/otcshare/openshift-operator/sriov-fec/api/v1
   version: v1
-version: 3-alpha
+version: "3"
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}

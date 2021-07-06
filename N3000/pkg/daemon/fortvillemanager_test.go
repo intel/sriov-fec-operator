@@ -6,7 +6,6 @@ package daemon
 import (
 	"fmt"
 	"io"
-	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
@@ -229,15 +228,6 @@ func fakeTar(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
 	return "", fmt.Errorf("Unsupported command: %s", cmd)
 }
 
-func serverFortvilleMock() *httptest.Server {
-	handler := http.NewServeMux()
-	handler.HandleFunc("/fortville", usersFortvilleMock)
-
-	srv := httptest.NewServer(handler)
-
-	return srv
-}
-
 func fakeFpgaInfoEmptyBCM(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string, error) {
 	return "", nil
 }
@@ -254,74 +244,23 @@ func fakeEthtoolInvalidMac(cmd *exec.Cmd, log logr.Logger, dryRun bool) (string,
 	return ethtoolOutput, nil
 }
 
-func usersFortvilleMock(w http.ResponseWriter, r *http.Request) {
-}
-
 var _ = Describe("Fortville Manager", func() {
 	f := FortvilleManager{Log: ctrl.Log.WithName("daemon-test")}
-	sampleOneFortville := fpgav1.N3000Node{
-		Spec: fpgav1.N3000NodeSpec{
-			Fortville: &fpgav1.N3000Fortville{
-				MACs: []fpgav1.FortvilleMAC{
-					{
-						MAC: "64:4c:36:11:1b:a8",
-					},
-				},
-				FirmwareURL: "http://www.test.com/fortville/nvmPackage.tag.gz",
-			},
-		},
-	}
-	sampleWrongMACFortville := fpgav1.N3000Node{
-		Spec: fpgav1.N3000NodeSpec{
-			Fortville: &fpgav1.N3000Fortville{
-				MACs: []fpgav1.FortvilleMAC{
-					{
-						MAC: "ff:ff:ff:ff:ff:aa",
-					},
-				},
-				FirmwareURL: "http://www.test.com/fpga/image/1.bin",
-			},
-		},
-	}
-	sampleOneFortvilleDryRun := fpgav1.N3000Node{
-		Spec: fpgav1.N3000NodeSpec{
-			Fortville: &fpgav1.N3000Fortville{
-				MACs: []fpgav1.FortvilleMAC{
-					{
-						MAC: "64:4c:36:11:1b:a8",
-					},
-				},
-				FirmwareURL: "http://www.test.com/fortville/nvmPackage.tag.gz",
-			},
-			DryRun: true,
-		},
-	}
-	sampleOneFortvilleNoURL := fpgav1.N3000Node{
-		Spec: fpgav1.N3000NodeSpec{
-			Fortville: &fpgav1.N3000Fortville{
-				MACs: []fpgav1.FortvilleMAC{
-					{
-						MAC: "64:4c:36:11:1b:a8",
-					},
-				},
-			},
-		},
-	}
-	sampleOneFortvilleInvalidChecksum := fpgav1.N3000Node{
-		Spec: fpgav1.N3000NodeSpec{
-			Fortville: &fpgav1.N3000Fortville{
-				MACs: []fpgav1.FortvilleMAC{
-					{
-						MAC: "64:4c:36:11:1b:a8",
-					},
-				},
-				FirmwareURL: "http://www.test.com/fortville/nvmPackage.tag.gz",
-				CheckSum:    "0xbad",
-			},
-		},
-	}
 
 	var _ = Describe("flash", func() {
+
+		sampleOneFortville := fpgav1.N3000Node{
+			Spec: fpgav1.N3000NodeSpec{
+				Fortville: &fpgav1.N3000Fortville{
+					MACs: []fpgav1.FortvilleMAC{
+						{
+							MAC: "64:4c:36:11:1b:a8",
+						},
+					},
+				},
+			},
+		}
+
 		var _ = It("will return nil in successfully scenario ", func() {
 			cleanFortville()
 			ethtoolExec = fakeEthtool
@@ -430,7 +369,18 @@ var _ = Describe("Fortville Manager", func() {
 			fpgadiagExec = fakeFpgadiag
 			rsuExec = runExecWithLog
 
-			err := f.flash(&sampleOneFortvilleDryRun)
+			err := f.flash(&fpgav1.N3000Node{
+				Spec: fpgav1.N3000NodeSpec{
+					Fortville: &fpgav1.N3000Fortville{
+						MACs: []fpgav1.FortvilleMAC{
+							{
+								MAC: "64:4c:36:11:1b:a8",
+							},
+						},
+					},
+					DryRun: true,
+				},
+			})
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
@@ -464,6 +414,19 @@ var _ = Describe("Fortville Manager", func() {
 		})
 	})
 	var _ = Describe("verifyPreconditions", func() {
+
+		sampleWrongMACFortville := fpgav1.N3000Node{
+			Spec: fpgav1.N3000NodeSpec{
+				Fortville: &fpgav1.N3000Fortville{
+					MACs: []fpgav1.FortvilleMAC{
+						{
+							MAC: "ff:ff:ff:ff:ff:aa",
+						},
+					},
+				},
+			},
+		}
+
 		var _ = It("will return error when MAC in CR does not exist ", func() {
 			cleanFortville()
 			fpgaInfoExec = fakeFpgaInfo
@@ -497,54 +460,122 @@ var _ = Describe("Fortville Manager", func() {
 			Expect(err).To(HaveOccurred())
 
 		})
-		var _ = It("will return error when extract nvm package failed ", func() {
-			cleanFortville()
-			fpgaInfoExec = fakeFpgaInfo
-			fpgadiagExec = fakeFpgadiag
-			fakeTarErrReturn = fmt.Errorf("error")
-			tarExec = fakeTar
-			srv := serverFortvilleMock()
-			defer srv.Close()
-			err := f.verifyPreconditions(&sampleOneFortville)
-			fakeTarErrReturn = nil
-			Expect(err).To(HaveOccurred())
-		})
-		var _ = It("will return nil in successfully scenario ", func() {
-			cleanFortville()
-			fpgaInfoExec = fakeFpgaInfo
-			fpgadiagExec = fakeFpgadiag
-			tarExec = fakeTar
-			srv := serverFortvilleMock()
-			defer srv.Close()
-			err := f.verifyPreconditions(&sampleOneFortville)
-			Expect(err).ToNot(HaveOccurred())
-		})
-		var _ = It("will fail because of no FirmwareURL ", func() {
-			cleanFortville()
-			fpgaInfoExec = fakeFpgaInfo
-			fpgadiagExec = fakeFpgadiag
-			tarExec = fakeTar
-			srv := serverFortvilleMock()
-			defer srv.Close()
-			err := f.verifyPreconditions(&sampleOneFortvilleNoURL)
-			Expect(err).To(HaveOccurred())
 
-			err = f.getNVMUpdate(&sampleOneFortvilleNoURL)
-			Expect(err).To(HaveOccurred())
+		var _ = Describe("", func() {
+			var testServer *httptest.Server
 
-			fakeFpgaInfoErrReturn = fmt.Errorf("error")
-			_, err = f.getN3000Devices()
-			Expect(err).To(HaveOccurred())
-			fakeFpgaInfoErrReturn = nil
-		})
-		var _ = It("will fail because of wrong checksum ", func() {
-			cleanFortville()
-			ethtoolExec = fakeEthtool
-			nvmupdateExec = fakeNvmupdate
-			fpgaInfoExec = fakeFpgaInfo
-			fpgadiagExec = fakeFpgadiag
-			err := f.verifyPreconditions(&sampleOneFortvilleInvalidChecksum)
-			Expect(err).To(HaveOccurred())
+			BeforeEach(func() {
+				testServer = CreateTestServer("/fortville/")
+			})
+
+			AfterEach(func() {
+				if testServer != nil {
+					testServer.Close()
+				}
+			})
+
+			var _ = It("will return error when extract nvm package failed ", func() {
+				cleanFortville()
+				fpgaInfoExec = fakeFpgaInfo
+				fpgadiagExec = fakeFpgadiag
+				fakeTarErrReturn = fmt.Errorf("error")
+				tarExec = fakeTar
+
+				err := f.verifyPreconditions(&fpgav1.N3000Node{
+					Spec: fpgav1.N3000NodeSpec{
+						Fortville: &fpgav1.N3000Fortville{
+							MACs: []fpgav1.FortvilleMAC{
+								{
+									MAC: "64:4c:36:11:1b:a8",
+								},
+							},
+							FirmwareURL: testServer.URL + "/fortville/nvmPackage.tag.gz",
+						},
+					},
+				})
+				fakeTarErrReturn = nil
+				Expect(err).To(HaveOccurred())
+			})
+
+			var _ = It("will return nil in successfully scenario ", func() {
+				cleanFortville()
+				fpgaInfoExec = fakeFpgaInfo
+				fpgadiagExec = fakeFpgadiag
+				tarExec = fakeTar
+				err := f.verifyPreconditions(&fpgav1.N3000Node{
+					Spec: fpgav1.N3000NodeSpec{
+						Fortville: &fpgav1.N3000Fortville{
+							MACs: []fpgav1.FortvilleMAC{
+								{
+									MAC: "64:4c:36:11:1b:a8",
+								},
+							},
+							FirmwareURL: testServer.URL + "/fortville/nvmPackage.tag.gz",
+						},
+					},
+				})
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			var _ = It("will fail because of no FirmwareURL ", func() {
+				cleanFortville()
+				fpgaInfoExec = fakeFpgaInfo
+				fpgadiagExec = fakeFpgadiag
+				tarExec = fakeTar
+
+				err := f.verifyPreconditions(&fpgav1.N3000Node{
+					Spec: fpgav1.N3000NodeSpec{
+						Fortville: &fpgav1.N3000Fortville{
+							MACs: []fpgav1.FortvilleMAC{
+								{
+									MAC: "64:4c:36:11:1b:a8",
+								},
+							},
+						},
+					},
+				})
+				Expect(err).To(HaveOccurred())
+
+				err = f.getNVMUpdate(&fpgav1.N3000Node{
+					Spec: fpgav1.N3000NodeSpec{
+						Fortville: &fpgav1.N3000Fortville{
+							MACs: []fpgav1.FortvilleMAC{
+								{
+									MAC: "64:4c:36:11:1b:a8",
+								},
+							},
+						},
+					},
+				})
+				Expect(err).To(HaveOccurred())
+
+				fakeFpgaInfoErrReturn = fmt.Errorf("error")
+				_, err = f.getN3000Devices()
+				Expect(err).To(HaveOccurred())
+				fakeFpgaInfoErrReturn = nil
+			})
+
+			var _ = It("will fail because of wrong checksum ", func() {
+				cleanFortville()
+				ethtoolExec = fakeEthtool
+				nvmupdateExec = fakeNvmupdate
+				fpgaInfoExec = fakeFpgaInfo
+				fpgadiagExec = fakeFpgadiag
+				err := f.verifyPreconditions(&fpgav1.N3000Node{
+					Spec: fpgav1.N3000NodeSpec{
+						Fortville: &fpgav1.N3000Fortville{
+							MACs: []fpgav1.FortvilleMAC{
+								{
+									MAC: "64:4c:36:11:1b:a8",
+								},
+							},
+							FirmwareURL: testServer.URL + "/fortville/nvmPackage.tag.gz",
+							CheckSum:    "0xbad",
+						},
+					},
+				})
+				Expect(err).To(HaveOccurred())
+			})
 		})
 	})
 })

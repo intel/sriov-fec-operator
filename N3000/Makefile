@@ -28,8 +28,9 @@ endif
 # tls verify flag for pushing images
 TLS_VERIFY ?= true
 
-# Default bundle image tag
-BUNDLE_IMG ?= $(IMAGE_REGISTRY)n3000-bundle:$(VERSION)
+IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)n3000
+BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
+
 # Options for 'image-bundle'
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
@@ -40,6 +41,9 @@ endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 IMG_VERSION := v$(VERSION)
+
+OS = $(shell go env GOOS)
+ARCH = $(shell go env GOARCH)
 
 # Images URLs to use for all building/pushing image targets (in assets/*.yaml files)
 export N3000_OPERATOR_IMAGE ?= $(IMAGE_REGISTRY)n3000-operator:$(IMG_VERSION)
@@ -59,6 +63,12 @@ GOBIN=$(shell go env GOPATH)/bin
 else
 GOBIN=$(shell go env GOBIN)
 endif
+
+# Setting SHELL to bash allows bash commands to be executed by recipes.
+# This is a requirement for 'setup-envtest.sh' in the test target.
+# Options are set to exit when a recipe line exits non-zero or a piped command fails.
+SHELL = /usr/bin/env bash -o pipefail
+.SHELLFLAGS = -ec
 
 all: manager daemon
 
@@ -212,3 +222,31 @@ push-bundle:
 	podman push $(BUNDLE_IMG) --tls-verify=$(TLS_VERIFY)
 
 build_all: image push
+
+docker-push: ## Push docker image with the manager.
+	podman push ${IMG} --tls-verify=false
+
+.PHONY: opm
+OPM = ./bin/opm
+opm:
+ifeq (,$(wildcard $(OPM)))
+ifeq (,$(shell which opm 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(OPM)) ;\
+	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$(OS)-$(ARCH)-opm ;\
+	chmod +x $(OPM) ;\
+	}
+else
+OPM = $(shell which opm)
+endif
+endif
+BUNDLE_IMGS ?= $(BUNDLE_IMG)
+CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION) ifneq ($(origin CATALOG_BASE_IMG), undefined) FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG) endif
+.PHONY: catalog-build
+catalog-build: opm
+	$(OPM) index add --container-tool podman --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
+
+.PHONY: catalog-push
+catalog-push: ## Push the catalog image.
+	$(MAKE) docker-push IMG=$(CATALOG_IMG)

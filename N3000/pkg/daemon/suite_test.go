@@ -5,6 +5,8 @@ package daemon
 
 import (
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path"
 	"path/filepath"
@@ -82,3 +84,10 @@ var _ = AfterSuite(func() {
 	err = os.RemoveAll(testTmpFolder)
 	Expect(err).ShouldNot(HaveOccurred())
 })
+
+func CreateTestServer(pattern string) *httptest.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc(pattern, func(http.ResponseWriter, *http.Request) {})
+	ts := httptest.NewServer(mux)
+	return ts
+}
