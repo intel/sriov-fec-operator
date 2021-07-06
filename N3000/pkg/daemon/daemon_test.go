@@ -578,7 +578,8 @@ var _ = Describe("N3000 Daemon Tests", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("will run Reconcile with misconfiugred DrainHelper", func() {
-			var err error
+			testServer := CreateTestServer("/fortville/")
+			defer testServer.Close()
 
 			n3000node.Spec.FPGA = nil
 			n3000node.Spec.Fortville = &fpgav1.N3000Fortville{
@@ -587,11 +588,10 @@ var _ = Describe("N3000 Daemon Tests", func() {
 						MAC: "64:4c:36:11:1b:a8",
 					},
 				},
-				FirmwareURL: "http://www.test.com/fortville/nvmPackage.tag.gz",
+				FirmwareURL: testServer.URL + "/fortville/nvmPackage.tag.gz",
 			}
 
-			err = k8sClient.Create(context.Background(), n3000node)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(k8sClient.Create(context.Background(), n3000node)).ToNot(HaveOccurred())
 
 			// simulate creation of cluster config by the user
 			clusterConfig.Spec.Nodes[0].Fortville.FirmwareURL = "/tmp/dummy.bin"
@@ -603,9 +603,6 @@ var _ = Describe("N3000 Daemon Tests", func() {
 					Name:      "gf",
 				},
 			}
-
-			srv := serverFortvilleMock()
-			defer srv.Close()
 
 			clientConfig := &restclient.Config{}
 			cset, err := clientset.NewForConfig(clientConfig)
