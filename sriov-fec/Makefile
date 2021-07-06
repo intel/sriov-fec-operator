@@ -19,7 +19,7 @@ endif
 # tls verify flag for pushing images
 TLS_VERIFY ?= true
 
-IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)/sriov-fec
+IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)sriov-fec
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
 # Options for 'image-bundle'
