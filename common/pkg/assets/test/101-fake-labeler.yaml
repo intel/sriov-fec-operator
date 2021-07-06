@@ -39,7 +39,6 @@ subjects:
   namespace: vran-acceleration-operators
 userNames:
 - system:serviceaccount:vran-acceleration-operators:accelerator-discovery
-
 ---
 apiVersion: v1
 kind: ConfigMap

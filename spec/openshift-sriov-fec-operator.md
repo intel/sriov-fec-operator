@@ -349,17 +349,48 @@ The OpenNESS Operator for Wireless FEC Accelerators has the following requiremen
 
 ## Deploying the Operator
 
-The OpenNESS Operator for Wireless FEC Accelerators is easily deployable from the OpenShift cluster via provisioning and application of the following YAML spec files:
+The OpenNESS Operator for Wireless FEC Accelerators is easily deployable from the OpenShift or Kubernetes cluster via provisioning and application of the following YAML spec files:
 
+### Install dependencies
+If operator is being installed on Kubernetes then run steps marked as (KUBERNETES).
+If operator is being installed on Openshift run only (OCP) steps.
+(KUBERNETES) Create configmap:
+```shell
+[user@ctrl1 /home]# cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: vran-acceleration-operators
+  name: operator-configuration
+data:
+  isGeneric: "true"
+EOF
+```
+(KUBERNETES) If Kubernetes doesn't have installed OLM (Operator lifecycle manager) start from installing Operator-sdk (https://olm.operatorframework.io/)
+After Operator-sdk installation run following command
+```shell
+[user@ctrl1 /home]# operator-sdk olm install
+```
+(KUBERNETES) Install PCIutils on worker nodes
+```shell
+[user@ctrl1 /home]#  yum install pciutils
+```
 ### Install the Bundle
 
 To install the OpenNESS Operator for Wireless FEC Accelerators operator bundle perform the following steps:
 
-Create the project:
-
+(OCP) Create the project:
 ```shell
 [user@ctrl1 /home]# oc new-project vran-acceleration-operators
 ```
+(KUBERNETES) Create the project:
+```shell
+[user@ctrl1 /home]# kubectl create namespace vran-acceleration-operators
+[user@ctrl1 /home]# kubectl config set-context --current --namespace=vran-acceleration-operators
+```
+Execute following commands on both OCP and KUBERNETES cluster:
+
+(KUBERNETES) In commands below use `kubectl` instead of `oc`
 
 Create an operator group and the subscriptions (all the commands are run in the `vran-acceleration-operators` namespace):
 

@@ -411,6 +411,14 @@ github.com/openshift/api v3.9.0+incompatible h1:fJ/KsefYuZAjmrr3+5U9yZIZbTOpVkDD
 github.com/openshift/api v3.9.0+incompatible/go.mod h1:dh9o4Fs58gpFXGSYfnVxGR9PnV53I8TW84pQaJDdGiY=
 github.com/otcshare/openshift-operator/common v0.0.0-20210325115051-f854f89c4d5d h1:5t6yX/g3GUTdagMIQ+kfs1W5mgDZHZZfGhTrZdidhUM=
 github.com/otcshare/openshift-operator/common v0.0.0-20210325115051-f854f89c4d5d/go.mod h1:P4J8gt44yxJ/gqmELdMl8ent+bXhnvDQuU8GkNK3CRg=
+github.com/otcshare/openshift-operator/common v0.0.0-20210609074439-8a1374be3c6d h1:ntXSsqVRIcHyVnFe57nkjHIa/8vZOBnG0z5oAsRcfqI=
+github.com/otcshare/openshift-operator/common v0.0.0-20210609074439-8a1374be3c6d/go.mod h1:P4J8gt44yxJ/gqmELdMl8ent+bXhnvDQuU8GkNK3CRg=
+github.com/otcshare/openshift-operator/common v0.0.0-20210610063118-b5e0eba36dee h1:JFZe+9y4+pwbiaILFHUJ+8UtINMh7t5RGtFGse6bG08=
+github.com/otcshare/openshift-operator/common v0.0.0-20210610063118-b5e0eba36dee/go.mod h1:P4J8gt44yxJ/gqmELdMl8ent+bXhnvDQuU8GkNK3CRg=
+github.com/otcshare/openshift-operator/common v0.0.0-20210610115823-42796be8f634 h1:nEqK8U2Uv7zpgoY9lSMek1WagwqblBKgEx+QcWFON9s=
+github.com/otcshare/openshift-operator/common v0.0.0-20210610115823-42796be8f634/go.mod h1:P4J8gt44yxJ/gqmELdMl8ent+bXhnvDQuU8GkNK3CRg=
+github.com/otcshare/openshift-operator/common v0.0.0-20210706073735-ebfab774dcaf h1:LCAQBAVxpybSzWkxuVMqfWRRWouR0Jss3DVmAMYlJWY=
+github.com/otcshare/openshift-operator/common v0.0.0-20210706073735-ebfab774dcaf/go.mod h1:eTdAHZxONSQBCTE8gghlZXoWZTFmc4NlcM09yo9CJIE=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=

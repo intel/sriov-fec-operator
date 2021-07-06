@@ -76,7 +76,7 @@ func (a *Asset) loadFromFile() error {
 		return err
 	}
 
-	t, err := template.New("asset").Option("missingkey=error").Parse(string(content))
+	t, err := template.New("asset").Funcs(template.FuncMap{"ToLower": strings.ToLower}).Option("missingkey=error").Parse(string(content))
 	if err != nil {
 		return err
 	}
