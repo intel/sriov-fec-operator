@@ -1,5 +1,9 @@
 domain: intel.com
-layout: go.kubebuilder.io/v3
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
 projectName: sriov-fec
 repo: github.com/otcshare/openshift-operator/sriov-fec
 resources:
@@ -12,6 +16,9 @@ resources:
   kind: SriovFecClusterConfig
   path: github.com/otcshare/openshift-operator/sriov-fec/api/v1
   version: v1
+  webhooks:
+    validation: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -21,6 +28,3 @@ resources:
   path: github.com/otcshare/openshift-operator/sriov-fec/api/v1
   version: v1
 version: "3"
-plugins:
-  manifests.sdk.operatorframework.io/v2: {}
-  scorecard.sdk.operatorframework.io/v2: {}

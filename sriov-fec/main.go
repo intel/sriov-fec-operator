@@ -97,6 +97,10 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "SriovFecClusterConfig")
 		os.Exit(1)
 	}
+	if err = (&sriovfecv1.SriovFecClusterConfig{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "SriovFecClusterConfig")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
