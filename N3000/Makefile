@@ -154,6 +154,7 @@ kustomize: ## Download kustomize locally if necessary.
 .PHONY: image-opae
 image-opae:
 	cp -r files docker/opae-image
+	cp ../LICENSE TEMP_LICENSE_COPY
 	cp ../LICENSE docker/opae-image/TEMP_LICENSE_COPY
 	cd docker/opae-image && podman build . -t $(N3000_OPAE_IMAGE) --build-arg=OPAE_VERSION=$(OPAE_VERSION)
 

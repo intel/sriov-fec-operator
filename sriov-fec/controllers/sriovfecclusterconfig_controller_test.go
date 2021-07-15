@@ -62,8 +62,9 @@ var _ = Describe("SriovControllerTest", func() {
 			}
 			clusterConfig = &sriovv1.SriovFecClusterConfig{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      DEFAULT_CLUSTER_CONFIG_NAME,
-					Namespace: NAMESPACE,
+					Name:       DEFAULT_CLUSTER_CONFIG_NAME,
+					Namespace:  NAMESPACE,
+					Finalizers: []string{SRIOVFEC_FINALIZER},
 				},
 				Spec: sriovv1.SriovFecClusterConfigSpec{
 					Nodes: []sriovv1.NodeConfig{
@@ -174,7 +175,7 @@ var _ = Describe("SriovControllerTest", func() {
 			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal(nodeName))
 		})
 
-		var _ = It("will update config to use another node", func() {
+		var _ = It("will create new config for another node", func() {
 
 			var err error
 
@@ -238,8 +239,9 @@ var _ = Describe("SriovControllerTest", func() {
 			nodeConfigs = &sriovv1.SriovFecNodeConfigList{}
 			err = k8sClient.List(context.TODO(), nodeConfigs)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(nodeConfigs.Items)).To(Equal(1))
+			Expect(len(nodeConfigs.Items)).To(Equal(2))
 			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("dummynode2"))
+			Expect(nodeConfigs.Items[1].ObjectMeta.Name).To(Equal("node-dummy"))
 
 			// cleanup
 			err = k8sClient.Delete(context.TODO(), node2)
@@ -297,7 +299,8 @@ var _ = Describe("SriovControllerTest", func() {
 			nodeConfigs = &sriovv1.SriovFecNodeConfigList{}
 			err = k8sClient.List(context.TODO(), nodeConfigs)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(nodeConfigs.Items)).To(Equal(0))
+			Expect(len(nodeConfigs.Items)).To(Equal(1))
+			Expect(nodeConfigs.Items[0].ObjectMeta.Name).To(Equal("node-dummy"))
 		})
 
 		var _ = It("will not create a node because of namespace not found", func() {
@@ -480,6 +483,37 @@ var _ = Describe("SriovControllerTest", func() {
 			Expect(err).ToNot(HaveOccurred())
 			_, err = reconciler.Reconcile(context.TODO(), request)
 			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("will add finalizer", func() {
+			// envtest is empty, create fake node
+			err := k8sClient.Create(context.TODO(), node)
+			Expect(err).ToNot(HaveOccurred())
+			clusterConfig.Finalizers = nil
+			// simulate creation of cluster config by the user
+			err = k8sClient.Create(context.TODO(), clusterConfig)
+			Expect(err).ToNot(HaveOccurred())
+
+			reconciler = SriovFecClusterConfigReconciler{
+				Client: k8sClient,
+				Scheme: scheme.Scheme,
+				Log:    log,
+			}
+
+			request = ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: NAMESPACE,
+					Name:      DEFAULT_CLUSTER_CONFIG_NAME,
+				},
+			}
+
+			_, err = reconciler.Reconcile(context.TODO(), request)
+			Expect(err).ToNot(HaveOccurred())
+
+			clusterConfigsList := &sriovv1.SriovFecClusterConfigList{}
+			err = k8sClient.List(context.TODO(), clusterConfigsList)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(clusterConfigsList.Items)).To(Equal(1))
+			Expect(clusterConfigsList.Items[0].Finalizers).To(ContainElement(SRIOVFEC_FINALIZER))
 		})
 	})
 	var _ = Describe("Reconciler manager", func() {

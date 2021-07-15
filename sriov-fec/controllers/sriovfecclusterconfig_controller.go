@@ -39,6 +39,7 @@ import (
 
 const (
 	DEFAULT_CLUSTER_CONFIG_NAME = "config"
+	SRIOVFEC_FINALIZER          = "sriovFecClusterConfig.deleteAll"
 )
 
 var NAMESPACE = os.Getenv("SRIOV_FEC_NAMESPACE")
@@ -74,34 +75,37 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(ctx context.Context, req ctr
 		return reconcile.Result{}, err
 	}
 
-	updateStatus := func(status sriovfecv1.SyncStatus, reason string) {
-		clusterConfig.Status.SyncStatus = status
-		clusterConfig.Status.LastSyncError = reason
-		if err := r.Status().Update(context.TODO(), clusterConfig, &client.UpdateOptions{}); err != nil {
-			log.Error(err, "failed to update cluster config's status")
-		}
-	}
-
 	// To simplify things, only specific CR is honored (Name: DEFAULT_CLUSTER_CONFIG_NAME, Namespace: NAMESPACE)
 	// Any other SriovFecClusterConfig is ignored
 	if req.Namespace != NAMESPACE || req.Name != DEFAULT_CLUSTER_CONFIG_NAME {
 		log.V(2).Info("received ClusterConfig, but it not an expected one - it'll be ignored",
 			"expectedNamespace", NAMESPACE, "expectedName", DEFAULT_CLUSTER_CONFIG_NAME)
 
-		updateStatus(sriovfecv1.IgnoredSync, fmt.Sprintf(
+		r.updateStatus(sriovfecv1.IgnoredSync, fmt.Sprintf(
 			"Only SriovFecClusterConfig with name '%s' and namespace '%s' are handled",
-			DEFAULT_CLUSTER_CONFIG_NAME, NAMESPACE))
+			DEFAULT_CLUSTER_CONFIG_NAME, NAMESPACE), clusterConfig)
 
 		return reconcile.Result{}, nil
+	}
+
+	if len(clusterConfig.Finalizers) == 0 {
+		clusterConfig.Finalizers = []string{SRIOVFEC_FINALIZER}
+		if err := r.Client.Update(ctx, clusterConfig); err != nil {
+			log.Error(err, "Failed to update ClusterConfig status and add finalizer to it")
+			return reconcile.Result{}, err
+		} else {
+			log.Info("Successfully added finalizer to ClusterConfig. Requeuing ClusterConfig reconcilation.",
+				"name", clusterConfig.Name, "namespace", clusterConfig.Namespace)
+			return reconcile.Result{Requeue: true}, nil
+		}
 	}
 
 	nodeList, err := r.getNodesWithIntelAccelerator()
 	if err != nil {
 		log.Error(err, "failed to obtain nodes with Intel accelerator")
-		updateStatus(sriovfecv1.FailedSync, "nfd error: failed to obtain nodes with Intel accelerator - check logs")
+		r.updateStatus(sriovfecv1.FailedSync, "nfd error: failed to obtain nodes with Intel accelerator - check logs", clusterConfig)
 		return reconcile.Result{}, err
 	}
-
 	log.V(2).Info("nodes with intel accelerator", "nodes", func() []string {
 		names := []string{}
 		for _, n := range nodeList.Items {
@@ -111,15 +115,41 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(ctx context.Context, req ctr
 	}())
 
 	nodeConfigs := r.renderNodeConfigs(clusterConfig, nodeList)
+	if clusterConfig.DeletionTimestamp != nil {
+		// if this is set to nil then operator will delete (or rather reset to 0 VFAmount) all SriovFecNodes in current ClusterConfig
+		nodeConfigs = nil
+	}
 	if err := r.syncNodeConfigs(nodeConfigs); err != nil {
 		log.Error(err, "syncNodeConfigs failed")
-		updateStatus(sriovfecv1.FailedSync, "failed to create NodeConfigs - check logs")
+		r.updateStatus(sriovfecv1.FailedSync, "failed to create NodeConfigs - check logs", clusterConfig)
 		return reconcile.Result{}, err
 	}
 
-	updateStatus(sriovfecv1.SucceededSync, "")
+	// clean finalizers to allow k8s/ocp to remove resource
+	if clusterConfig.DeletionTimestamp != nil {
+		clusterConfig.Finalizers = nil
+		if err := r.Client.Update(ctx, clusterConfig); err != nil {
+			log.Error(err, "Failed to update ClusterConfig status after removal of finalizers")
+			return reconcile.Result{}, err
+		}
+		//no need to update status - object will be already deleted
+		return reconcile.Result{}, nil
+	}
+
+	r.updateStatus(sriovfecv1.SucceededSync, "", clusterConfig)
 
 	return reconcile.Result{}, nil
+}
+
+func (r *SriovFecClusterConfigReconciler) updateStatus(status sriovfecv1.SyncStatus,
+	reason string, clusterConfig *sriovfecv1.SriovFecClusterConfig) {
+	log := r.Log.WithName("updateStatus")
+
+	clusterConfig.Status.SyncStatus = status
+	clusterConfig.Status.LastSyncError = reason
+	if err := r.Status().Update(context.TODO(), clusterConfig, &client.UpdateOptions{}); err != nil {
+		log.Error(err, "failed to update cluster config's status")
+	}
 }
 
 func (r *SriovFecClusterConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -263,12 +293,26 @@ func (r *SriovFecClusterConfigReconciler) removeOldNodeConfigs(newNodeCfgs []sri
 
 		if deleteNC {
 			log.V(2).Info("deleting existing NodeConfig", "name", nc.GetName())
-			if err := r.Delete(context.TODO(), &nc, &client.DeleteOptions{}); err != nil {
-				log.Error(err, "failed to delete existing NodeConfig", "name", nc.GetName())
-				return err
-			}
+
+			_ = r.setVfAmountToZero(nc)
 		}
 	}
 
+	return nil
+}
+
+func (r *SriovFecClusterConfigReconciler) setVfAmountToZero(nc sriovfecv1.SriovFecNodeConfig) error {
+	log := r.Log.WithName("setVfAmountToZero")
+
+	for idx := range nc.Spec.PhysicalFunctions {
+		nc.Spec.PhysicalFunctions[idx].VFAmount = 0
+	}
+
+	err := r.updateOrCreateNodeConfig(nc)
+	if err != nil {
+		log.Error(err, "Failed to set VFAmount to 0 on after NodeConfig removal", "name", nc.GetName())
+		return err
+	}
+	log.Info("Successfully set VFAmount to 0", "name", nc.Name)
 	return nil
 }
