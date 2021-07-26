@@ -173,9 +173,6 @@ func (dh *DrainHelper) Run(f func(context.Context) bool, drain bool) error {
 					log.Error(err, "uncordon failed")
 					innerErr = err
 				}
-
-				log.V(4).Info("cancelling the context to finish the leadership")
-				cancel()
 			}
 
 			if drain {
@@ -194,6 +191,9 @@ func (dh *DrainHelper) Run(f func(context.Context) bool, drain bool) error {
 			if drain && performUncordon {
 				uncordonAndFreeLeadership()
 			}
+
+			log.V(4).Info("cancelling the context to finish the leadership")
+			cancel()
 		},
 		OnStoppedLeading: func() {
 			log.V(4).Info("stopped leading")

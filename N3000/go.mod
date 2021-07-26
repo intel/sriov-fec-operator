@@ -10,7 +10,6 @@ require (
 	github.com/otcshare/openshift-operator/common v0.0.0-20210706073735-ebfab774dcaf
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.45.0
-	github.com/ugorji/go v1.1.4 // indirect
 	k8s.io/api v0.20.4
 	k8s.io/apimachinery v0.20.4
 	k8s.io/client-go v0.20.4
