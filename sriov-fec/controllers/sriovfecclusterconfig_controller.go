@@ -115,8 +115,9 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(ctx context.Context, req ctr
 	}())
 
 	nodeConfigs := r.renderNodeConfigs(clusterConfig, nodeList)
-	if clusterConfig.DeletionTimestamp != nil {
+	if clusterConfig.DeletionTimestamp != nil && contains(clusterConfig.Finalizers, SRIOVFEC_FINALIZER) {
 		// if this is set to nil then operator will delete (or rather reset to 0 VFAmount) all SriovFecNodes in current ClusterConfig
+		log.Info("Finalizer detected - initiating NodeConfigs cleanup", "finalizer", SRIOVFEC_FINALIZER)
 		nodeConfigs = nil
 	}
 	if err := r.syncNodeConfigs(nodeConfigs); err != nil {
@@ -315,4 +316,13 @@ func (r *SriovFecClusterConfigReconciler) setVfAmountToZero(nc sriovfecv1.SriovF
 	}
 	log.Info("Successfully set VFAmount to 0", "name", nc.Name)
 	return nil
+}
+
+func contains(arr []string, el string) bool {
+	for i := range arr {
+		if arr[i] == el {
+			return true
+		}
+	}
+	return false
 }
