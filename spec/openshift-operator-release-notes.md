@@ -35,7 +35,7 @@ This document provides high-level system features, issues, and limitations infor
    
 # Features for Release 
 ***v1.3.0***
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators OCP4.8.x support
+- OpenNESS SR-IOV Operator for Wireless FEC Accelerators OCP4.8.2 support
   - validated on ACC100 only
 
 ***v1.2.0***
@@ -126,6 +126,12 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - RT Kernel (the OPAE Docker images are built for specific kernel version)
 
 # Supported Operating Systems
+***v1.3.0*** was tested using the following:
+- OpenShift: 4.8.2
+- OS: Red Hat Enterprise Linux CoreOS 48.84.202107202156-0 
+- Kubernetes: v1.21.1+051ac4f
+- RT Kernel: 4.18.0-305.10.2.rt7.83.el8_4.x86_64
+
 ***v1.2.1*** was tested using the following:
 - OpenShift: 4.7.8
 - OS: Red Hat Enterprise Linux CoreOS 47.83.202104161442-0
