@@ -92,7 +92,7 @@ This document provides high-level system features, issues, and limitations infor
 
 # Fixed Issues
 ***v1.2.1***
-- [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/otcshare/openshift-operator/issues/270)
+- [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/open-ness/openshift-operator/issues/270)
 
 ***v1.1.0***
 - OpenNESS Operator for Intel® FPGA PAC N3000

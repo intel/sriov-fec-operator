@@ -1,4 +1,4 @@
-module github.com/otcshare/openshift-operator/common
+module github.com/open-ness/openshift-operator/common
 
 go 1.15
 

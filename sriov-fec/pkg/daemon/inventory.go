@@ -9,7 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/jaypipes/ghw"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
-	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
+	sriovv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
 )
 
 func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {

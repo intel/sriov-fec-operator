@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	dh "github.com/otcshare/openshift-operator/common/pkg/drainhelper"
-	"github.com/otcshare/openshift-operator/common/pkg/utils"
-	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
+	dh "github.com/open-ness/openshift-operator/common/pkg/drainhelper"
+	"github.com/open-ness/openshift-operator/common/pkg/utils"
+	sriovv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"

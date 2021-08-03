@@ -9,14 +9,14 @@ import (
 	"os"
 	"os/exec"
 
-	dh "github.com/otcshare/openshift-operator/common/pkg/drainhelper"
+	dh "github.com/open-ness/openshift-operator/common/pkg/drainhelper"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/go-logr/logr"
 
-	fpgav1 "github.com/otcshare/openshift-operator/N3000/api/v1"
+	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
