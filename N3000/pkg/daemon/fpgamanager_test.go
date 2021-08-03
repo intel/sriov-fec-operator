@@ -5,19 +5,17 @@ package daemon
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
 	"k8s.io/klog/klogr"
+	"net/http/httptest"
+	"os"
+	"os/exec"
+	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"strings"
 )
 
 const (
@@ -127,18 +125,6 @@ func cleanFPGA() {
 	Expect(err).ToNot(HaveOccurred())
 }
 
-func serverMock() *httptest.Server {
-	handler := http.NewServeMux()
-	handler.HandleFunc("/fpga/image", usersMock)
-
-	srv := httptest.NewServer(handler)
-
-	return srv
-}
-
-func usersMock(w http.ResponseWriter, r *http.Request) {
-}
-
 var _ = Describe("FPGA Manager", func() {
 	log := klogr.New().WithName("fpgamanager-Test")
 	f := FPGAManager{Log: ctrl.Log.WithName("daemon-test")}
@@ -146,34 +132,12 @@ var _ = Describe("FPGA Manager", func() {
 		Spec: fpgav1.N3000NodeSpec{
 			FPGA: []fpgav1.N3000Fpga{
 				{
-					PCIAddr:      "0000:1b:00.0",
-					UserImageURL: "http://www.test.com/fpga/image/1.bin",
-				},
-			},
-		},
-	}
-	sampleTwoFPGAs := fpgav1.N3000Node{
-		Spec: fpgav1.N3000NodeSpec{
-			FPGA: []fpgav1.N3000Fpga{
-				{
 					PCIAddr: "0000:1b:00.0",
 				},
-				{
-					PCIAddr: "0000:1x:00.0",
-				},
 			},
 		},
 	}
-	sampleWrongUrlFPGA := fpgav1.N3000Node{
-		Spec: fpgav1.N3000NodeSpec{
-			FPGA: []fpgav1.N3000Fpga{
-				{
-					PCIAddr:      "0000:1b:00.0",
-					UserImageURL: "*?1.bin",
-				},
-			},
-		},
-	}
+
 	var _ = Describe("getFPGAInfo", func() {
 		var _ = It("will return valid []N3000FpgaStatus ", func() {
 			fpgaInfoExec = fakeFpgaInfo
@@ -288,56 +252,95 @@ var _ = Describe("FPGA Manager", func() {
 			fpgaInfoExec = fakeFpgaInfo
 			fpgasUpdateExec = fakeFpgasUpdate
 			rsuExec = fakeRsu
-			err := f.ProgramFPGAs(&sampleTwoFPGAs)
+			err := f.ProgramFPGAs(&fpgav1.N3000Node{
+				Spec: fpgav1.N3000NodeSpec{
+					FPGA: []fpgav1.N3000Fpga{
+						{
+							PCIAddr: "0000:1x:00.0", //not existing one
+						},
+					},
+				},
+			})
 			Expect(err).To(HaveOccurred())
 		})
 	})
 	var _ = Describe("verifyPreconditions", func() {
-		var _ = It("will return nil in successfully scenario", func() {
-			srv := serverMock()
-			defer srv.Close()
+		var testServer *httptest.Server
+
+		BeforeEach(func() {
 			fpgaInfoExec = fakeFpgaInfo
-			err := f.verifyPreconditions(&sampleOneFPGA)
+			testServer = CreateTestServer("/fpga/image/")
+		})
+		AfterEach(func() {
+			testServer.Close()
+		})
+		var _ = It("will return nil in successfully scenario", func() {
+			err := f.verifyPreconditions(&fpgav1.N3000Node{
+				Spec: fpgav1.N3000NodeSpec{
+					FPGA: []fpgav1.N3000Fpga{
+						{
+							PCIAddr:      "0000:1b:00.0",
+							UserImageURL: testServer.URL + "/fpga/image/1.bin",
+						},
+					},
+				},
+			})
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("will return error when http get failed", func() {
-			srv := serverMock()
-			defer srv.Close()
-			fpgaInfoExec = fakeFpgaInfo
-			err := f.verifyPreconditions(&sampleWrongUrlFPGA)
+			err := f.verifyPreconditions(&fpgav1.N3000Node{
+				Spec: fpgav1.N3000NodeSpec{
+					FPGA: []fpgav1.N3000Fpga{
+						{
+							PCIAddr:      "0000:1b:00.0",
+							UserImageURL: "*?1.bin",
+						},
+					},
+				},
+			})
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will return error when fpga temperature exceeded limit", func() {
 			fpgaTemperature := 70.0 //in Celsius degrees
 			err := os.Setenv(envTemperatureLimitName, fmt.Sprintf("%f", fpgaTemperature))
 			Expect(err).ToNot(HaveOccurred())
-			fpgaInfoExec = fakeFpgaInfo
 			err = f.verifyPreconditions(&sampleOneFPGA)
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will return error when one PCIAddr in CR does not exist", func() {
-			srv := serverMock()
-			defer srv.Close()
-			fpgaInfoExec = fakeFpgaInfo
-			err := f.verifyPreconditions(&sampleTwoFPGAs)
-			Expect(err).To(HaveOccurred())
+			Expect(f.verifyPreconditions(&fpgav1.N3000Node{
+				Spec: fpgav1.N3000NodeSpec{
+					FPGA: []fpgav1.N3000Fpga{
+						{
+							PCIAddr: "0000:1b:00.0",
+						},
+						{
+							PCIAddr: "0000:1x:00.0", //not existing one
+						},
+					},
+				},
+			})).To(HaveOccurred())
 		})
 		var _ = It("will return error when fpgaInfo failed", func() {
 			fakeFpgaInfoErrReturn = fmt.Errorf("error")
-			fpgaInfoExec = fakeFpgaInfo
 			err := f.verifyPreconditions(&sampleOneFPGA)
 			cleanFPGA()
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will succeed with non-existing directory", func() {
-			srv := serverMock()
-			defer srv.Close()
-			fpgaInfoExec = fakeFpgaInfo
-
 			tmpPathHolder := fpgaUserImageSubfolderPath
 			fpgaUserImageSubfolderPath = testTmpFolder + "/fakeFPGApath"
 
-			err := f.verifyPreconditions(&sampleOneFPGA)
+			err := f.verifyPreconditions(&fpgav1.N3000Node{
+				Spec: fpgav1.N3000NodeSpec{
+					FPGA: []fpgav1.N3000Fpga{
+						{
+							PCIAddr:      "0000:1b:00.0",
+							UserImageURL: testServer.URL + "/fpga/image/1.bin",
+						},
+					},
+				},
+			})
 			Expect(err).ToNot(HaveOccurred())
 
 			os.Remove(fpgaUserImageSubfolderPath)
