@@ -4,7 +4,7 @@
 # Default k8s command-line tool exec
 export CLI_EXEC?=oc
 # Current Operator version
-VERSION ?= 1.2.1
+VERSION ?= 1.3.0
 # Supported channels
 CHANNELS ?= stable
 # Default channel
@@ -40,7 +40,7 @@ ARCH = $(shell go env GOARCH)
 export SRIOV_FEC_OPERATOR_IMAGE ?= $(IMAGE_REGISTRY)sriov-fec-operator:$(IMG_VERSION)
 export SRIOV_FEC_DAEMON_IMAGE ?= $(IMAGE_REGISTRY)sriov-fec-daemon:$(IMG_VERSION)
 export SRIOV_FEC_LABELER_IMAGE ?= $(IMAGE_REGISTRY)n3000-labeler:$(IMG_VERSION)
-export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.7
+export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.8
 
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
@@ -173,7 +173,7 @@ bundle: check-operator-sdk-version manifests kustomize
 	operator-sdk bundle validate ./bundle
 	FOLDER=. COPYRIGHT_FILE=../COPYRIGHT ../copyright.sh
 	cat ../COPYRIGHT bundle.Dockerfile >bundle.tmp
-	printf "\nLABEL com.redhat.openshift.versions=\"=v4.7\"\n" >> bundle.tmp
+	printf "\nLABEL com.redhat.openshift.versions=\"=v4.8\"\n" >> bundle.tmp
 	printf "\nCOPY TEMP_LICENSE_COPY /licenses/LICENSE\n" >> bundle.tmp
 	mv bundle.tmp bundle.Dockerfile
 

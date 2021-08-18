@@ -23,7 +23,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: n3000-operator:v1.2.1
+        image: n3000-operator:v1.3.0
         name: manager
         securityContext:
           allowPrivilegeEscalation: false

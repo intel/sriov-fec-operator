@@ -18,4 +18,4 @@ require (
 	sigs.k8s.io/controller-runtime v0.8.3
 )
 
-replace github.com/k8snetworkplumbingwg/sriov-network-device-plugin => github.com/openshift/sriov-network-device-plugin v0.0.0-20201204004339-6d9de398bc37 //4.7
+replace github.com/k8snetworkplumbingwg/sriov-network-device-plugin => github.com/openshift/sriov-network-device-plugin v0.0.0-20210316000337-fed32d92655d //4.8
