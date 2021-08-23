@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/otcshare/openshift-operator/common/pkg/assets"
-	sriovfecv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
+	sriovfecv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
 	"github.com/otcshare/openshift-operator/sriov-fec/controllers"
 	// +kubebuilder:scaffold:imports
 )
@@ -53,7 +53,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(secv1.AddToScheme(scheme))
-	utilruntime.Must(sriovfecv1.AddToScheme(scheme))
+	utilruntime.Must(sriovfecv2.AddToScheme(scheme))
 
 	n := os.Getenv("NAME")
 	operatorDeploymentName = n[:strings.LastIndex(n[:strings.LastIndex(n, "-")], "-")]
@@ -83,6 +83,7 @@ func main() {
 		Port:                   9443,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "98e78623.intel.com",
+		Namespace:              controllers.NAMESPACE,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -97,7 +98,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "SriovFecClusterConfig")
 		os.Exit(1)
 	}
-	if err = (&sriovfecv1.SriovFecClusterConfig{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&sriovfecv2.SriovFecClusterConfig{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "SriovFecClusterConfig")
 		os.Exit(1)
 	}

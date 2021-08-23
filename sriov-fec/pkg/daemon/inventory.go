@@ -9,10 +9,10 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/jaypipes/ghw"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
-	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
+	sriovv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
 )
 
-func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
+func GetSriovInventory(log logr.Logger) (*sriovv2.NodeInventory, error) {
 	pci, err := ghw.PCI()
 	if err != nil {
 		log.Error(err, "failed to get PCI info")
@@ -26,8 +26,8 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 		return nil, err
 	}
 
-	accelerators := &sriovv1.NodeInventory{
-		SriovAccelerators: []sriovv1.SriovAccelerator{},
+	accelerators := &sriovv2.NodeInventory{
+		SriovAccelerators: []sriovv2.SriovAccelerator{},
 	}
 
 	for _, device := range devices {
@@ -55,13 +55,13 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 			driver = ""
 		}
 
-		acc := sriovv1.SriovAccelerator{
+		acc := sriovv2.SriovAccelerator{
 			VendorID:   device.Vendor.ID,
 			DeviceID:   device.Product.ID,
 			PCIAddress: device.Address,
-			Driver:     driver,
+			PFDriver:   driver,
 			MaxVFs:     utils.GetSriovVFcapacity(device.Address),
-			VFs:        []sriovv1.VF{},
+			VFs:        []sriovv2.VF{},
 		}
 
 		vfs, err := utils.GetVFList(device.Address)
@@ -70,7 +70,7 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 		}
 
 		for _, vf := range vfs {
-			vfInfo := sriovv1.VF{
+			vfInfo := sriovv2.VF{
 				PCIAddress: vf,
 			}
 

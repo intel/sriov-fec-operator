@@ -180,7 +180,7 @@ bundle: check-operator-sdk-version manifests kustomize
 # Build/Push the bundle image.
 .PHONY: image-bundle
 image-bundle: bundle
-	podman build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	podman build -f bundle.Dockerfile -t $(BUNDLE_IMG) --format docker .
 
 .PHONY: push-bundle
 push-bundle:

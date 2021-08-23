@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2020-2021 Intel Corporation
 
-package v1
+package v2
 
 import (
 	"fmt"
@@ -108,9 +108,6 @@ type BBDevConfig struct {
 
 // PhysicalFunctionConfig defines a possible configuration of a single Physical Function (PF), i.e. card
 type PhysicalFunctionConfig struct {
-	// PCIAdress is a Physical Functions's PCI address that will be configured according to this spec
-	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[01][a-fA-F0-9]\.[0-7]$`
-	PCIAddress string `json:"pciAddress"`
 	// PFDriver to bound the PFs to
 	PFDriver string `json:"pfDriver"`
 	// VFDriver to bound the VFs to
@@ -122,20 +119,40 @@ type PhysicalFunctionConfig struct {
 	BBDevConfig BBDevConfig `json:"bbDevConfig"`
 }
 
-type NodeConfig struct {
-	// Name of the node
-	NodeName string `json:"nodeName"`
-	// List of physical functions (cards) configs
-	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	PhysicalFunctions []PhysicalFunctionConfig `json:"physicalFunctions"`
+type PhysicalFunctionConfigExt struct {
+	// PCIAdress is a Physical Functions's PCI address that will be configured according to this spec
+	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[01][a-fA-F0-9]\.[0-7]$`
+	PCIAddress string `json:"pciAddress"`
+
+	PhysicalFunctionConfig `json:",inline"`
 }
 
 // SriovFecClusterConfigSpec defines the desired state of SriovFecClusterConfig
 type SriovFecClusterConfigSpec struct {
 	// List of node configurations
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	Nodes     []NodeConfig `json:"nodes"`
-	DrainSkip bool         `json:"drainSkip,omitempty"`
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	AcceleratorSelector AcceleratorSelector `json:"acceleratorSelector,omitempty"`
+
+	// Physical function (card) config
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	PhysicalFunction PhysicalFunctionConfig `json:"physicalFunction"`
+
+	// Higher priority policies can override lower ones.
+	Priority int `json:"priority"`
+
+	DrainSkip bool `json:"drainSkip,omitempty"`
+}
+
+type AcceleratorSelector struct {
+	VendorID string `json:"vendorID,omitempty"`
+	DeviceID string `json:"deviceID,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[01][a-fA-F0-9]\.[0-7]$`
+	PCIAddress string `json:"pciAddress,omitempty"`
+	PFDriver   string `json:"driver,omitempty"`
+	MaxVFs     int    `json:"maxVirtualFunctions,omitempty"`
 }
 
 // SriovFecClusterConfigStatus defines the observed state of SriovFecClusterConfig
@@ -149,9 +166,11 @@ type SriovFecClusterConfigStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="SyncStatus",type=string,JSONPath=`.status.syncStatus`
+// +kubebuilder:storageversion
+// +kubebuilder:resource:shortName=sfcc
 
 // SriovFecClusterConfig is the Schema for the sriovfecclusterconfigs API
-// +operator-sdk:csv:customresourcedefinitions:displayName="SriovFecClusterConfig",resources={{SriovFecNodeConfig,v1,node}}
+// +operator-sdk:csv:customresourcedefinitions:displayName="SriovFecClusterConfig",resources={{SriovFecNodeConfig,v2,node}}
 type SriovFecClusterConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

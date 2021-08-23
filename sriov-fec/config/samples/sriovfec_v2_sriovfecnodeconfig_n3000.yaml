@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2021 Intel Corporation
+
+apiVersion: sriovfec.intel.com/v2
+kind: SriovFecNodeConfig
+metadata:
+  name: worker-0
+  namespace: vran-acceleration-operators
+spec:
+  drainSkip: false
+  physicalFunctions:
+    - pci_addr: "somePciAddress"
+      pf_driver: "pci-pf-stub"
+      vf_driver: "vfio-pci"
+      vf_amount: 2
+      bbDevConfig:
+        n3000:
+          # Network Type: either "FPGA_5GNR" or "FPGA_LTE"
+          networkType: "FPGA_5GNR"
+          # Programming mode: 0 = VF Programming, 1 = PF Programming
+          pfMode: true
+          flrTimeout: 610
+          downlink:
+            bandwidth: 3
+            loadBalance: 128
+            queues:
+              vf0: 16
+              vf1: 16
+              vf2: 0
+              vf3: 0
+              vf4: 0
+              vf5: 0
+              vf6: 0
+              vf7: 0
+          uplink:
+            bandwidth: 3
+            loadBalance: 128
+            queues:
+              vf0: 16
+              vf1: 16
+              vf2: 0
+              vf3: 0
+              vf4: 0
+              vf5: 0
+              vf6: 0
+              vf7: 0

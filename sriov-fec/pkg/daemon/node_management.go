@@ -14,7 +14,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
-	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
+	sriovv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
 )
 
 var (
@@ -44,6 +44,9 @@ func (n *NodeConfigurator) addMissingKernelParams() error {
 
 func (n *NodeConfigurator) loadModule(module string) error {
 	log := n.Log.WithName("loadModule")
+	if module == "" {
+		return fmt.Errorf("module cannot be empty string")
+	}
 	_, err := runExecCmd([]string{"chroot", "/host/", "modprobe", module}, log)
 	return err
 }
@@ -157,13 +160,13 @@ func (n *NodeConfigurator) enableMasterBus(pciAddr string) error {
 	return nil
 }
 
-func getMatchingExistingAccelerator(inventory *sriovv1.NodeInventory, pciAddress string) (sriovv1.SriovAccelerator, bool) {
+func getMatchingExistingAccelerator(inventory *sriovv2.NodeInventory, pciAddress string) (sriovv2.SriovAccelerator, bool) {
 	for _, acc := range inventory.SriovAccelerators {
 		if acc.PCIAddress == pciAddress {
 			return acc, true
 		}
 	}
-	return sriovv1.SriovAccelerator{}, false
+	return sriovv2.SriovAccelerator{}, false
 }
 
 func (n *NodeConfigurator) changeAmountOfVFs(pfPCIAddress string, vfsAmount int) error {
@@ -195,7 +198,7 @@ func (n *NodeConfigurator) changeAmountOfVFs(pfPCIAddress string, vfsAmount int)
 	return nil
 }
 
-func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec) error {
+func (n *NodeConfigurator) applyConfig(nodeConfig sriovv2.SriovFecNodeConfigSpec) error {
 	log := n.Log.WithName("applyConfig")
 
 	inv, err := getSriovInventory(log)

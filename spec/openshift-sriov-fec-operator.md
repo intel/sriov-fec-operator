@@ -99,40 +99,42 @@ To configure the FEC device with desired setting create a CR (An example below c
 * [Sample CR for Wireless FEC (ACC100)](#sample-cr-for-wireless-fec-acc100)
 
 ```yaml
-apiVersion: sriovfec.intel.com/v1
+apiVersion: sriovfec.intel.com/v2
 kind: SriovFecClusterConfig
 metadata:
   name: config
 spec:
-  nodes:
-    - nodeName: node1
-      physicalFunctions:
-        - pciAddress: 0000:af:00.0
-          pfDriver: "pci-pf-stub"
-          vfDriver: "vfio-pci"
-          vfAmount: 16
-          bbDevConfig:
-            acc100:
-              # Programming mode: 0 = VF Programming, 1 = PF Programming
-              pfMode: false
-              numVfBundles: 16
-              maxQueueSize: 1024
-              uplink4G:
-                numQueueGroups: 0
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
-              downlink4G:
-                numQueueGroups: 0
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
-              uplink5G:
-                numQueueGroups: 4
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
-              downlink5G:
-                numQueueGroups: 4
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
+  priority: 1
+  nodeSelector:
+    kubernetes.io/hostname: node1
+  acceleratorSelector:
+    pciAddress: 0000:af:00.0    
+  physicalFunction:
+    pfDriver: "pci-pf-stub"
+    vfDriver: "vfio-pci"
+    vfAmount: 16
+    bbDevConfig:
+      acc100:
+        # Programming mode: 0 = VF Programming, 1 = PF Programming
+        pfMode: false
+        numVfBundles: 16
+        maxQueueSize: 1024
+        uplink4G:
+          numQueueGroups: 0
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        downlink4G:
+          numQueueGroups: 0
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        uplink5G:
+          numQueueGroups: 4
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        downlink5G:
+          numQueueGroups: 4
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
 ```
 
 To apply the CR run:
@@ -456,34 +458,37 @@ To view the status of current CR run (sample output):
 [user@ctrl1 /home]# oc get sriovfecclusterconfig config -o yaml
 ***
 spec:
-  nodes:
-  - nodeName: node1
-    physicalFunctions:
-    - bbDevConfig:
-        acc100:
-          downlink4G:
-            aqDepthLog2: 4
-            numAqsPerGroups: 16
-            numQueueGroups: 0
-          downlink5G:
-            aqDepthLog2: 4
-            numAqsPerGroups: 16
-            numQueueGroups: 4
-          maxQueueSize: 1024
-          numVfBundles: 16
-          pfMode: false
-          uplink4G:
-            aqDepthLog2: 4
-            numAqsPerGroups: 16
-            numQueueGroups: 0
-          uplink5G:
-            aqDepthLog2: 4
-            numAqsPerGroups: 16
-            numQueueGroups: 4
-      pciAddress: 0000:af:00.0
-      pfDriver: pci-pf-stub
-      vfAmount: 16
-      vfDriver: vfio-pci
+  priority: 1
+  nodeSelector:
+    kubernetes.io/hostname: node1
+  acceleratorSelector:
+    pciAddress: 0000:af:00.0    
+  physicalFunction:  
+    bbDevConfig:
+      acc100:
+        downlink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        downlink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        maxQueueSize: 1024
+        numVfBundles: 16
+        pfMode: false
+        uplink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        uplink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+    pciAddress: 0000:af:00.0
+    pfDriver: pci-pf-stub
+    vfAmount: 16
+    vfDriver: vfio-pci
 status:
   syncStatus: Succeeded
 ```
@@ -533,50 +538,52 @@ If needed the user can set up a local registry for the operators' images. For mo
 #### Sample CR for Wireless FEC (N3000)
 
 ```yaml
-apiVersion: sriovfec.intel.com/v1
+apiVersion: sriovfec.intel.com/v2
 kind: SriovFecClusterConfig
 metadata:
   name: config
   namespace: vran-acceleration-operators
 spec:
-  nodes:
-    - nodeName: node1
-      physicalFunctions:
-        - pciAddress: 0000.1d.00.0
-          pfDriver: pci-pf-stub
-          vfDriver: vfio-pci
-          vfAmount: 2
-          bbDevConfig:
-            n3000:
-              # Network Type: either "FPGA_5GNR" or "FPGA_LTE"
-              networkType: "FPGA_5GNR"
-              # Programming mode: 0 = VF Programming, 1 = PF Programming
-              pfMode: false
-              flrTimeout: 610
-              downlink:
-                bandwidth: 3
-                loadBalance: 128
-                queues:
-                  vf0: 16
-                  vf1: 16
-                  vf2: 0
-                  vf3: 0
-                  vf4: 0
-                  vf5: 0
-                  vf6: 0
-                  vf7: 0
-              uplink:
-                bandwidth: 3
-                loadBalance: 128
-                queues:
-                  vf0: 16
-                  vf1: 16
-                  vf2: 0
-                  vf3: 0
-                  vf4: 0
-                  vf5: 0
-                  vf6: 0
-                  vf7: 0
+  priority: 1
+  nodeSelector:
+    kubernetes.io/hostname: node1
+  acceleratorSelector:
+    pciAddress: 0000.1d.00.0
+  physicalFunction:  
+    pfDriver: pci-pf-stub
+    vfDriver: vfio-pci
+    vfAmount: 2
+    bbDevConfig:
+      n3000:
+        # Network Type: either "FPGA_5GNR" or "FPGA_LTE"
+        networkType: "FPGA_5GNR"
+        # Programming mode: 0 = VF Programming, 1 = PF Programming
+        pfMode: false
+        flrTimeout: 610
+        downlink:
+          bandwidth: 3
+          loadBalance: 128
+          queues:
+            vf0: 16
+            vf1: 16
+            vf2: 0
+            vf3: 0
+            vf4: 0
+            vf5: 0
+            vf6: 0
+            vf7: 0
+        uplink:
+          bandwidth: 3
+          loadBalance: 128
+          queues:
+            vf0: 16
+            vf1: 16
+            vf2: 0
+            vf3: 0
+            vf4: 0
+            vf5: 0
+            vf6: 0
+            vf7: 0
 ```
 
 #### Sample Status for Wireless FEC (N3000)
@@ -714,40 +721,42 @@ FPGA_5GNR PF [0000:1d:00.0] configuration complete!"}
 #### Sample CR for Wireless FEC (ACC100)
 
 ```yaml
-apiVersion: sriovfec.intel.com/v1
+apiVersion: sriovfec.intel.com/v2
 kind: SriovFecClusterConfig
 metadata:
   name: config
 spec:
-  nodes:
-    - nodeName: node1
-      physicalFunctions:
-        - pciAddress: 0000:af:00.0
-          pfDriver: "pci-pf-stub"
-          vfDriver: "vfio-pci"
-          vfAmount: 16
-          bbDevConfig:
-            acc100:
-              # Programming mode: 0 = VF Programming, 1 = PF Programming
-              pfMode: false
-              numVfBundles: 16
-              maxQueueSize: 1024
-              uplink4G:
-                numQueueGroups: 0
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
-              downlink4G:
-                numQueueGroups: 0
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
-              uplink5G:
-                numQueueGroups: 4
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
-              downlink5G:
-                numQueueGroups: 4
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
+  priority: 1
+  nodeSelector:
+    kubernetes.io/hostname: node1
+  acceleratorSelector:
+    pciAddress: 0000:af:00.0
+  physicalFunction:  
+    pfDriver: "pci-pf-stub"
+    vfDriver: "vfio-pci"
+    vfAmount: 16
+    bbDevConfig:
+      acc100:
+        # Programming mode: 0 = VF Programming, 1 = PF Programming
+        pfMode: false
+        numVfBundles: 16
+        maxQueueSize: 1024
+        uplink4G:
+          numQueueGroups: 0
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        downlink4G:
+          numQueueGroups: 0
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        uplink5G:
+          numQueueGroups: 4
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        downlink5G:
+          numQueueGroups: 4
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
 ```
 
 #### Sample Status for Wireless FEC (ACC100)

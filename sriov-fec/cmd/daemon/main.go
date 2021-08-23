@@ -7,7 +7,7 @@ import (
 	"flag"
 	"os"
 
-	sriovv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
+	sriovv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
 	"github.com/otcshare/openshift-operator/sriov-fec/pkg/daemon"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,7 +26,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(sriovv1.AddToScheme(scheme))
+	utilruntime.Must(sriovv2.AddToScheme(scheme))
 }
 
 func main() {

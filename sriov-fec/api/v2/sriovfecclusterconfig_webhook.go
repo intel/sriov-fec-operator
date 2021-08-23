@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2020-2021 Intel Corporation
 
-package v1
+package v2
 
 import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,7 +22,7 @@ func (r *SriovFecClusterConfig) SetupWebhookWithManager(mgr ctrl.Manager) error 
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/validate-sriovfec-intel-com-v1-sriovfecclusterconfig,mutating=false,failurePolicy=fail,sideEffects=None,groups=sriovfec.intel.com,resources=sriovfecclusterconfigs,verbs=create;update,versions=v1,name=vsriovfecclusterconfig.kb.io,admissionReviewVersions={v1}
+//+kubebuilder:webhook:path=/validate-sriovfec-intel-com-v2-sriovfecclusterconfig,mutating=false,failurePolicy=fail,sideEffects=None,groups=sriovfec.intel.com,resources=sriovfecclusterconfigs,verbs=create;update,versions=v2,name=vsriovfecclusterconfig.kb.io,admissionReviewVersions={v1}
 
 var _ webhook.Validator = &SriovFecClusterConfig{}
 
@@ -36,7 +36,7 @@ func (r *SriovFecClusterConfig) ValidateCreate() error {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *SriovFecClusterConfig) ValidateUpdate(old runtime.Object) error {
+func (r *SriovFecClusterConfig) ValidateUpdate(_ runtime.Object) error {
 	sriovfecclusterconfiglog.Info("validate update", "name", r.Name)
 	if errs := r.validate(); len(errs) != 0 {
 		return apierrors.NewInvalid(schema.GroupKind{Group: "sriovfec.intel.com", Kind: "SriovFecClusterConfig"}, r.Name, errs)
@@ -51,37 +51,37 @@ func (r *SriovFecClusterConfig) ValidateDelete() error {
 	return nil
 }
 
-func (r *SriovFecClusterConfig) validate() field.ErrorList {
-	var allErrs field.ErrorList
+func (r *SriovFecClusterConfig) validate() (errs field.ErrorList) {
+	if r.Spec.PhysicalFunction.BBDevConfig.N3000 != nil && r.Spec.PhysicalFunction.BBDevConfig.ACC100 != nil {
+		err := field.Forbidden(
+			field.NewPath("spec").Child("physicalFunction").Child("bbDevConfig"),
+			"specified bbDevConfig cannot contain acc100 and n3000 configuration in the same time")
 
-	for nID, node := range r.Spec.Nodes {
-		for pfID, pf := range node.PhysicalFunctions {
-
-			queuePath := field.NewPath("spec").
-				Child("nodes").Index(nID).
-				Child("physicalFunctions").Index(pfID).
-				Child("bbDevConfig", "n3000", "uplink", "queues")
-
-			if pf.BBDevConfig.N3000 == nil {
-				continue
-			}
-
-			if err := validateN3000Queues(queuePath, pf.BBDevConfig.N3000.Uplink.Queues); err != nil {
-				allErrs = append(allErrs, err)
-			}
-
-			queuePath = field.NewPath("spec").
-				Child("nodes").Index(nID).
-				Child("physicalFunctions").Index(pfID).
-				Child("bbDevConfig", "n3000", "downlink", "queues")
-
-			if err := validateN3000Queues(queuePath, pf.BBDevConfig.N3000.Downlink.Queues); err != nil {
-				allErrs = append(allErrs, err)
-			}
-		}
+		errs = append(errs, err)
 	}
 
-	return allErrs
+	n3000BBDevConfig := r.Spec.PhysicalFunction.BBDevConfig.N3000
+	if n3000BBDevConfig == nil {
+		return
+	}
+
+	queuePath := field.NewPath("spec").
+		Child("physicalFunction").
+		Child("bbDevConfig", "n3000", "uplink", "queues")
+
+	if err := validateN3000Queues(queuePath, n3000BBDevConfig.Uplink.Queues); err != nil {
+		errs = append(errs, err)
+	}
+
+	queuePath = field.NewPath("spec").
+		Child("physicalFunction").
+		Child("bbDevConfig", "n3000", "downlink", "queues")
+
+	if err := validateN3000Queues(queuePath, n3000BBDevConfig.Downlink.Queues); err != nil {
+		errs = append(errs, err)
+	}
+
+	return
 }
 
 func validateN3000Queues(qID *field.Path, queues UplinkDownlinkQueues) *field.Error {

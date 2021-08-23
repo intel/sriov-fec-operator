@@ -1,17 +1,29 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2021 Intel Corporation
 
-apiVersion: sriovfec.intel.com/v1
-kind: SriovFecNodeConfig
+apiVersion: sriovfec.intel.com/v2
+kind: SriovFecClusterConfig
 metadata:
-  name: worker-0
+  name: cc1
   namespace: vran-acceleration-operators
 spec:
-  physicalFunctions:
-  - pci_addr: ""
-    pf_driver: "pci-pf-stub"
-    vf_driver: "vfio-pci"
-    vf_amount: 2
+  drainSkip: false
+  priority: 100
+  # nodeSelector and all its key-value pairs are optional
+  nodeSelector:
+    expectedLabel1: "valueOfExpectedLabel1"
+    expectedLabelN: "valueOfExpectedLabelN"
+  # acceleratorSelector and all its fields are optional
+  acceleratorSelector:
+    vendorID: "someVendor"
+    deviceID: "someDevice"
+    pciAddress: "somePciAddress"
+    driver: "someDriver"
+    maxVirtualFunctions: 2
+  physicalFunction:
+    pfDriver: "pci-pf-stub"
+    vfDriver: "vfio-pci"
+    vfAmount: 2
     bbDevConfig:
       n3000:
         # Network Type: either "FPGA_5GNR" or "FPGA_LTE"

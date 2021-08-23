@@ -21,7 +21,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	sriovfecv1 "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
+	sriovv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -59,7 +59,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(config).ToNot(BeNil())
 
-	err = sriovfecv1.AddToScheme(scheme.Scheme)
+	err = sriovv2.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme

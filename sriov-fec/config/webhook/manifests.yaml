@@ -14,14 +14,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-sriovfec-intel-com-v1-sriovfecclusterconfig
+      path: /validate-sriovfec-intel-com-v2-sriovfecclusterconfig
   failurePolicy: Fail
   name: vsriovfecclusterconfig.kb.io
   rules:
   - apiGroups:
     - sriovfec.intel.com
     apiVersions:
-    - v1
+    - v2
     operations:
     - CREATE
     - UPDATE

@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2021 Intel Corporation
+
+apiVersion: sriovfec.intel.com/v2
+kind: SriovFecClusterConfig
+metadata:
+  name: cc1
+  namespace: vran-acceleration-operators
+spec:
+  priority: 100
+  drainSkip: false
+  # nodeSelector and all its key-value pairs are optional
+  nodeSelector:
+    expectedLabel1: "valueOfExpectedLabel1"
+    expectedLabelN: "valueOfExpectedLabelN"
+  # acceleratorSelector and all its fields are optional
+  acceleratorSelector:
+    vendorID: "someVendor"
+    deviceID: "someDevice"
+    pciAddress: "somePciAddress"
+    driver: "someDriver"
+    maxVirtualFunctions: 2
+  physicalFunction:
+    pfDriver: "pci-pf-stub"
+    vfDriver: "vfio-pci"
+    vfAmount: 2
+    bbDevConfig:
+      acc100:
+        # Programming mode: 0 = VF Programming, 1 = PF Programming
+        pfMode: true
+        numVfBundles: 16
+        maxQueueSize: 1024
+        uplink4G:
+          numQueueGroups: 0
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        downlink4G:
+          numQueueGroups: 0
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        uplink5G:
+          numQueueGroups: 4
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        downlink5G:
+          numQueueGroups: 4
+          numAqsPerGroups: 16
+          aqDepthLog2: 4

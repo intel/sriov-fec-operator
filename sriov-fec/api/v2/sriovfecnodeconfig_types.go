@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2020-2021 Intel Corporation
 
-package v1
+package v2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +17,7 @@ type SriovAccelerator struct {
 	VendorID   string `json:"vendorID"`
 	DeviceID   string `json:"deviceID"`
 	PCIAddress string `json:"pciAddress"`
-	Driver     string `json:"driver"`
+	PFDriver   string `json:"driver"`
 	MaxVFs     int    `json:"maxVirtualFunctions"`
 	VFs        []VF   `json:"virtualFunctions"`
 }
@@ -30,8 +30,8 @@ type NodeInventory struct {
 type SriovFecNodeConfigSpec struct {
 	// List of PhysicalFunctions configs
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	PhysicalFunctions []PhysicalFunctionConfig `json:"physicalFunctions"`
-	DrainSkip         bool                     `json:"drainSkip,omitempty"`
+	PhysicalFunctions []PhysicalFunctionConfigExt `json:"physicalFunctions"`
+	DrainSkip         bool                        `json:"drainSkip,omitempty"`
 }
 
 // SriovFecNodeConfigStatus defines the observed state of SriovFecNodeConfig
@@ -46,6 +46,8 @@ type SriovFecNodeConfigStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Configured",type=string,JSONPath=`.status.conditions[?(@.type=="Configured")].reason`
+// +kubebuilder:storageversion
+// +kubebuilder:resource:shortName=sfnc
 
 // SriovFecNodeConfig is the Schema for the sriovfecnodeconfigs API
 // +operator-sdk:csv:customresourcedefinitions:displayName="SriovFecNodeConfig",resources={{SriovFecNodeConfig,v1,node}}

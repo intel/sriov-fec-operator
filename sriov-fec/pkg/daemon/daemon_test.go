@@ -7,20 +7,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-
-	sriov "github.com/otcshare/openshift-operator/sriov-fec/api/v1"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	sriovv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
+	"io/ioutil"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
+	"os"
+	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -52,7 +50,7 @@ var _ = Describe("SriovDaemonTest", func() {
 		getVFList = func(string) ([]string, error) {
 			return nil, nil
 		}
-		getSriovInventory = func(_ logr.Logger) (*sriov.NodeInventory, error) {
+		getSriovInventory = func(_ logr.Logger) (*sriovv2.NodeInventory, error) {
 			return &data.NodeInventory, nil
 		}
 	})
@@ -66,8 +64,8 @@ var _ = Describe("SriovDaemonTest", func() {
 		AfterEach(func() {
 			nn := data.GetNamespacedName()
 			if err := k8sClient.Get(context.TODO(), nn, &data.SriovFecNodeConfig); err == nil {
-				data.SriovFecNodeConfig.Spec = sriov.SriovFecNodeConfigSpec{
-					PhysicalFunctions: []sriov.PhysicalFunctionConfig{},
+				data.SriovFecNodeConfig.Spec = sriovv2.SriovFecNodeConfigSpec{
+					PhysicalFunctions: []sriovv2.PhysicalFunctionConfigExt{},
 				}
 				Expect(k8sClient.Update(context.TODO(), &data.SriovFecNodeConfig)).NotTo(HaveOccurred())
 				Expect(returnLastArg(reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: nn}))).ToNot(HaveOccurred())
@@ -93,45 +91,9 @@ var _ = Describe("SriovDaemonTest", func() {
 			).To(Succeed())
 
 			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			nodeConfigs := &sriovv2.SriovFecNodeConfigList{}
 			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
 			Expect(nodeConfigs.Items).To(HaveLen(1))
-		})
-
-		var _ = It("will ignore cr with wrong node name", func() {
-			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
-
-			Expect(initReconciler(reconciler, "wrongName", data.NodeConfigNS())).To(Succeed())
-
-			Expect(
-				returnLastArg(
-					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
-				),
-			).To(Succeed())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
-			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
-			Expect(nodeConfigs.Items).To(BeEmpty())
-		})
-
-		var _ = It("will ignore cr with wrong namespace", func() {
-			Expect(
-				k8sClient.Create(context.TODO(), &data.Node),
-			).To(Succeed())
-
-			Expect(initReconciler(reconciler, data.NodeConfigName(), "wrongNamespace")).To(Succeed())
-
-			Expect(
-				returnLastArg(
-					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
-				),
-			).To(Succeed())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
-			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
-			Expect(nodeConfigs.Items).To(BeEmpty())
 		})
 
 		var _ = It("will fail when namespace will be not handle", func() {
@@ -146,7 +108,7 @@ var _ = Describe("SriovDaemonTest", func() {
 			).To(HaveOccurred())
 
 			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			nodeConfigs := &sriovv2.SriovFecNodeConfigList{}
 			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
 			Expect(nodeConfigs.Items).To(BeEmpty())
 		})
@@ -180,7 +142,7 @@ var _ = Describe("SriovDaemonTest", func() {
 			).To(Succeed())
 
 			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			nodeConfigs := &sriovv2.SriovFecNodeConfigList{}
 			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
 			Expect(nodeConfigs.Items).To(HaveLen(1))
 			Expect(execCmdMock.verify()).To(Succeed())
@@ -209,7 +171,7 @@ var _ = Describe("SriovDaemonTest", func() {
 			).To(Succeed())
 
 			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			nodeConfigs := &sriovv2.SriovFecNodeConfigList{}
 			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
 			Expect(nodeConfigs.Items).To(HaveLen(1))
 			Expect(osExecMock.verify()).To(Succeed())
@@ -235,7 +197,7 @@ var _ = Describe("SriovDaemonTest", func() {
 			Expect(returnLastArg(reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}))).To(Succeed())
 
 			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			nodeConfigs := &sriovv2.SriovFecNodeConfigList{}
 			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
 			Expect(nodeConfigs.Items).To(HaveLen(1))
 			Expect(osExecMock.verify()).To(Succeed())
@@ -273,7 +235,7 @@ var _ = Describe("SriovDaemonTest", func() {
 			).To(Succeed())
 
 			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			nodeConfigs := &sriovv2.SriovFecNodeConfigList{}
 			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
 			Expect(nodeConfigs.Items).To(HaveLen(1))
 			Expect(osExecMock.verify()).To(Succeed())
@@ -286,28 +248,28 @@ var _ = Describe("SriovDaemonTest", func() {
 
 			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
 
-			nodeConfig := &sriov.SriovFecNodeConfig{}
+			nodeConfig := &sriovv2.SriovFecNodeConfig{}
 			nn := data.GetNamespacedName()
 			Expect(k8sClient.Get(context.TODO(), nn, nodeConfig)).To(Succeed())
 
-			reconciler.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationUnknown, "test unknown")
+			reconciler.updateStatus(nodeConfig, metav1.ConditionFalse, ConfigurationUnknown, "test unknown")
 
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
+			nodeConfigs := &sriovv2.SriovFecNodeConfigList{}
 			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
 			Expect(nodeConfigs.Items).To(HaveLen(1))
 			Expect(nodeConfigs.Items[0].Status.Conditions).To(HaveLen(1))
-			Expect(nodeConfigs.Items[0].Status.Conditions[0].Type).To(Equal(ConfigurationCondition))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Type).To(Equal(ConditionConfigured))
 			Expect(nodeConfigs.Items[0].Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
 			Expect(nodeConfigs.Items[0].Status.Conditions[0].Reason).To(Equal(string(ConfigurationUnknown)))
 			Expect(nodeConfigs.Items[0].Status.Conditions[0].Message).To(Equal("test unknown"))
 			Expect(nodeConfigs.Items[0].Status.Conditions[0].ObservedGeneration).To(Equal(int64(1)))
 
-			reconciler.updateCondition(nodeConfig, metav1.ConditionTrue, ConfigurationSucceeded, "test succeeded")
+			reconciler.updateStatus(nodeConfig, metav1.ConditionTrue, ConfigurationSucceeded, "test succeeded")
 
 			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
 			Expect(nodeConfigs.Items).To(HaveLen(1))
 			Expect(nodeConfigs.Items[0].Status.Conditions).To(HaveLen(1))
-			Expect(nodeConfigs.Items[0].Status.Conditions[0].Type).To(Equal(ConfigurationCondition))
+			Expect(nodeConfigs.Items[0].Status.Conditions[0].Type).To(Equal(ConditionConfigured))
 			Expect(nodeConfigs.Items[0].Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
 			Expect(nodeConfigs.Items[0].Status.Conditions[0].Reason).To(Equal(string(ConfigurationSucceeded)))
 			Expect(nodeConfigs.Items[0].Status.Conditions[0].Message).To(Equal("test succeeded"))
@@ -318,7 +280,7 @@ var _ = Describe("SriovDaemonTest", func() {
 	var _ = Describe("Reconciler manager", func() {
 		var _ = It("setup with invalid manager", func() {
 			var m ctrl.Manager
-			Expect(new(NodeConfigReconciler).SetupWithManager(m)).To(HaveOccurred())
+			Expect((&NodeConfigReconciler{log: logr.Discard()}).SetupWithManager(m)).To(HaveOccurred())
 		})
 	})
 })
@@ -352,9 +314,9 @@ func readAndUnmarshall(filepath string, target interface{}) error {
 }
 
 type TestData struct {
-	SriovFecNodeConfig sriov.SriovFecNodeConfig `json:"sriov_fec_node_config"`
-	NodeInventory      sriov.NodeInventory      `json:"node_inventory"`
-	Node               core.Node                `json:"node"`
+	SriovFecNodeConfig sriovv2.SriovFecNodeConfig `json:"sriov_fec_node_config"`
+	NodeInventory      sriovv2.NodeInventory      `json:"node_inventory"`
+	Node               core.Node                  `json:"node"`
 }
 
 func (d *TestData) SetPcieAddress(addr string) {
