@@ -4,7 +4,7 @@
 apiVersion: sriovfec.intel.com/v2
 kind: SriovFecClusterConfig
 metadata:
-  name: cc1
+  name: acc100SampleConfig
   namespace: vran-acceleration-operators
 spec:
   priority: 100

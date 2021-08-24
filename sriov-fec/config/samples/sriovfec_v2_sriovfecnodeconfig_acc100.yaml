@@ -4,7 +4,7 @@
 apiVersion: sriovfec.intel.com/v2
 kind: SriovFecNodeConfig
 metadata:
-  name: worker-0
+  name: acc100-worker
   namespace: vran-acceleration-operators
 spec:
   drainSkip: false
