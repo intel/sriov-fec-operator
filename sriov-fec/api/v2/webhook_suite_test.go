@@ -35,6 +35,14 @@ var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
 
+var ccPrototype = SriovFecClusterConfig{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "cc-cr-to-be-rejected",
+		Namespace: "default",
+	},
+	Spec: SriovFecClusterConfigSpec{},
+}
+
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
@@ -109,14 +117,6 @@ var _ = Describe("Creation of SriovFecClusterConfig with bbdevconfig containing 
 })
 var _ = Describe("Creation of SriovFecClusterConfig with n3000 bbdevconfig", func() {
 
-	ccPrototype := SriovFecClusterConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cc-cr-to-be-rejected",
-			Namespace: "default",
-		},
-		Spec: SriovFecClusterConfigSpec{},
-	}
-
 	When("With total number of downlink queues exceeds allowed 32", func() {
 		It("should be rejected", func() {
 			cc := ccPrototype.DeepCopy()
@@ -183,6 +183,120 @@ var _ = Describe("Creation of SriovFecClusterConfig with n3000 bbdevconfig", fun
 		})
 	})
 
+})
+
+var _ = Describe("Creation of SriovFecClusterConfig with acc100 bbdevconfig", func() {
+	When("With total number of all specified numQueueGroups is greater than 8", func() {
+		It("should  be rejected", func() {
+			cc := ccPrototype.DeepCopy()
+			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
+				BBDevConfig: BBDevConfig{
+					ACC100: &ACC100BBDevConfig{
+						NumVfBundles: 16,
+						MaxQueueSize: 1024,
+						Uplink4G: QueueGroupConfig{
+							NumQueueGroups:  8,
+							NumAqsPerGroups: 16,
+							AqDepthLog2:     4,
+						},
+						Uplink5G: QueueGroupConfig{
+							NumQueueGroups:  1,
+							NumAqsPerGroups: 16,
+							AqDepthLog2:     4,
+						},
+						Downlink4G: QueueGroupConfig{
+							NumQueueGroups:  0,
+							NumAqsPerGroups: 16,
+							AqDepthLog2:     4,
+						},
+						Downlink5G: QueueGroupConfig{
+							NumQueueGroups:  0,
+							NumAqsPerGroups: 16,
+							AqDepthLog2:     4,
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), cc)).To(MatchError(ContainSubstring("sum of all numQueueGroups should not be greater than 8")))
+			Expect(k8sClient.Create(context.TODO(), cc)).ToNot(Succeed())
+		})
+	})
+
+	When("fvAmount != bbDevConfig.acc100.numVfBundles", func() {
+		It("should be rejected", func() {
+			cc := ccPrototype.DeepCopy()
+			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
+				VFAmount: 2,
+				BBDevConfig: BBDevConfig{
+					ACC100: &ACC100BBDevConfig{
+						NumVfBundles: 16,
+						MaxQueueSize: 1024,
+						Uplink4G: QueueGroupConfig{
+							NumQueueGroups:  2,
+							NumAqsPerGroups: 16,
+							AqDepthLog2:     4,
+						},
+						Uplink5G: QueueGroupConfig{
+							NumQueueGroups:  2,
+							NumAqsPerGroups: 16,
+							AqDepthLog2:     4,
+						},
+						Downlink4G: QueueGroupConfig{
+							NumQueueGroups:  2,
+							NumAqsPerGroups: 16,
+							AqDepthLog2:     4,
+						},
+						Downlink5G: QueueGroupConfig{
+							NumQueueGroups:  2,
+							NumAqsPerGroups: 16,
+							AqDepthLog2:     4,
+						},
+					},
+				},
+			}
+
+			Expect(k8sClient.Create(context.TODO(), cc)).
+				To(MatchError(ContainSubstring("value should be the same as spec.physicalFunction.vvDevConfig.acc100.numVfBundles")))
+		})
+	})
+
+	When("fvAmount equals zero and bbDevConfig.acc100.numVfBundles is greater than zero", func() {
+		It("should be rejected", func() {
+			cc := ccPrototype.DeepCopy()
+			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
+				VFAmount: 0,
+				BBDevConfig: BBDevConfig{
+					ACC100: &ACC100BBDevConfig{
+						NumVfBundles: 2,
+						MaxQueueSize: 1024,
+						Uplink4G: QueueGroupConfig{
+							NumQueueGroups:  2,
+							NumAqsPerGroups: 16,
+							AqDepthLog2:     4,
+						},
+						Uplink5G: QueueGroupConfig{
+							NumQueueGroups:  2,
+							NumAqsPerGroups: 16,
+							AqDepthLog2:     4,
+						},
+						Downlink4G: QueueGroupConfig{
+							NumQueueGroups:  2,
+							NumAqsPerGroups: 16,
+							AqDepthLog2:     4,
+						},
+						Downlink5G: QueueGroupConfig{
+							NumQueueGroups:  2,
+							NumAqsPerGroups: 16,
+							AqDepthLog2:     4,
+						},
+					},
+				},
+			}
+
+			Expect(k8sClient.Create(context.TODO(), cc)).
+				To(MatchError(ContainSubstring("non zero value of spec.physicalFunction.vvDevConfig.acc100.numVfBundles cannot be accepted when spec.physicalFunction.vfAmount equals 0")))
+		})
+	})
 })
 
 var _ = BeforeSuite(func() {

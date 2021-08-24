@@ -88,7 +88,7 @@ type QueueGroupConfig struct {
 // ACC100BBDevConfig specifies variables to configure ACC100 with
 type ACC100BBDevConfig struct {
 	PFMode bool `json:"pfMode"`
-	// +kubebuilder:validation:Minimum=16
+	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=16
 	NumVfBundles int `json:"numVfBundles"`
 	// +kubebuilder:validation:Minimum=1024
