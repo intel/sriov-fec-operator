@@ -16,6 +16,10 @@ This document provides high-level system features, issues, and limitations infor
 - [Package Versions](#package-versions)
 
 # Release history
+
+***v1.4.0/4.9***
+- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
+
 ***v1.3.0***
 - OpenNESS SR-IOV Operator for Wireless FEC Accelerators
 
@@ -23,17 +27,24 @@ This document provides high-level system features, issues, and limitations infor
 - Dot release, bugfixes only.
 
 ***v1.2.0***
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators 
-
-***v1.1.0*** 
-- OpenNESS Operator for Intel® FPGA PAC N3000 
 - OpenNESS SR-IOV Operator for Wireless FEC Accelerators
-  
+
+***v1.1.0***
+- OpenNESS Operator for Intel® FPGA PAC N3000
+- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
+
 ***v1.0.0***
 - OpenNESS Operator for Intel® FPGA PAC N3000
 - OpenNESS SRIOV-FEC Operator for Intel® FPGA PAC N3000
-   
-# Features for Release 
+
+# Features for Release
+
+***v1.4.0/4.9.0***
+- Added new version (v2) of API with selectors
+- Added resources cleanup on SriovFecNodeConfig delete // TODO:
+- SriovFecController no longer overwrites ConfigMaps with `immutable` key
+- Added support for deployment on K8S
+
 ***v1.3.0***
 - OpenNESS SR-IOV Operator for Wireless FEC Accelerators OCP4.8.2 support
   - validated on ACC100 only
@@ -41,14 +52,14 @@ This document provides high-level system features, issues, and limitations infor
 ***v1.2.0***
 - OpenNESS SR-IOV Operator for Wireless FEC Accelerators OCP4.7.8 support
   - validated on ACC100 only
-  
+
 ***v1.1.0***
 - OpenNESS SR-IOV Operator for Wireless FEC Accelerators
   - Added support for Intel® vRAN Dedicated Accelerator ACC100
   - Independent accelerator discovery mechanism now enables standalone usage
 
 ***v1.0.0***
-- OpenNESS Operator for Intel® FPGA PAC N3000  
+- OpenNESS Operator for Intel® FPGA PAC N3000
   - N3000 operator handles the management of the FPGA configuration
   - Load the necessary drivers, allows the user to program the Intel® FPGA PAC N3000 user image and to update the firmware of the Intel® XL710 NICs
   - Download the FPGA user image and the XL710 firmware from a location specified in the CR
@@ -56,17 +67,23 @@ This document provides high-level system features, issues, and limitations infor
   - The SRIOV FEC operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications
   - Create desired Virtual Functions for the FEC device, bind them to appropriate drivers and configure the VF's queues for desired functionality in 4G or 5G deployment
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
-  - Prometheus fpgainfo exporter 
+  - Prometheus fpgainfo exporter
     - Deploys an instance of Prometheus exporter which collects metrics from the Intel® FPGA PAC N3000 card
 
-# Changes to Existing Features 
+# Changes to Existing Features
+
+***v1.4.0/4.9.0***
+- Improved existing validation rules and added new rules
+- Removed old API (v1)
+- Updated pf-bb-config from 21.3 to 21.6 and OperatorSDK from 1.4.2 to 1.9.0
+
 ***v1.3.0***
 - OpenNESS Operator for Intel® FPGA PAC N3000
   - out of validation process
 
 ***v1.2.0***
 - OpenNESS Operator for Intel® FPGA PAC N3000
-  - out of validation process 
+  - out of validation process
 
 ***v1.1.0***
 - OpenNESS Operator for Intel® FPGA PAC N3000
