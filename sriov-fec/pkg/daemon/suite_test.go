@@ -4,24 +4,22 @@
 package daemon
 
 import (
+	"github.com/otcshare/openshift-operator/common/pkg/utils"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
-	ctrl "sigs.k8s.io/controller-runtime"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	sriovv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	sriovv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -33,7 +31,7 @@ var (
 	k8sClient     client.Client
 	testEnv       *envtest.Environment
 	testTmpFolder string
-	log           = ctrl.Log.WithName("SriovDaemon-test")
+	log           = logrus.New()
 )
 
 func TestAPIs(t *testing.T) {
@@ -45,7 +43,7 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	logf.SetLogger(utils.NewLogWrapper())
 	var err error
 	testTmpFolder, err = ioutil.TempDir("/tmp", "bbdevconfig_test")
 	Expect(err).ShouldNot(HaveOccurred())

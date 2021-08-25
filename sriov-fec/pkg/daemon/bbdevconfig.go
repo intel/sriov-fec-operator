@@ -6,9 +6,9 @@ package daemon
 import (
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"strconv"
 
-	"github.com/go-logr/logr"
 	sriovv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
 	"gopkg.in/ini.v1"
 )
@@ -140,7 +140,7 @@ func generateBBDevConfigFile(pfCfg sriovv2.BBDevConfig, file string) error {
 // deviceName is one of: FPGA_LTE or FPGA_5GNR or ACC100
 // cfgFilepath is a filepath to the config
 // pciAddress points to a specific PF device
-func runPFConfig(log logr.Logger, deviceName, cfgFilepath, pciAddress string) error {
+func runPFConfig(log *logrus.Logger, deviceName, cfgFilepath, pciAddress string) error {
 	switch deviceName {
 	case "FPGA_LTE", "FPGA_5GNR", "ACC100":
 	default:

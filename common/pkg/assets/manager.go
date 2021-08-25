@@ -6,10 +6,10 @@ package assets
 import (
 	"context"
 	"errors"
+	"github.com/otcshare/openshift-operator/common/pkg/utils"
+	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
-
-	"github.com/go-logr/logr"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +21,7 @@ import (
 type Manager struct {
 	Client client.Client
 
-	Log    logr.Logger
+	Log    *logrus.Logger
 	Assets []Asset
 
 	// Prefix used to gather enviroment variables for the templating the assets
@@ -58,7 +58,7 @@ func (m *Manager) buildTemplateVars(ctx context.Context, setKernelVar bool) (map
 	}
 
 	if len(nodes.Items) == 0 {
-		m.Log.Error(nil, "received empty node list")
+		m.Log.Error("received empty node list")
 		return nil, errors.New("empty node list while building template vars")
 	}
 
@@ -80,26 +80,28 @@ func (m *Manager) LoadAndDeploy(ctx context.Context, setKernelVar bool) error {
 
 // Load loads given assets from paths
 func (m *Manager) Load(ctx context.Context, setKernelVar bool) error {
-	log := m.Log.WithName("Load()")
 	tv, err := m.buildTemplateVars(ctx, setKernelVar)
 	if err != nil {
-		log.Error(err, "failed to build template vars")
+		m.Log.WithError(err).Error("failed to build template vars")
 		return err
 	}
-	log.V(2).Info("template vars", "tv", tv)
+	m.Log.WithField("tv", tv).Info("template vars")
 
 	for idx := range m.Assets {
-		log.V(4).Info("loading asset", "path", m.Assets[idx].Path)
+		m.Log.WithField("path", m.Assets[idx].Path).Info("loading asset")
 
-		m.Assets[idx].log = m.Log.WithName("asset")
+		assetLogger := utils.NewLogger()
+
+		m.Assets[idx].log = assetLogger
 		m.Assets[idx].substitutions = tv
 
 		if err := m.Assets[idx].load(); err != nil {
-			log.Error(err, "failed to load asset", "path", m.Assets[idx].Path)
+			m.Log.WithError(err).WithField("path", m.Assets[idx].Path).Error("failed to load asset")
 			return err
 		}
 
-		log.V(2).Info("asset loaded successfully", "path", m.Assets[idx].Path, "objects", len(m.Assets[idx].objects))
+		m.Log.WithField("path", m.Assets[idx].Path).WithField("objects", len(m.Assets[idx].objects)).
+			Info("asset loaded successfully")
 	}
 
 	return nil
@@ -107,22 +109,23 @@ func (m *Manager) Load(ctx context.Context, setKernelVar bool) error {
 
 // Deploy will create (or update) each asset
 func (m *Manager) Deploy(ctx context.Context) error {
-	log := m.Log.WithName("Deploy()")
-
 	for _, asset := range m.Assets {
-		log.V(4).Info("deploying asset", "path", asset.Path, "retries",
-			asset.BlockingReadiness.Retries, "delay", asset.BlockingReadiness.Delay.String(),
-			"objects", len(asset.objects))
+		m.Log.WithFields(logrus.Fields{
+			"path":    asset.Path,
+			"retries": asset.BlockingReadiness.Retries,
+			"delay":   asset.BlockingReadiness.Delay.String(),
+			"objects": len(asset.objects),
+		}).Info("deploying asset")
 
 		if err := asset.createOrUpdate(ctx, m.Client, m.Owner, m.Scheme); err != nil {
-			log.Error(err, "failed to create asset", "path", asset.Path)
+			m.Log.WithError(err).WithField("path", asset.Path).Error("failed to create asset")
 			return err
 		}
 
-		log.V(2).Info("asset created successfully", "path", asset.Path)
+		m.Log.WithField("path", asset.Path).Info("asset created successfully")
 
 		if err := asset.waitUntilReady(ctx, m.Client); err != nil {
-			log.Error(err, "waitUntilReady")
+			m.Log.WithError(err).Error("waitUntilReady")
 			return err
 		}
 	}

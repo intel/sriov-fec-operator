@@ -5,9 +5,9 @@ package daemon
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"reflect"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -197,7 +197,7 @@ func (r *runExecCmdMock) onCall(expected []string) *resultCatcher {
 	return &resultCatcher{toBeReturned: &tbr, mock: r}
 }
 
-func (r *runExecCmdMock) execute(args []string, l logr.Logger) (string, error) {
+func (r *runExecCmdMock) execute(args []string, l *logrus.Logger) (string, error) {
 	l.Info("runExecCmdMock:", "command", args)
 	defer func() { r.executionCount++ }()
 

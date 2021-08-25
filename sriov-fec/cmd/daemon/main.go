@@ -4,7 +4,7 @@
 package main
 
 import (
-	"flag"
+	"github.com/otcshare/openshift-operator/common/pkg/utils"
 	"os"
 
 	sriovv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
@@ -16,12 +16,11 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 var (
 	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	setupLog = utils.NewLogger()
 )
 
 func init() {
@@ -30,34 +29,30 @@ func init() {
 }
 
 func main() {
-	opts := zap.Options{}
-	opts.BindFlags(flag.CommandLine)
-	flag.Parse()
-
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	ctrl.SetLogger(utils.NewLogWrapper())
 
 	nodeName := os.Getenv("NODENAME")
 	if nodeName == "" {
-		setupLog.Error(nil, "NODENAME environment variable is empty")
+		setupLog.Error("NODENAME environment variable is empty")
 		os.Exit(1)
 	}
 
 	ns := os.Getenv("SRIOV_FEC_NAMESPACE")
 	if ns == "" {
-		setupLog.Error(nil, "SRIOV_FEC_NAMESPACE environment variable is empty")
+		setupLog.Error("SRIOV_FEC_NAMESPACE environment variable is empty")
 		os.Exit(1)
 	}
 
 	config := ctrl.GetConfigOrDie()
 	directClient, err := client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
-		setupLog.Error(err, "failed to create direct client")
+		setupLog.WithError(err).Error("failed to create direct client")
 		os.Exit(1)
 	}
 
 	cset, err := clientset.NewForConfig(config)
 	if err != nil {
-		setupLog.Error(err, "failed to create clientset")
+		setupLog.WithError(err).Error("failed to create clientset")
 		os.Exit(1)
 	}
 
@@ -68,28 +63,29 @@ func main() {
 		Namespace:          ns,
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		setupLog.WithError(err).Error("unable to start manager")
 		os.Exit(1)
 	}
 
-	daemon, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), cset, ctrl.Log.WithName("daemon"), nodeName, ns)
+	daemonLog := utils.NewLogger()
+	daemon, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), cset, daemonLog, nodeName, ns)
 	if err != nil {
-		setupLog.Error(err, "unable to create reconciler")
+		setupLog.WithError(err).Error("unable to create reconciler")
 		os.Exit(1)
 	}
 
 	if err := daemon.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "NodeConfig")
+		setupLog.WithError(err).Error("unable to create controller", "controller", "NodeConfig")
 		os.Exit(1)
 	}
 
 	if err := daemon.CreateEmptyNodeConfigIfNeeded(directClient); err != nil {
-		setupLog.Error(err, "failed to create initial NodeConfig CR")
+		setupLog.WithError(err).Error("failed to create initial NodeConfig CR")
 		os.Exit(1)
 	}
 
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+		setupLog.WithError(err).Error("problem running manager")
 		os.Exit(1)
 	}
 }

@@ -4,6 +4,7 @@
 package drainhelper
 
 import (
+	"github.com/otcshare/openshift-operator/common/pkg/utils"
 	"path/filepath"
 	"testing"
 
@@ -16,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -34,7 +34,7 @@ func TestAPIs(t *testing.T) {
 
 var _ = BeforeSuite(func(done Done) {
 	var err error
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	logf.SetLogger(utils.NewLogWrapper())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{

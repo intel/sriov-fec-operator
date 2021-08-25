@@ -22,6 +22,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +32,6 @@ import (
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,7 +46,7 @@ var NAMESPACE = os.Getenv("SRIOV_FEC_NAMESPACE")
 // SriovFecClusterConfigReconciler reconciles a SriovFecClusterConfig object
 type SriovFecClusterConfigReconciler struct {
 	client.Client
-	Log    logr.Logger
+	Log    *logrus.Logger
 	Scheme *runtime.Scheme
 }
 
@@ -62,31 +62,30 @@ type SriovFecClusterConfigReconciler struct {
 
 //TODO: if ClusterConfig is already Succeeded, but a new node is added/labeled - should we update node or skip it?
 func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("sriovfecclusterconfig", req.NamespacedName)
-	log.V(2).Info("Reconciling SriovFecClusterConfig")
+	r.Log.Info("Reconciling SriovFecClusterConfig")
 
 	allClusterConfigs := new(sriovfecv2.SriovFecClusterConfigList)
 	if err := r.List(context.TODO(), allClusterConfigs, client.InNamespace(NAMESPACE)); err != nil {
-		log.V(1).Info("cannot obtain list of SriovFecClusterConfig, rescheduling rescheduling reconcile call", "err", err)
+		r.Log.WithError(err).Error("cannot obtain list of SriovFecClusterConfig, rescheduling rescheduling reconcile call")
 		return ctrl.Result{}, err
 	}
 
 	nodes, err := r.getAcceleratedNodes()
 	if err != nil {
-		log.V(1).Info("cannot obtain list of accelerated nodes, rescheduling rescheduling reconcile call", "err", err)
+		r.Log.WithError(err).Info("cannot obtain list of accelerated nodes, rescheduling rescheduling reconcile call")
 		return reconcile.Result{}, err
 	}
 
-	clusterConfigurationMatcher := createClusterConfigMatcher(r.getOrInitializeSriovFecNodeConfig, log)
+	clusterConfigurationMatcher := createClusterConfigMatcher(r.getOrInitializeSriovFecNodeConfig, r.Log)
 	for _, node := range nodes {
 		configurationContextProvider, err := clusterConfigurationMatcher.match(node, allClusterConfigs.Items)
 		if err != nil {
-			log.V(1).Info("Error when matching SriovFecClusterConfigs", "node", node.Name, "error", err)
+			r.Log.WithField("node", node.Name).WithField("error", err).Info("Error when matching SriovFecClusterConfigs")
 			continue
 		}
 
 		if err := r.synchronizeNodeConfigSpec(*configurationContextProvider); err != nil {
-			log.V(1).Info("failed to propagate configuration into SriovFecNodeConfig", "name", node.Name, "error", err)
+			r.Log.WithField("name", node.Name).WithField("error", err).Info("failed to propagate configuration into SriovFecNodeConfig")
 
 			err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 				snc := new(sriovfecv2.SriovFecNodeConfig)
@@ -99,7 +98,7 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.
 			})
 
 			if err != nil {
-				log.V(1).Info("failed to set ConfigurationPropagationCondition for SriovFecNodeConfig", "name", node.Name, "error", err)
+				r.Log.WithError(err).WithField("name", node.Name).Error("failed to set ConfigurationPropagationCondition for SriovFecNodeConfig")
 			}
 			continue
 		}
@@ -172,7 +171,7 @@ type NodeConfigurationCtx struct {
 	AcceleratorConfigContext
 }
 
-func createClusterConfigMatcher(ncp nodeConfigProvider, l logr.Logger) *clusterConfigMatcher {
+func createClusterConfigMatcher(ncp nodeConfigProvider, l *logrus.Logger) *clusterConfigMatcher {
 	return &clusterConfigMatcher{
 		getNodeConfig: ncp,
 		log:           l,
@@ -183,7 +182,7 @@ type nodeConfigProvider func(nodeName string) (*sriovfecv2.SriovFecNodeConfig, e
 
 type clusterConfigMatcher struct {
 	getNodeConfig nodeConfigProvider
-	log           logr.Logger
+	log           *logrus.Logger
 }
 
 func (pm *clusterConfigMatcher) match(node corev1.Node, allConfigs []sriovfecv2.SriovFecClusterConfig) (*NodeConfigurationCtx, error) {
@@ -216,22 +215,22 @@ func (pm *clusterConfigMatcher) prepareAcceleratorConfigContext(nodeConfig *srio
 				case current.Spec.Priority == previous.Spec.Priority: //multiple configs with same priority; drop older one
 					//TODO: Update Timestamp would be better than CreationTime
 					if current.CreationTimestamp.After(previous.CreationTimestamp.Time) {
-						pm.log.V(2).
-							Info("Dropping older ClusterConfig",
-								"Node", nodeConfig.Name,
-								"SriovFecClusterConfig", previous.Name,
-								"Priority", previous.Spec.Priority,
-								"CreationTimestamp", previous.CreationTimestamp.String())
+						pm.log.WithFields(logrus.Fields{
+							"Node":                  nodeConfig.Name,
+							"SriovFecClusterConfig": previous.Name,
+							"Priority":              previous.Spec.Priority,
+							"CreationTimestamp":     previous.CreationTimestamp.String(),
+						}).Info("Dropping older ClusterConfig")
 
 						acceleratorConfigContext[accelerator.PCIAddress] = current
 					}
 
 				case current.Spec.Priority < previous.Spec.Priority: //drop current with lower priority
-					pm.log.V(2).
-						Info("Dropping low prioritized ClusterConfig",
-							"node", nodeConfig.Name,
-							"SriovFecClusterConfig", current.Name,
-							"priority", current.Spec.Priority)
+					pm.log.WithFields(logrus.Fields{
+						"node":                  nodeConfig.Name,
+						"SriovFecClusterConfig": current.Name,
+						"priority":              current.Spec.Priority,
+					}).Info("Dropping low prioritized ClusterConfig")
 				}
 			}
 		}

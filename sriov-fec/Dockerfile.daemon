@@ -9,7 +9,7 @@ RUN git clone --depth 1 --branch r44 https://github.com/benhoyt/inih && \
     cd inih/extra  && \
     make -f Makefile.static && \
     cp libinih.a ../
-RUN git clone  --depth 1 --branch v21.3 https://github.com/intel/pf-bb-config && \
+RUN git clone  --depth 1 --branch v21.6 https://github.com/intel/pf-bb-config && \
     cd pf-bb-config && \
     INIH_PATH=../inih make
 

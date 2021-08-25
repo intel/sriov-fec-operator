@@ -6,11 +6,11 @@ package daemon
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"github.com/sirupsen/logrus"
 )
 
 var _ = Describe("common", func() {
-	log = ctrl.Log.WithName("SriovCommon-test")
+	log = logrus.New()
 	var _ = Context("execCmd", func() {
 		var _ = It("will return error when args is empty ", func() {
 			_, err := execCmd([]string{}, log)

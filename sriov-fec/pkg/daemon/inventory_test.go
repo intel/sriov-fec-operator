@@ -6,11 +6,11 @@ package daemon
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"github.com/sirupsen/logrus"
 )
 
 var _ = Describe("SriovInventoryTest", func() {
-	log := ctrl.Log.WithName("SriovDaemon-test")
+	log := logrus.New()
 	var _ = Context("GetSriovInventory", func() {
 		var _ = It("will return error when config is nil ", func() {
 			_, err := GetSriovInventory(log)

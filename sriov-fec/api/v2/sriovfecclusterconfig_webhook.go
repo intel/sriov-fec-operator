@@ -4,17 +4,17 @@
 package v2
 
 import (
+	"github.com/otcshare/openshift-operator/common/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // log is for logging in this package.
-var sriovfecclusterconfiglog = logf.Log.WithName("sriovfecclusterconfig-resource")
+var sriovfecclusterconfiglog = utils.NewLogger()
 
 func (in *SriovFecClusterConfig) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).For(in).Complete()
@@ -26,7 +26,7 @@ var _ webhook.Validator = &SriovFecClusterConfig{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (in *SriovFecClusterConfig) ValidateCreate() error {
-	sriovfecclusterconfiglog.Info("validate create", "name", in.Name)
+	sriovfecclusterconfiglog.WithField("name", in.Name).Info("validate create")
 	if errs := validate(in.Spec); len(errs) != 0 {
 		return apierrors.NewInvalid(schema.GroupKind{Group: "sriovfec.intel.com", Kind: "SriovFecClusterConfig"}, in.Name, errs)
 	}
@@ -35,7 +35,7 @@ func (in *SriovFecClusterConfig) ValidateCreate() error {
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (in *SriovFecClusterConfig) ValidateUpdate(_ runtime.Object) error {
-	sriovfecclusterconfiglog.Info("validate update", "name", in.Name)
+	sriovfecclusterconfiglog.WithField("name", in.Name).Info("validate update")
 	if errs := validate(in.Spec); len(errs) != 0 {
 		return apierrors.NewInvalid(schema.GroupKind{Group: "sriovfec.intel.com", Kind: "SriovFecClusterConfig"}, in.Name, errs)
 	}
@@ -60,7 +60,7 @@ func validate(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (in *SriovFecClusterConfig) ValidateDelete() error {
-	sriovfecclusterconfiglog.Info("validate delete", "name", in.Name)
+	sriovfecclusterconfiglog.WithField("name", in.Name).Info("validate delete")
 	//do nothing
 	return nil
 }

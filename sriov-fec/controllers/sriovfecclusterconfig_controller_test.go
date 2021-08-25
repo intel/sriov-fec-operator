@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/onsi/gomega/gstruct"
+	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -119,7 +120,7 @@ var (
 
 var _ = Describe("SriovControllerTest", func() {
 	var _ = Describe("Reconciler", func() {
-		var log = ctrl.Log.WithName("SriovController-test")
+		var log = logrus.New()
 
 		createNodeInventory := func(nodeName string, inventory []sriovv2.SriovAccelerator) {
 			nodeConfig := nodeConfigPrototype.DeepCopy()

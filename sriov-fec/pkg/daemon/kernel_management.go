@@ -5,10 +5,10 @@ package daemon
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"strings"
 
-	"github.com/go-logr/logr"
 	"gopkg.in/ini.v1"
 )
 
@@ -27,10 +27,10 @@ var (
 	procCmdlineFilePath = "/host/proc/cmdline"
 )
 
-func createKernelController(log logr.Logger) (*kernelController, error) {
+func createKernelController(log *logrus.Logger) (*kernelController, error) {
 	osReleaseFile, err := ini.Load(osReleaseFilepath)
 	if err != nil {
-		log.Error(err, "cannot determine OS, failed to read", "file", osReleaseFilepath)
+		log.WithError(err).WithField("file", osReleaseFilepath).Error("cannot determine OS, failed to read")
 		osReleaseFile = ini.Empty()
 	}
 
@@ -38,7 +38,7 @@ func createKernelController(log logr.Logger) (*kernelController, error) {
 	osID := strings.ToLower(flat.Key("ID").String())
 	osIDLike := strings.ToLower(flat.Key("ID_LIKE").String())
 
-	var kernelArgsSetter func(log logr.Logger) error
+	var kernelArgsSetter func(log *logrus.Logger) error
 	switch {
 	case osID == "rhcos":
 		kernelArgsSetter = rpmostreeBasedKernelArgsSetter
@@ -49,28 +49,27 @@ func createKernelController(log logr.Logger) (*kernelController, error) {
 	}
 
 	return &kernelController{
-		log:           log.WithName(osID).WithName("kernelController"),
+		log:           log,
 		setKernelArgs: kernelArgsSetter,
 	}, nil
 }
 
 type kernelController struct {
-	log           logr.Logger
-	setKernelArgs func(log logr.Logger) error
+	log           *logrus.Logger
+	setKernelArgs func(log *logrus.Logger) error
 }
 
 func (k *kernelController) isAnyKernelParamsMissing() (bool, error) {
-	log := k.log.WithName("isAnyKernelParamsMissing")
 	cmdlineBytes, err := ioutil.ReadFile(procCmdlineFilePath)
 	if err != nil {
-		log.Error(err, "failed to read file contents", "path", procCmdlineFilePath)
+		k.log.WithError(err).WithField("path", procCmdlineFilePath).Error("failed to read file contents")
 
 		return false, err
 	}
 	cmdline := string(cmdlineBytes)
 	for _, param := range kernelParams {
 		if !strings.Contains(cmdline, param) {
-			log.Info("missing kernel param", "param", param)
+			k.log.WithField("param", param).Info("missing kernel param")
 			return true, nil
 		}
 	}
@@ -79,31 +78,30 @@ func (k *kernelController) isAnyKernelParamsMissing() (bool, error) {
 }
 
 func (k *kernelController) addMissingKernelParams() error {
-	log := k.log.WithName("addMissingKernelParams")
-	return k.setKernelArgs(log)
+	return k.setKernelArgs(k.log)
 }
 
-func errorReturningKernelArgsSetter(log logr.Logger) error {
+func errorReturningKernelArgsSetter(log *logrus.Logger) error {
 	return fmt.Errorf("cannot modify set kernel params, detected OS is not supported")
 }
 
-func grubbyBasedKernelArgsSetter(log logr.Logger) error {
+func grubbyBasedKernelArgsSetter(log *logrus.Logger) error {
 	_, err := runExecCmd(setKernelParamsGrubby, log)
-	log.V(2).Info("added missing params")
+	log.Info("added missing params")
 	return err
 }
 
-func rpmostreeBasedKernelArgsSetter(log logr.Logger) error {
+func rpmostreeBasedKernelArgsSetter(log *logrus.Logger) error {
 	kargs, err := runExecCmd([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs"}, log)
 	if err != nil {
 		return err
 	}
 
-	log.V(2).Info("rpm-ostree", "kargs", kargs)
+	log.WithField("kargs", kargs).Info("rpm-ostree")
 
 	for _, param := range kernelParams {
 		if !strings.Contains(kargs, param) {
-			log.V(2).Info("missing param - adding", "param", param)
+			log.WithField("param", param).Info("missing param - adding")
 			_, err = runExecCmd([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs", "--append", param}, log)
 			if err != nil {
 				return err
@@ -111,6 +109,6 @@ func rpmostreeBasedKernelArgsSetter(log logr.Logger) error {
 		}
 	}
 
-	log.V(2).Info("added missing params")
+	log.Info("added missing params")
 	return nil
 }

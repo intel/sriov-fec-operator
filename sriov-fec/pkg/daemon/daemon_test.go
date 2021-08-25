@@ -7,10 +7,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	sriovv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -50,7 +50,7 @@ var _ = Describe("SriovDaemonTest", func() {
 		getVFList = func(string) ([]string, error) {
 			return nil, nil
 		}
-		getSriovInventory = func(_ logr.Logger) (*sriovv2.NodeInventory, error) {
+		getSriovInventory = func(_ *logrus.Logger) (*sriovv2.NodeInventory, error) {
 			return &data.NodeInventory, nil
 		}
 	})
@@ -71,7 +71,7 @@ var _ = Describe("SriovDaemonTest", func() {
 				Expect(returnLastArg(reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: nn}))).ToNot(HaveOccurred())
 				Expect(k8sClient.Delete(context.TODO(), &data.SriovFecNodeConfig)).ToNot(HaveOccurred())
 			} else if errors.IsNotFound(err) {
-				log.Info("Requested NodeConfig does not exists", "NodeConfig", &data.SriovFecNodeConfig)
+				log.WithField("NodeConfig", &data.SriovFecNodeConfig).Info("Requested NodeConfig does not exists")
 			} else {
 				Expect(err).NotTo(HaveOccurred())
 			}
@@ -280,7 +280,7 @@ var _ = Describe("SriovDaemonTest", func() {
 	var _ = Describe("Reconciler manager", func() {
 		var _ = It("setup with invalid manager", func() {
 			var m ctrl.Manager
-			Expect((&NodeConfigReconciler{log: logr.Discard()}).SetupWithManager(m)).To(HaveOccurred())
+			Expect((&NodeConfigReconciler{log: logrus.New()}).SetupWithManager(m)).To(HaveOccurred())
 		})
 	})
 })
@@ -369,7 +369,7 @@ func initReconciler(toBeInitialized *NodeConfigReconciler, nodeName, namespace s
 	return nil
 }
 
-func initNodeConfiguratorRunExecCmd(f func([]string, logr.Logger) (string, error)) {
+func initNodeConfiguratorRunExecCmd(f func([]string, *logrus.Logger) (string, error)) {
 	runExecCmd = f
 }
 

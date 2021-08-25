@@ -130,8 +130,6 @@ spec:
       - name: sriov-fec-daemon
         image: "{{ .SRIOV_FEC_DAEMON_IMAGE }}"
         imagePullPolicy: IfNotPresent
-        args:
-        - --zap-log-level=4
         volumeMounts:
         - name: host
           mountPath: /host

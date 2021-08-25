@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -14,8 +15,6 @@ import (
 	"strings"
 	"text/template"
 	"time"
-
-	"github.com/go-logr/logr"
 
 	secv1 "github.com/openshift/api/security/v1"
 	promv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -65,7 +64,7 @@ type Asset struct {
 
 	objects []client.Object
 
-	log logr.Logger
+	log *logrus.Logger
 }
 
 func (a *Asset) loadFromFile() error {
@@ -130,21 +129,24 @@ func (a *Asset) setOwner(owner metav1.Object, obj runtime.Object, s *runtime.Sch
 	}
 
 	if owner.GetNamespace() == metaObj.GetNamespace() {
-		a.log.V(4).Info("set owner for object", "owner", owner.GetName()+"."+owner.GetNamespace(),
-			"object", metaObj.GetName()+"."+metaObj.GetNamespace())
+		a.log.WithField("owner", owner.GetName()+"."+owner.GetNamespace()).
+			WithField("object", metaObj.GetName()+"."+metaObj.GetNamespace()).
+			Info("set owner for object")
 		if err := controllerutil.SetControllerReference(owner, metaObj, s); err != nil {
 			return err
 		}
 	} else {
-		a.log.V(4).Info("Unsupported owner for object...skipping", "owner", owner.GetName()+"."+owner.GetNamespace(),
-			"object", metaObj.GetName()+"."+metaObj.GetNamespace())
+		a.log.WithField("owner", owner.GetName()+"."+owner.GetNamespace()).
+			WithField("object", metaObj.GetName()+"."+metaObj.GetNamespace()).
+			Info("Unsupported owner for object...skipping")
 	}
 	return nil
 }
 
 func (a *Asset) createOrUpdate(ctx context.Context, c client.Client, o metav1.Object, s *runtime.Scheme) error {
 	for _, obj := range a.objects {
-		a.log.V(4).Info("create or update", "asset", a.Path, "kind", obj.GetObjectKind())
+		a.log.WithField("asset", a.Path).WithField("kind", obj.GetObjectKind()).
+			Info("create or update")
 
 		err := a.setOwner(o, obj, s)
 		if err != nil {
@@ -157,24 +159,29 @@ func (a *Asset) createOrUpdate(ctx context.Context, c client.Client, o metav1.Ob
 		key := client.ObjectKeyFromObject(obj)
 		if err := c.Get(ctx, key, old); err != nil {
 			if !apierr.IsNotFound(err) {
-				a.log.Error(err, "Failed to get an object", "key", key, "GroupVersionKind", gvk)
+				a.log.WithError(err).WithField("key", key).WithField("GroupVersionKind", gvk).
+					Error("Failed to get an object")
 				return err
 			}
 
 			// Object does not exist
 			if err := c.Create(ctx, obj); err != nil {
-				a.log.Error(err, "Create failed", "key", key, "GroupVersionKind", gvk)
+				a.log.WithError(err).WithField("key", key).WithField("GroupVersionKind", gvk).
+					Error("Create failed")
 				return err
 			}
-			a.log.V(2).Info("Object created", "key", key, "GroupVersionKind", gvk)
+			a.log.WithField("key", key).WithField("GroupVersionKind", gvk).
+				Info("Object created")
 		} else {
 			if strings.ToLower(old.GetObjectKind().GroupVersionKind().Kind) == "configmap" {
 				isImmutable, ok := old.Object["immutable"].(bool)
 				if !ok {
-					a.log.V(2).Info("Failed to read 'immutable' field.", "key", key, "GroupVersionKind", gvk)
+					a.log.WithField("key", key).WithField("GroupVersionKind", gvk).
+						Info("Failed to read 'immutable' field.")
 				} else {
 					if isImmutable {
-						a.log.V(2).Info("Skipping update because it is marked as immutable", "key", key, "GroupVersionKind", gvk)
+						a.log.WithField("key", key).WithField("GroupVersionKind", gvk).
+							Info("Skipping update because it is marked as immutable")
 						continue
 					}
 				}
@@ -183,12 +190,15 @@ func (a *Asset) createOrUpdate(ctx context.Context, c client.Client, o metav1.Ob
 			if !equality.Semantic.DeepDerivative(obj, old) {
 				obj.SetResourceVersion(old.GetResourceVersion())
 				if err := c.Update(ctx, obj); err != nil {
-					a.log.Error(err, "Update failed", "key", key, "GroupVersionKind", gvk)
+					a.log.WithError(err).WithField("key", key).WithField("GroupVersionKind", gvk).
+						Error("Update failed")
 					return err
 				}
-				a.log.V(2).Info("Object updated", "key", key, "GroupVersionKind", gvk)
+				a.log.WithField("key", key).WithField("GroupVersionKind", gvk).
+					Info("Object updated")
 			} else {
-				a.log.V(4).Info("Object has not changed", "key", key, "GroupVersionKind", gvk)
+				a.log.WithField("key", key).WithField("GroupVersionKind", gvk).
+					Info("Object has not changed")
 			}
 		}
 	}
@@ -203,7 +213,7 @@ func (a *Asset) waitUntilReady(ctx context.Context, apiReader client.Reader) err
 
 	for _, obj := range a.objects {
 		if obj.GetObjectKind().GroupVersionKind().Kind == "DaemonSet" {
-			a.log.V(2).Info("waiting until daemonset is ready", "asset", a.Path)
+			a.log.WithField("asset", a.Path).Info("waiting until daemonset is ready")
 
 			backoff := wait.Backoff{
 				Steps:    a.BlockingReadiness.Retries,
@@ -218,15 +228,16 @@ func (a *Asset) waitUntilReady(ctx context.Context, apiReader client.Reader) err
 					return false, err
 				}
 
-				a.log.V(4).Info("daemonset status", "name", ds.GetName(),
-					"NumberUnavailable", ds.Status.NumberUnavailable,
-					"DesiredNumberScheduled", ds.Status.DesiredNumberScheduled)
+				a.log.WithFields(logrus.Fields{"name": ds.GetName(),
+					"NumberUnavailable":      ds.Status.NumberUnavailable,
+					"DesiredNumberScheduled": ds.Status.DesiredNumberScheduled}).
+					Info("daemonset status")
 
 				return ds.Status.NumberUnavailable == 0, nil
 			}
 
 			if err := wait.ExponentialBackoff(backoff, f); err != nil {
-				a.log.Error(err, "wait for daemonset failed")
+				a.log.WithError(err).Error("wait for daemonset failed")
 				return err
 			}
 		}

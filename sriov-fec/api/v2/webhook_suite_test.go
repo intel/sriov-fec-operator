@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/otcshare/openshift-operator/common/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"net"
@@ -24,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -300,7 +300,7 @@ var _ = Describe("Creation of SriovFecClusterConfig with acc100 bbdevconfig", fu
 })
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	logf.SetLogger(utils.NewLogWrapper())
 
 	ctx, cancel = context.WithCancel(context.TODO())
 
