@@ -31,6 +31,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -60,7 +61,6 @@ type SriovFecClusterConfigReconciler struct {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=*
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=*
 
-//TODO: if ClusterConfig is already Succeeded, but a new node is added/labeled - should we update node or skip it?
 func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.Log.Info("Reconciling SriovFecClusterConfig")
 
@@ -104,7 +104,7 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.
 		}
 	}
 
-	return ctrl.Result{}, err
+	return ctrl.Result{RequeueAfter: time.Minute}, err
 }
 
 func (r *SriovFecClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConfigurationCtx) error {

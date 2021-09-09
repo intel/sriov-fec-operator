@@ -40,7 +40,6 @@ func GetSriovInventory(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
 		}
 
 		if _, ok := supportedAccelerators.Devices[device.Product.ID]; !ok {
-			log.WithField("device.Product.ID", device.Product.ID).Info("ignoring unsupported device")
 			continue
 		}
 

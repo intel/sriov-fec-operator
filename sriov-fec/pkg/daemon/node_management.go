@@ -157,15 +157,6 @@ func (n *NodeConfigurator) enableMasterBus(pciAddr string) error {
 	return nil
 }
 
-func getMatchingExistingAccelerator(inventory *sriovv2.NodeInventory, pciAddress string) (sriovv2.SriovAccelerator, bool) {
-	for _, acc := range inventory.SriovAccelerators {
-		if acc.PCIAddress == pciAddress {
-			return acc, true
-		}
-	}
-	return sriovv2.SriovAccelerator{}, false
-}
-
 func (n *NodeConfigurator) changeAmountOfVFs(pfPCIAddress string, vfsAmount int) error {
 	currentAmount := getVFconfigured(pfPCIAddress)
 	if currentAmount == vfsAmount {
@@ -203,16 +194,21 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv2.SriovFecNodeConfigSpec
 	}
 
 	n.Log.WithField("inventory", inv).Info("current node status")
+
 	pciStubRegex := regexp.MustCompile("pci[-_]pf[-_]stub")
-	for _, pf := range nodeConfig.PhysicalFunctions {
-		acc, exists := getMatchingExistingAccelerator(inv, pf.PCIAddress)
-		if !exists {
-			n.Log.WithField("pci", pf.PCIAddress).Info("received unknown (not present in inventory) PciAddress")
-			return fmt.Errorf("unknown (%s not present in inventory) PciAddress", pf.PCIAddress)
+	for _, acc := range inv.SriovAccelerators {
+		pf := getMatchingConfiguration(acc.PCIAddress, nodeConfig.PhysicalFunctions)
+		if pf == nil {
+			if len(acc.VFs) > 0 {
+				n.Log.WithField("pci", acc.PCIAddress).Info("zeroing VMs")
+				if err := n.changeAmountOfVFs(acc.PCIAddress, 0); err != nil {
+					return err
+				}
+			}
+			continue
 		}
 
 		n.Log.WithField("requestedConfig", pf).Info("configuring PF")
-
 		if err := n.loadModule(pf.PFDriver); err != nil {
 			n.Log.WithField("driver", pf.PFDriver).Info("failed to load module for PF driver")
 			return err
@@ -277,5 +273,14 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv2.SriovFecNodeConfigSpec
 		}
 	}
 
+	return nil
+}
+
+func getMatchingConfiguration(pciAddress string, configurations []sriovv2.PhysicalFunctionConfigExt) *sriovv2.PhysicalFunctionConfigExt {
+	for _, configuration := range configurations {
+		if configuration.PCIAddress == pciAddress {
+			return &configuration
+		}
+	}
 	return nil
 }

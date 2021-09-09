@@ -183,10 +183,6 @@ type runExecCmdMock struct {
 	executionCount int
 }
 
-func (r *runExecCmdMock) build() *runExecCmdMock {
-	return r
-}
-
 func (r *runExecCmdMock) onCall(expected []string) *resultCatcher {
 	var tbr []interface{}
 	r.executions = append(r.executions, struct {
@@ -224,7 +220,7 @@ func (r *runExecCmdMock) execute(args []string, l *logrus.Logger) (string, error
 
 func (r *runExecCmdMock) verify() error {
 	if r.executionCount != len(r.executions) {
-		return fmt.Errorf("runExecCmdMock: exec command was not requested")
+		return fmt.Errorf("runExecCmdMock: exec command was not requested, expected executions(%d), actual executions(%d); expected executions: %v", len(r.executions), r.executionCount, r.executions)
 	}
 	return nil
 }

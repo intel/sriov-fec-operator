@@ -41,7 +41,7 @@ This document provides high-level system features, issues, and limitations infor
 
 ***v1.4.0/4.9.0***
 - Added new version (v2) of API with selectors
-- Added resources cleanup on SriovFecNodeConfig delete // TODO:
+- Added resources cleanup on SriovFecNodeConfig delete
 - SriovFecController no longer overwrites ConfigMaps with `immutable` key
 - Added support for deployment on K8S
 

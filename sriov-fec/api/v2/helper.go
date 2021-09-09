@@ -3,6 +3,11 @@
 
 package v2
 
+import (
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
 type ByPriority []SriovFecClusterConfig
 
 func (a ByPriority) Len() int {
@@ -38,4 +43,8 @@ func (s AcceleratorSelector) Matches(a SriovAccelerator) bool {
 	}
 
 	return true
+}
+
+func (in *SriovFecNodeConfig) FindCondition(conditionType string) *metav1.Condition {
+	return meta.FindStatusCondition(in.Status.Conditions, conditionType)
 }

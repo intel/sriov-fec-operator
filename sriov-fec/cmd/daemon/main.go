@@ -4,6 +4,7 @@
 package main
 
 import (
+	dh "github.com/otcshare/openshift-operator/common/pkg/drainhelper"
 	"github.com/otcshare/openshift-operator/common/pkg/utils"
 	"os"
 
@@ -56,30 +57,26 @@ func main() {
 		os.Exit(1)
 	}
 
-	mgr, err := ctrl.NewManager(config, ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: "0",
-		LeaderElection:     false,
-		Namespace:          ns,
-	})
+	mgr, err := daemon.CreateManager(config, ns, scheme)
 	if err != nil {
 		setupLog.WithError(err).Error("unable to start manager")
 		os.Exit(1)
 	}
 
 	daemonLog := utils.NewLogger()
-	daemon, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), cset, daemonLog, nodeName, ns)
+	drainHelper := dh.NewDrainHelper(daemonLog, cset, nodeName, ns)
+	reconciler, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), drainHelper.Run, daemonLog, nodeName, ns)
 	if err != nil {
 		setupLog.WithError(err).Error("unable to create reconciler")
 		os.Exit(1)
 	}
 
-	if err := daemon.SetupWithManager(mgr); err != nil {
+	if err := reconciler.SetupWithManager(mgr); err != nil {
 		setupLog.WithError(err).Error("unable to create controller", "controller", "NodeConfig")
 		os.Exit(1)
 	}
 
-	if err := daemon.CreateEmptyNodeConfigIfNeeded(directClient); err != nil {
+	if err := reconciler.CreateEmptyNodeConfigIfNeeded(directClient); err != nil {
 		setupLog.WithError(err).Error("failed to create initial NodeConfig CR")
 		os.Exit(1)
 	}
