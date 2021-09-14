@@ -77,11 +77,11 @@ type QueueGroupConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=8
 	NumQueueGroups int `json:"numQueueGroups"`
-	// +kubebuilder:validation:Minimum=16
+	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=16
 	NumAqsPerGroups int `json:"numAqsPerGroups"`
-	// +kubebuilder:validation:Minimum=4
-	// +kubebuilder:validation:Maximum=4
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=12
 	AqDepthLog2 int `json:"aqDepthLog2"`
 }
 
