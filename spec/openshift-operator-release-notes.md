@@ -17,31 +17,29 @@ This document provides high-level system features, issues, and limitations infor
 
 # Release history
 
-***v1.4.0/4.9***
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
+### SRIOV-FEC Operator
 
-***v1.3.0***
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
+| Version   | Release Date   | OCP Version(s) compatibility | Verified on OCP         |
+| --------- | ---------------| ---------------------------- | ------------------------|
+| 1.0.0     | January 2021   | 4.6                          | 4.6.4                   |
+| 1.1.0     | March 2021     | 4.6                          | 4.6.16                  |
+| 1.2.0     | June 2021      | 4.7                          | 4.7.8                   |
+| 1.2.1     | June 2021      | 4.7                          | 4.7.8                   |
+| 1.3.0     | August 2021    | 4.8                          | 4.8.2                   |
+| 2.0.0     | September 2021 | 4.8                          | 4.8.5                   |
 
-***v1.2.1***
-- Dot release, bugfixes only.
+### N3000K Operator
 
-***v1.2.0***
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
-
-***v1.1.0***
-- OpenNESS Operator for Intel® FPGA PAC N3000
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
-
-***v1.0.0***
-- OpenNESS Operator for Intel® FPGA PAC N3000
-- OpenNESS SRIOV-FEC Operator for Intel® FPGA PAC N3000
+| Version   | Release Date   | OCP Version(s) compatibility | Verified on OCP
+| --------- | ---------------| ---------------------------- | ------------------------|
+| 1.0.0     | January 2021   | 4.6                          | 4.6.4                   |
+| 1.1.0     | March 2021     | 4.6                          | 4.6.16                  |
 
 # Features for Release
 
-***v1.4.0/4.9.0***
+***v2.0.0***
 - Added new version (v2) of API with selectors
-- Added resources cleanup on SriovFecNodeConfig delete
+- Added resources cleanup on SriovFecClusterConfig deletion
 - SriovFecController no longer overwrites ConfigMaps with `immutable` key
 - Added support for deployment on K8S
 
@@ -72,7 +70,7 @@ This document provides high-level system features, issues, and limitations infor
 
 # Changes to Existing Features
 
-***v1.4.0/4.9.0***
+***v2.0.0***
 - Improved existing validation rules and added new rules
 - Removed old API (v1)
 - Updated pf-bb-config from 21.3 to 21.6 and OperatorSDK from 1.4.2 to 1.9.0
@@ -143,6 +141,12 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - RT Kernel (the OPAE Docker images are built for specific kernel version)
 
 # Supported Operating Systems
+***v2.0.0*** was tested using the following:
+- OpenShift: 4.8.5
+- OS: Red Hat Enterprise Linux CoreOS 48.84.202108062347-0
+- Kubernetes: v1.21.1+9807387
+- RT Kernel: 4.18.0-305.10.2.rt7.83.el8_4.x86_64
+
 ***v1.3.0*** was tested using the following:
 - OpenShift: 4.8.2
 - OS: Red Hat Enterprise Linux CoreOS 48.84.202107202156-0 

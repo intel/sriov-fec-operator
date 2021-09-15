@@ -16,4 +16,4 @@ kind: Kustomization
 images:
 - name: sriov-fec-operator
   newName: registry.connect.redhat.com/intel/sriov-fec-operator
-  newTag: v1.3.0
+  newTag: v2.0.0
