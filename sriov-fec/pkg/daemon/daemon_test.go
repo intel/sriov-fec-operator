@@ -240,7 +240,9 @@ var _ = Describe("NodeConfigReconciler", func() {
 									),
 								)
 
-							Expect(expectedCallsRelatedWithReboot.verify()).To(Succeed())
+							Eventually(func() error {
+								return expectedCallsRelatedWithReboot.verify()
+							}, "10s").Should(Succeed())
 
 							//manifest expected kernel configuration
 							procCmdlineFilePath = "testdata/cmdline_test"
