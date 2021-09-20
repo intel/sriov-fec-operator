@@ -31,7 +31,10 @@ type SriovFecNodeConfigSpec struct {
 	// List of PhysicalFunctions configs
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	PhysicalFunctions []PhysicalFunctionConfigExt `json:"physicalFunctions"`
-	DrainSkip         bool                        `json:"drainSkip,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// Skips drain process when true; default false. Should be true if operator is running on SNO
+	DrainSkip bool `json:"drainSkip,omitempty"`
 }
 
 // SriovFecNodeConfigStatus defines the observed state of SriovFecNodeConfig

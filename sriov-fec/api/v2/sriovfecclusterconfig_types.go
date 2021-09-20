@@ -129,19 +129,25 @@ type PhysicalFunctionConfigExt struct {
 
 // SriovFecClusterConfigSpec defines the desired state of SriovFecClusterConfig
 type SriovFecClusterConfigSpec struct {
-	// List of node configurations
+
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// Selector describes target node for this spec
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// Selector describes target accelerator for this spec
 	AcceleratorSelector AcceleratorSelector `json:"acceleratorSelector,omitempty"`
 
-	// Physical function (card) config
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// Physical function (card) config
 	PhysicalFunction PhysicalFunctionConfig `json:"physicalFunction"`
 
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// Higher priority policies can override lower ones.
 	Priority int `json:"priority"`
 
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// Skips drain process when true; default false. Should be true if operator is running on SNO
 	DrainSkip bool `json:"drainSkip,omitempty"`
 }
 
