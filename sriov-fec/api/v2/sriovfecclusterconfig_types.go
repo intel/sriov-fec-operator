@@ -124,11 +124,27 @@ type PhysicalFunctionConfigExt struct {
 	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[01][a-fA-F0-9]\.[0-7]$`
 	PCIAddress string `json:"pciAddress"`
 
-	PhysicalFunctionConfig `json:",inline"`
+	// PFDriver to bound the PFs to
+	PFDriver string `json:"pfDriver"`
+
+	// VFDriver to bound the VFs to
+	VFDriver string `json:"vfDriver"`
+
+	// VFAmount is an amount of VFs to be created
+	// +kubebuilder:validation:Minimum=0
+	VFAmount int `json:"vfAmount"`
+
+	// BBDevConfig is a config for PF's queues
+	BBDevConfig BBDevConfig `json:"bbDevConfig"`
 }
 
 // SriovFecClusterConfigSpec defines the desired state of SriovFecClusterConfig
 type SriovFecClusterConfigSpec struct {
+
+	// List of node configurations. This element is deprecated and should not be use because it will be removed in next release of sriov-fec operator.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +kubebuilder:validation:Optional
+	Nodes []NodeConfig `json:"nodes,omitempty"`
 
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// Selector describes target node for this spec
@@ -140,11 +156,11 @@ type SriovFecClusterConfigSpec struct {
 
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// Physical function (card) config
-	PhysicalFunction PhysicalFunctionConfig `json:"physicalFunction"`
+	PhysicalFunction PhysicalFunctionConfig `json:"physicalFunction,omitempty"`
 
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// Higher priority policies can override lower ones.
-	Priority int `json:"priority"`
+	Priority int `json:"priority,omitempty"`
 
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// Skips drain process when true; default false. Should be true if operator is running on SNO
@@ -167,6 +183,14 @@ type SriovFecClusterConfigStatus struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	SyncStatus    SyncStatus `json:"syncStatus,omitempty"`
 	LastSyncError string     `json:"lastSyncError,omitempty"`
+}
+
+type NodeConfig struct {
+	// Name of the node
+	NodeName string `json:"nodeName"`
+	// List of physical functions (cards) configs
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	PhysicalFunctions []PhysicalFunctionConfigExt `json:"physicalFunctions"`
 }
 
 // +kubebuilder:object:root=true

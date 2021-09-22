@@ -297,7 +297,13 @@ var _ = Describe("SriovControllerTest", func() {
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKey{Name: n1.Name, Namespace: NAMESPACE}, nc)).ToNot(HaveOccurred())
 				Expect(nc.Spec.PhysicalFunctions).ToNot(BeEmpty())
 				Expect(nc.Spec.PhysicalFunctions[0]).
-					To(Equal(sriovv2.PhysicalFunctionConfigExt{PCIAddress: "0000:18:00.1", PhysicalFunctionConfig: pfc}))
+					To(Equal(sriovv2.PhysicalFunctionConfigExt{
+						PCIAddress:  "0000:18:00.1",
+						PFDriver:    pfc.PFDriver,
+						VFDriver:    pfc.VFDriver,
+						VFAmount:    pfc.VFAmount,
+						BBDevConfig: pfc.BBDevConfig,
+					}))
 
 				nc2 := new(sriovv2.SriovFecNodeConfig)
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKey{Name: n2.Name, Namespace: NAMESPACE}, nc2)).ToNot(HaveOccurred())
@@ -348,13 +354,25 @@ var _ = Describe("SriovControllerTest", func() {
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKey{Name: n1.Name, Namespace: NAMESPACE}, nc1)).ToNot(HaveOccurred())
 				Expect(nc1.Spec.PhysicalFunctions).ToNot(BeEmpty())
 				Expect(nc1.Spec.PhysicalFunctions[0]).
-					To(Equal(sriovv2.PhysicalFunctionConfigExt{PCIAddress: "0000:18:00.1", PhysicalFunctionConfig: pfc}))
+					To(Equal(sriovv2.PhysicalFunctionConfigExt{
+						PCIAddress:  "0000:18:00.1",
+						PFDriver:    pfc.PFDriver,
+						VFDriver:    pfc.VFDriver,
+						VFAmount:    pfc.VFAmount,
+						BBDevConfig: pfc.BBDevConfig,
+					}))
 
 				nc2 := new(sriovv2.SriovFecNodeConfig)
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKey{Name: n2.Name, Namespace: NAMESPACE}, nc2)).ToNot(HaveOccurred())
 				Expect(nc2.Spec.PhysicalFunctions).ToNot(BeEmpty())
 				Expect(nc2.Spec.PhysicalFunctions[0]).
-					To(Equal(sriovv2.PhysicalFunctionConfigExt{PCIAddress: "0000:20:00.1", PhysicalFunctionConfig: pfc}))
+					To(Equal(sriovv2.PhysicalFunctionConfigExt{
+						PCIAddress:  "0000:20:00.1",
+						PFDriver:    pfc.PFDriver,
+						VFDriver:    pfc.VFDriver,
+						VFAmount:    pfc.VFAmount,
+						BBDevConfig: pfc.BBDevConfig,
+					}))
 
 			})
 		})

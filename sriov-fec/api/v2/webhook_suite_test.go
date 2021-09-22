@@ -52,24 +52,38 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = Describe("Creation of SriovFecClusterConfig without n3000 bbdevconfig", func() {
-	It("should be accepted", func() {
-		cc := SriovFecClusterConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cc-cr-to-be-created",
-				Namespace: "default",
-			},
-			Spec: SriovFecClusterConfigSpec{
-				PhysicalFunction: PhysicalFunctionConfig{
-					BBDevConfig: BBDevConfig{},
-				},
+	AfterEach(func() {
+		_ = k8sClient.Delete(context.TODO(), &ccPrototype)
+	})
+
+	It("should be accepted(new spec)", func() {
+		cc := ccPrototype.DeepCopy()
+		cc.Spec = SriovFecClusterConfigSpec{
+			PhysicalFunction: PhysicalFunctionConfig{
+				BBDevConfig: BBDevConfig{},
 			},
 		}
-		Expect(k8sClient.Create(context.TODO(), &cc)).To(Succeed())
+		Expect(k8sClient.Create(context.TODO(), cc)).To(Succeed())
+	})
+	It("should be accepted(old spec)", func() {
+		cc := ccPrototype.DeepCopy()
+		cc.Spec = SriovFecClusterConfigSpec{
+			Nodes: []NodeConfig{{
+				PhysicalFunctions: []PhysicalFunctionConfigExt{
+					{
+						PCIAddress:  "0000:00:13.0",
+						BBDevConfig: BBDevConfig{},
+					},
+				},
+			}},
+		}
+
+		Expect(k8sClient.Create(context.TODO(), cc)).To(Succeed())
 	})
 })
 
 var _ = Describe("Creation of SriovFecClusterConfig with bbdevconfig containing acc100 and n3000", func() {
-	It("should be rejected", func() {
+	It("should be rejected(new spec)", func() {
 		cc := SriovFecClusterConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cc-cr-to-be-created",
@@ -114,11 +128,63 @@ var _ = Describe("Creation of SriovFecClusterConfig with bbdevconfig containing 
 			MatchError(
 				ContainSubstring("Forbidden: specified bbDevConfig cannot contain acc100 and n3000 configuration in the same time")))
 	})
+	It("should be rejected(old spec)", func() {
+		cc := SriovFecClusterConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cc-cr-to-be-created",
+				Namespace: "default",
+			},
+			Spec: SriovFecClusterConfigSpec{
+				Nodes: []NodeConfig{{
+					PhysicalFunctions: []PhysicalFunctionConfigExt{{
+						PCIAddress: "0000:00:13.0",
+						BBDevConfig: BBDevConfig{
+							ACC100: &ACC100BBDevConfig{
+								NumVfBundles: 16,
+								MaxQueueSize: 1024,
+								Uplink4G: QueueGroupConfig{
+									NumQueueGroups:  0,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Uplink5G: QueueGroupConfig{
+									NumQueueGroups:  0,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Downlink4G: QueueGroupConfig{
+									NumQueueGroups:  0,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Downlink5G: QueueGroupConfig{
+									NumQueueGroups:  0,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+							},
+							N3000: &N3000BBDevConfig{
+								NetworkType: "FPGA_5GNR",
+							},
+						},
+					}},
+				}},
+			},
+		}
+
+		Expect(k8sClient.Create(context.TODO(), &cc)).To(
+			MatchError(
+				ContainSubstring("Forbidden: specified bbDevConfig cannot contain acc100 and n3000 configuration in the same time")))
+	})
 })
 var _ = Describe("Creation of SriovFecClusterConfig with n3000 bbdevconfig", func() {
 
+	AfterEach(func() {
+		_ = k8sClient.Delete(context.TODO(), &ccPrototype)
+	})
+
 	When("With total number of downlink queues exceeds allowed 32", func() {
-		It("should be rejected", func() {
+		It("should be rejected(new spec)", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
 				BBDevConfig: BBDevConfig{
@@ -137,10 +203,34 @@ var _ = Describe("Creation of SriovFecClusterConfig with n3000 bbdevconfig", fun
 			Expect(err).ToNot(Succeed())
 			Expect(err.Error()).To(ContainSubstring("sum of all specified queues must be no more than 32"))
 		})
+		It("should be rejected(old spec)", func() {
+			cc := ccPrototype.DeepCopy()
+			cc.Spec.Nodes = []NodeConfig{{
+				PhysicalFunctions: []PhysicalFunctionConfigExt{
+					{
+						PCIAddress: "0000:00:13.0",
+						BBDevConfig: BBDevConfig{
+							N3000: &N3000BBDevConfig{
+								NetworkType: "FPGA_LTE",
+								Downlink: UplinkDownlink{
+									Queues: UplinkDownlinkQueues{
+										VF0: 32,
+										VF7: 1,
+									},
+								},
+							},
+						},
+					},
+				},
+			}}
+			err := k8sClient.Create(context.TODO(), cc)
+			Expect(err).ToNot(Succeed())
+			Expect(err.Error()).To(ContainSubstring("sum of all specified queues must be no more than 32"))
+		})
 	})
 
 	When("With total number of uplink queues exceeds allowed 32", func() {
-		It("should be rejected", func() {
+		It("should be rejected(new spec)", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
 				BBDevConfig: BBDevConfig{
@@ -160,10 +250,37 @@ var _ = Describe("Creation of SriovFecClusterConfig with n3000 bbdevconfig", fun
 			Expect(err).ToNot(Succeed())
 			Expect(err.Error()).To(ContainSubstring("sum of all specified queues must be no more than 32"))
 		})
+		It("should be rejected(old spec)", func() {
+			cc := ccPrototype.DeepCopy()
+			cc.Spec.Nodes = []NodeConfig{
+				{
+					PhysicalFunctions: []PhysicalFunctionConfigExt{
+						{
+							PCIAddress: "0000:00:13.0",
+							BBDevConfig: BBDevConfig{
+								N3000: &N3000BBDevConfig{
+									NetworkType: "FPGA_LTE",
+									Uplink: UplinkDownlink{
+										Queues: UplinkDownlinkQueues{
+											VF0: 20,
+											VF7: 10,
+											VF6: 10,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			err := k8sClient.Create(context.TODO(), cc)
+			Expect(err).ToNot(Succeed())
+			Expect(err.Error()).To(ContainSubstring("sum of all specified queues must be no more than 32"))
+		})
 	})
 
 	When("With total number of uplink queues is less than allowed 32", func() {
-		It("should pass", func() {
+		It("should pass(new spec)", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
 				BBDevConfig: BBDevConfig{
@@ -181,13 +298,36 @@ var _ = Describe("Creation of SriovFecClusterConfig with n3000 bbdevconfig", fun
 			}
 			Expect(k8sClient.Create(context.TODO(), cc)).To(Succeed())
 		})
+		It("should pass(old spec)", func() {
+			cc := ccPrototype.DeepCopy()
+			cc.Spec.Nodes = []NodeConfig{
+				{
+					PhysicalFunctions: []PhysicalFunctionConfigExt{{
+						PCIAddress: "0000:00:13.0",
+						BBDevConfig: BBDevConfig{
+							N3000: &N3000BBDevConfig{
+								NetworkType: "FPGA_LTE",
+								Uplink: UplinkDownlink{
+									Queues: UplinkDownlinkQueues{
+										VF0: 2,
+										VF7: 10,
+										VF6: 10,
+									},
+								},
+							},
+						},
+					}},
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), cc)).To(Succeed())
+		})
 	})
 
 })
 
 var _ = Describe("Creation of SriovFecClusterConfig with acc100 bbdevconfig", func() {
 	When("With total number of all specified numQueueGroups is greater than 8", func() {
-		It("should  be rejected", func() {
+		It("invalid new spec should  be rejected", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
 				BBDevConfig: BBDevConfig{
@@ -220,10 +360,48 @@ var _ = Describe("Creation of SriovFecClusterConfig with acc100 bbdevconfig", fu
 			Expect(k8sClient.Create(context.TODO(), cc)).To(MatchError(ContainSubstring("sum of all numQueueGroups should not be greater than 8")))
 			Expect(k8sClient.Create(context.TODO(), cc)).ToNot(Succeed())
 		})
+		It("invalid old spec should  be rejected", func() {
+			cc := ccPrototype.DeepCopy()
+			cc.Spec.Nodes = []NodeConfig{
+				{
+					PhysicalFunctions: []PhysicalFunctionConfigExt{{
+						PCIAddress: "0000:00:13.0",
+						BBDevConfig: BBDevConfig{
+							ACC100: &ACC100BBDevConfig{
+								NumVfBundles: 16,
+								MaxQueueSize: 1024,
+								Uplink4G: QueueGroupConfig{
+									NumQueueGroups:  8,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Uplink5G: QueueGroupConfig{
+									NumQueueGroups:  1,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Downlink4G: QueueGroupConfig{
+									NumQueueGroups:  0,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Downlink5G: QueueGroupConfig{
+									NumQueueGroups:  0,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+							},
+						},
+					}},
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), cc)).To(MatchError(ContainSubstring("sum of all numQueueGroups should not be greater than 8")))
+			Expect(k8sClient.Create(context.TODO(), cc)).ToNot(Succeed())
+		})
 	})
 
 	When("fvAmount != bbDevConfig.acc100.numVfBundles", func() {
-		It("should be rejected", func() {
+		It("invalid new spec should be rejected", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
 				VFAmount: 2,
@@ -256,12 +434,51 @@ var _ = Describe("Creation of SriovFecClusterConfig with acc100 bbdevconfig", fu
 			}
 
 			Expect(k8sClient.Create(context.TODO(), cc)).
-				To(MatchError(ContainSubstring("value should be the same as spec.physicalFunction.vvDevConfig.acc100.numVfBundles")))
+				To(MatchError(ContainSubstring("value should be the same as physicalFunction.vfAmount")))
+		})
+		It("invalid old spec should be rejected", func() {
+			cc := ccPrototype.DeepCopy()
+			cc.Spec.Nodes = []NodeConfig{
+				{
+					PhysicalFunctions: []PhysicalFunctionConfigExt{{
+						PCIAddress: "0000:00:13.0",
+						VFAmount:   2,
+						BBDevConfig: BBDevConfig{
+							ACC100: &ACC100BBDevConfig{
+								NumVfBundles: 16,
+								MaxQueueSize: 1024,
+								Uplink4G: QueueGroupConfig{
+									NumQueueGroups:  2,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Uplink5G: QueueGroupConfig{
+									NumQueueGroups:  2,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Downlink4G: QueueGroupConfig{
+									NumQueueGroups:  2,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Downlink5G: QueueGroupConfig{
+									NumQueueGroups:  2,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+							},
+						},
+					}},
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), cc)).
+				To(MatchError(ContainSubstring("value should be the same as physicalFunction.vfAmount")))
 		})
 	})
 
 	When("fvAmount equals zero and bbDevConfig.acc100.numVfBundles is greater than zero", func() {
-		It("should be rejected", func() {
+		It("invalid new spec should be rejected", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
 				VFAmount: 0,
@@ -294,7 +511,48 @@ var _ = Describe("Creation of SriovFecClusterConfig with acc100 bbdevconfig", fu
 			}
 
 			Expect(k8sClient.Create(context.TODO(), cc)).
-				To(MatchError(ContainSubstring("non zero value of spec.physicalFunction.vvDevConfig.acc100.numVfBundles cannot be accepted when spec.physicalFunction.vfAmount equals 0")))
+				To(MatchError(ContainSubstring("non zero value of numVfBundles cannot be accepted when physicalFunction.vfAmount equals 0")))
+		})
+
+		It("invalid old spec should be rejected", func() {
+			cc := ccPrototype.DeepCopy()
+			cc.Spec.Nodes = []NodeConfig{
+				{
+					PhysicalFunctions: []PhysicalFunctionConfigExt{{
+						PCIAddress: "0000:00:13.0",
+						VFAmount:   0,
+						BBDevConfig: BBDevConfig{
+							ACC100: &ACC100BBDevConfig{
+								NumVfBundles: 2,
+								MaxQueueSize: 1024,
+								Uplink4G: QueueGroupConfig{
+									NumQueueGroups:  2,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Uplink5G: QueueGroupConfig{
+									NumQueueGroups:  2,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Downlink4G: QueueGroupConfig{
+									NumQueueGroups:  2,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Downlink5G: QueueGroupConfig{
+									NumQueueGroups:  2,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+							},
+						},
+					}},
+				},
+			}
+
+			Expect(k8sClient.Create(context.TODO(), cc)).
+				To(MatchError(ContainSubstring("non zero value of numVfBundles cannot be accepted when physicalFunction.vfAmount equals 0")))
 		})
 	})
 })

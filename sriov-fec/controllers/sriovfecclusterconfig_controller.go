@@ -64,10 +64,35 @@ type SriovFecClusterConfigReconciler struct {
 func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.Log.Info("Reconciling SriovFecClusterConfig")
 
-	allClusterConfigs := new(sriovfecv2.SriovFecClusterConfigList)
-	if err := r.List(context.TODO(), allClusterConfigs, client.InNamespace(NAMESPACE)); err != nil {
+	clusterConfigList := new(sriovfecv2.SriovFecClusterConfigList)
+	if err := r.List(context.TODO(), clusterConfigList, client.InNamespace(NAMESPACE)); err != nil {
 		r.Log.WithError(err).Error("cannot obtain list of SriovFecClusterConfig, rescheduling rescheduling reconcile call")
 		return ctrl.Result{}, err
+	}
+
+	var allClusterConfigs []sriovfecv2.SriovFecClusterConfig
+	for _, sfcc := range clusterConfigList.Items {
+		for ncIdx, nodeConfig := range sfcc.Spec.Nodes {
+			for pfIdx, pf := range nodeConfig.PhysicalFunctions {
+				newCC := sfcc.DeepCopy()
+				newCC.Name = fmt.Sprintf("%s-%d-%d", newCC.Name, ncIdx, pfIdx)
+				newCC.Spec.Nodes = nil
+				newCC.Spec.NodeSelector = map[string]string{
+					"kubernetes.io/hostname": nodeConfig.NodeName,
+				}
+				newCC.Spec.AcceleratorSelector = sriovfecv2.AcceleratorSelector{
+					PCIAddress: pf.PCIAddress,
+				}
+				newCC.Spec.PhysicalFunction = sriovfecv2.PhysicalFunctionConfig{
+					PFDriver:    pf.PFDriver,
+					VFDriver:    pf.VFDriver,
+					VFAmount:    pf.VFAmount,
+					BBDevConfig: pf.BBDevConfig,
+				}
+				allClusterConfigs = append(allClusterConfigs, *newCC)
+			}
+		}
+		allClusterConfigs = append(allClusterConfigs, sfcc)
 	}
 
 	nodes, err := r.getAcceleratedNodes()
@@ -78,7 +103,7 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.
 
 	clusterConfigurationMatcher := createClusterConfigMatcher(r.getOrInitializeSriovFecNodeConfig, r.Log)
 	for _, node := range nodes {
-		configurationContextProvider, err := clusterConfigurationMatcher.match(node, allClusterConfigs.Items)
+		configurationContextProvider, err := clusterConfigurationMatcher.match(node, allClusterConfigs)
 		if err != nil {
 			r.Log.WithField("node", node.Name).WithField("error", err).Info("Error when matching SriovFecClusterConfigs")
 			continue
@@ -122,8 +147,13 @@ func (r *SriovFecClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConf
 	newNodeConfig := copyWithEmptySpec(ncc.SriovFecNodeConfig)
 
 	for pciAddress, cc := range acceleratorConfigContext {
-		pf := sriovfecv2.PhysicalFunctionConfigExt{PCIAddress: pciAddress}
-		pf.PhysicalFunctionConfig = cc.Spec.PhysicalFunction
+		pf := sriovfecv2.PhysicalFunctionConfigExt{
+			PCIAddress:  pciAddress,
+			PFDriver:    cc.Spec.PhysicalFunction.PFDriver,
+			VFDriver:    cc.Spec.PhysicalFunction.VFDriver,
+			VFAmount:    cc.Spec.PhysicalFunction.VFAmount,
+			BBDevConfig: cc.Spec.PhysicalFunction.BBDevConfig,
+		}
 		newNodeConfig.Spec.PhysicalFunctions = append(newNodeConfig.Spec.PhysicalFunctions, pf)
 	}
 

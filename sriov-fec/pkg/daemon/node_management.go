@@ -200,7 +200,7 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv2.SriovFecNodeConfigSpec
 		pf := getMatchingConfiguration(acc.PCIAddress, nodeConfig.PhysicalFunctions)
 		if pf == nil {
 			if len(acc.VFs) > 0 {
-				n.Log.WithField("pci", acc.PCIAddress).Info("zeroing VMs")
+				n.Log.WithField("pci", acc.PCIAddress).Info("zeroing VFs")
 				if err := n.changeAmountOfVFs(acc.PCIAddress, 0); err != nil {
 					return err
 				}

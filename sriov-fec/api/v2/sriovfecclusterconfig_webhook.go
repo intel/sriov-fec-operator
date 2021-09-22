@@ -4,6 +4,7 @@
 package v2
 
 import (
+	"fmt"
 	"github.com/otcshare/openshift-operator/common/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -66,6 +67,17 @@ func (in *SriovFecClusterConfig) ValidateDelete() error {
 }
 
 func ambiguousBBDevConfigValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
+	for nid, node := range spec.Nodes {
+		for pfid, pf := range node.PhysicalFunctions {
+			if pf.BBDevConfig.N3000 != nil && pf.BBDevConfig.ACC100 != nil {
+				err := field.Forbidden(
+					field.NewPath("spec").Child(fmt.Sprintf("nodes[%d]", nid)).Child(fmt.Sprintf("physicalFunctions[%d]", pfid)).Child("bbDevConfig"),
+					"specified bbDevConfig cannot contain acc100 and n3000 configuration in the same time")
+				errs = append(errs, err)
+			}
+		}
+	}
+
 	if spec.PhysicalFunction.BBDevConfig.N3000 != nil && spec.PhysicalFunction.BBDevConfig.ACC100 != nil {
 		err := field.Forbidden(
 			field.NewPath("spec").Child("physicalFunction").Child("bbDevConfig"),
@@ -76,14 +88,6 @@ func ambiguousBBDevConfigValidator(spec SriovFecClusterConfigSpec) (errs field.E
 }
 
 func n3000LinkQueuesValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
-	n3000BBDevConfig := spec.PhysicalFunction.BBDevConfig.N3000
-	if n3000BBDevConfig == nil {
-		return
-	}
-
-	queuePath := field.NewPath("spec").
-		Child("physicalFunction").
-		Child("bbDevConfig", "n3000", "uplink", "queues")
 
 	validateN3000Queues := func(qID *field.Path, queues UplinkDownlinkQueues) *field.Error {
 		total := queues.VF0 + queues.VF1 + queues.VF2 + queues.VF3 + queues.VF4 + queues.VF5 + queues.VF5 + queues.VF6 + queues.VF7
@@ -93,65 +97,144 @@ func n3000LinkQueuesValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorL
 		return nil
 	}
 
-	if err := validateN3000Queues(queuePath, n3000BBDevConfig.Uplink.Queues); err != nil {
-		errs = append(errs, err)
+	if n3000Config := spec.PhysicalFunction.BBDevConfig.N3000; n3000Config != nil {
+		queuePath := field.NewPath("spec").
+			Child("physicalFunction").
+			Child("bbDevConfig", "n3000", "uplink", "queues")
+
+		if err := validateN3000Queues(queuePath, n3000Config.Uplink.Queues); err != nil {
+			errs = append(errs, err)
+		}
+
+		queuePath = field.NewPath("spec").
+			Child("physicalFunction").
+			Child("bbDevConfig", "n3000", "downlink", "queues")
+
+		if err := validateN3000Queues(queuePath, n3000Config.Downlink.Queues); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
-	queuePath = field.NewPath("spec").
-		Child("physicalFunction").
-		Child("bbDevConfig", "n3000", "downlink", "queues")
+	for nid, node := range spec.Nodes {
+		for pfid, pf := range node.PhysicalFunctions {
+			n3000BBDevConfig := pf.BBDevConfig.N3000
+			if n3000BBDevConfig == nil {
+				continue
+			}
+			queuePath := field.NewPath("spec").
+				Child(fmt.Sprintf("nodes[%d]", nid)).
+				Child(fmt.Sprintf("physicalFunctions[%d]", pfid)).
+				Child("bbDevConfig", "n3000", "uplink", "queues")
 
-	if err := validateN3000Queues(queuePath, n3000BBDevConfig.Downlink.Queues); err != nil {
-		errs = append(errs, err)
+			if err := validateN3000Queues(queuePath, n3000BBDevConfig.Uplink.Queues); err != nil {
+				errs = append(errs, err)
+			}
+
+			queuePath = field.NewPath("spec").
+				Child(fmt.Sprintf("nodes[%d]", nid)).
+				Child(fmt.Sprintf("physicalFunctions[%d]", pfid)).
+				Child("bbDevConfig", "n3000", "downlink", "queues")
+
+			if err := validateN3000Queues(queuePath, n3000BBDevConfig.Downlink.Queues); err != nil {
+				errs = append(errs, err)
+			}
+		}
 	}
 
 	return
 }
 
 func acc100VfAmountValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
-	if spec.PhysicalFunction.BBDevConfig.ACC100 == nil {
-		return
+
+	validate := func(accConfig *ACC100BBDevConfig, vfAmount int, path *field.Path) *field.Error {
+		if accConfig == nil {
+			return nil
+		}
+
+		if vfAmount == 0 && accConfig.NumVfBundles != 0 {
+			return field.Invalid(
+				path,
+				accConfig.NumVfBundles,
+				"non zero value of numVfBundles cannot be accepted when physicalFunction.vfAmount equals 0")
+		}
+
+		if vfAmount != accConfig.NumVfBundles {
+			return field.Invalid(
+				path,
+				accConfig.NumVfBundles,
+				"value should be the same as physicalFunction.vfAmount")
+		}
+		return nil
 	}
 
-	if spec.PhysicalFunction.VFAmount == 0 && spec.PhysicalFunction.BBDevConfig.ACC100.NumVfBundles != 0 {
-		errs = append(errs,
-			field.Invalid(field.NewPath("spec").Child("physicalFunction").Child("bbDevConfig", "acc100", "numVfBundles"),
-				spec.PhysicalFunction.BBDevConfig.ACC100.NumVfBundles,
-				"non zero value of spec.physicalFunction.vvDevConfig.acc100.numVfBundles cannot be accepted when spec.physicalFunction.vfAmount equals 0"))
-		return
+	if err := validate(
+		spec.PhysicalFunction.BBDevConfig.ACC100,
+		spec.PhysicalFunction.VFAmount,
+		field.NewPath("spec").Child("physicalFunction").Child("bbDevConfig", "acc100", "numVfBundles"),
+	); err != nil {
+		errs = append(errs, err)
 	}
 
-	if spec.PhysicalFunction.VFAmount != spec.PhysicalFunction.BBDevConfig.ACC100.NumVfBundles {
-		errs = append(errs,
-			field.Invalid(field.NewPath("spec").Child("physicalFunction").Child("bbDevConfig", "acc100", "numVfBundles"),
-				spec.PhysicalFunction.BBDevConfig.ACC100.NumVfBundles,
-				"value should be the same as spec.physicalFunction.vfAmount"))
-
-		errs = append(errs,
-			field.Invalid(field.NewPath("spec").Child("physicalFunction").Child("vfAmount"),
-				spec.PhysicalFunction.VFAmount,
-				"value should be the same as spec.physicalFunction.vvDevConfig.acc100.numVfBundles"))
-
+	for nid, node := range spec.Nodes {
+		for pfid, pf := range node.PhysicalFunctions {
+			if err := validate(
+				pf.BBDevConfig.ACC100,
+				pf.VFAmount,
+				field.NewPath("spec",
+					fmt.Sprintf("nodes[%d]", nid),
+					fmt.Sprintf("physicalFunctions[%d]", pfid),
+					"bbDevConfig",
+					"acc100",
+					"numVfBundles"),
+			); err != nil {
+				errs = append(errs, err)
+			}
+		}
 	}
 	return
 }
 
 func acc100NumQueueGroupsValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
-	if spec.PhysicalFunction.BBDevConfig.ACC100 == nil {
-		return
+
+	validate := func(accConfig *ACC100BBDevConfig, path *field.Path) *field.Error {
+		if accConfig == nil {
+			return nil
+		}
+
+		downlink4g := accConfig.Downlink4G.NumQueueGroups
+		uplink4g := accConfig.Uplink4G.NumQueueGroups
+		downlink5g := accConfig.Downlink5G.NumQueueGroups
+		uplink5g := accConfig.Uplink5G.NumQueueGroups
+
+		if sum := downlink5g + uplink5g + downlink4g + uplink4g; sum > 8 {
+			return field.Invalid(
+				field.NewPath("spec", "physicalFunction", "bbDevConfig", "acc100", "[downlink4G|uplink4G|downlink5G|uplink5G]", "numQueueGroups"),
+				sum,
+				"sum of all numQueueGroups should not be greater than 8",
+			)
+		}
+		return nil
 	}
 
-	downlink4g := spec.PhysicalFunction.BBDevConfig.ACC100.Downlink4G.NumQueueGroups
-	uplink4g := spec.PhysicalFunction.BBDevConfig.ACC100.Uplink4G.NumQueueGroups
-	downlink5g := spec.PhysicalFunction.BBDevConfig.ACC100.Downlink5G.NumQueueGroups
-	uplink5g := spec.PhysicalFunction.BBDevConfig.ACC100.Uplink5G.NumQueueGroups
+	if err := validate(spec.PhysicalFunction.BBDevConfig.ACC100, field.NewPath("spec", "physicalFunction", "bbDevConfig", "acc100", "[downlink4G|uplink4G|downlink5G|uplink5G]", "numQueueGroups")); err != nil {
+		errs = append(errs, err)
+	}
 
-	if sum := downlink5g + uplink5g + downlink4g + uplink4g; sum > 8 {
-		errs = append(errs, field.Invalid(
-			field.NewPath("spec", "physicalFunction", "bbDevConfig", "acc100", "[downlink4G|uplink4G|downlink5G|uplink5G]", "numQueueGroups"),
-			sum,
-			"sum of all numQueueGroups should not be greater than 8",
-		))
+	for nid, node := range spec.Nodes {
+		for pfid, pf := range node.PhysicalFunctions {
+			if err := validate(
+				pf.BBDevConfig.ACC100,
+				field.NewPath("spec",
+					fmt.Sprintf("nodes[%d]", nid),
+					fmt.Sprintf("physicalFunctions[%d]", pfid),
+					"bbDevConfig",
+					"acc100",
+					"[downlink4G|uplink4G|downlink5G|uplink5G]",
+					"numQueueGroups")); err != nil {
+
+				errs = append(errs, err)
+			}
+		}
 	}
 	return
 }
