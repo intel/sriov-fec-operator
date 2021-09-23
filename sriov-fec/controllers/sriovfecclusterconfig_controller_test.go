@@ -797,22 +797,5 @@ var _ = Describe("SriovControllerTest", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 		})
-
-		_ = Context("Verifying Incorrect SriovFecClusterConfigs", func() {
-			err := filepath.Walk("./testdata/clusterconfig/incorrect",
-				func(path string, info os.FileInfo, err error) error {
-					Expect(err).ToNot(HaveOccurred())
-					if !info.IsDir() {
-						It(filepath.Base(path), func() {
-							_, _, e := kctl.Run("apply", "-f", path)
-							Expect(e).To(HaveOccurred())
-						})
-					}
-					return nil
-				},
-			)
-
-			Expect(err).ToNot(HaveOccurred())
-		})
 	})
 })

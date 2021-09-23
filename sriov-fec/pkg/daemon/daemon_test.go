@@ -14,7 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	core "k8s.io/api/core/v1"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -450,14 +449,14 @@ var _ = Describe("NodeConfigReconciler", func() {
 		Expect(res.FindCondition(ConditionConfigured)).ToNot(BeNil())
 		Expect(res.FindCondition(ConditionConfigured).Reason).To(ContainSubstring("NotRequested"), "Condition.Reason")
 		Expect(res.FindCondition(ConditionConfigured).Message).To(ContainSubstring("Unknown"), "Condition.Message")
-		Expect(res.FindCondition(ConditionConfigured).Status).To(BeEquivalentTo(v1.ConditionUnknown), "Condition.Status")
+		Expect(res.FindCondition(ConditionConfigured).Status).To(BeEquivalentTo(metav1.ConditionUnknown), "Condition.Status")
 
 		Expect(reconciler.updateStatus(&nodeConfig, metav1.ConditionTrue, ConfigurationSucceeded, string(ConfigurationSucceeded))).To(Succeed())
 		res = new(sriovv2.SriovFecNodeConfig)
 		Expect(fakeClient.Get(context.TODO(), client.ObjectKeyFromObject(&nodeConfig), res)).To(Succeed())
 		Expect(res.Status.Conditions).To(HaveLen(1))
 		Expect(res.FindCondition(ConditionConfigured)).ToNot(BeNil())
-		Expect(res.FindCondition(ConditionConfigured).Status).To(BeEquivalentTo(v1.ConditionTrue), "Condition.Status")
+		Expect(res.FindCondition(ConditionConfigured).Status).To(BeEquivalentTo(metav1.ConditionTrue), "Condition.Status")
 		Expect(res.FindCondition(ConditionConfigured).Message).To(ContainSubstring("Succeeded"), "Condition.Message")
 		Expect(res.FindCondition(ConditionConfigured).Reason).To(ContainSubstring("Succeeded"), "Condition.Reason")
 	})
