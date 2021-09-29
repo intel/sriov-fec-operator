@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2021 Intel Corporation
+
+apiVersion: sriovfec.intel.com/v2
+kind: SriovFecNodeConfig
+metadata:
+  name: acc100-worker
+  namespace: vran-acceleration-operators
+spec:
+  drainSkip: false
+  physicalFunctions:
+    - pci_addr: "somePciAddress"
+      pf_driver: "pci-pf-stub"
+      vf_driver: "vfio-pci"
+      vf_amount: 2
+      bbDevConfig:
+        acc100:
+          # Programming mode: 0 = VF Programming, 1 = PF Programming
+          pfMode: true
+          numVfBundles: 16
+          maxQueueSize: 1024
+          uplink4G:
+            numQueueGroups: 0
+            numAqsPerGroups: 16
+            aqDepthLog2: 4
+          downlink4G:
+            numQueueGroups: 0
+            numAqsPerGroups: 16
+            aqDepthLog2: 4
+          uplink5G:
+            numQueueGroups: 4
+            numAqsPerGroups: 16
+            aqDepthLog2: 4
+          downlink5G:
+            numQueueGroups: 4
+            numAqsPerGroups: 16
+            aqDepthLog2: 4

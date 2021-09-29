@@ -19,19 +19,18 @@ limitations under the License.
 package controllers
 
 import (
+	"github.com/smart-edge-open/openshift-operator/common/pkg/utils"
 	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	sriovfecv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	sriovfecv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -50,7 +49,7 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func(done Done) {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	logf.SetLogger(utils.NewLogWrapper())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -61,7 +60,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = sriovfecv1.AddToScheme(scheme.Scheme)
+	err = sriovfecv2.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme

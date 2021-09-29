@@ -41,6 +41,7 @@ subjects:
 ---
 apiVersion: v1
 kind: ConfigMap
+immutable: false
 metadata:
   name: sriovdp-config
   namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
@@ -102,7 +103,7 @@ spec:
       serviceAccountName: sriov-device-plugin
       containers:
       - name: sriov-device-plugin
-        image: registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.8
+        image: "{{ .SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE }}"
         imagePullPolicy: IfNotPresent
         securityContext:
           readOnlyRootFilesystem: true

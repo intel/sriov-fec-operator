@@ -6,6 +6,7 @@ kind: ConfigMap
 metadata:
   name: supported-accelerators
   namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+immutable: false
 data:
   accelerators.json: |
     {
@@ -50,14 +51,17 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: accelerator-discovery
+  {{ if eq (.SRIOV_FEC_GENERIC_K8S|ToLower) `false` }}
   namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+  {{ end }}
 subjects:
 - kind: ServiceAccount
   name: accelerator-discovery
   namespace: "{{ .SRIOV_FEC_NAMESPACE }}"
+  {{ if eq (.SRIOV_FEC_GENERIC_K8S|ToLower) `false` }}
 userNames:
 - system:serviceaccount:{{ .SRIOV_FEC_NAMESPACE }}:accelerator-discovery
-
+  {{ end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet

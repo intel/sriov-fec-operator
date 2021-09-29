@@ -16,24 +16,33 @@ This document provides high-level system features, issues, and limitations infor
 - [Package Versions](#package-versions)
 
 # Release history
-***v1.3.0***
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
 
-***v1.2.1***
-- Bugfix release
+### SRIOV-FEC Operator
 
-***v1.2.0***
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators 
+| Version   | Release Date   | OCP Version(s) compatibility | Verified on OCP         |
+| --------- | ---------------| ---------------------------- | ------------------------|
+| 1.0.0     | January 2021   | 4.6                          | 4.6.4                   |
+| 1.1.0     | March 2021     | 4.6                          | 4.6.16                  |
+| 1.2.0     | June 2021      | 4.7                          | 4.7.8                   |
+| 1.2.1     | June 2021      | 4.7                          | 4.7.8                   |
+| 1.3.0     | August 2021    | 4.8                          | 4.8.2                   |
+| 2.0.0     | September 2021 | 4.8                          | 4.8.5                   |
 
-***v1.1.0*** 
-- OpenNESS Operator for Intel® FPGA PAC N3000 
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
-  
-***v1.0.0***
-- OpenNESS Operator for Intel® FPGA PAC N3000
-- OpenNESS SRIOV-FEC Operator for Intel® FPGA PAC N3000
-   
-# Features for Release 
+### N3000K Operator
+
+| Version   | Release Date   | OCP Version(s) compatibility | Verified on OCP
+| --------- | ---------------| ---------------------------- | ------------------------|
+| 1.0.0     | January 2021   | 4.6                          | 4.6.4                   |
+| 1.1.0     | March 2021     | 4.6                          | 4.6.16                  |
+
+# Features for Release
+
+***v2.0.0***
+- Added new version (v2) of API with selectors
+- Added resources cleanup on SriovFecClusterConfig deletion
+- SriovFecController no longer overwrites ConfigMaps with `immutable` key
+- Added support for deployment on K8S
+
 ***v1.3.0***
 - OpenNESS SR-IOV Operator for Wireless FEC Accelerators OCP4.8.2 support
   - validated on ACC100 only
@@ -41,14 +50,14 @@ This document provides high-level system features, issues, and limitations infor
 ***v1.2.0***
 - OpenNESS SR-IOV Operator for Wireless FEC Accelerators OCP4.7.8 support
   - validated on ACC100 only
-  
+
 ***v1.1.0***
 - OpenNESS SR-IOV Operator for Wireless FEC Accelerators
   - Added support for Intel® vRAN Dedicated Accelerator ACC100
   - Independent accelerator discovery mechanism now enables standalone usage
 
 ***v1.0.0***
-- OpenNESS Operator for Intel® FPGA PAC N3000  
+- OpenNESS Operator for Intel® FPGA PAC N3000
   - N3000 operator handles the management of the FPGA configuration
   - Load the necessary drivers, allows the user to program the Intel® FPGA PAC N3000 user image and to update the firmware of the Intel® XL710 NICs
   - Download the FPGA user image and the XL710 firmware from a location specified in the CR
@@ -56,17 +65,23 @@ This document provides high-level system features, issues, and limitations infor
   - The SRIOV FEC operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications
   - Create desired Virtual Functions for the FEC device, bind them to appropriate drivers and configure the VF's queues for desired functionality in 4G or 5G deployment
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
-  - Prometheus fpgainfo exporter 
+  - Prometheus fpgainfo exporter
     - Deploys an instance of Prometheus exporter which collects metrics from the Intel® FPGA PAC N3000 card
 
-# Changes to Existing Features 
+# Changes to Existing Features
+
+***v2.0.0***
+- Improved existing validation rules and added new rules
+- Removed old API (v1)
+- Updated pf-bb-config from 21.3 to 21.6 and OperatorSDK from 1.4.2 to 1.9.0
+
 ***v1.3.0***
 - OpenNESS Operator for Intel® FPGA PAC N3000
   - out of validation process
 
 ***v1.2.0***
 - OpenNESS Operator for Intel® FPGA PAC N3000
-  - out of validation process 
+  - out of validation process
 
 ***v1.1.0***
 - OpenNESS Operator for Intel® FPGA PAC N3000
@@ -92,7 +107,7 @@ This document provides high-level system features, issues, and limitations infor
 
 # Fixed Issues
 ***v1.2.1***
-- [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/open-ness/openshift-operator/issues/270)
+- [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/smart-edge-open/openshift-operator/issues/270)
 
 ***v1.1.0***
 - OpenNESS Operator for Intel® FPGA PAC N3000
@@ -126,6 +141,12 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - RT Kernel (the OPAE Docker images are built for specific kernel version)
 
 # Supported Operating Systems
+***v2.0.0*** was tested using the following:
+- OpenShift: 4.8.5
+- OS: Red Hat Enterprise Linux CoreOS 48.84.202108062347-0
+- Kubernetes: v1.21.1+9807387
+- RT Kernel: 4.18.0-305.10.2.rt7.83.el8_4.x86_64
+
 ***v1.3.0*** was tested using the following:
 - OpenShift: 4.8.2
 - OS: Red Hat Enterprise Linux CoreOS 48.84.202107202156-0 

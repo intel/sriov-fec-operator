@@ -7,321 +7,532 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-
-	sriov "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
-
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
+	sriovv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
+	"github.com/sirupsen/logrus"
+	"io/ioutil"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	clientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	"os"
+	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"time"
 )
 
 var (
 	pciAddress = "0000:14:00.1"
 )
 
-var _ = Describe("SriovDaemonTest", func() {
-	data := new(TestData)
-	reconciler := new(NodeConfigReconciler)
+var _ = Describe("NodeConfigReconciler", func() {
+	const (
+		_THIS_NODE_NAME      = "worker"
+		_SUPPORTED_NAMESPACE = "default"
+	)
 
-	var _ = BeforeEach(func() {
-		//configure kernel controller
-		osReleaseFilepath = "testdata/rhcos_os_release"
-		procCmdlineFilePath = "testdata/cmdline_test"
-		configPath = "testdata/accelerators.json"
-
-		//configure node configurator
-		workdir = testTmpFolder
-		sysBusPciDevices = testTmpFolder
-		sysBusPciDrivers = testTmpFolder
-		Expect(createFiles(filepath.Join(sysBusPciDevices, pciAddress), "driver_override", vfNumFile)).To(Succeed())
-		Expect(createFiles(filepath.Join(sysBusPciDrivers, "PFdriver"), "bind")).To(Succeed())
-		Expect(createFiles(filepath.Join(sysBusPciDrivers, "pci-pf-stub"), "bind")).To(Succeed())
-
-		getVFconfigured = func(string) int {
-			return 0
-		}
-		getVFList = func(string) ([]string, error) {
-			return nil, nil
-		}
-		getSriovInventory = func(_ logr.Logger) (*sriov.NodeInventory, error) {
-			return &data.NodeInventory, nil
-		}
+	BeforeEach(func() {
+		Expect(sriovv2.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
 	})
 
-	var _ = Context("Reconciler", func() {
+	Describe("NodeConfigReconciler.Reconcile(...)", func() {
+		var (
+			data    *TestData
+			testEnv *envtest.Environment
+		)
+
 		BeforeEach(func() {
+			//configure kernel controller
+			osReleaseFilepath = "testdata/rhcos_os_release"
+			procCmdlineFilePath = "testdata/cmdline_test"
+			configPath = "testdata/accelerators.json"
+
+			//configure node configurator
+			workdir = testTmpFolder
+			sysBusPciDevices = testTmpFolder
+			sysBusPciDrivers = testTmpFolder
+			Expect(createFiles(filepath.Join(sysBusPciDevices, pciAddress), "driver_override", vfNumFile)).To(Succeed())
+			Expect(createFiles(filepath.Join(sysBusPciDrivers, "PFdriver"), "bind")).To(Succeed())
+			Expect(createFiles(filepath.Join(sysBusPciDrivers, "pci-pf-stub"), "bind")).To(Succeed())
+
+			getVFconfigured = func(string) int {
+				return 0
+			}
+
+			getVFList = func(string) ([]string, error) {
+				return nil, nil
+			}
+
+			getSriovInventory = func(_ *logrus.Logger) (*sriovv2.NodeInventory, error) {
+				return &data.SriovFecNodeConfig.Status.Inventory, nil
+			}
+
 			data = new(TestData)
 			Expect(readAndUnmarshall("testdata/node_config.json", data)).To(Succeed())
 		})
 
-		AfterEach(func() {
-			nn := data.GetNamespacedName()
-			if err := k8sClient.Get(context.TODO(), nn, &data.SriovFecNodeConfig); err == nil {
-				data.SriovFecNodeConfig.Spec = sriov.SriovFecNodeConfigSpec{
-					PhysicalFunctions: []sriov.PhysicalFunctionConfig{},
-				}
-				Expect(k8sClient.Update(context.TODO(), &data.SriovFecNodeConfig)).NotTo(HaveOccurred())
-				Expect(returnLastArg(reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: nn}))).ToNot(HaveOccurred())
-				Expect(k8sClient.Delete(context.TODO(), &data.SriovFecNodeConfig)).ToNot(HaveOccurred())
-			} else if errors.IsNotFound(err) {
-				log.Info("Requested NodeConfig does not exists", "NodeConfig", &data.SriovFecNodeConfig)
-			} else {
-				Expect(err).NotTo(HaveOccurred())
-			}
+		When("Required SriovFecNodeConfig does not exist and cannot be created", func() {
 
-			Expect(k8sClient.Delete(context.TODO(), &data.Node)).To(Succeed())
-		})
+			var reconciler *NodeConfigReconciler
 
-		var _ = It("will create cr without node config", func() {
-			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
+			BeforeEach(func() {
+				By("bootstrapping test environment")
 
-			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
-
-			Expect(
-				returnLastArg(
-					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
-				),
-			).To(Succeed())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
-			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
-			Expect(nodeConfigs.Items).To(HaveLen(1))
-		})
-
-		var _ = It("will ignore cr with wrong node name", func() {
-			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
-
-			Expect(initReconciler(reconciler, "wrongName", data.NodeConfigNS())).To(Succeed())
-
-			Expect(
-				returnLastArg(
-					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
-				),
-			).To(Succeed())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
-			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
-			Expect(nodeConfigs.Items).To(BeEmpty())
-		})
-
-		var _ = It("will ignore cr with wrong namespace", func() {
-			Expect(
-				k8sClient.Create(context.TODO(), &data.Node),
-			).To(Succeed())
-
-			Expect(initReconciler(reconciler, data.NodeConfigName(), "wrongNamespace")).To(Succeed())
-
-			Expect(
-				returnLastArg(
-					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
-				),
-			).To(Succeed())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
-			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
-			Expect(nodeConfigs.Items).To(BeEmpty())
-		})
-
-		var _ = It("will fail when namespace will be not handle", func() {
-			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
-			Expect(initReconciler(reconciler, data.NodeConfigName(), "wrongNamespace")).To(Succeed())
-			Expect(
-				returnLastArg(
-					reconciler.Reconcile(context.TODO(),
-						ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "wrongNamespace", Name: data.NodeConfigName()}},
-					),
-				),
-			).To(HaveOccurred())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
-			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
-			Expect(nodeConfigs.Items).To(BeEmpty())
-		})
-
-		var _ = It("will create cr with node config and failed reboot", func() {
-			execCmdMock := new(runExecCmdMock)
-			execCmdMock.
-				onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs"}).Return("", nil).
-				onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs", "--append", "intel_iommu=on"}).Return("", nil).
-				onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs", "--append", "iommu=pt"}).Return("", nil).
-				onCall([]string{
-					"chroot", "--userspec", "0", "/host", "systemd-run", "--unit", "sriov-fec-daemon-reboot", "--description", "sriov-fec-daemon reboot",
-					"/bin/sh", "-c", "systemctl stop kubelet.service; reboot",
-				}).
-				Return("", fmt.Errorf("error"))
-
-			initNodeConfiguratorRunExecCmd(execCmdMock.execute)
-			procCmdlineFilePath = "testdata/cmdline_test_missing_param"
-
-			Expect(
-				k8sClient.Create(context.TODO(), &data.Node),
-			).To(Succeed())
-
-			Expect(
-				k8sClient.Create(context.TODO(), &data.SriovFecNodeConfig),
-			).To(Succeed())
-
-			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
-			Expect(
-				returnLastArg(reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()})),
-			).To(Succeed())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
-			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
-			Expect(nodeConfigs.Items).To(HaveLen(1))
-			Expect(execCmdMock.verify()).To(Succeed())
-		})
-
-		var _ = It("will create cr with node config", func() {
-			osExecMock := new(runExecCmdMock)
-			osExecMock.
-				onCall([]string{"chroot", "/host/", "modprobe", "PFdriver"}).
-				Return("", nil).
-				onCall([]string{"chroot", "/host/", "modprobe", "v"}).
-				Return("", nil).
-				onCall([]string{"/sriov_workdir/pf_bb_config", "FPGA_5GNR", "-c", fmt.Sprintf("%s.ini", filepath.Join(workdir, pciAddress)), "-p", pciAddress}).
-				Return("", nil)
-
-			initNodeConfiguratorRunExecCmd(osExecMock.execute)
-
-			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
-			Expect(k8sClient.Create(context.TODO(), &data.SriovFecNodeConfig)).To(Succeed())
-
-			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
-			Expect(
-				returnLastArg(
-					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
-				),
-			).To(Succeed())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
-			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
-			Expect(nodeConfigs.Items).To(HaveLen(1))
-			Expect(osExecMock.verify()).To(Succeed())
-		})
-
-		var _ = It("will create cr with node config and failed unbind device", func() {
-			osExecMock := new(runExecCmdMock)
-			osExecMock.
-				onCall([]string{"chroot", "/host/", "modprobe", "PFdriver"}).
-				Return("", nil).
-				onCall([]string{"chroot", "/host/", "modprobe", "v"}).
-				Return("", nil)
-
-			initNodeConfiguratorRunExecCmd(osExecMock.execute)
-
-			Expect(createFiles(filepath.Join(sysBusPciDevices, pciAddress), "driver")).To(Succeed())
-			defer os.Remove(filepath.Join(sysBusPciDevices, pciAddress, "driver"))
-
-			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
-			Expect(k8sClient.Create(context.TODO(), &data.SriovFecNodeConfig)).To(Succeed())
-
-			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
-			Expect(returnLastArg(reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}))).To(Succeed())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
-			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
-			Expect(nodeConfigs.Items).To(HaveLen(1))
-			Expect(osExecMock.verify()).To(Succeed())
-		})
-
-		var _ = It("will create cr with node config and enable master bus", func() {
-			driver := "pci-pf-stub"
-			expectedSetpciCommandOutput := fmt.Sprintf("%s = 1", pciAddress)
-
-			data.SriovFecNodeConfig.Spec.PhysicalFunctions[0].PFDriver = driver
-
-			osExecMock := new(runExecCmdMock).
-				onCall([]string{"chroot", "/host/", "modprobe", driver}).Return("", nil).
-				onCall([]string{"chroot", "/host/", "modprobe", "v"}).Return("", nil).
-				onCall(
-					[]string{
-						"/sriov_workdir/pf_bb_config", "FPGA_5GNR", "-c", fmt.Sprintf("%s.ini", filepath.Join(workdir, pciAddress)), "-p", pciAddress,
+				onGetErrorReturningClient := testClient{
+					Client: fake.NewClientBuilder().Build(),
+					get: func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+						return errors.NewNotFound(sriovv2.GroupVersion.WithResource("SriovFecNodeConfig").GroupResource(), "cannot get")
 					},
-				).Return("", nil).
-				onCall([]string{"chroot", "/host/", "setpci", "-v", "-s", pciAddress, "COMMAND"}).Return(expectedSetpciCommandOutput, nil).
-				onCall([]string{"chroot", "/host/", "setpci", "-v", "-s", pciAddress, "COMMAND=05"}).Return(expectedSetpciCommandOutput, nil).
-				build()
+					create: func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+						return fmt.Errorf("cannot create")
+					},
+				}
 
-			initNodeConfiguratorRunExecCmd(osExecMock.execute)
+				var err error
+				reconciler, err = NewNodeConfigReconciler(
+					&onGetErrorReturningClient,
+					func(operation func(ctx context.Context) bool, drain bool) error { return nil },
+					log,
+					_THIS_NODE_NAME,
+					_SUPPORTED_NAMESPACE,
+				)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(reconciler).ToNot(BeNil())
+			})
 
-			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
-			Expect(k8sClient.Create(context.TODO(), &data.SriovFecNodeConfig)).To(Succeed())
-
-			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
-
-			Expect(
-				returnLastArg(
-					reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: data.GetNamespacedName()}),
-				),
-			).To(Succeed())
-
-			//Check if node config was created out of cluster config
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
-			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
-			Expect(nodeConfigs.Items).To(HaveLen(1))
-			Expect(osExecMock.verify()).To(Succeed())
+			It("Reconcile(...) returns error", func() {
+				_, err := reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: types.NamespacedName{Name: _THIS_NODE_NAME, Namespace: _SUPPORTED_NAMESPACE}})
+				Expect(err).To(MatchError(ContainSubstring("cannot create")))
+			})
 		})
 
-		var _ = It("will update status condition", func() {
+		Context("Positive scenarios", func() {
 
-			Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
-			Expect(k8sClient.Create(context.TODO(), &data.SriovFecNodeConfig)).To(Succeed())
+			Context("Initial/zero SriovFecNodeConfig is existing", func() {
+				var k8sClient client.Client
 
-			Expect(initReconciler(reconciler, data.NodeConfigName(), data.NodeConfigNS())).To(Succeed())
+				JustBeforeEach(func() {
+					By("bootstrapping test environment")
 
-			nodeConfig := &sriov.SriovFecNodeConfig{}
-			nn := data.GetNamespacedName()
-			Expect(k8sClient.Get(context.TODO(), nn, nodeConfig)).To(Succeed())
+					testEnv = &envtest.Environment{
+						CRDDirectoryPaths:       []string{filepath.Join("..", "..", "config", "crd", "bases")},
+						ControlPlaneStopTimeout: time.Second,
+					}
 
-			reconciler.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationUnknown, "test unknown")
+					config, err := testEnv.Start()
+					Expect(err).To(Succeed())
+					Expect(config).ToNot(BeNil())
 
-			nodeConfigs := &sriov.SriovFecNodeConfigList{}
-			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
-			Expect(nodeConfigs.Items).To(HaveLen(1))
-			Expect(nodeConfigs.Items[0].Status.Conditions).To(HaveLen(1))
-			Expect(nodeConfigs.Items[0].Status.Conditions[0].Type).To(Equal(ConfigurationCondition))
-			Expect(nodeConfigs.Items[0].Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
-			Expect(nodeConfigs.Items[0].Status.Conditions[0].Reason).To(Equal(string(ConfigurationUnknown)))
-			Expect(nodeConfigs.Items[0].Status.Conditions[0].Message).To(Equal("test unknown"))
-			Expect(nodeConfigs.Items[0].Status.Conditions[0].ObservedGeneration).To(Equal(int64(1)))
+					k8sClient, err = client.New(config, client.Options{Scheme: scheme.Scheme})
+					Expect(err).ToNot(HaveOccurred())
+					Expect(k8sClient).ToNot(BeNil())
 
-			reconciler.updateCondition(nodeConfig, metav1.ConditionTrue, ConfigurationSucceeded, "test succeeded")
+					fakeDrainer := func(configure func(ctx context.Context) bool, drain bool) error {
+						configure(context.TODO())
+						return nil
+					}
+					reconciler, err := NewNodeConfigReconciler(k8sClient, fakeDrainer, log, _THIS_NODE_NAME, _SUPPORTED_NAMESPACE)
+					Expect(err).ToNot(HaveOccurred())
 
-			Expect(k8sClient.List(context.TODO(), nodeConfigs)).To(Succeed())
-			Expect(nodeConfigs.Items).To(HaveLen(1))
-			Expect(nodeConfigs.Items[0].Status.Conditions).To(HaveLen(1))
-			Expect(nodeConfigs.Items[0].Status.Conditions[0].Type).To(Equal(ConfigurationCondition))
-			Expect(nodeConfigs.Items[0].Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
-			Expect(nodeConfigs.Items[0].Status.Conditions[0].Reason).To(Equal(string(ConfigurationSucceeded)))
-			Expect(nodeConfigs.Items[0].Status.Conditions[0].Message).To(Equal("test succeeded"))
-			Expect(nodeConfigs.Items[0].Status.Conditions[0].ObservedGeneration).To(Equal(int64(1)))
+					k8sManager, err := CreateManager(config, _SUPPORTED_NAMESPACE, scheme.Scheme)
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(reconciler.SetupWithManager(k8sManager)).ToNot(HaveOccurred())
+
+					//Required during cordoning & draining
+					Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
+
+					//initialize empty SriovFecNodeConfig
+					Expect(reconciler.CreateEmptyNodeConfigIfNeeded(k8sClient)).To(Succeed())
+
+					go func() {
+						Expect(k8sManager.Start(context.TODO())).ToNot(HaveOccurred())
+					}()
+				})
+
+				AfterEach(func() {
+					By("tearing down the test environment")
+					gexec.KillAndWait("5s")
+					Expect(testEnv.Stop()).ToNot(HaveOccurred())
+				})
+
+				Context("Requested spec/config is correct and refers to existing accelerators", func() {
+					It("spec/config should be applied", func() {
+						osExecMock := new(runExecCmdMock).
+							onCall([]string{"chroot", "/host/", "modprobe", "PFdriver"}).
+							Return("", nil).
+							onCall([]string{"chroot", "/host/", "modprobe", "v"}).
+							Return("", nil).
+							onCall([]string{"/sriov_workdir/pf_bb_config", "FPGA_5GNR", "-c", fmt.Sprintf("%s.ini", filepath.Join(workdir, pciAddress)), "-p", pciAddress}).
+							Return("", nil)
+
+						initNodeConfiguratorRunExecCmd(osExecMock.execute)
+
+						nc := new(sriovv2.SriovFecNodeConfig)
+						Expect(k8sClient.Get(context.TODO(), data.GetNamespacedName(), nc)).ToNot(HaveOccurred())
+
+						nc.Spec = data.SriovFecNodeConfig.Spec
+						Expect(k8sClient.Update(context.TODO(), nc)).To(Succeed())
+
+						Eventually(func() (nc sriovv2.SriovFecNodeConfig, err error) {
+							return nc, k8sClient.Get(context.TODO(), data.GetNamespacedName(), &nc)
+						}, "1m", "0.5s").
+							Should(
+								WithTransform(
+									func(nc sriovv2.SriovFecNodeConfig) *metav1.Condition {
+										return nc.FindCondition(ConditionConfigured)
+									}, SatisfyAll(
+										Not(BeNil()),
+										WithTransform(func(c *metav1.Condition) string { return c.Reason }, Equal(string(ConfigurationSucceeded))),
+									),
+								),
+							)
+
+						Expect(osExecMock.verify()).To(Succeed())
+					})
+
+					When("Kernel has missing parameters", func() {
+						Specify("kernel has to be reconfigured and spec/config should be applied", func() {
+
+							expectedCallsRelatedWithReboot := new(runExecCmdMock).
+								//mocking calls for nodeConfigurator.rebootNode(...)
+								onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs"}).Return("", nil).
+								onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs", "--append", "intel_iommu=on"}).Return("", nil).
+								onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs", "--append", "iommu=pt"}).Return("", nil).
+								onCall([]string{
+									"chroot", "--userspec", "0", "/host", "systemd-run", "--unit", "sriov-fec-daemon-reboot", "--description", "sriov-fec-daemon reboot",
+									"/bin/sh", "-c", "systemctl stop kubelet.service; reboot",
+								}).Return("", nil)
+
+							//init daemon.runExecCmd
+							runExecCmd = expectedCallsRelatedWithReboot.execute
+							//manifest missing kernel params
+							procCmdlineFilePath = "testdata/cmdline_test_missing_param"
+
+							//Reconcile(...) function will be executed automatically after node reboot
+							//I have no idea how to simulate reboot/restart controller
+							//I am making resyncPeriod tiny to force immediate requeue of reconciliation process
+							resyncPeriod = time.Second
+
+							//apply nodeconfig
+							Expect(k8sClient.Patch(context.TODO(), &data.SriovFecNodeConfig, client.Merge, client.FieldOwner("test"))).To(Succeed())
+
+							//node config processing should be in progress
+							Eventually(func() (nc sriovv2.SriovFecNodeConfig, err error) {
+								return nc, k8sClient.Get(context.TODO(), data.GetNamespacedName(), &nc)
+							}, "10s").
+								Should(
+									WithTransform(
+										func(nc sriovv2.SriovFecNodeConfig) *metav1.Condition {
+											return nc.FindCondition(ConditionConfigured)
+										}, SatisfyAll(
+											Not(BeNil()),
+											WithTransform(func(c *metav1.Condition) string { return c.Reason }, Equal(string(ConfigurationInProgress))),
+										),
+									),
+								)
+
+							Eventually(func() error {
+								return expectedCallsRelatedWithReboot.verify()
+							}, "10s").Should(Succeed())
+
+							//manifest expected kernel configuration
+							procCmdlineFilePath = "testdata/cmdline_test"
+
+							expectedApplyConfigRelatedCalls := new(runExecCmdMock).
+								onCall([]string{"chroot", "/host/", "modprobe", "PFdriver"}).Return("", nil).
+								onCall([]string{"chroot", "/host/", "modprobe", "v"}).Return("", nil).
+								onCall([]string{"/sriov_workdir/pf_bb_config", "FPGA_5GNR", "-c", fmt.Sprintf("%s.ini", filepath.Join(workdir, pciAddress)), "-p", pciAddress}).Return("", nil)
+
+							//init daemon.runExecCmd
+							runExecCmd = expectedApplyConfigRelatedCalls.execute
+
+							Eventually(func() error {
+								return expectedApplyConfigRelatedCalls.verify()
+							}, "10s").Should(Succeed())
+
+							resyncPeriod = time.Minute
+
+							Eventually(func() (nc sriovv2.SriovFecNodeConfig, err error) {
+								return nc, k8sClient.Get(context.TODO(), data.GetNamespacedName(), &nc)
+							}, "10s", "0.5s").
+								Should(
+									WithTransform(
+										func(nc sriovv2.SriovFecNodeConfig) *metav1.Condition {
+											return nc.FindCondition(ConditionConfigured)
+										}, SatisfyAll(
+											Not(BeNil()),
+											WithTransform(func(c *metav1.Condition) string { return c.Reason }, Equal(string(ConfigurationSucceeded))),
+										),
+									),
+								)
+						})
+					})
+				})
+			})
+		})
+
+		Context("Negative scenarios", func() {
+
+			Context("Requested config/spec refers to non existing accelerator", func() {
+				It("spec/config should not be applied, error info should be exposed over configuration ccondition", func() {
+
+					//existing inventory
+					getSriovInventory = func(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
+						inventory := data.SriovFecNodeConfig.Status.Inventory
+						inventory.SriovAccelerators[0].PCIAddress = "0000:99:00.1"
+						return &inventory, nil
+					}
+
+					fakeClient := fake.NewClientBuilder().WithObjects(&data.SriovFecNodeConfig).Build()
+					reconciler := NodeConfigReconciler{Client: fakeClient, log: log}
+
+					_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{
+						Name:      _THIS_NODE_NAME,
+						Namespace: _SUPPORTED_NAMESPACE,
+					}})
+					Expect(err).To(Succeed())
+
+					res := new(sriovv2.SriovFecNodeConfig)
+					Expect(fakeClient.Get(context.TODO(), client.ObjectKeyFromObject(&data.SriovFecNodeConfig), res)).To(Succeed())
+					Expect(res).To(Not(BeNil()))
+					Expect(res.FindCondition(ConditionConfigured)).To(Not(BeNil()))
+					Expect(res.FindCondition(ConditionConfigured).Reason).To(Equal(string(ConfigurationFailed)))
+					Expect(res.FindCondition(ConditionConfigured).Status).To(Equal(metav1.ConditionFalse))
+					Expect(res.FindCondition(ConditionConfigured).Message).To(ContainSubstring("not existing accelerator"))
+				})
+			})
+
+			Context("Modification of SriovFecNodeConfig not related with this NodeConfigReconciler instance", func() {
+				var k8sClient client.Client
+
+				BeforeEach(func() {
+
+					By("bootstrapping test environment")
+
+					testEnv = &envtest.Environment{
+						CRDDirectoryPaths:       []string{filepath.Join("..", "..", "config", "crd", "bases")},
+						ControlPlaneStopTimeout: time.Second,
+					}
+
+					config, err := testEnv.Start()
+					Expect(err).To(Succeed())
+					Expect(config).ToNot(BeNil())
+
+					k8sClient, err = client.New(config, client.Options{Scheme: scheme.Scheme})
+					Expect(err).ToNot(HaveOccurred())
+					Expect(k8sClient).ToNot(BeNil())
+
+					drainer := func(configure func(ctx context.Context) bool, drain bool) error {
+						configure(context.TODO())
+						return nil
+					}
+					nodeReconciler, err := NewNodeConfigReconciler(k8sClient, drainer, log, _THIS_NODE_NAME, _SUPPORTED_NAMESPACE)
+					Expect(err).ToNot(HaveOccurred())
+
+					reconciler := nodeRecocnilerWrapper{
+						NodeConfigReconciler: nodeReconciler,
+						reconcilingFunc: func(context.Context, reconcile.Request) (reconcile.Result, error) {
+							Fail("reconcile function should not be called")
+							return reconcile.Result{}, nil
+						},
+					}
+
+					k8sManager, err := CreateManager(config, _SUPPORTED_NAMESPACE, scheme.Scheme)
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(reconciler.SetupWithManager(k8sManager)).ToNot(HaveOccurred())
+
+					go func() {
+						Expect(k8sManager.Start(context.TODO())).ToNot(HaveOccurred())
+					}()
+				})
+
+				AfterEach(func() {
+					By("tearing down the test environment")
+					gexec.KillAndWait("5s")
+					Expect(testEnv.Stop()).ToNot(HaveOccurred())
+				})
+
+				When("Modified SriovFecNodeConfig has foreign name(....)", func() {
+					It("should not be considered for reconciliation", func() {
+						nodeConfigRelatedWithForeignNode := &sriovv2.SriovFecNodeConfig{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "foreign-node",
+								Namespace: _SUPPORTED_NAMESPACE,
+							},
+							Spec: sriovv2.SriovFecNodeConfigSpec{
+								PhysicalFunctions: []sriovv2.PhysicalFunctionConfigExt{},
+							},
+						}
+
+						Expect(k8sClient.Create(context.TODO(), nodeConfigRelatedWithForeignNode)).ToNot(HaveOccurred())
+
+						Consistently(
+							func() error {
+								return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nodeConfigRelatedWithForeignNode), &sriovv2.SriovFecNodeConfig{})
+							}, "10s", "1s").ShouldNot(HaveOccurred())
+					})
+				})
+
+				When("Modified SriovFecNodeConfig has foreign namespace", func() {
+					It("should not be considered for reconciliation", func() {
+
+						const _FOREIGN_NAMESPACE = "kube-system"
+						nodeConfigRelatedWithForeignNode := &sriovv2.SriovFecNodeConfig{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      _THIS_NODE_NAME,
+								Namespace: _FOREIGN_NAMESPACE,
+							},
+							Spec: sriovv2.SriovFecNodeConfigSpec{
+								PhysicalFunctions: []sriovv2.PhysicalFunctionConfigExt{},
+							},
+						}
+
+						Expect(k8sClient.Create(context.TODO(), nodeConfigRelatedWithForeignNode)).ToNot(HaveOccurred())
+
+						Consistently(
+							func() error {
+								return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nodeConfigRelatedWithForeignNode), &sriovv2.SriovFecNodeConfig{})
+							}, "10s", "1s").ShouldNot(HaveOccurred())
+					})
+				})
+			})
+
+			When("NodeConfigReconciler cannot read inventory", func() {
+				It("SriovFecNodeConfig.Status.Condition should expose appropriate info", func() {
+					fakeClient := fake.NewClientBuilder().WithObjects(&data.SriovFecNodeConfig).Build()
+					reconciler := NodeConfigReconciler{Client: fakeClient, log: log}
+					getSriovInventory = func(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
+						return nil, fmt.Errorf("cannot read inventory")
+					}
+
+					_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{
+						Name:      _THIS_NODE_NAME,
+						Namespace: _SUPPORTED_NAMESPACE,
+					}})
+					Expect(err).To(MatchError("cannot read inventory"))
+				})
+			})
 		})
 	})
 
-	var _ = Describe("Reconciler manager", func() {
-		var _ = It("setup with invalid manager", func() {
-			var m ctrl.Manager
-			Expect(new(NodeConfigReconciler).SetupWithManager(m)).To(HaveOccurred())
+	It("updateStatus() updates ConditionConfigured condition", func() {
+		nodeConfig := sriovv2.SriovFecNodeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      _THIS_NODE_NAME,
+				Namespace: _SUPPORTED_NAMESPACE,
+			},
+			Status: sriovv2.SriovFecNodeConfigStatus{},
+			Spec: sriovv2.SriovFecNodeConfigSpec{
+				PhysicalFunctions: []sriovv2.PhysicalFunctionConfigExt{},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithObjects(&nodeConfig).Build()
+		reconciler := NodeConfigReconciler{Client: fakeClient, log: log}
+
+		Expect(nodeConfig.Status.Conditions).To(BeEmpty())
+
+		Expect(reconciler.updateStatus(&nodeConfig, metav1.ConditionUnknown, ConfigurationNotRequested, "Unknown")).To(Succeed())
+
+		res := new(sriovv2.SriovFecNodeConfig)
+		Expect(fakeClient.Get(context.TODO(), client.ObjectKeyFromObject(&nodeConfig), res)).To(Succeed())
+		Expect(res.Status.Conditions).To(HaveLen(1))
+		Expect(res.FindCondition(ConditionConfigured)).ToNot(BeNil())
+		Expect(res.FindCondition(ConditionConfigured).Reason).To(ContainSubstring("NotRequested"), "Condition.Reason")
+		Expect(res.FindCondition(ConditionConfigured).Message).To(ContainSubstring("Unknown"), "Condition.Message")
+		Expect(res.FindCondition(ConditionConfigured).Status).To(BeEquivalentTo(metav1.ConditionUnknown), "Condition.Status")
+
+		Expect(reconciler.updateStatus(&nodeConfig, metav1.ConditionTrue, ConfigurationSucceeded, string(ConfigurationSucceeded))).To(Succeed())
+		res = new(sriovv2.SriovFecNodeConfig)
+		Expect(fakeClient.Get(context.TODO(), client.ObjectKeyFromObject(&nodeConfig), res)).To(Succeed())
+		Expect(res.Status.Conditions).To(HaveLen(1))
+		Expect(res.FindCondition(ConditionConfigured)).ToNot(BeNil())
+		Expect(res.FindCondition(ConditionConfigured).Status).To(BeEquivalentTo(metav1.ConditionTrue), "Condition.Status")
+		Expect(res.FindCondition(ConditionConfigured).Message).To(ContainSubstring("Succeeded"), "Condition.Message")
+		Expect(res.FindCondition(ConditionConfigured).Reason).To(ContainSubstring("Succeeded"), "Condition.Reason")
+	})
+
+	Describe("isConfigurationOfNonExistingInventoryRequested()", func() {
+		When("requested config refers only to exiting inventory", func() {
+			It("error should not be returned", func() {
+				requestedConfig := []sriovv2.PhysicalFunctionConfigExt{
+					{PCIAddress: "1"}, {PCIAddress: "2"}, {PCIAddress: "3"},
+				}
+
+				inventory := sriovv2.NodeInventory{
+					SriovAccelerators: []sriovv2.SriovAccelerator{
+						{PCIAddress: "1"}, {PCIAddress: "2"}, {PCIAddress: "3"}, {PCIAddress: "4"},
+					},
+				}
+				Expect(isConfigurationOfNonExistingInventoryRequested(requestedConfig, &inventory)).To(BeFalse())
+			})
+		})
+
+		When("requested config refers to not exiting inventory", func() {
+			It("error should be returned", func() {
+				requestedConfig := []sriovv2.PhysicalFunctionConfigExt{
+					{PCIAddress: "1"}, {PCIAddress: "99"}, {PCIAddress: "3"},
+				}
+
+				inventory := sriovv2.NodeInventory{
+					SriovAccelerators: []sriovv2.SriovAccelerator{
+						{PCIAddress: "1"}, {PCIAddress: "2"}, {PCIAddress: "3"}, {PCIAddress: "4"},
+					},
+				}
+				Expect(isConfigurationOfNonExistingInventoryRequested(requestedConfig, &inventory)).To(BeTrue())
+			})
+		})
+
+		When("empty config requested", func() {
+			It("error should not be returned", func() {
+				requestedConfig := []sriovv2.PhysicalFunctionConfigExt{}
+
+				inventory := sriovv2.NodeInventory{
+					SriovAccelerators: []sriovv2.SriovAccelerator{
+						{PCIAddress: "1"},
+						{PCIAddress: "2"},
+						{PCIAddress: "3"},
+						{PCIAddress: "4"},
+					},
+				}
+				Expect(isConfigurationOfNonExistingInventoryRequested(requestedConfig, &inventory)).To(BeFalse())
+			})
 		})
 	})
+
 })
+
+type nodeRecocnilerWrapper struct {
+	*NodeConfigReconciler
+	reconcilingFunc func(ctx context.Context, req ctrl.Request) (ctrl.Result, error)
+}
+
+func (n *nodeRecocnilerWrapper) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	return n.reconcilingFunc(ctx, req)
+}
+
+type testClient struct {
+	client.Client
+	get    func(ctx context.Context, key client.ObjectKey, obj client.Object) error
+	create func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error
+}
+
+func (e *testClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+	return e.get(ctx, key, obj)
+}
+
+func (e *testClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+	return e.create(ctx, obj, opts...)
+}
 
 func createFiles(folderPath string, filesToBeCreated ...string) error {
 	if _, err := os.Stat(folderPath); os.IsNotExist(err) {
@@ -352,29 +563,9 @@ func readAndUnmarshall(filepath string, target interface{}) error {
 }
 
 type TestData struct {
-	SriovFecNodeConfig sriov.SriovFecNodeConfig `json:"sriov_fec_node_config"`
-	NodeInventory      sriov.NodeInventory      `json:"node_inventory"`
-	Node               core.Node                `json:"node"`
-}
-
-func (d *TestData) SetPcieAddress(addr string) {
-	for _, f := range d.SriovFecNodeConfig.Spec.PhysicalFunctions {
-		f.PCIAddress = addr
-	}
-
-	for _, a := range d.NodeInventory.SriovAccelerators {
-		a.PCIAddress = addr
-		for _, vf := range a.VFs {
-			vf.PCIAddress = addr
-		}
-	}
-}
-
-func (d *TestData) PcieAddress() string {
-	for _, a := range d.NodeInventory.SriovAccelerators {
-		return a.PCIAddress
-	}
-	panic("PcieAddress is not defined")
+	SriovFecNodeConfig   sriovv2.SriovFecNodeConfig `json:"sriov_fec_node_config"`
+	Node                 core.Node                  `json:"node"`
+	SriovDevicePluginPod core.Pod                   `json:"sriov_device_plugin_pod"`
 }
 
 func (d *TestData) GetNamespacedName() types.NamespacedName {
@@ -392,25 +583,6 @@ func (d *TestData) NodeConfigNS() string {
 	return d.SriovFecNodeConfig.Namespace
 }
 
-func initReconciler(toBeInitialized *NodeConfigReconciler, nodeName, namespace string) error {
-	cset, err := clientset.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-
-	r, err := NewNodeConfigReconciler(k8sClient, cset, log, nodeName, namespace)
-	if err != nil {
-		return err
-	}
-
-	*toBeInitialized = *r
-	return nil
-}
-
-func initNodeConfiguratorRunExecCmd(f func([]string, logr.Logger) (string, error)) {
+func initNodeConfiguratorRunExecCmd(f func([]string, *logrus.Logger) (string, error)) {
 	runExecCmd = f
-}
-
-func returnLastArg(args ...interface{}) interface{} {
-	return args[len(args)-1]
 }

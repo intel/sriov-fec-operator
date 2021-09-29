@@ -5,19 +5,20 @@ package daemon
 
 import (
 	"context"
-	"reflect"
+	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"time"
 
-	"github.com/go-logr/logr"
-	dh "github.com/open-ness/openshift-operator/common/pkg/drainhelper"
-	"github.com/open-ness/openshift-operator/common/pkg/utils"
-	sriovv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
+	"github.com/smart-edge-open/openshift-operator/common/pkg/utils"
+	fec "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	meta "k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clientset "k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -25,242 +26,295 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const (
-	resyncPeriod = time.Minute
-)
-
 type ConfigurationConditionReason string
 
 const (
-	ConfigurationCondition    string                       = "Configured"
-	ConfigurationUnknown      ConfigurationConditionReason = "Unknown"
+	ConditionConfigured       string                       = "Configured"
 	ConfigurationInProgress   ConfigurationConditionReason = "InProgress"
 	ConfigurationFailed       ConfigurationConditionReason = "Failed"
 	ConfigurationNotRequested ConfigurationConditionReason = "NotRequested"
 	ConfigurationSucceeded    ConfigurationConditionReason = "Succeeded"
 )
 
-func (r *NodeConfigReconciler) updateCondition(nc *sriovv1.SriovFecNodeConfig, status metav1.ConditionStatus,
-	reason ConfigurationConditionReason, msg string) {
-	log := r.log.WithName("updateCondition")
-	c := metav1.Condition{
-		Type:               ConfigurationCondition,
-		Status:             status,
-		Reason:             string(reason),
-		Message:            msg,
-		ObservedGeneration: nc.GetGeneration(),
-	}
-	if err := r.updateStatus(nc, []metav1.Condition{c}); err != nil {
-		log.Error(err, "failed to update SriovFecNodeConfig condition")
-	}
-}
-
-func (r *NodeConfigReconciler) updateStatus(nc *sriovv1.SriovFecNodeConfig, c []metav1.Condition) error {
-	log := r.log.WithName("updateStatus")
-
-	inv, err := getSriovInventory(log)
-	if err != nil {
-		log.Error(err, "failed to obtain sriov inventory for the node")
-		return err
-	}
-	nodeStatus := sriovv1.SriovFecNodeConfigStatus{Inventory: *inv}
-
-	for _, condition := range c {
-		meta.SetStatusCondition(&nodeStatus.Conditions, condition)
-	}
-
-	nc.Status = nodeStatus
-	if err := r.Status().Update(context.Background(), nc); err != nil {
-		log.Error(err, "failed to update SriovFecNode status")
-		return err
-	}
-
-	return nil
-}
-
-type NodeConfigReconciler struct {
-	client.Client
-	log              logr.Logger
-	nodeName         string
-	namespace        string
-	drainHelper      *dh.DrainHelper
-	nodeConfigurator *NodeConfigurator
-}
-
 var (
+	resyncPeriod          = time.Minute
 	configPath            = "/sriov_config/config/accelerators.json"
 	getSriovInventory     = GetSriovInventory
 	supportedAccelerators utils.AcceleratorDiscoveryConfig
 )
 
-func NewNodeConfigReconciler(c client.Client, clientSet *clientset.Clientset, log logr.Logger,
-	nodeName, ns string) (*NodeConfigReconciler, error) {
+type NodeConfigReconciler struct {
+	client.Client
+	log              *logrus.Logger
+	nodeName         string
+	namespace        string
+	drainAndExecute  Drainer
+	nodeConfigurator *NodeConfigurator
+}
 
-	var err error
-	supportedAccelerators, err = utils.LoadDiscoveryConfig(configPath)
+type Drainer func(configurer func(ctx context.Context) bool, drain bool) error
+type configurer func(ctx context.Context) bool
+
+type configurationStatus struct {
+	isRebootRequested  bool
+	configurationError error
+}
+
+func NewNodeConfigReconciler(k8sClient client.Client, drainer Drainer, log *logrus.Logger, nodeName, ns string) (r *NodeConfigReconciler, err error) {
+
+	if supportedAccelerators, err = utils.LoadDiscoveryConfig(configPath); err != nil {
+		return nil, err
+	}
+
+	kc, err := createKernelController(log)
 	if err != nil {
 		return nil, err
 	}
 
-	kk, err := createKernelController(log.WithName("KernelController"))
-	if err != nil {
-		return nil, err
-	}
-
-	nc := &NodeConfigurator{Log: log.WithName("NodeConfigurator"), kernelController: kk}
+	nc := &NodeConfigurator{Log: log, kernelController: kc}
 
 	return &NodeConfigReconciler{
-		Client:           c,
+		Client:           k8sClient,
 		log:              log,
 		nodeName:         nodeName,
 		namespace:        ns,
-		drainHelper:      dh.NewDrainHelper(log, clientSet, nodeName, ns),
+		drainAndExecute:  drainer,
 		nodeConfigurator: nc,
 	}, nil
 }
 
-func (r *NodeConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&sriovv1.SriovFecNodeConfig{}).
-		WithEventFilter(predicate.Funcs{
-			CreateFunc: func(e event.CreateEvent) bool {
-				_, ok := e.Object.(*sriovv1.SriovFecNodeConfig)
-				if !ok {
-					r.log.V(2).Info("Failed to convert e.Object to sriovv1.SriovFecNodeConfig", "e.Object", e.Object)
-					return false
-				}
-				return true
+func (r *NodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
 
-			},
-			UpdateFunc: func(e event.UpdateEvent) bool {
-				if e.ObjectOld.GetGeneration() == e.ObjectNew.GetGeneration() {
-					r.log.V(4).Info("Update ignored, generation unchanged")
-					return false
-				}
-				return true
-			},
-		}).
-		Complete(r)
+	nc, err := r.readSriovFecNodeConfig(req.NamespacedName)
+	if err != nil {
+		return requeueNowWithError(err)
+	}
+
+	detectedInventory, err := r.readExistingInventory()
+	if err != nil {
+		return requeueNowWithError(err)
+	}
+
+	if isConfigurationOfNonExistingInventoryRequested(nc.Spec.PhysicalFunctions, detectedInventory) {
+		return requeueLaterOrNowIfError(r.updateStatus(nc, metav1.ConditionFalse, ConfigurationFailed, "requested configuration reffers to not existing accelerator"))
+	}
+
+	if !isReconcileRequired(nc) {
+		r.log.Info("Nothing to do")
+		return requeueLater()
+	}
+
+	if err := r.updateStatus(nc, metav1.ConditionFalse, ConfigurationInProgress, "Configuration started"); err != nil {
+		return requeueNowWithError(err)
+	}
+
+	if rebootRequested, err := r.configureNode(nc); err != nil {
+		r.log.WithError(err).Error("error occurred during configuring node")
+		return requeueNowWithError(r.updateStatus(nc, metav1.ConditionFalse, ConfigurationFailed, err.Error()))
+	} else if rebootRequested {
+		r.log.Info("status update skipped - CR will be handled again after node reboot")
+		return requeueLater()
+	} else {
+		return requeueLaterOrNowIfError(r.updateStatus(nc, metav1.ConditionTrue, ConfigurationSucceeded, "Configured successfully"))
+	}
 }
 
-func (r *NodeConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.log.WithName("Reconcile").WithValues("namespace", req.Namespace, "name", req.Name)
+// CreateEmptyNodeConfigIfNeeded creates empty CR to be Reconciled in near future and filled with Status.
+// If invoked before manager's Start, it'll need a direct API client
+// (Manager's/Controller's client is cached and cache is not initialized yet).
+func (r *NodeConfigReconciler) CreateEmptyNodeConfigIfNeeded(c client.Client) error {
+	nodeConfig := &fec.SriovFecNodeConfig{}
 
-	if req.Namespace != r.namespace {
-		log.V(4).Info("unexpected namespace - ignoring", "expected namespace", r.namespace)
-		return reconcile.Result{}, nil
+	err := c.Get(context.Background(), client.ObjectKey{Name: r.nodeName, Namespace: r.namespace}, nodeConfig)
+	if err == nil {
+		r.log.Info("already exists")
+		return nil
 	}
 
-	if req.Name != r.nodeName {
-		log.V(4).Info("CR intended for another node - ignoring", "expected name", r.nodeName)
-		return reconcile.Result{}, nil
+	if !k8serrors.IsNotFound(err) {
+		return err
 	}
 
-	nodeConfig := &sriovv1.SriovFecNodeConfig{}
-	if err := r.Client.Get(ctx, req.NamespacedName, nodeConfig); err != nil {
-		if k8serrors.IsNotFound(err) {
-			log.V(4).Info("not found - creating")
-			return reconcile.Result{}, r.CreateEmptyNodeConfigIfNeeded(r.Client)
-		}
-		log.Error(err, "Get() failed")
-		return reconcile.Result{}, err
-	}
-	skipStatusUpdate := false
+	r.log.Infof("SriovFecNodeConfig{name: %s, namespace: %s} not found - creating", r.nodeName, r.namespace)
 
-	if len(nodeConfig.Spec.PhysicalFunctions) == 0 {
-		log.V(4).Info("Nothing to do")
-		r.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationNotRequested, "Inventory up to date")
-		return reconcile.Result{}, nil
+	nodeConfig = &fec.SriovFecNodeConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.nodeName,
+			Namespace: r.namespace,
+		},
+		Spec: fec.SriovFecNodeConfigSpec{
+			PhysicalFunctions: []fec.PhysicalFunctionConfigExt{},
+		},
 	}
 
-	inv, err := getSriovInventory(log)
+	if createErr := c.Create(context.Background(), nodeConfig); createErr != nil {
+		r.log.WithError(createErr).Error("failed to create")
+		return createErr
+	}
+
+	meta.SetStatusCondition(&nodeConfig.Status.Conditions, metav1.Condition{
+		Type:               ConditionConfigured,
+		Status:             metav1.ConditionFalse,
+		Reason:             string(ConfigurationNotRequested),
+		Message:            "",
+		ObservedGeneration: nodeConfig.GetGeneration(),
+	})
+
+	if inv, err := r.readExistingInventory(); err != nil {
+		return err
+	} else {
+		nodeConfig.Status.Inventory = *inv
+	}
+
+	if updateErr := c.Status().Update(context.Background(), nodeConfig); updateErr != nil {
+		r.log.WithError(updateErr).Error("failed to update cr status")
+		return updateErr
+	}
+
+	return nil
+}
+
+func (r *NodeConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&fec.SriovFecNodeConfig{}).
+		WithEventFilter(
+			predicate.And(
+				ResourceNamePredicate{
+					requiredName: r.nodeName,
+					log:          r.log,
+				},
+				predicate.GenerationChangedPredicate{},
+			),
+		).Complete(r)
+}
+
+func (r *NodeConfigReconciler) updateStatus(nc *fec.SriovFecNodeConfig, status metav1.ConditionStatus, reason ConfigurationConditionReason, msg string) error {
+	previousCondition := findOrCreateConfigurationStatusCondition(nc)
+
+	condition := metav1.Condition{
+		Type:    ConditionConfigured,
+		Status:  status,
+		Reason:  string(reason),
+		Message: msg,
+		ObservedGeneration: func() int64 {
+			if reason != ConfigurationInProgress {
+				return nc.GetGeneration()
+			} else {
+				return previousCondition.ObservedGeneration
+			}
+		}(),
+	}
+
+	meta.SetStatusCondition(&nc.Status.Conditions, condition)
+	if inv, err := getSriovInventory(r.log); err != nil {
+		r.log.WithError(err).
+			WithField("reason", condition.Reason).
+			WithField("message", condition.Message).
+			Error("failed to obtain sriov inventory for the node")
+	} else {
+		nc.Status.Inventory = *inv
+	}
+
+	if err := r.Status().Update(context.Background(), nc); err != nil {
+		return err
+	}
+
+	r.log.WithField("previous", previousCondition).
+		WithField("current", condition).
+		Infof("%s condition transition", ConditionConfigured)
+
+	return nil
+}
+
+func (r *NodeConfigReconciler) readExistingInventory() (*fec.NodeInventory, error) {
+	inv, err := getSriovInventory(r.log)
 	if err != nil {
-		log.Error(err, "failed to obtain sriov inventory for the node")
-		r.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationFailed, err.Error())
-		return reconcile.Result{}, err
+		r.log.WithError(err).Error("failed to obtain sriov inventory for the node")
+	}
+	return inv, err
+}
+
+func (r *NodeConfigReconciler) readSriovFecNodeConfig(nn types.NamespacedName) (nc *fec.SriovFecNodeConfig, err error) {
+	getSriovFecNodeConfig := func() (*fec.SriovFecNodeConfig, error) {
+		sfnc := new(fec.SriovFecNodeConfig)
+		if err := r.Client.Get(context.TODO(), nn, sfnc); err != nil {
+			return nil, err
+		}
+		return sfnc, nil
 	}
 
-	currentCondition := meta.FindStatusCondition(nodeConfig.Status.Conditions, ConfigurationCondition)
-	if currentCondition != nil {
-		if reflect.DeepEqual(*inv, nodeConfig.Status.Inventory) && currentCondition.ObservedGeneration == nodeConfig.GetGeneration() {
-			return reconcile.Result{RequeueAfter: resyncPeriod}, nil
+	if nc, err = getSriovFecNodeConfig(); err != nil {
+		if !k8serrors.IsNotFound(err) {
+			r.log.WithError(err).Error("Get() failed")
+			return nil, err
 		}
 
-		currentCondition.Status = metav1.ConditionFalse
-		currentCondition.Reason = string(ConfigurationInProgress)
-		currentCondition.Message = "Configuration started"
-		if err := r.updateStatus(nodeConfig, []metav1.Condition{*currentCondition}); err != nil {
-			log.Error(err, "failed to update current SriovFecNode configuration condition")
-			return reconcile.Result{}, err
+		r.log.Info("SriovFecNodeConfig not found - creating")
+		if err := r.CreateEmptyNodeConfigIfNeeded(r.Client); err != nil {
+			r.log.WithError(err).Error("Couldn't create SriovFecNodeConfig")
+			return nil, err
+		}
+
+		if nc, err = getSriovFecNodeConfig(); err != nil {
+			return nil, err
 		}
 	}
 
-	var configurationErr, dhErr error
+	return nc, nil
+}
 
-	dhErr = r.drainHelper.Run(func(c context.Context) bool {
+func (r *NodeConfigReconciler) configureNode(nodeConfig *fec.SriovFecNodeConfig) (isRebootRequested bool, err error) {
+	configurer, status := r.createNodeConfigurer(nodeConfig)
+
+	if err = r.drainAndExecute(configurer, !nodeConfig.Spec.DrainSkip); err != nil {
+		return false, err
+	}
+
+	return status.isRebootRequested, status.configurationError
+}
+
+func (r *NodeConfigReconciler) createNodeConfigurer(nodeConfig *fec.SriovFecNodeConfig) (configurer, *configurationStatus) {
+	status := new(configurationStatus)
+
+	configurer := func(ctx context.Context) bool {
 		missingParams, err := r.nodeConfigurator.isAnyKernelParamsMissing()
 		if err != nil {
-			log.Error(err, "failed to check for missing params")
-			configurationErr = err
+			r.log.WithError(err).Error("failed to check for missing params")
+			status.configurationError = err
 			return true
 		}
 
 		if missingParams {
-			log.V(2).Info("missing kernel params")
+			r.log.Info("missing kernel params")
 
 			err := r.nodeConfigurator.addMissingKernelParams()
 			if err != nil {
-				log.Error(err, "failed to add missing params")
-				configurationErr = err
+				r.log.WithError(err).Error("failed to add missing params")
+				status.configurationError = err
 				return true
 			}
 
-			log.V(2).Info("added kernel params - rebooting")
+			r.log.Info("added kernel params - rebooting")
 			if err := r.nodeConfigurator.rebootNode(); err != nil {
-				log.Error(err, "failed to request a node reboot")
-				configurationErr = err
+				r.log.WithError(err).Error("failed to request a node reboot")
+				status.configurationError = err
 				return true
 			}
-			skipStatusUpdate = true
+			status.isRebootRequested = true
 			return false // leave node cordoned & keep the leadership
 		}
 		if err := r.nodeConfigurator.applyConfig(nodeConfig.Spec); err != nil {
-			log.Error(err, "failed applying new PF/VF configuration")
-			configurationErr = err
+			r.log.WithError(err).Error("failed applying new PF/VF configuration")
+			status.configurationError = err
 			return true
 		}
 
-		configurationErr = r.restartDevicePlugin()
+		status.configurationError = r.restartDevicePlugin()
 		return true
-	}, !nodeConfig.Spec.DrainSkip)
-
-	if skipStatusUpdate {
-		log.V(4).Info("status update skipped - CR will be handled again after node reboot")
-		return reconcile.Result{}, nil
 	}
 
-	if dhErr != nil {
-		log.Error(dhErr, "drainhelper returned an error")
-		r.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationUnknown, dhErr.Error())
-		return reconcile.Result{}, err
-	}
-
-	if configurationErr != nil {
-		log.Error(configurationErr, "error during configuration")
-		r.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationFailed, configurationErr.Error())
-		return reconcile.Result{}, err
-	}
-
-	if err := r.updateInventory(nodeConfig); err != nil {
-		log.Error(err, "error during updateInventory")
-		r.updateCondition(nodeConfig, metav1.ConditionFalse, ConfigurationFailed, err.Error())
-		return reconcile.Result{}, err
-	}
-
-	r.updateCondition(nodeConfig, metav1.ConditionTrue, ConfigurationSucceeded, "Configured successfully")
-	log.V(2).Info("Reconciled")
-
-	return reconcile.Result{RequeueAfter: resyncPeriod}, nil
+	return configurer, status
 }
 
 func (r *NodeConfigReconciler) restartDevicePlugin() error {
@@ -273,7 +327,7 @@ func (r *NodeConfigReconciler) restartDevicePlugin() error {
 		return errors.Wrap(err, "failed to get pods")
 	}
 	if len(pods.Items) == 0 {
-		return errors.New("restartDevicePlugin: No pods found")
+		r.log.Info("there is no running instance of device plugin, nothing to restart")
 	}
 
 	for _, p := range pods.Items {
@@ -295,67 +349,101 @@ func (r *NodeConfigReconciler) restartDevicePlugin() error {
 	return nil
 }
 
-func (r *NodeConfigReconciler) updateInventory(nc *sriovv1.SriovFecNodeConfig) error {
-	log := r.log.WithName("updateInventory")
+func isReconcileRequired(nc *fec.SriovFecNodeConfig) bool {
 
-	inv, err := getSriovInventory(log)
-	if err != nil {
-		log.Error(err, "failed to obtain sriov inventory")
-		return err
+	isGenerationChanged := func() bool {
+		return nc.GetGeneration() != findOrCreateConfigurationStatusCondition(nc).ObservedGeneration
 	}
 
-	log.V(4).Info("obtained inventory", "inv", inv)
-	if inv != nil {
-		nc.Status.Inventory = *inv
+	isReconfigurationRequested := func() bool {
+		return len(nc.Spec.PhysicalFunctions) > 0
 	}
 
-	return nil
+	isSriovFecConfigured := func() bool {
+		for _, accelerator := range nc.Status.Inventory.SriovAccelerators {
+			if len(accelerator.VFs) > 0 {
+				return true
+			}
+		}
+		return false
+	}
+
+	return isGenerationChanged() && (isReconfigurationRequested() || isSriovFecConfigured())
 }
 
-// CreateEmptyNodeConfigIfNeeded creates empty CR to be Reconciled in near future and filled with Status.
-// If invoked before manager's Start, it'll need a direct API client
-// (Manager's/Controller's client is cached and cache is not initialized yet).
-func (r *NodeConfigReconciler) CreateEmptyNodeConfigIfNeeded(c client.Client) error {
-	log := r.log.WithName("CreateEmptyNodeConfigIfNeeded").WithValues("name", r.nodeName, "namespace", r.namespace)
-
-	nodeConfig := &sriovv1.SriovFecNodeConfig{}
-	err := c.Get(context.Background(),
-		client.ObjectKey{
-			Name:      r.nodeName,
-			Namespace: r.namespace,
-		},
-		nodeConfig)
-
-	if err == nil {
-		log.V(4).Info("already exists")
-		return nil
+func findOrCreateConfigurationStatusCondition(nc *fec.SriovFecNodeConfig) metav1.Condition {
+	configurationStatusCondition := nc.FindCondition(ConditionConfigured)
+	if configurationStatusCondition == nil {
+		return metav1.Condition{
+			Type:               ConditionConfigured,
+			Status:             metav1.ConditionTrue,
+			Reason:             string(ConfigurationNotRequested),
+			ObservedGeneration: 0,
+		}
 	}
 
-	if !k8serrors.IsNotFound(err) {
-		return err
+	return *configurationStatusCondition
+}
+
+//returns error if requested configuration refers to not existing inventory/accelerator
+func isConfigurationOfNonExistingInventoryRequested(requestedConfiguration []fec.PhysicalFunctionConfigExt, existingInventory *fec.NodeInventory) bool {
+OUTER:
+	for _, pf := range requestedConfiguration {
+		for _, acc := range existingInventory.SriovAccelerators {
+			if acc.PCIAddress == pf.PCIAddress {
+				continue OUTER
+			}
+		}
+
+		return true
 	}
+	return false
+}
 
-	log.V(2).Info("not found - creating")
+//returns result indicating necessity of re-queuing Reconcile after configured resyncPeriod
+func requeueLater() (reconcile.Result, error) {
+	return reconcile.Result{RequeueAfter: resyncPeriod}, nil
+}
 
-	nodeConfig = &sriovv1.SriovFecNodeConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.nodeName,
-			Namespace: r.namespace,
-		},
-		Spec: sriovv1.SriovFecNodeConfigSpec{
-			PhysicalFunctions: []sriovv1.PhysicalFunctionConfig{},
-		},
+//returns result indicating necessity of re-queuing Reconcile(...) immediately; non-nil err will be logged by controller
+func requeueNowWithError(e error) (reconcile.Result, error) {
+	return reconcile.Result{Requeue: true}, e
+}
+
+//returns result indicating necessity of re-queuing Reconcile(...):
+//immediately - in case when given err is non-nil;
+//on configured schedule, when err is nil
+func requeueLaterOrNowIfError(e error) (reconcile.Result, error) {
+	return reconcile.Result{RequeueAfter: resyncPeriod}, e
+}
+
+type ResourceNamePredicate struct {
+	predicate.Funcs
+	requiredName string
+	log          *logrus.Logger
+}
+
+func (r ResourceNamePredicate) Update(e event.UpdateEvent) bool {
+	if e.ObjectNew.GetName() != r.requiredName {
+		r.log.WithField("expected name", r.requiredName).Info("CR intended for another node - ignoring")
+		return false
 	}
+	return true
+}
 
-	if createErr := c.Create(context.Background(), nodeConfig); createErr != nil {
-		log.Error(createErr, "failed to create")
-		return createErr
+func (r ResourceNamePredicate) Create(e event.CreateEvent) bool {
+	if e.Object.GetName() != r.requiredName {
+		r.log.WithField("expected name", r.requiredName).Info("CR intended for another node - ignoring")
+		return false
 	}
+	return true
+}
 
-	updateErr := c.Status().Update(context.Background(), nodeConfig)
-	if updateErr != nil {
-		log.Error(updateErr, "failed to update status")
-	}
-	return updateErr
-
+func CreateManager(config *rest.Config, namespace string, scheme *runtime.Scheme) (manager.Manager, error) {
+	return ctrl.NewManager(config, ctrl.Options{
+		Scheme:             scheme,
+		MetricsBindAddress: "0",
+		LeaderElection:     false,
+		Namespace:          namespace,
+	})
 }

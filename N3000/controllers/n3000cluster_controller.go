@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
+	fpgav1 "github.com/smart-edge-open/openshift-operator/N3000/api/v1"
 )
 
 const (
@@ -72,6 +72,7 @@ type N3000ClusterReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=daemonsets;deployments;deployments/finalizers,verbs=*
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;create;update
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=get;create;update
+// +kubebuilder:rbac:groups=policy,resources=podsecuritypolicies,verbs=get;create;update
 
 func (r *N3000ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log.V(2).Info("Reconciling N3000ClusterReconciler", "name", req.Name, "namespace", req.Namespace)

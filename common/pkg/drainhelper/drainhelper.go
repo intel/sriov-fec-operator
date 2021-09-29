@@ -6,12 +6,12 @@ package drainhelper
 import (
 	"context"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -28,18 +28,18 @@ const (
 	leaseDurationDefault         = int64(600)
 )
 
-// logWriter is a wrapper around logr's log.Info() to allow drain.Helper logging
+// logWriter is a wrapper around logrus log.Info() to allow drain.Helper logging
 type logWriter struct {
-	log logr.Logger
+	log *logrus.Logger
 }
 
 func (w logWriter) Write(p []byte) (n int, err error) {
-	w.log.V(4).Info(strings.TrimSuffix(string(p), "\n"))
+	w.log.Info(strings.TrimSuffix(string(p), "\n"))
 	return len(p), nil
 }
 
 type DrainHelper struct {
-	log       logr.Logger
+	log       *logrus.Logger
 	clientSet *clientset.Clientset
 	nodeName  string
 
@@ -48,34 +48,31 @@ type DrainHelper struct {
 	leaderElectionConfig leaderelection.LeaderElectionConfig
 }
 
-func NewDrainHelper(l logr.Logger, cs *clientset.Clientset, nodeName, namespace string) *DrainHelper {
-	log := l.WithName("drainhelper")
-
+func NewDrainHelper(log *logrus.Logger, cs *clientset.Clientset, nodeName, namespace string) *DrainHelper {
 	drainTimeout := drainHelperTimeoutDefault
 	drainTimeoutStr := os.Getenv(drainHelperTimeoutEnvVarName)
 	if drainTimeoutStr != "" {
 		val, err := strconv.ParseInt(drainTimeoutStr, 10, 64)
 		if err != nil {
-			log.Error(err, "failed to parse env variable to int64 - using default value",
-				"variable", drainHelperTimeoutEnvVarName)
+			log.WithError(err).WithField("variable", drainHelperTimeoutEnvVarName).
+				Error("failed to parse env variable to int64 - using default value")
 		} else {
 			drainTimeout = val
 		}
 	}
-	log.V(2).Info("drain settings", "timeout seconds", drainTimeout)
+	log.WithField("timeout seconds", drainTimeout).Info("drain settings")
 
 	leaseDur := leaseDurationDefault
 	leaseDurStr := os.Getenv(leaseDurationEnvVarName)
 	if leaseDurStr != "" {
 		val, err := strconv.ParseInt(leaseDurStr, 10, 64)
 		if err != nil {
-			log.Error(err, "failed to parse env variable to int64 - using default value",
-				"variable", leaseDurationEnvVarName)
+			log.WithError(err).WithField("varaible", leaseDurationEnvVarName).Error("failed to parse env variable to int64 - using default value")
 		} else {
 			leaseDur = val
 		}
 	}
-	log.V(2).Info("lease settings", "duration seconds", leaseDur)
+	log.WithField("duration seconds", leaseDur).Info("lease settings")
 
 	lock := &resourcelock.LeaseLock{
 		LeaseMeta: metav1.ObjectMeta{
@@ -105,8 +102,8 @@ func NewDrainHelper(l logr.Logger, cs *clientset.Clientset, nodeName, namespace 
 				if usingEviction {
 					act = "Evicted"
 				}
-				log.V(2).Info("pod evicted or deleted",
-					"action", act, "pod", fmt.Sprintf("%s/%s", pod.Name, pod.Namespace))
+				log.WithField("action", act).WithField("pod", fmt.Sprintf("%s/%s", pod.Name, pod.Namespace)).
+					Info("pod evicted or deleted")
 			},
 			Out:    logWriter{log},
 			ErrOut: logWriter{log},
@@ -130,8 +127,6 @@ func NewDrainHelper(l logr.Logger, cs *clientset.Clientset, nodeName, namespace 
 // If `f` returns false, the uncordon does not take place. This is useful in 2-step scenario like sriov-fec-daemon where
 // reboot must be performed without loosing the leadership and without the uncordon.
 func (dh *DrainHelper) Run(f func(context.Context) bool, drain bool) error {
-	log := dh.log.WithName("Run()")
-
 	defer func() {
 		// Following mitigation is needed because of the bug in the leader election's release functionality
 		// Release fails because the input (leader election record) is created incomplete (missing fields):
@@ -142,16 +137,16 @@ func (dh *DrainHelper) Run(f func(context.Context) bool, drain bool) error {
 		// This however is not critical - if the leader will not refresh the lease,
 		// another node will take it after some time.
 
-		dh.log.V(4).Info("releasing the lock (bug mitigation)")
+		dh.log.Info("releasing the lock (bug mitigation)")
 
 		leaderElectionRecord, _, err := dh.leaseLock.Get(context.Background())
 		if err != nil {
-			log.Error(err, "failed to get the LeaderElectionRecord")
+			dh.log.WithError(err).Error("failed to get the LeaderElectionRecord")
 			return
 		}
 		leaderElectionRecord.HolderIdentity = ""
 		if err := dh.leaseLock.Update(context.Background(), *leaderElectionRecord); err != nil {
-			log.Error(err, "failed to update the LeaderElectionRecord")
+			dh.log.WithError(err).Error("failed to update the LeaderElectionRecord")
 		}
 	}()
 
@@ -163,69 +158,68 @@ func (dh *DrainHelper) Run(f func(context.Context) bool, drain bool) error {
 	lec := dh.leaderElectionConfig
 	lec.Callbacks = leaderelection.LeaderCallbacks{
 		OnStartedLeading: func(ctx context.Context) {
-			log.V(2).Info("started leading")
+			dh.log.Info("started leading")
 
 			uncordonAndFreeLeadership := func() {
 				// always try to uncordon the node
 				// e.g. when cordoning succeeds, but draining fails
-				log.V(4).Info("uncordoning node")
+				dh.log.Info("uncordoning node")
 				if err := dh.uncordon(ctx); err != nil {
-					log.Error(err, "uncordon failed")
+					dh.log.WithError(err).Error("uncordon failed")
 					innerErr = err
 				}
-
-				log.V(4).Info("cancelling the context to finish the leadership")
-				cancel()
 			}
 
 			if drain {
-				log.V(4).Info("cordoning & draining node")
+				dh.log.Info("cordoning & draining node")
 				if err := dh.cordonAndDrain(ctx); err != nil {
-					log.Error(err, "cordonAndDrain failed")
+					dh.log.WithError(err).Error("cordonAndDrain failed")
 					innerErr = err
 					uncordonAndFreeLeadership()
 					return
 				}
 			}
 
-			log.V(4).Info("worker function - start")
+			dh.log.Info("worker function - start")
 			performUncordon := f(ctx)
-			log.V(4).Info("worker function - end", "performUncordon", performUncordon)
+			dh.log.WithField("performUncordon", performUncordon).Info("worker function - end")
 			if drain && performUncordon {
 				uncordonAndFreeLeadership()
 			}
+
+			dh.log.Info("cancelling the context to finish the leadership")
+			cancel()
 		},
 		OnStoppedLeading: func() {
-			log.V(4).Info("stopped leading")
+			dh.log.Info("stopped leading")
 		},
 		OnNewLeader: func(id string) {
 			if id != dh.nodeName {
-				log.V(2).Info("new leader elected", "leader", id, "this", dh.nodeName)
+				dh.log.WithField("this", dh.nodeName).WithField("leader", id).
+					Info("new leader elected")
 			}
 		},
 	}
 
 	le, err := leaderelection.NewLeaderElector(lec)
 	if err != nil {
-		log.Error(err, "failed to create new leader elector")
+		dh.log.WithError(err).Error("failed to create new leader elector")
 		return err
 	}
 
 	le.Run(ctx)
 
 	if innerErr != nil {
-		log.Error(innerErr, "error during (un)cordon or drain actions")
+		dh.log.WithError(innerErr).Error("error during (un)cordon or drain actions")
 	}
 
 	return innerErr
 }
 
 func (dh *DrainHelper) cordonAndDrain(ctx context.Context) error {
-	log := dh.log.WithName("cordonAndDrain()")
-
 	node, nodeGetErr := dh.clientSet.CoreV1().Nodes().Get(ctx, dh.nodeName, metav1.GetOptions{})
 	if nodeGetErr != nil {
-		log.Error(nodeGetErr, "failed to get the node object")
+		dh.log.WithError(nodeGetErr).Error("failed to get the node object")
 		return nodeGetErr
 	}
 
@@ -233,13 +227,15 @@ func (dh *DrainHelper) cordonAndDrain(ctx context.Context) error {
 	backoff := wait.Backoff{Steps: 5, Duration: 15 * time.Second, Factor: 2}
 	f := func() (bool, error) {
 		if err := drain.RunCordonOrUncordon(dh.drainer, node, true); err != nil {
-			log.V(2).Info("failed to cordon the node - retrying", "nodeName", dh.nodeName, "reason", err.Error())
+			dh.log.WithField("nodeName", dh.nodeName).WithField("reason", err.Error()).
+				Info("failed to cordon the node - retrying")
 			e = err
 			return false, nil
 		}
 
 		if err := drain.RunNodeDrain(dh.drainer, dh.nodeName); err != nil {
-			log.V(2).Info("failed to drain the node - retrying", "nodeName", dh.nodeName, "reason", err.Error())
+			dh.log.WithField("nodeName", dh.nodeName).WithField("reason", err.Error()).
+				Info("failed to drain the node - retrying")
 			e = err
 			return false, nil
 		}
@@ -247,26 +243,24 @@ func (dh *DrainHelper) cordonAndDrain(ctx context.Context) error {
 		return true, nil
 	}
 
-	log.V(4).Info("starting drain attempts")
+	dh.log.Info("starting drain attempts")
 	if err := wait.ExponentialBackoff(backoff, f); err != nil {
 		if err == wait.ErrWaitTimeout {
-			log.Error(e, "failed to drain node - timed out")
+			dh.log.WithError(e).Error("failed to drain node - timed out")
 			return e
 		}
-		log.Error(err, "failed to drain node")
+		dh.log.WithError(err).Error("failed to drain node")
 		return err
 	}
 
-	log.V(2).Info("node drained")
+	dh.log.Info("node drained")
 	return nil
 }
 
 func (dh *DrainHelper) uncordon(ctx context.Context) error {
-	log := dh.log.WithName("uncordon()")
-
 	node, err := dh.clientSet.CoreV1().Nodes().Get(ctx, dh.nodeName, metav1.GetOptions{})
 	if err != nil {
-		log.Error(err, "failed to get the node object")
+		dh.log.WithError(err).Error("failed to get the node object")
 		return err
 	}
 
@@ -274,7 +268,7 @@ func (dh *DrainHelper) uncordon(ctx context.Context) error {
 	backoff := wait.Backoff{Steps: 5, Duration: 15 * time.Second, Factor: 2}
 	f := func() (bool, error) {
 		if err := drain.RunCordonOrUncordon(dh.drainer, node, false); err != nil {
-			log.Error(err, "failed to uncordon the node - retrying", "nodeName", dh.nodeName)
+			dh.log.WithField("nodeName", dh.nodeName).WithError(err).Error("failed to uncordon the node - retrying")
 			e = err
 			return false, nil
 		}
@@ -282,16 +276,16 @@ func (dh *DrainHelper) uncordon(ctx context.Context) error {
 		return true, nil
 	}
 
-	log.V(4).Info("starting uncordon attempts")
+	dh.log.Info("starting uncordon attempts")
 	if err := wait.ExponentialBackoff(backoff, f); err != nil {
 		if err == wait.ErrWaitTimeout {
-			log.Error(e, "failed to uncordon node - timed out")
+			dh.log.WithError(e).Error("failed to uncordon node - timed out")
 			return e
 		}
-		log.Error(err, "failed to uncordon node")
+		dh.log.WithError(err).Error("failed to uncordon node")
 		return err
 	}
-	log.V(2).Info("node uncordoned")
+	dh.log.Info("node uncordoned")
 
 	return nil
 }

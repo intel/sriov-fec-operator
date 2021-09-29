@@ -46,7 +46,7 @@ type SriovFecNodeConfigStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Configured",type=string,JSONPath=`.status.conditions[?(@.type=="Configured")].reason`
-
+// +kubebuilder:unservedversion
 // SriovFecNodeConfig is the Schema for the sriovfecnodeconfigs API
 // +operator-sdk:csv:customresourcedefinitions:displayName="SriovFecNodeConfig",resources={{SriovFecNodeConfig,v1,node}}
 type SriovFecNodeConfig struct {

@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2021 Intel Corporation
+
+apiVersion: sriovfec.intel.com/v2
+kind: SriovFecClusterConfig
+metadata:
+  name: config
+spec:
+  physicalFunction:
+    pfDriver: pfDirver
+    vfDriver: vfDriver
+    vfAmount: 2
+    bbDevConfig: {}
+  priority: 100

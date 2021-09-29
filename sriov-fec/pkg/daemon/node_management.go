@@ -5,6 +5,7 @@ package daemon
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -12,9 +13,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-logr/logr"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
-	sriovv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
+	sriovv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
 )
 
 var (
@@ -28,7 +28,7 @@ var (
 )
 
 type NodeConfigurator struct {
-	Log              logr.Logger
+	Log              *logrus.Logger
 	kernelController *kernelController
 }
 
@@ -43,19 +43,20 @@ func (n *NodeConfigurator) addMissingKernelParams() error {
 }
 
 func (n *NodeConfigurator) loadModule(module string) error {
-	log := n.Log.WithName("loadModule")
-	_, err := runExecCmd([]string{"chroot", "/host/", "modprobe", module}, log)
+	if module == "" {
+		return fmt.Errorf("module cannot be empty string")
+	}
+	_, err := runExecCmd([]string{"chroot", "/host/", "modprobe", module}, n.Log)
 	return err
 }
 
 func (n *NodeConfigurator) rebootNode() error {
-	log := n.Log.WithName("rebootNode")
 	// systemd-run command borrowed from openshift/sriov-network-operator
 	_, err := runExecCmd([]string{"chroot", "--userspec", "0", "/host",
 		"systemd-run",
 		"--unit", "sriov-fec-daemon-reboot",
 		"--description", "sriov-fec-daemon reboot",
-		"/bin/sh", "-c", "systemctl stop kubelet.service; reboot"}, log)
+		"/bin/sh", "-c", "systemctl stop kubelet.service; reboot"}, n.Log)
 
 	return err
 }
@@ -64,7 +65,7 @@ func (n *NodeConfigurator) isDeviceBoundToDriver(pciAddr string) (bool, error) {
 	path := filepath.Join(sysBusPciDevices, pciAddr, "driver")
 
 	if _, err := os.Stat(path); err == nil {
-		n.Log.V(2).Info("device is bound to driver", "path", path)
+		n.Log.WithField("path", path).Info("device is bound to driver")
 		return true, nil
 
 	} else if os.IsNotExist(err) {
@@ -78,14 +79,14 @@ func (n *NodeConfigurator) unbindDeviceFromDriver(pciAddress string) error {
 	deviceDriverPath := filepath.Join(sysBusPciDevices, pciAddress, "driver")
 	driverPath, err := filepath.EvalSymlinks(deviceDriverPath)
 	if err != nil {
-		n.Log.Error(err, "failed to read device's driver symlink", "path", deviceDriverPath)
+		n.Log.WithError(err).WithField("path", deviceDriverPath).Error("failed to read device's driver symlink")
 		return err
 	}
-	n.Log.V(2).Info("driver to unbound device from", "pciAddress", pciAddress, "driver", driverPath)
+	n.Log.WithField("pciAddress", pciAddress).WithField("driver", driverPath).Info("driver to unbound device from")
 	unbindPath := filepath.Join(driverPath, "unbind")
 	err = ioutil.WriteFile(unbindPath, []byte(pciAddress), os.ModeAppend)
 	if err != nil {
-		n.Log.Error(err, "failed to unbind driver from device", "pciAddress", pciAddress, "unbindPath", unbindPath)
+		n.Log.WithError(err).WithField("pciAddress", pciAddress).WithField("unbindPath", unbindPath).Error("failed to unbind driver from device")
 	}
 
 	return err
@@ -93,39 +94,38 @@ func (n *NodeConfigurator) unbindDeviceFromDriver(pciAddress string) error {
 
 func (n *NodeConfigurator) bindDeviceToDriver(pciAddress, driver string) error {
 	if isBound, err := n.isDeviceBoundToDriver(pciAddress); err != nil {
-		n.Log.Error(err, "failed to check if device is bound to driver", "pci", pciAddress)
+		n.Log.WithField("pci", pciAddress).WithError(err).Error("failed to check if device is bound to driver")
 		return err
 	} else if isBound {
 		if err := n.unbindDeviceFromDriver(pciAddress); err != nil {
-			n.Log.Error(err, "failed to unbind device from driver", "pci", pciAddress)
+			n.Log.WithField("pci", pciAddress).WithError(err).Error("failed to unbind device from driver")
 			return err
 		}
 	}
 
 	driverOverridePath := filepath.Join(sysBusPciDevices, pciAddress, "driver_override")
-	n.Log.V(2).Info("device's driver_override path", "path", driverOverridePath)
+	n.Log.WithField("path", driverOverridePath).Info("device's driver_override path")
 	if err := ioutil.WriteFile(driverOverridePath, []byte(driver), os.ModeAppend); err != nil {
-		n.Log.Error(err, "failed to override driver", "path", driverOverridePath, "driver", driver)
+		n.Log.WithError(err).WithField("path", driverOverridePath).WithField("driver", driver).Error("failed to override driver")
 		return err
 	}
 
 	driverBindPath := filepath.Join(sysBusPciDrivers, driver, "bind")
-	n.Log.V(2).Info("driver bind path", "path", driverBindPath)
+	n.Log.WithField("path", driverBindPath).Info("driver bind path")
 	err := ioutil.WriteFile(driverBindPath, []byte(pciAddress), os.ModeAppend)
 	if err != nil {
-		n.Log.Error(err, "failed to bind driver to device", "pciAddress", pciAddress, "driverBindPath", driverBindPath)
+		n.Log.WithError(err).WithField("pciAddress", pciAddress).WithField("driverBindPath", driverBindPath).Error("failed to bind driver to device")
 	}
 
 	return err
 }
 
 func (n *NodeConfigurator) enableMasterBus(pciAddr string) error {
-	log := n.Log.WithName("enableMasterBus")
 	const MASTER_BUS_BIT int64 = 4
 	cmd := []string{"chroot", "/host/", "setpci", "-v", "-s", pciAddr, "COMMAND"}
-	out, err := runExecCmd(cmd, log)
+	out, err := runExecCmd(cmd, n.Log)
 	if err != nil {
-		log.Error(err, "failed to get the PCI flags for: "+pciAddr)
+		n.Log.WithError(err).Error("failed to get the PCI flags for: " + pciAddr)
 		return err
 	}
 
@@ -136,34 +136,25 @@ func (n *NodeConfigurator) enableMasterBus(pciAddr string) error {
 
 	v, err := strconv.ParseInt(strings.Replace(values[1], "\n", "", 1), 16, 16)
 	if err != nil {
-		log.Error(err, "failed to parse the value", "value", v)
+		n.Log.WithError(err).WithField("value", v).Error("failed to parse the value")
 		return err
 	}
 
 	if v&MASTER_BUS_BIT == MASTER_BUS_BIT {
-		log.V(4).Info("MasterBus already set for " + pciAddr)
+		n.Log.Info("MasterBus already set for " + pciAddr)
 		return nil
 	}
 
 	v = v | MASTER_BUS_BIT
 	cmd = []string{"chroot", "/host/", "setpci", "-v", "-s", pciAddr, fmt.Sprintf("COMMAND=0%x", v)}
-	out, err = runExecCmd(cmd, log)
+	out, err = runExecCmd(cmd, n.Log)
 	if err != nil {
-		log.Error(err, "failed to set MasterBus bit", "output", out)
+		n.Log.WithField("output", out).WithError(err).Error("failed to set MasterBus bit")
 		return err
 	}
 
-	log.V(2).Info("MasterBus set", "pci", pciAddr, "output", out)
+	n.Log.WithField("pci", pciAddr).WithField("output", out).Info("MasterBus set")
 	return nil
-}
-
-func getMatchingExistingAccelerator(inventory *sriovv1.NodeInventory, pciAddress string) (sriovv1.SriovAccelerator, bool) {
-	for _, acc := range inventory.SriovAccelerators {
-		if acc.PCIAddress == pciAddress {
-			return acc, true
-		}
-	}
-	return sriovv1.SriovAccelerator{}, false
 }
 
 func (n *NodeConfigurator) changeAmountOfVFs(pfPCIAddress string, vfsAmount int) error {
@@ -176,7 +167,7 @@ func (n *NodeConfigurator) changeAmountOfVFs(pfPCIAddress string, vfsAmount int)
 		unbindPath := filepath.Join(sysBusPciDevices, pfPCIAddress, vfNumFile)
 		err := ioutil.WriteFile(unbindPath, []byte(strconv.Itoa(vfsAmount)), os.ModeAppend)
 		if err != nil {
-			n.Log.Error(err, "failed to set new amount of VFs for PF", "pf", pfPCIAddress, "vfsAmount", vfsAmount)
+			n.Log.WithError(err).WithField("pf", pfPCIAddress).WithField("vfsAmount", vfsAmount).Error("failed to set new amount of VFs for PF")
 			return fmt.Errorf("failed to set new amount of VFs (%d) for PF (%s): %w", vfsAmount, pfPCIAddress, err)
 		}
 		return nil
@@ -195,33 +186,36 @@ func (n *NodeConfigurator) changeAmountOfVFs(pfPCIAddress string, vfsAmount int)
 	return nil
 }
 
-func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec) error {
-	log := n.Log.WithName("applyConfig")
-
-	inv, err := getSriovInventory(log)
+func (n *NodeConfigurator) applyConfig(nodeConfig sriovv2.SriovFecNodeConfigSpec) error {
+	inv, err := getSriovInventory(n.Log)
 	if err != nil {
-		log.Error(err, "failed to obtain current sriov inventory")
+		n.Log.WithError(err).Error("failed to obtain current sriov inventory")
 		return err
 	}
 
-	log.V(4).Info("current node status", "inventory", inv)
+	n.Log.WithField("inventory", inv).Info("current node status")
+
 	pciStubRegex := regexp.MustCompile("pci[-_]pf[-_]stub")
-	for _, pf := range nodeConfig.PhysicalFunctions {
-		acc, exists := getMatchingExistingAccelerator(inv, pf.PCIAddress)
-		if !exists {
-			log.Info("received unknown (not present in inventory) PciAddress", "pci", pf.PCIAddress)
-			return fmt.Errorf("unknown (%s not present in inventory) PciAddress", pf.PCIAddress)
+	for _, acc := range inv.SriovAccelerators {
+		pf := getMatchingConfiguration(acc.PCIAddress, nodeConfig.PhysicalFunctions)
+		if pf == nil {
+			if len(acc.VFs) > 0 {
+				n.Log.WithField("pci", acc.PCIAddress).Info("zeroing VFs")
+				if err := n.changeAmountOfVFs(acc.PCIAddress, 0); err != nil {
+					return err
+				}
+			}
+			continue
 		}
 
-		log.V(4).Info("configuring PF", "requestedConfig", pf)
-
+		n.Log.WithField("requestedConfig", pf).Info("configuring PF")
 		if err := n.loadModule(pf.PFDriver); err != nil {
-			log.Info("failed to load module for PF driver", "driver", pf.PFDriver)
+			n.Log.WithField("driver", pf.PFDriver).Info("failed to load module for PF driver")
 			return err
 		}
 
 		if err := n.loadModule(pf.VFDriver); err != nil {
-			log.Info("failed to load module for VF driver", "driver", pf.VFDriver)
+			n.Log.WithField("driver", pf.VFDriver).Info("failed to load module for VF driver")
 			return err
 		}
 
@@ -241,7 +235,7 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec
 
 		createdVfs, err := getVFList(pf.PCIAddress)
 		if err != nil {
-			log.Error(err, "failed to get list of newly created VFs")
+			n.Log.WithError(err).Error("failed to get list of newly created VFs")
 			return err
 		}
 
@@ -254,22 +248,22 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec
 		if pf.BBDevConfig.N3000 != nil || pf.BBDevConfig.ACC100 != nil {
 			bbdevConfigFilepath := filepath.Join(workdir, fmt.Sprintf("%s.ini", pf.PCIAddress))
 			if err := generateBBDevConfigFile(pf.BBDevConfig, bbdevConfigFilepath); err != nil {
-				log.Error(err, "failed to create bbdev config file", "pci", pf.PCIAddress)
+				n.Log.WithError(err).WithField("pci", pf.PCIAddress).Error("failed to create bbdev config file")
 				return err
 			}
 			defer func() {
 				if err := os.Remove(bbdevConfigFilepath); err != nil {
-					log.Error(err, "failed to remove old bbdev config file", "path", bbdevConfigFilepath)
+					n.Log.WithError(err).WithField("path", bbdevConfigFilepath).Error("failed to remove old bbdev config file")
 				}
 			}()
 
 			deviceName := supportedAccelerators.Devices[acc.DeviceID]
-			if err := runPFConfig(log, deviceName, bbdevConfigFilepath, pf.PCIAddress); err != nil {
-				log.Error(err, "failed to configure device's queues", "pci", pf.PCIAddress)
+			if err := runPFConfig(n.Log, deviceName, bbdevConfigFilepath, pf.PCIAddress); err != nil {
+				n.Log.WithError(err).WithField("pci", pf.PCIAddress).Error("failed to configure device's queues")
 				return err
 			}
 		} else {
-			log.V(4).Info("N3000 and ACC100 BBDevConfig are nil - queues will not be (re)configured")
+			n.Log.Info("N3000 and ACC100 BBDevConfig are nil - queues will not be (re)configured")
 		}
 
 		if pciStubRegex.MatchString(pf.PFDriver) {
@@ -279,5 +273,14 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv1.SriovFecNodeConfigSpec
 		}
 	}
 
+	return nil
+}
+
+func getMatchingConfiguration(pciAddress string, configurations []sriovv2.PhysicalFunctionConfigExt) *sriovv2.PhysicalFunctionConfigExt {
+	for _, configuration := range configurations {
+		if configuration.PCIAddress == pciAddress {
+			return &configuration
+		}
+	}
 	return nil
 }

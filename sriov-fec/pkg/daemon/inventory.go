@@ -5,29 +5,29 @@ package daemon
 
 import (
 	"errors"
+	"github.com/sirupsen/logrus"
 
-	"github.com/go-logr/logr"
 	"github.com/jaypipes/ghw"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
-	sriovv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
+	sriovv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
 )
 
-func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
+func GetSriovInventory(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
 	pci, err := ghw.PCI()
 	if err != nil {
-		log.Error(err, "failed to get PCI info")
+		log.WithError(err).Error("failed to get PCI info")
 		return nil, err
 	}
 
 	devices := pci.ListDevices()
 	if len(devices) == 0 {
-		log.V(4).Info("got 0 pci devices")
+		log.Info("got 0 pci devices")
 		err := errors.New("pci.ListDevices() returned 0 devices")
 		return nil, err
 	}
 
-	accelerators := &sriovv1.NodeInventory{
-		SriovAccelerators: []sriovv1.SriovAccelerator{},
+	accelerators := &sriovv2.NodeInventory{
+		SriovAccelerators: []sriovv2.SriovAccelerator{},
 	}
 
 	for _, device := range devices {
@@ -40,49 +40,52 @@ func GetSriovInventory(log logr.Logger) (*sriovv1.NodeInventory, error) {
 		}
 
 		if _, ok := supportedAccelerators.Devices[device.Product.ID]; !ok {
-			log.V(4).Info("ignoring unsupported device", "device.Product.ID", device.Product.ID)
 			continue
 		}
 
 		if !utils.IsSriovPF(device.Address) {
-			log.V(4).Info("ignoring non SriovPF capable device", "pci", device.Address)
+			log.WithField("pci", device.Address).Info("ignoring non SriovPF capable device")
 			continue
 		}
 
 		driver, err := utils.GetDriverName(device.Address)
 		if err != nil {
-			log.V(4).Info("unable to get driver for device", "pci", device.Address, "reason", err.Error())
+			log.WithField("pci", device.Address).WithField("reason", err.Error()).Info("unable to get driver for device")
 			driver = ""
 		}
 
-		acc := sriovv1.SriovAccelerator{
+		acc := sriovv2.SriovAccelerator{
 			VendorID:   device.Vendor.ID,
 			DeviceID:   device.Product.ID,
 			PCIAddress: device.Address,
-			Driver:     driver,
+			PFDriver:   driver,
 			MaxVFs:     utils.GetSriovVFcapacity(device.Address),
-			VFs:        []sriovv1.VF{},
+			VFs:        []sriovv2.VF{},
 		}
 
 		vfs, err := utils.GetVFList(device.Address)
 		if err != nil {
-			log.Error(err, "failed to get list of VFs for device", "pci", device.Address)
+			log.WithError(err).WithField("pci", device.Address).Error("failed to get list of VFs for device")
 		}
 
 		for _, vf := range vfs {
-			vfInfo := sriovv1.VF{
+			vfInfo := sriovv2.VF{
 				PCIAddress: vf,
 			}
 
 			driver, err := utils.GetDriverName(vf)
 			if err != nil {
-				log.V(4).Info("failed to get driver name for VF", "pci", vf, "pf", device.Address, "reason", err.Error())
+				log.WithFields(logrus.Fields{
+					"pci":    vf,
+					"pf":     device.Address,
+					"reason": err.Error(),
+				}).Info("failed to get driver name for VF")
 			} else {
 				vfInfo.Driver = driver
 			}
 
 			if vfDeviceInfo := pci.GetDevice(vf); vfDeviceInfo == nil {
-				log.V(4).Info("failed to get device info for vf", "pci", vf)
+				log.WithField("pci", vf).Info("failed to get device info for vf")
 			} else {
 				vfInfo.DeviceID = vfDeviceInfo.Product.ID
 			}

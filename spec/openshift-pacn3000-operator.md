@@ -34,10 +34,10 @@ This document provides the instructions for using the OpenNESS Operator for Inte
 
 ## OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)
 
-The role of the OpenNESS Operator for Intel® FPGA PAC N3000 (Programming) is to orchestrate and manage the resources/devices exposed by the Intel® FPGA PAC N3000 card within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction. For vRAN use-cases it is expected that the operator is used alongside the [OpenNESS Operator for Intel Wireless FEC Accelerator.](https://github.com/open-ness/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md)
+The role of the OpenNESS Operator for Intel® FPGA PAC N3000 (Programming) is to orchestrate and manage the resources/devices exposed by the Intel® FPGA PAC N3000 card within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction. For vRAN use-cases it is expected that the operator is used alongside the [OpenNESS Operator for Intel Wireless FEC Accelerator.](https://github.com/smart-edge-open/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md)
 The operator design of the OpenNESS Operator for Intel® FPGA PAC N3000 (Programming) supports the following device:
 
-* [Intel® PAC N3000 for vRAN Acceleration](https://github.com/open-ness/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration)
+* [Intel® PAC N3000 for vRAN Acceleration](https://github.com/smart-edge-open/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration)
 
 ### Intel® FPGA PAC N3000 (Programming)
 
@@ -382,11 +382,42 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 (Programming) is easily deploya
 
 To install the PACN3000 operator bundle perform the following steps:
 
-Create the project:
-
+If operator is being installed on Kubernetes then run steps marked as (KUBERNETES).
+If operator is being installed on Openshift run only (OCP) steps.
+(KUBERNETES) Create configmap:
+```shell
+[user@ctrl1 /home]# cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: vran-acceleration-operators
+  name: operator-configuration
+data:
+  isGeneric: "true"
+EOF
+```
+(KUBERNETES) If Kubernetes doesn't have installed OLM (OPERATOR LIFECYCLE MANAGER) start from installing Operator-sdk (https://olm.operatorframework.io/)
+After Operator-sdk installation run following command
+```shell
+[user@ctrl1 /home]# operator-sdk olm install
+```
+(KUBERNETES) Install PCIutils on worker nodes
+```shell
+[user@ctrl1 /home]#  yum install pciutils
+```
+(OCP) Create the project:
 ```shell
 [user@ctrl1 /home]# oc new-project vran-acceleration-operators
 ```
+(KUBERNETES) Create the project:
+```shell
+[user@ctrl1 /home]# kubectl create namespace vran-acceleration-operators
+[user@ctrl1 /home]# kubectl config set-context --current --namespace=vran-acceleration-operators
+```
+
+Execute following commands on both OCP and KUBERNETES cluster:
+
+(KUBERNETES) In commands below use `kubectl` instead of `oc`
 
 Create an operator group and the subscriptions (all the commands are run in the `vran-acceleration-operators` namespace):
 

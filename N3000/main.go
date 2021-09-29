@@ -22,9 +22,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
-	"github.com/open-ness/openshift-operator/N3000/controllers"
-	"github.com/open-ness/openshift-operator/common/pkg/assets"
+	fpgav1 "github.com/smart-edge-open/openshift-operator/N3000/api/v1"
+	"github.com/smart-edge-open/openshift-operator/N3000/controllers"
+	"github.com/smart-edge-open/openshift-operator/common/pkg/assets"
 	// +kubebuilder:scaffold:imports
 )
 
