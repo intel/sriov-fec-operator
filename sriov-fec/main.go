@@ -22,6 +22,7 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/smart-edge-open/openshift-operator/common/pkg/utils"
 	"os"
 	"strings"
 	"time"
@@ -35,17 +36,16 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/smart-edge-open/openshift-operator/common/pkg/assets"
-	sriovfecv1 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v1"
+	sriovfecv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
 	"github.com/smart-edge-open/openshift-operator/sriov-fec/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
 var (
 	scheme                 = runtime.NewScheme()
-	setupLog               = ctrl.Log.WithName("setup")
+	setupLog               = utils.NewLogger()
 	operatorDeploymentName string
 )
 
@@ -53,7 +53,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(secv1.AddToScheme(scheme))
-	utilruntime.Must(sriovfecv1.AddToScheme(scheme))
+	utilruntime.Must(sriovfecv2.AddToScheme(scheme))
 
 	n := os.Getenv("NAME")
 	operatorDeploymentName = n[:strings.LastIndex(n[:strings.LastIndex(n, "-")], "-")]
@@ -69,11 +69,9 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&healthProbeAddr, "health-probe-bind-address", ":8081", "The address the controller binds to for serving health probes.")
-	opts := zap.Options{}
-	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	ctrl.SetLogger(utils.NewLogWrapper())
 
 	config := ctrl.GetConfigOrDie()
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
@@ -83,34 +81,40 @@ func main() {
 		Port:                   9443,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "98e78623.intel.com",
+		Namespace:              controllers.NAMESPACE,
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		setupLog.WithError(err).Error("unable to start manager")
 		os.Exit(1)
 	}
 
+	log := utils.NewLogger()
 	if err = (&controllers.SriovFecClusterConfigReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("SriovFecClusterConfig"),
+		Log:    log,
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "SriovFecClusterConfig")
+		setupLog.WithField("controller", "SriovFecClusterConfig").WithError(err).Error("unable to create controller")
+		os.Exit(1)
+	}
+	if err = (&sriovfecv2.SriovFecClusterConfig{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.WithError(err).WithField("webhook", "SriovFecClusterConfig").Error("unable to create webhook")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
+		setupLog.WithError(err).Error("unable to set up health check")
 		os.Exit(1)
 	}
 	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
+		setupLog.WithError(err).Error("unable to set up ready check")
 		os.Exit(1)
 	}
 
 	c, err := client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
-		setupLog.Error(err, "failed to create client")
+		setupLog.WithError(err).Error("failed to create client")
 		os.Exit(1)
 	}
 
@@ -121,13 +125,14 @@ func main() {
 		Name:      operatorDeploymentName,
 	}, owner)
 	if err != nil {
-		setupLog.Error(err, "Unable to get operator deployment")
+		setupLog.WithError(err).Error("Unable to get operator deployment")
 		os.Exit(1)
 	}
 
+	logger := utils.NewLogger()
 	if err := (&assets.Manager{
 		Client:    c,
-		Log:       ctrl.Log.WithName("asset_manager").WithName("sriov-fec"),
+		Log:       logger,
 		EnvPrefix: "SRIOV_FEC_",
 		Scheme:    scheme,
 		Owner:     owner,
@@ -144,13 +149,13 @@ func main() {
 			},
 		},
 	}).LoadAndDeploy(context.Background(), false); err != nil {
-		setupLog.Error(err, "failed to deploy the assets")
+		setupLog.WithError(err).Error("failed to deploy the assets")
 		os.Exit(1)
 	}
 
-	setupLog.V(2).Info("starting manager")
+	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+		setupLog.WithError(err).Error("problem running manager")
 		os.Exit(1)
 	}
 }

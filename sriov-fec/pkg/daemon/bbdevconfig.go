@@ -6,10 +6,10 @@ package daemon
 import (
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"strconv"
 
-	"github.com/go-logr/logr"
-	sriovv1 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v1"
+	sriovv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
 	"gopkg.in/ini.v1"
 )
 
@@ -40,7 +40,7 @@ const (
 	pfConfigAppFilepath = "/sriov_workdir/pf_bb_config"
 )
 
-func generateN3000BBDevConfigFile(nc *sriovv1.N3000BBDevConfig, file string) error {
+func generateN3000BBDevConfigFile(nc *sriovv2.N3000BBDevConfig, file string) error {
 	if nc == nil {
 		return errors.New("received nil N3000BBDevConfig")
 	}
@@ -73,7 +73,7 @@ func generateN3000BBDevConfigFile(nc *sriovv1.N3000BBDevConfig, file string) err
 	return nil
 }
 
-func generateACC100BBDevConfigFile(nc *sriovv1.ACC100BBDevConfig, file string) error {
+func generateACC100BBDevConfigFile(nc *sriovv2.ACC100BBDevConfig, file string) error {
 	if nc == nil {
 		return errors.New("received nil ACC100BBDevConfig")
 	}
@@ -120,7 +120,7 @@ func generateACC100BBDevConfigFile(nc *sriovv1.ACC100BBDevConfig, file string) e
 	return nil
 }
 
-func generateBBDevConfigFile(pfCfg sriovv1.BBDevConfig, file string) error {
+func generateBBDevConfigFile(pfCfg sriovv2.BBDevConfig, file string) error {
 	if pfCfg.ACC100 != nil {
 		if err := generateACC100BBDevConfigFile(pfCfg.ACC100, file); err != nil {
 			return fmt.Errorf("ACC100 config file creation failed, %s", err)
@@ -140,7 +140,7 @@ func generateBBDevConfigFile(pfCfg sriovv1.BBDevConfig, file string) error {
 // deviceName is one of: FPGA_LTE or FPGA_5GNR or ACC100
 // cfgFilepath is a filepath to the config
 // pciAddress points to a specific PF device
-func runPFConfig(log logr.Logger, deviceName, cfgFilepath, pciAddress string) error {
+func runPFConfig(log *logrus.Logger, deviceName, cfgFilepath, pciAddress string) error {
 	switch deviceName {
 	case "FPGA_LTE", "FPGA_5GNR", "ACC100":
 	default:

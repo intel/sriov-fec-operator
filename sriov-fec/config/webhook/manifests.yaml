@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020-2021 Intel Corporation
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-sriovfec-intel-com-v2-sriovfecclusterconfig
+  failurePolicy: Fail
+  name: vsriovfecclusterconfig.kb.io
+  rules:
+  - apiGroups:
+    - sriovfec.intel.com
+    apiVersions:
+    - v2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - sriovfecclusterconfigs
+  sideEffects: None

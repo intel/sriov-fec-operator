@@ -30,7 +30,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: sriov-fec-operator:v1.3.0
+        image: sriov-fec-operator:v2.0.0
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
@@ -58,6 +58,8 @@ spec:
           value: $SRIOV_FEC_DAEMON_IMAGE
         - name: SRIOV_FEC_LABELER_IMAGE
           value: $SRIOV_FEC_LABELER_IMAGE
+        - name: SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE
+          value: $SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE
         - name: SRIOV_FEC_NAMESPACE
           valueFrom:
             fieldRef:
@@ -66,5 +68,11 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: SRIOV_FEC_GENERIC_K8S
+          valueFrom:
+            configMapKeyRef:
+              optional: true
+              name: operator-configuration
+              key: isGeneric
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

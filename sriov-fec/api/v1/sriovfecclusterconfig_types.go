@@ -149,7 +149,7 @@ type SriovFecClusterConfigStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="SyncStatus",type=string,JSONPath=`.status.syncStatus`
-
+// +kubebuilder:unservedversion
 // SriovFecClusterConfig is the Schema for the sriovfecclusterconfigs API
 // +operator-sdk:csv:customresourcedefinitions:displayName="SriovFecClusterConfig",resources={{SriovFecNodeConfig,v1,node}}
 type SriovFecClusterConfig struct {

@@ -5,15 +5,14 @@ package daemon
 
 import (
 	"errors"
+	"github.com/sirupsen/logrus"
 	"os/exec"
-
-	"github.com/go-logr/logr"
 )
 
-func execCmd(args []string, log logr.Logger) (string, error) {
+func execCmd(args []string, log *logrus.Logger) (string, error) {
 	var cmd *exec.Cmd
 	if len(args) == 0 {
-		log.Error(nil, "provided cmd is empty")
+		log.Error("provided cmd is empty")
 		return "", errors.New("cmd is empty")
 	} else if len(args) == 1 {
 		cmd = exec.Command(args[0])
@@ -21,15 +20,15 @@ func execCmd(args []string, log logr.Logger) (string, error) {
 		cmd = exec.Command(args[0], args[1:]...)
 	}
 
-	log.V(4).Info("executing command", "cmd", cmd)
+	log.WithField("cmd", cmd).Info("executing command")
 
 	out, err := cmd.Output()
 	if err != nil {
-		log.Error(err, "failed to execute command", "cmd", args, "output", string(out))
+		log.WithField("cmd", args).WithField("output", string(out)).WithError(err).Error("failed to execute command")
 		return "", err
 	}
 
 	output := string(out)
-	log.V(4).Info("commands output", "output", output)
+	log.WithField("output", output).Info("commands output")
 	return output, nil
 }

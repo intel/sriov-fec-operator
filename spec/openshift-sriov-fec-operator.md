@@ -99,40 +99,42 @@ To configure the FEC device with desired setting create a CR (An example below c
 * [Sample CR for Wireless FEC (ACC100)](#sample-cr-for-wireless-fec-acc100)
 
 ```yaml
-apiVersion: sriovfec.intel.com/v1
+apiVersion: sriovfec.intel.com/v2
 kind: SriovFecClusterConfig
 metadata:
   name: config
 spec:
-  nodes:
-    - nodeName: node1
-      physicalFunctions:
-        - pciAddress: 0000:af:00.0
-          pfDriver: "pci-pf-stub"
-          vfDriver: "vfio-pci"
-          vfAmount: 16
-          bbDevConfig:
-            acc100:
-              # Programming mode: 0 = VF Programming, 1 = PF Programming
-              pfMode: false
-              numVfBundles: 16
-              maxQueueSize: 1024
-              uplink4G:
-                numQueueGroups: 0
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
-              downlink4G:
-                numQueueGroups: 0
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
-              uplink5G:
-                numQueueGroups: 4
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
-              downlink5G:
-                numQueueGroups: 4
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
+  priority: 1
+  nodeSelector:
+    kubernetes.io/hostname: node1
+  acceleratorSelector:
+    pciAddress: 0000:af:00.0    
+  physicalFunction:
+    pfDriver: "pci-pf-stub"
+    vfDriver: "vfio-pci"
+    vfAmount: 16
+    bbDevConfig:
+      acc100:
+        # Programming mode: 0 = VF Programming, 1 = PF Programming
+        pfMode: false
+        numVfBundles: 16
+        maxQueueSize: 1024
+        uplink4G:
+          numQueueGroups: 0
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        downlink4G:
+          numQueueGroups: 0
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        uplink5G:
+          numQueueGroups: 4
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        downlink5G:
+          numQueueGroups: 4
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
 ```
 
 To apply the CR run:
@@ -344,22 +346,53 @@ The OpenNESS Operator for Wireless FEC Accelerators has the following requiremen
 
 - [Intel® vRAN Dedicated Accelerator ACC100](https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf) (Optional)
 - [Intel® FPGA PAC N3000 card](https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html) (Optional)
-- [OpenShift 4.8.2](https://docs.openshift.com/container-platform/4.8/release_notes/ocp-4-8-release-notes.html)
+- [OpenShift 4.8.x](https://docs.openshift.com/container-platform/4.8/release_notes/ocp-4-8-release-notes.html)
 - RT Kernel configured with [Performance Addon Operator](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.6/html/scalability_and_performance/cnf-performance-addon-operator-for-low-latency-nodes).
 
 ## Deploying the Operator
 
-The OpenNESS Operator for Wireless FEC Accelerators is easily deployable from the OpenShift cluster via provisioning and application of the following YAML spec files:
+The OpenNESS Operator for Wireless FEC Accelerators is easily deployable from the OpenShift or Kubernetes cluster via provisioning and application of the following YAML spec files:
 
+### Install dependencies
+If operator is being installed on Kubernetes then run steps marked as (KUBERNETES).
+If operator is being installed on Openshift run only (OCP) steps.
+(KUBERNETES) Create configmap:
+```shell
+[user@ctrl1 /home]# cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: vran-acceleration-operators
+  name: operator-configuration
+data:
+  isGeneric: "true"
+EOF
+```
+(KUBERNETES) If Kubernetes doesn't have installed OLM (Operator lifecycle manager) start from installing Operator-sdk (https://olm.operatorframework.io/)
+After Operator-sdk installation run following command
+```shell
+[user@ctrl1 /home]# operator-sdk olm install
+```
+(KUBERNETES) Install PCIutils on worker nodes
+```shell
+[user@ctrl1 /home]#  yum install pciutils
+```
 ### Install the Bundle
 
 To install the OpenNESS Operator for Wireless FEC Accelerators operator bundle perform the following steps:
 
-Create the project:
-
+(OCP) Create the project:
 ```shell
 [user@ctrl1 /home]# oc new-project vran-acceleration-operators
 ```
+(KUBERNETES) Create the project:
+```shell
+[user@ctrl1 /home]# kubectl create namespace vran-acceleration-operators
+[user@ctrl1 /home]# kubectl config set-context --current --namespace=vran-acceleration-operators
+```
+Execute following commands on both OCP and KUBERNETES cluster:
+
+(KUBERNETES) In commands below use `kubectl` instead of `oc`
 
 Create an operator group and the subscriptions (all the commands are run in the `vran-acceleration-operators` namespace):
 
@@ -425,34 +458,37 @@ To view the status of current CR run (sample output):
 [user@ctrl1 /home]# oc get sriovfecclusterconfig config -o yaml
 ***
 spec:
-  nodes:
-  - nodeName: node1
-    physicalFunctions:
-    - bbDevConfig:
-        acc100:
-          downlink4G:
-            aqDepthLog2: 4
-            numAqsPerGroups: 16
-            numQueueGroups: 0
-          downlink5G:
-            aqDepthLog2: 4
-            numAqsPerGroups: 16
-            numQueueGroups: 4
-          maxQueueSize: 1024
-          numVfBundles: 16
-          pfMode: false
-          uplink4G:
-            aqDepthLog2: 4
-            numAqsPerGroups: 16
-            numQueueGroups: 0
-          uplink5G:
-            aqDepthLog2: 4
-            numAqsPerGroups: 16
-            numQueueGroups: 4
-      pciAddress: 0000:af:00.0
-      pfDriver: pci-pf-stub
-      vfAmount: 16
-      vfDriver: vfio-pci
+  priority: 1
+  nodeSelector:
+    kubernetes.io/hostname: node1
+  acceleratorSelector:
+    pciAddress: 0000:af:00.0    
+  physicalFunction:  
+    bbDevConfig:
+      acc100:
+        downlink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        downlink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        maxQueueSize: 1024
+        numVfBundles: 16
+        pfMode: false
+        uplink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        uplink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+    pciAddress: 0000:af:00.0
+    pfDriver: pci-pf-stub
+    vfAmount: 16
+    vfDriver: vfio-pci
 status:
   syncStatus: Succeeded
 ```
@@ -502,50 +538,52 @@ If needed the user can set up a local registry for the operators' images. For mo
 #### Sample CR for Wireless FEC (N3000)
 
 ```yaml
-apiVersion: sriovfec.intel.com/v1
+apiVersion: sriovfec.intel.com/v2
 kind: SriovFecClusterConfig
 metadata:
   name: config
   namespace: vran-acceleration-operators
 spec:
-  nodes:
-    - nodeName: node1
-      physicalFunctions:
-        - pciAddress: 0000.1d.00.0
-          pfDriver: pci-pf-stub
-          vfDriver: vfio-pci
-          vfAmount: 2
-          bbDevConfig:
-            n3000:
-              # Network Type: either "FPGA_5GNR" or "FPGA_LTE"
-              networkType: "FPGA_5GNR"
-              # Programming mode: 0 = VF Programming, 1 = PF Programming
-              pfMode: false
-              flrTimeout: 610
-              downlink:
-                bandwidth: 3
-                loadBalance: 128
-                queues:
-                  vf0: 16
-                  vf1: 16
-                  vf2: 0
-                  vf3: 0
-                  vf4: 0
-                  vf5: 0
-                  vf6: 0
-                  vf7: 0
-              uplink:
-                bandwidth: 3
-                loadBalance: 128
-                queues:
-                  vf0: 16
-                  vf1: 16
-                  vf2: 0
-                  vf3: 0
-                  vf4: 0
-                  vf5: 0
-                  vf6: 0
-                  vf7: 0
+  priority: 1
+  nodeSelector:
+    kubernetes.io/hostname: node1
+  acceleratorSelector:
+    pciAddress: 0000.1d.00.0
+  physicalFunction:  
+    pfDriver: pci-pf-stub
+    vfDriver: vfio-pci
+    vfAmount: 2
+    bbDevConfig:
+      n3000:
+        # Network Type: either "FPGA_5GNR" or "FPGA_LTE"
+        networkType: "FPGA_5GNR"
+        # Programming mode: 0 = VF Programming, 1 = PF Programming
+        pfMode: false
+        flrTimeout: 610
+        downlink:
+          bandwidth: 3
+          loadBalance: 128
+          queues:
+            vf0: 16
+            vf1: 16
+            vf2: 0
+            vf3: 0
+            vf4: 0
+            vf5: 0
+            vf6: 0
+            vf7: 0
+        uplink:
+          bandwidth: 3
+          loadBalance: 128
+          queues:
+            vf0: 16
+            vf1: 16
+            vf2: 0
+            vf3: 0
+            vf4: 0
+            vf5: 0
+            vf6: 0
+            vf7: 0
 ```
 
 #### Sample Status for Wireless FEC (N3000)
@@ -683,40 +721,42 @@ FPGA_5GNR PF [0000:1d:00.0] configuration complete!"}
 #### Sample CR for Wireless FEC (ACC100)
 
 ```yaml
-apiVersion: sriovfec.intel.com/v1
+apiVersion: sriovfec.intel.com/v2
 kind: SriovFecClusterConfig
 metadata:
   name: config
 spec:
-  nodes:
-    - nodeName: node1
-      physicalFunctions:
-        - pciAddress: 0000:af:00.0
-          pfDriver: "pci-pf-stub"
-          vfDriver: "vfio-pci"
-          vfAmount: 16
-          bbDevConfig:
-            acc100:
-              # Programming mode: 0 = VF Programming, 1 = PF Programming
-              pfMode: false
-              numVfBundles: 16
-              maxQueueSize: 1024
-              uplink4G:
-                numQueueGroups: 0
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
-              downlink4G:
-                numQueueGroups: 0
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
-              uplink5G:
-                numQueueGroups: 4
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
-              downlink5G:
-                numQueueGroups: 4
-                numAqsPerGroups: 16
-                aqDepthLog2: 4
+  priority: 1
+  nodeSelector:
+    kubernetes.io/hostname: node1
+  acceleratorSelector:
+    pciAddress: 0000:af:00.0
+  physicalFunction:  
+    pfDriver: "pci-pf-stub"
+    vfDriver: "vfio-pci"
+    vfAmount: 16
+    bbDevConfig:
+      acc100:
+        # Programming mode: 0 = VF Programming, 1 = PF Programming
+        pfMode: false
+        numVfBundles: 16
+        maxQueueSize: 1024
+        uplink4G:
+          numQueueGroups: 0
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        downlink4G:
+          numQueueGroups: 0
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        uplink5G:
+          numQueueGroups: 4
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
+        downlink5G:
+          numQueueGroups: 4
+          numAqsPerGroups: 16
+          aqDepthLog2: 4
 ```
 
 #### Sample Status for Wireless FEC (ACC100)
