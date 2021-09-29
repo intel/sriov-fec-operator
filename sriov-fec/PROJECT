@@ -1,7 +1,7 @@
 domain: intel.com
 layout: go.kubebuilder.io/v3
 projectName: sriov-fec
-repo: github.com/open-ness/openshift-operator/sriov-fec
+repo: github.com/smart-edge-open/openshift-operator/sriov-fec
 resources:
 - crdVersion: v1
   group: sriovfec

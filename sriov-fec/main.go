@@ -37,9 +37,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/open-ness/openshift-operator/common/pkg/assets"
-	sriovfecv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
-	"github.com/open-ness/openshift-operator/sriov-fec/controllers"
+	"github.com/smart-edge-open/openshift-operator/common/pkg/assets"
+	sriovfecv1 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v1"
+	"github.com/smart-edge-open/openshift-operator/sriov-fec/controllers"
 	// +kubebuilder:scaffold:imports
 )
 

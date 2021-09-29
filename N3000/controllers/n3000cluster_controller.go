@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
+	fpgav1 "github.com/smart-edge-open/openshift-operator/N3000/api/v1"
 )
 
 const (

@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	sriov "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
+	sriov "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v1"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"

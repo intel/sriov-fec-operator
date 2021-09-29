@@ -7,8 +7,8 @@ import (
 	"flag"
 	"os"
 
-	sriovv1 "github.com/open-ness/openshift-operator/sriov-fec/api/v1"
-	"github.com/open-ness/openshift-operator/sriov-fec/pkg/daemon"
+	sriovv1 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v1"
+	"github.com/smart-edge-open/openshift-operator/sriov-fec/pkg/daemon"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"

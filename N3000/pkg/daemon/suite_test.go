@@ -14,7 +14,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
+	fpgav1 "github.com/smart-edge-open/openshift-operator/N3000/api/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"

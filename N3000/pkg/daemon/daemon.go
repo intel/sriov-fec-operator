@@ -7,10 +7,10 @@ import (
 	"context"
 	"errors"
 
-	dh "github.com/open-ness/openshift-operator/common/pkg/drainhelper"
+	dh "github.com/smart-edge-open/openshift-operator/common/pkg/drainhelper"
 
 	"github.com/go-logr/logr"
-	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
+	fpgav1 "github.com/smart-edge-open/openshift-operator/N3000/api/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

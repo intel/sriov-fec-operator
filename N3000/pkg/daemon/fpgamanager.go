@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	fpgav1 "github.com/open-ness/openshift-operator/N3000/api/v1"
+	fpgav1 "github.com/smart-edge-open/openshift-operator/N3000/api/v1"
 	"github.com/pkg/errors"
 )
 

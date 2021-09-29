@@ -1,4 +1,4 @@
-module github.com/open-ness/openshift-operator/common
+module github.com/smart-edge-open/openshift-operator/common
 
 go 1.15
 
