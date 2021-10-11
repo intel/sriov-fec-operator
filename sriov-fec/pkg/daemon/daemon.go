@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"time"
 
@@ -45,45 +46,30 @@ var (
 
 type NodeConfigReconciler struct {
 	client.Client
-	log              *logrus.Logger
-	nodeName         string
-	namespace        string
-	drainAndExecute  Drainer
-	nodeConfigurator *NodeConfigurator
+	log         *logrus.Logger
+	nodeNameRef types.NamespacedName
+	configurer  NodeConfigurer
 }
 
 type Drainer func(configurer func(ctx context.Context) bool, drain bool) error
-type configurer func(ctx context.Context) bool
+type configurationTask func(ctx context.Context) bool
 
-type configurationStatus struct {
+type configurationTaskStatus struct {
 	isRebootRequested  bool
 	configurationError error
 }
 
-func NewNodeConfigReconciler(k8sClient client.Client, drainer Drainer, log *logrus.Logger, nodeName, ns string) (r *NodeConfigReconciler, err error) {
+func NewNodeConfigReconciler(k8sClient client.Client, configurer NodeConfigurer, nodeNameRef types.NamespacedName) (r *NodeConfigReconciler, err error) {
 
 	if supportedAccelerators, err = utils.LoadDiscoveryConfig(configPath); err != nil {
 		return nil, err
 	}
 
-	kc, err := createKernelController(log)
-	if err != nil {
-		return nil, err
-	}
-
-	nc := &NodeConfigurator{Log: log, kernelController: kc}
-
-	return &NodeConfigReconciler{
-		Client:           k8sClient,
-		log:              log,
-		nodeName:         nodeName,
-		namespace:        ns,
-		drainAndExecute:  drainer,
-		nodeConfigurator: nc,
-	}, nil
+	return &NodeConfigReconciler{Client: k8sClient, log: utils.NewLogger(), nodeNameRef: nodeNameRef, configurer: configurer}, nil
 }
 
 func (r *NodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
+	r.log.Infof("Reconcile(...) triggered by %s", req.NamespacedName.String())
 
 	nc, err := r.readSriovFecNodeConfig(req.NamespacedName)
 	if err != nil {
@@ -96,10 +82,11 @@ func (r *NodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (c
 	}
 
 	if isConfigurationOfNonExistingInventoryRequested(nc.Spec.PhysicalFunctions, detectedInventory) {
-		return requeueLaterOrNowIfError(r.updateStatus(nc, metav1.ConditionFalse, ConfigurationFailed, "requested configuration reffers to not existing accelerator"))
+		r.log.Info("requested configuration refers to not existing accelerator(s)")
+		return requeueLaterOrNowIfError(r.updateStatus(nc, metav1.ConditionFalse, ConfigurationFailed, "requested configuration refers to not existing accelerator"))
 	}
 
-	if !isReconcileRequired(nc) {
+	if !r.isReconcileRequired(nc, detectedInventory) {
 		r.log.Info("Nothing to do")
 		return requeueLater()
 	}
@@ -108,7 +95,7 @@ func (r *NodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (c
 		return requeueNowWithError(err)
 	}
 
-	if rebootRequested, err := r.configureNode(nc); err != nil {
+	if rebootRequested, err := r.configurer.configureNode(nc); err != nil {
 		r.log.WithError(err).Error("error occurred during configuring node")
 		return requeueNowWithError(r.updateStatus(nc, metav1.ConditionFalse, ConfigurationFailed, err.Error()))
 	} else if rebootRequested {
@@ -125,7 +112,7 @@ func (r *NodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (c
 func (r *NodeConfigReconciler) CreateEmptyNodeConfigIfNeeded(c client.Client) error {
 	nodeConfig := &fec.SriovFecNodeConfig{}
 
-	err := c.Get(context.Background(), client.ObjectKey{Name: r.nodeName, Namespace: r.namespace}, nodeConfig)
+	err := c.Get(context.Background(), client.ObjectKey{Name: r.nodeNameRef.Name, Namespace: r.nodeNameRef.Namespace}, nodeConfig)
 	if err == nil {
 		r.log.Info("already exists")
 		return nil
@@ -135,12 +122,12 @@ func (r *NodeConfigReconciler) CreateEmptyNodeConfigIfNeeded(c client.Client) er
 		return err
 	}
 
-	r.log.Infof("SriovFecNodeConfig{name: %s, namespace: %s} not found - creating", r.nodeName, r.namespace)
+	r.log.Infof("SriovFecNodeConfig{%s} not found - creating", r.nodeNameRef)
 
 	nodeConfig = &fec.SriovFecNodeConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.nodeName,
-			Namespace: r.namespace,
+			Name:      r.nodeNameRef.Name,
+			Namespace: r.nodeNameRef.Namespace,
 		},
 		Spec: fec.SriovFecNodeConfigSpec{
 			PhysicalFunctions: []fec.PhysicalFunctionConfigExt{},
@@ -181,7 +168,7 @@ func (r *NodeConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithEventFilter(
 			predicate.And(
 				ResourceNamePredicate{
-					requiredName: r.nodeName,
+					requiredName: r.nodeNameRef.Name,
 					log:          r.log,
 				},
 				predicate.GenerationChangedPredicate{},
@@ -192,18 +179,23 @@ func (r *NodeConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *NodeConfigReconciler) updateStatus(nc *fec.SriovFecNodeConfig, status metav1.ConditionStatus, reason ConfigurationConditionReason, msg string) error {
 	previousCondition := findOrCreateConfigurationStatusCondition(nc)
 
+	// SriovFecNodeConfig.generation is under K8S management
+	// metav1.Condition.observedGeneration is under this reconciler management.
+	// observedGeneration would be incremented then and only then when spec which comes with updated generation would be processed without any error.
+	determineGeneration := func() int64 {
+		if reason == ConfigurationSucceeded {
+			return nc.GetGeneration()
+		} else {
+			return previousCondition.ObservedGeneration
+		}
+	}
+
 	condition := metav1.Condition{
-		Type:    ConditionConfigured,
-		Status:  status,
-		Reason:  string(reason),
-		Message: msg,
-		ObservedGeneration: func() int64 {
-			if reason != ConfigurationInProgress {
-				return nc.GetGeneration()
-			} else {
-				return previousCondition.ObservedGeneration
-			}
-		}(),
+		Type:               ConditionConfigured,
+		Status:             status,
+		Reason:             string(reason),
+		Message:            msg,
+		ObservedGeneration: determineGeneration(),
 	}
 
 	meta.SetStatusCondition(&nc.Status.Conditions, condition)
@@ -264,74 +256,97 @@ func (r *NodeConfigReconciler) readSriovFecNodeConfig(nn types.NamespacedName) (
 	return nc, nil
 }
 
-func (r *NodeConfigReconciler) configureNode(nodeConfig *fec.SriovFecNodeConfig) (isRebootRequested bool, err error) {
-	configurer, status := r.createNodeConfigurer(nodeConfig)
+type NodeConfigurer interface {
+	configureNode(nodeConfig *fec.SriovFecNodeConfig) (isRebootRequested bool, err error)
+}
 
-	if err = r.drainAndExecute(configurer, !nodeConfig.Spec.DrainSkip); err != nil {
+func NewNodeConfigurer(drainer Drainer, client client.Client, nodeNameRef types.NamespacedName) (NodeConfigurer, error) {
+	log := utils.NewLogger()
+	kc, err := createKernelController(log)
+	if err != nil {
+		return nil, err
+	}
+
+	configurer := &NodeConfigurator{Log: log, kernelController: kc}
+
+	return &nodeConfigurer{log: log, drainAndExecute: drainer, configurer: configurer, Client: client, nodeNameRef: nodeNameRef}, nil
+}
+
+type nodeConfigurer struct {
+	client.Client
+	drainAndExecute Drainer
+	log             *logrus.Logger
+	configurer      *NodeConfigurator
+	nodeNameRef     types.NamespacedName
+}
+
+func (n *nodeConfigurer) configureNode(nodeConfig *fec.SriovFecNodeConfig) (isRebootRequested bool, err error) {
+	configurationTask, configurationTaskStatus := n.createConfigurationTask(nodeConfig)
+	if err = n.drainAndExecute(configurationTask, !nodeConfig.Spec.DrainSkip); err != nil {
 		return false, err
 	}
 
-	return status.isRebootRequested, status.configurationError
+	return configurationTaskStatus.isRebootRequested, configurationTaskStatus.configurationError
 }
 
-func (r *NodeConfigReconciler) createNodeConfigurer(nodeConfig *fec.SriovFecNodeConfig) (configurer, *configurationStatus) {
-	status := new(configurationStatus)
+func (n *nodeConfigurer) createConfigurationTask(nodeConfig *fec.SriovFecNodeConfig) (configurationTask, *configurationTaskStatus) {
+	status := new(configurationTaskStatus)
 
-	configurer := func(ctx context.Context) bool {
-		missingParams, err := r.nodeConfigurator.isAnyKernelParamsMissing()
+	task := func(ctx context.Context) bool {
+		missingParams, err := n.configurer.isAnyKernelParamsMissing()
 		if err != nil {
-			r.log.WithError(err).Error("failed to check for missing params")
+			n.log.WithError(err).Error("failed to check for missing params")
 			status.configurationError = err
 			return true
 		}
 
 		if missingParams {
-			r.log.Info("missing kernel params")
+			n.log.Info("missing kernel params")
 
-			err := r.nodeConfigurator.addMissingKernelParams()
+			err := n.configurer.addMissingKernelParams()
 			if err != nil {
-				r.log.WithError(err).Error("failed to add missing params")
+				n.log.WithError(err).Error("failed to add missing params")
 				status.configurationError = err
 				return true
 			}
 
-			r.log.Info("added kernel params - rebooting")
-			if err := r.nodeConfigurator.rebootNode(); err != nil {
-				r.log.WithError(err).Error("failed to request a node reboot")
+			n.log.Info("added kernel params - rebooting")
+			if err := n.configurer.rebootNode(); err != nil {
+				n.log.WithError(err).Error("failed to request a node reboot")
 				status.configurationError = err
 				return true
 			}
 			status.isRebootRequested = true
 			return false // leave node cordoned & keep the leadership
 		}
-		if err := r.nodeConfigurator.applyConfig(nodeConfig.Spec); err != nil {
-			r.log.WithError(err).Error("failed applying new PF/VF configuration")
+		if err := n.configurer.applyConfig(nodeConfig.Spec); err != nil {
+			n.log.WithError(err).Error("failed applying new PF/VF configuration")
 			status.configurationError = err
 			return true
 		}
 
-		status.configurationError = r.restartDevicePlugin()
+		status.configurationError = n.restartDevicePlugin()
 		return true
 	}
 
-	return configurer, status
+	return task, status
 }
 
-func (r *NodeConfigReconciler) restartDevicePlugin() error {
+func (n *nodeConfigurer) restartDevicePlugin() error {
 	pods := &corev1.PodList{}
-	err := r.Client.List(context.TODO(), pods,
-		client.InNamespace(r.namespace),
+	err := n.List(context.TODO(), pods,
+		client.InNamespace(n.nodeNameRef.Namespace),
 		&client.MatchingLabels{"app": "sriov-device-plugin-daemonset"})
 
 	if err != nil {
 		return errors.Wrap(err, "failed to get pods")
 	}
 	if len(pods.Items) == 0 {
-		r.log.Info("there is no running instance of device plugin, nothing to restart")
+		n.log.Info("there is no running instance of device plugin, nothing to restart")
 	}
 
 	for _, p := range pods.Items {
-		if p.Spec.NodeName != r.nodeName {
+		if p.Spec.NodeName != n.nodeNameRef.Name {
 			continue
 		}
 		d := &corev1.Pod{
@@ -340,7 +355,7 @@ func (r *NodeConfigReconciler) restartDevicePlugin() error {
 				Name:      p.Name,
 			},
 		}
-		if err := r.Delete(context.TODO(), d, &client.DeleteOptions{}); err != nil {
+		if err := n.Delete(context.TODO(), d, &client.DeleteOptions{}); err != nil {
 			return errors.Wrap(err, "failed to delete sriov-device-plugin-daemonset pod")
 		}
 
@@ -349,26 +364,31 @@ func (r *NodeConfigReconciler) restartDevicePlugin() error {
 	return nil
 }
 
-func isReconcileRequired(nc *fec.SriovFecNodeConfig) bool {
+func (r *NodeConfigReconciler) isReconcileRequired(nc *fec.SriovFecNodeConfig, detectedInventory *fec.NodeInventory) bool {
 
 	isGenerationChanged := func() bool {
-		return nc.GetGeneration() != findOrCreateConfigurationStatusCondition(nc).ObservedGeneration
-	}
-
-	isReconfigurationRequested := func() bool {
-		return len(nc.Spec.PhysicalFunctions) > 0
-	}
-
-	isSriovFecConfigured := func() bool {
-		for _, accelerator := range nc.Status.Inventory.SriovAccelerators {
-			if len(accelerator.VFs) > 0 {
-				return true
-			}
+		observedGeneration := findOrCreateConfigurationStatusCondition(nc).ObservedGeneration
+		if nc.GetGeneration() != observedGeneration {
+			r.log.WithField("observed", observedGeneration).
+				WithField("requested", nc.GetGeneration()).
+				Info("Observed generation doesn't reflect requested one")
+			return true
 		}
 		return false
 	}
 
-	return isGenerationChanged() && (isReconfigurationRequested() || isSriovFecConfigured())
+	isExposedInventoryUpToDate := func() bool {
+		if !reflect.DeepEqual(nc.Status.Inventory, *detectedInventory) {
+			r.log.WithField("exposed", nc.Status.Inventory).
+				WithField("detected", *detectedInventory).
+				Info("exposed inventory is outdated")
+			return false
+		}
+
+		return true
+	}
+
+	return isGenerationChanged() || !isExposedInventoryUpToDate()
 }
 
 func findOrCreateConfigurationStatusCondition(nc *fec.SriovFecNodeConfig) metav1.Condition {
