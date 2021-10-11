@@ -116,4 +116,4 @@ spec:
     name: Intel Corporation
     url: https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html
   version: 0.0.0
-  replaces: sriov-fec.v1.3.0
+  replaces: sriov-fec.v2.0.0

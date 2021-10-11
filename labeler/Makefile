@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020 Intel Corporation
 
-VERSION ?= 2.0.0
+VERSION ?= 2.0.1
 IMG_VERSION := v$(VERSION)
 TLS_VERIFY ?= true
 
