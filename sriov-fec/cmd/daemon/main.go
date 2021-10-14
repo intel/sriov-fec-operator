@@ -6,6 +6,7 @@ package main
 import (
 	dh "github.com/smart-edge-open/openshift-operator/common/pkg/drainhelper"
 	"github.com/smart-edge-open/openshift-operator/common/pkg/utils"
+	"k8s.io/apimachinery/pkg/types"
 	"os"
 
 	sriovv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
@@ -63,9 +64,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	daemonLog := utils.NewLogger()
-	drainHelper := dh.NewDrainHelper(daemonLog, cset, nodeName, ns)
-	reconciler, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), drainHelper.Run, daemonLog, nodeName, ns)
+	nodeNameRef := types.NamespacedName{Namespace: ns, Name: nodeName}
+	drainHelper := dh.NewDrainHelper(utils.NewLogger(), cset, nodeName, ns)
+	configurer, err := daemon.NewNodeConfigurer(drainHelper.Run, mgr.GetClient(), nodeNameRef)
+	if err != nil {
+		setupLog.WithError(err).Error("unable to create node configurer")
+		os.Exit(1)
+	}
+	reconciler, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), configurer, nodeNameRef)
 	if err != nil {
 		setupLog.WithError(err).Error("unable to create reconciler")
 		os.Exit(1)
