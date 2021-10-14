@@ -62,7 +62,7 @@ type SriovFecClusterConfigReconciler struct {
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=*
 
 func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.Log.Info("Reconciling SriovFecClusterConfig")
+	r.Log.Infof("Reconcile(...) triggered by %s", req.NamespacedName.String())
 
 	clusterConfigList := new(sriovfecv2.SriovFecClusterConfigList)
 	if err := r.List(context.TODO(), clusterConfigList, client.InNamespace(NAMESPACE)); err != nil {
@@ -119,6 +119,9 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.
 				}
 
 				setConfigurationPropagationConditionFailed(&snc.Status.Conditions, snc.GetGeneration(), err.Error())
+				r.Log.
+					WithField("sfnc", snc).
+					Info("updating svnc status")
 				return r.Status().Update(context.TODO(), snc)
 			})
 

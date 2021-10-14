@@ -95,14 +95,10 @@ var _ = Describe("NodeConfigReconciler", func() {
 					},
 				}
 
+				nodeNameRef := types.NamespacedName{Namespace: _SUPPORTED_NAMESPACE, Name: _THIS_NODE_NAME}
+				configurer, _ := NewNodeConfigurer(func(operation func(ctx context.Context) bool, drain bool) error { return nil }, &onGetErrorReturningClient, nodeNameRef)
 				var err error
-				reconciler, err = NewNodeConfigReconciler(
-					&onGetErrorReturningClient,
-					func(operation func(ctx context.Context) bool, drain bool) error { return nil },
-					log,
-					_THIS_NODE_NAME,
-					_SUPPORTED_NAMESPACE,
-				)
+				reconciler, err = NewNodeConfigReconciler(&onGetErrorReturningClient, configurer, nodeNameRef)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(reconciler).ToNot(BeNil())
 			})
@@ -138,7 +134,11 @@ var _ = Describe("NodeConfigReconciler", func() {
 						configure(context.TODO())
 						return nil
 					}
-					reconciler, err := NewNodeConfigReconciler(k8sClient, fakeDrainer, log, _THIS_NODE_NAME, _SUPPORTED_NAMESPACE)
+
+					nodeNameRef := types.NamespacedName{Namespace: _SUPPORTED_NAMESPACE, Name: _THIS_NODE_NAME}
+					configurer, _ := NewNodeConfigurer(fakeDrainer, k8sClient, nodeNameRef)
+
+					reconciler, err := NewNodeConfigReconciler(k8sClient, configurer, nodeNameRef)
 					Expect(err).ToNot(HaveOccurred())
 
 					k8sManager, err := CreateManager(config, _SUPPORTED_NAMESPACE, scheme.Scheme)
@@ -334,7 +334,11 @@ var _ = Describe("NodeConfigReconciler", func() {
 						configure(context.TODO())
 						return nil
 					}
-					nodeReconciler, err := NewNodeConfigReconciler(k8sClient, drainer, log, _THIS_NODE_NAME, _SUPPORTED_NAMESPACE)
+
+					nodeNameRef := types.NamespacedName{Namespace: _SUPPORTED_NAMESPACE, Name: _THIS_NODE_NAME}
+					configurer, _ := NewNodeConfigurer(drainer, k8sClient, nodeNameRef)
+
+					nodeReconciler, err := NewNodeConfigReconciler(k8sClient, configurer, nodeNameRef)
 					Expect(err).ToNot(HaveOccurred())
 
 					reconciler := nodeRecocnilerWrapper{

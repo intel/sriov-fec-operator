@@ -27,6 +27,7 @@ This document provides high-level system features, issues, and limitations infor
 | 1.2.1     | June 2021      | 4.7                          | 4.7.8                   |
 | 1.3.0     | August 2021    | 4.8                          | 4.8.2                   |
 | 2.0.0     | September 2021 | 4.8                          | 4.8.5                   |
+| 2.0.1     | October 2021   | 4.8                          | 4.8.13                  |
 
 ### N3000K Operator
 
@@ -36,6 +37,8 @@ This document provides high-level system features, issues, and limitations infor
 | 1.1.0     | March 2021     | 4.6                          | 4.6.16                  |
 
 # Features for Release
+***v2.0.1***
+- Bugfixes
 
 ***v2.0.0***
 - Added new version (v2) of API with selectors
@@ -69,6 +72,9 @@ This document provides high-level system features, issues, and limitations infor
     - Deploys an instance of Prometheus exporter which collects metrics from the Intel® FPGA PAC N3000 card
 
 # Changes to Existing Features
+
+***v2.0.1***
+- Daemon reconcile loop has been redesigned 
 
 ***v2.0.0***
 - Improved existing validation rules and added new rules
@@ -141,6 +147,12 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - RT Kernel (the OPAE Docker images are built for specific kernel version)
 
 # Supported Operating Systems
+***v2.0.1*** was tested using the following:
+- OpenShift: 4.8.13
+- OS: Red Hat Enterprise Linux CoreOS 48.84.202109210859-0 (Ootpa)
+- Kubernetes: v1.21.1+a620f50
+- RT Kernel: 4.18.0-305.19.1.rt7.91.el8_4.x86_64
+
 ***v2.0.0*** was tested using the following:
 - OpenShift: 4.8.5
 - OS: Red Hat Enterprise Linux CoreOS 48.84.202108062347-0
