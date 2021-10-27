@@ -37,6 +37,10 @@ This document provides high-level system features, issues, and limitations infor
 | 1.1.0     | March 2021     | 4.6                          | 4.6.16                  |
 
 # Features for Release
+***v2.1.0***
+- Added webhook that converts existing SriovFecClusterConfigs with `nodes` field to SriovFecClusterConfig with `nodeSelector` and `acceleratorSelectors`
+- Added webhook that prohibits creation of  SriovFecClusterConfig with `nodes` field.
+
 ***v2.0.1***
 - Bugfixes
 

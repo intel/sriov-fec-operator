@@ -23,21 +23,20 @@ import (
 	"context"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"time"
-
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"time"
 
 	sriovfecv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
 )
@@ -70,29 +69,10 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.
 		return ctrl.Result{}, err
 	}
 
-	var allClusterConfigs []sriovfecv2.SriovFecClusterConfig
 	for _, sfcc := range clusterConfigList.Items {
-		for ncIdx, nodeConfig := range sfcc.Spec.Nodes {
-			for pfIdx, pf := range nodeConfig.PhysicalFunctions {
-				newCC := sfcc.DeepCopy()
-				newCC.Name = fmt.Sprintf("%s-%d-%d", newCC.Name, ncIdx, pfIdx)
-				newCC.Spec.Nodes = nil
-				newCC.Spec.NodeSelector = map[string]string{
-					"kubernetes.io/hostname": nodeConfig.NodeName,
-				}
-				newCC.Spec.AcceleratorSelector = sriovfecv2.AcceleratorSelector{
-					PCIAddress: pf.PCIAddress,
-				}
-				newCC.Spec.PhysicalFunction = sriovfecv2.PhysicalFunctionConfig{
-					PFDriver:    pf.PFDriver,
-					VFDriver:    pf.VFDriver,
-					VFAmount:    pf.VFAmount,
-					BBDevConfig: pf.BBDevConfig,
-				}
-				allClusterConfigs = append(allClusterConfigs, *newCC)
-			}
+		if len(sfcc.Spec.Nodes) != 0 {
+			return r.convertClusterConfigWithNodesField(sfcc)
 		}
-		allClusterConfigs = append(allClusterConfigs, sfcc)
 	}
 
 	nodes, err := r.getAcceleratedNodes()
@@ -103,7 +83,7 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.
 
 	clusterConfigurationMatcher := createClusterConfigMatcher(r.getOrInitializeSriovFecNodeConfig, r.Log)
 	for _, node := range nodes {
-		configurationContextProvider, err := clusterConfigurationMatcher.match(node, allClusterConfigs)
+		configurationContextProvider, err := clusterConfigurationMatcher.match(node, clusterConfigList.Items)
 		if err != nil {
 			r.Log.WithField("node", node.Name).WithField("error", err).Info("Error when matching SriovFecClusterConfigs")
 			continue
@@ -132,7 +112,54 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.
 		}
 	}
 
-	return ctrl.Result{RequeueAfter: time.Minute}, err
+	return r.requeueIfClusterConfigExists(req.NamespacedName)
+}
+
+func (r *SriovFecClusterConfigReconciler) requeueIfClusterConfigExists(cc types.NamespacedName) (ctrl.Result, error) {
+	sfcc := &sriovfecv2.SriovFecClusterConfig{}
+	err := r.Get(context.TODO(), cc, sfcc)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("failed to get ClusterConfig to determine whenever reconcile is needed - %v", err)
+	}
+
+	return ctrl.Result{RequeueAfter: time.Minute}, nil
+}
+
+func (r *SriovFecClusterConfigReconciler) convertClusterConfigWithNodesField(sfcc sriovfecv2.SriovFecClusterConfig) (ctrl.Result, error) {
+	r.Log.Infof("converting %v", sfcc.Name)
+	for ncIdx, nodeConfig := range sfcc.Spec.Nodes {
+		for pfIdx, pf := range nodeConfig.PhysicalFunctions {
+			newCC := sfcc.DeepCopy()
+			newCC.Name = fmt.Sprintf("%s-%d-%d", newCC.Name, ncIdx, pfIdx)
+			newCC.Spec.Nodes = nil
+			newCC.Spec.NodeSelector = map[string]string{
+				"kubernetes.io/hostname": nodeConfig.NodeName,
+			}
+			newCC.Spec.AcceleratorSelector = sriovfecv2.AcceleratorSelector{
+				PCIAddress: pf.PCIAddress,
+			}
+			newCC.Spec.PhysicalFunction = sriovfecv2.PhysicalFunctionConfig{
+				PFDriver:    pf.PFDriver,
+				VFDriver:    pf.VFDriver,
+				VFAmount:    pf.VFAmount,
+				BBDevConfig: pf.BBDevConfig,
+			}
+			newCC.ResourceVersion = ""
+			err := r.Create(context.TODO(), newCC)
+			if err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to write converted ClusterConfig - %v", err)
+			}
+		}
+	}
+	err := r.Client.Delete(context.TODO(), &sfcc, &client.DeleteOptions{})
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to delete converted ClusterConfig - %v", err)
+	}
+	r.Log.Infof("Successfully converted %v ClusterConfig", sfcc.Name)
+	return ctrl.Result{}, nil
 }
 
 func (r *SriovFecClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConfigurationCtx) error {
