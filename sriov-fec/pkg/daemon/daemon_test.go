@@ -9,7 +9,6 @@ import (
 	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 	sriovv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -159,8 +158,6 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 				AfterEach(func() {
 					By("tearing down the test environment")
-					gexec.KillAndWait("5s")
-					Expect(testEnv.Stop()).ToNot(HaveOccurred())
 				})
 
 				Context("Requested spec/config is correct and refers to existing accelerators", func() {
@@ -357,12 +354,6 @@ var _ = Describe("NodeConfigReconciler", func() {
 					go func() {
 						Expect(k8sManager.Start(context.TODO())).ToNot(HaveOccurred())
 					}()
-				})
-
-				AfterEach(func() {
-					By("tearing down the test environment")
-					gexec.KillAndWait("5s")
-					Expect(testEnv.Stop()).ToNot(HaveOccurred())
 				})
 
 				When("Modified SriovFecNodeConfig has foreign name(....)", func() {

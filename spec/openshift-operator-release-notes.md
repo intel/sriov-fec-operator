@@ -28,6 +28,7 @@ This document provides high-level system features, issues, and limitations infor
 | 1.3.0     | August 2021    | 4.8                          | 4.8.2                   |
 | 2.0.0     | September 2021 | 4.8                          | 4.8.5                   |
 | 2.0.1     | October 2021   | 4.8                          | 4.8.13                  |
+| 2.1.0     | November 2021  | 4.9                          | 4.9.5                   |
 
 ### N3000K Operator
 
@@ -77,6 +78,9 @@ This document provides high-level system features, issues, and limitations infor
 
 # Changes to Existing Features
 
+***v2.1.0***
+[TBD]
+
 ***v2.0.1***
 - Daemon reconcile loop has been redesigned 
 
@@ -116,6 +120,9 @@ This document provides high-level system features, issues, and limitations infor
 - There are no unsupported or discontinued features relevant to this release.
 
 # Fixed Issues
+***v2.1.0***
+[TBD]
+
 ***v1.2.1***
 - [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/otcshare/openshift-operator/issues/270)
 
@@ -151,6 +158,9 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - RT Kernel (the OPAE Docker images are built for specific kernel version)
 
 # Supported Operating Systems
+***v2.1.0***
+[TBD]
+
 ***v2.0.1*** was tested using the following:
 - OpenShift: 4.8.13
 - OS: Red Hat Enterprise Linux CoreOS 48.84.202109210859-0 (Ootpa)

@@ -125,9 +125,11 @@ var _ = Describe("SriovControllerTest", func() {
 		createNodeInventory := func(nodeName string, inventory []sriovv2.SriovAccelerator) {
 			nodeConfig := nodeConfigPrototype.DeepCopy()
 			nodeConfig.Name = nodeName
-			nodeConfig.Status.Inventory.SriovAccelerators = inventory
 			Expect(k8sClient.Create(context.TODO(), nodeConfig)).ToNot(HaveOccurred())
+
+			nodeConfig.Status.Inventory.SriovAccelerators = inventory
 			Expect(k8sClient.Status().Update(context.TODO(), nodeConfig)).ToNot(HaveOccurred())
+			Expect(nodeConfig.Status.Inventory.SriovAccelerators).To(HaveLen(len(inventory)))
 		}
 
 		createNode := func(name string, configurers ...func(n *corev1.Node)) *corev1.Node {
