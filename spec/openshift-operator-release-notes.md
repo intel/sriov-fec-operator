@@ -39,8 +39,8 @@ This document provides high-level system features, issues, and limitations infor
 
 # Features for Release
 ***v2.1.0***
-- Added webhook that converts existing SriovFecClusterConfigs with `nodes` field to SriovFecClusterConfig with `nodeSelector` and `acceleratorSelectors`
-- Added webhook that prohibits creation of  SriovFecClusterConfig with `nodes` field.
+- Support for OCP4.9.x
+- Bugfixes
 
 ***v2.0.1***
 - Bugfixes
@@ -79,7 +79,9 @@ This document provides high-level system features, issues, and limitations infor
 # Changes to Existing Features
 
 ***v2.1.0***
-[TBD]
+- Added webhook that converts existing SriovFecClusterConfigs with `nodes` field to SriovFecClusterConfig with `nodeSelector` and `acceleratorSelectors`
+- Added webhook that prohibits creation of  SriovFecClusterConfig with `nodes` field
+- Daemon's reconciliation process trigger has been adjusted to cover multi-reboot scenarios  
 
 ***v2.0.1***
 - Daemon reconcile loop has been redesigned 
@@ -121,7 +123,7 @@ This document provides high-level system features, issues, and limitations infor
 
 # Fixed Issues
 ***v2.1.0***
-[TBD]
+- SriovFecNodeConfig stucks in InProgress state(issue observed in case of multiple reboots)   
 
 ***v1.2.1***
 - [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/otcshare/openshift-operator/issues/270)
@@ -158,8 +160,11 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - RT Kernel (the OPAE Docker images are built for specific kernel version)
 
 # Supported Operating Systems
-***v2.1.0***
-[TBD]
+***v2.1.0*** was tested using the following:
+- OpenShift: 4.9.5
+- OS: Red Hat Enterprise Linux CoreOS 49.84.202110220538-0 (Ootpa) 
+- Kubernetes: v1.22.0-rc.0+a44d0f0
+- RT Kernel: 4.18.0-305.19.1.rt7.91.el8_4.x86_64
 
 ***v2.0.1*** was tested using the following:
 - OpenShift: 4.8.13
@@ -212,7 +217,7 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 # Package Versions 
 Package:
 - Prometheus: 1.7.1
-- Golang: 1.15
-- Kubernetes: 1.19.0
+- Golang: 1.16
+- Kubernetes: 1.22
 - DPDK: v20.11
-- pf-bb-config-app: v21.3
+- pf-bb-config-app: v21.6
