@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"time"
 
@@ -86,7 +85,7 @@ func (r *NodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (c
 		return requeueLaterOrNowIfError(r.updateStatus(nc, metav1.ConditionFalse, ConfigurationFailed, "requested configuration refers to not existing accelerator"))
 	}
 
-	if !r.isReconcileRequired(nc, detectedInventory) {
+	if !r.isCardUpdateRequired(nc, detectedInventory) {
 		r.log.Info("Nothing to do")
 		return requeueLater()
 	}
@@ -364,7 +363,11 @@ func (n *nodeConfigurer) restartDevicePlugin() error {
 	return nil
 }
 
-func (r *NodeConfigReconciler) isReconcileRequired(nc *fec.SriovFecNodeConfig, detectedInventory *fec.NodeInventory) bool {
+func (r *NodeConfigReconciler) isCardUpdateRequired(nc *fec.SriovFecNodeConfig, detectedInventory *fec.NodeInventory) bool {
+	pciToVfsAmount := map[string]int{}
+	for _, physicalFunction := range nc.Spec.PhysicalFunctions {
+		pciToVfsAmount[physicalFunction.PCIAddress] = physicalFunction.VFAmount
+	}
 
 	isGenerationChanged := func() bool {
 		observedGeneration := findOrCreateConfigurationStatusCondition(nc).ObservedGeneration
@@ -377,18 +380,20 @@ func (r *NodeConfigReconciler) isReconcileRequired(nc *fec.SriovFecNodeConfig, d
 		return false
 	}
 
-	isExposedInventoryUpToDate := func() bool {
-		if !reflect.DeepEqual(nc.Status.Inventory, *detectedInventory) {
-			r.log.WithField("exposed", nc.Status.Inventory).
-				WithField("detected", *detectedInventory).
-				Info("exposed inventory is outdated")
-			return false
+	exposedInventoryOutdated := func() bool {
+		for _, accelerator := range detectedInventory.SriovAccelerators {
+			if len(accelerator.VFs) != pciToVfsAmount[accelerator.PCIAddress] {
+				r.log.WithField("pciAddress", accelerator.PCIAddress).
+					WithField("exposedVfs", len(accelerator.VFs)).
+					WithField("requestedVfs", pciToVfsAmount[accelerator.PCIAddress]).
+					Info("Exposed inventory doesn't match requested one")
+				return true
+			}
 		}
-
-		return true
+		return false
 	}
 
-	return isGenerationChanged() || !isExposedInventoryUpToDate()
+	return isGenerationChanged() || exposedInventoryOutdated()
 }
 
 func findOrCreateConfigurationStatusCondition(nc *fec.SriovFecNodeConfig) metav1.Condition {
