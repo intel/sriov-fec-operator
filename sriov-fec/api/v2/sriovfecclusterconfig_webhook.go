@@ -4,7 +4,6 @@
 package v2
 
 import (
-	"fmt"
 	"github.com/smart-edge-open/openshift-operator/common/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,6 +45,7 @@ func (in *SriovFecClusterConfig) ValidateUpdate(_ runtime.Object) error {
 func validate(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
 
 	validators := []func(spec SriovFecClusterConfigSpec) field.ErrorList{
+		nodesFieldValidator,
 		ambiguousBBDevConfigValidator,
 		n3000LinkQueuesValidator,
 		acc100VfAmountValidator,
@@ -66,18 +66,20 @@ func (in *SriovFecClusterConfig) ValidateDelete() error {
 	return nil
 }
 
-func ambiguousBBDevConfigValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
-	for nid, node := range spec.Nodes {
-		for pfid, pf := range node.PhysicalFunctions {
-			if pf.BBDevConfig.N3000 != nil && pf.BBDevConfig.ACC100 != nil {
-				err := field.Forbidden(
-					field.NewPath("spec").Child(fmt.Sprintf("nodes[%d]", nid)).Child(fmt.Sprintf("physicalFunctions[%d]", pfid)).Child("bbDevConfig"),
-					"specified bbDevConfig cannot contain acc100 and n3000 configuration in the same time")
-				errs = append(errs, err)
-			}
+func nodesFieldValidator(spec SriovFecClusterConfigSpec) field.ErrorList {
+	if spec.Nodes != nil {
+		return field.ErrorList{
+			field.Invalid(
+				field.NewPath("spec", "nodes"),
+				spec.Nodes,
+				"using deprecated field 'nodes', which is no longer supported. Use 'acceleratorSelector' and 'nodeSelector' instead.",
+			),
 		}
 	}
+	return nil
+}
 
+func ambiguousBBDevConfigValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
 	if spec.PhysicalFunction.BBDevConfig.N3000 != nil && spec.PhysicalFunction.BBDevConfig.ACC100 != nil {
 		err := field.Forbidden(
 			field.NewPath("spec").Child("physicalFunction").Child("bbDevConfig"),
@@ -115,32 +117,6 @@ func n3000LinkQueuesValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorL
 		}
 	}
 
-	for nid, node := range spec.Nodes {
-		for pfid, pf := range node.PhysicalFunctions {
-			n3000BBDevConfig := pf.BBDevConfig.N3000
-			if n3000BBDevConfig == nil {
-				continue
-			}
-			queuePath := field.NewPath("spec").
-				Child(fmt.Sprintf("nodes[%d]", nid)).
-				Child(fmt.Sprintf("physicalFunctions[%d]", pfid)).
-				Child("bbDevConfig", "n3000", "uplink", "queues")
-
-			if err := validateN3000Queues(queuePath, n3000BBDevConfig.Uplink.Queues); err != nil {
-				errs = append(errs, err)
-			}
-
-			queuePath = field.NewPath("spec").
-				Child(fmt.Sprintf("nodes[%d]", nid)).
-				Child(fmt.Sprintf("physicalFunctions[%d]", pfid)).
-				Child("bbDevConfig", "n3000", "downlink", "queues")
-
-			if err := validateN3000Queues(queuePath, n3000BBDevConfig.Downlink.Queues); err != nil {
-				errs = append(errs, err)
-			}
-		}
-	}
-
 	return
 }
 
@@ -175,22 +151,6 @@ func acc100VfAmountValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorLi
 		errs = append(errs, err)
 	}
 
-	for nid, node := range spec.Nodes {
-		for pfid, pf := range node.PhysicalFunctions {
-			if err := validate(
-				pf.BBDevConfig.ACC100,
-				pf.VFAmount,
-				field.NewPath("spec",
-					fmt.Sprintf("nodes[%d]", nid),
-					fmt.Sprintf("physicalFunctions[%d]", pfid),
-					"bbDevConfig",
-					"acc100",
-					"numVfBundles"),
-			); err != nil {
-				errs = append(errs, err)
-			}
-		}
-	}
 	return
 }
 
@@ -220,21 +180,5 @@ func acc100NumQueueGroupsValidator(spec SriovFecClusterConfigSpec) (errs field.E
 		errs = append(errs, err)
 	}
 
-	for nid, node := range spec.Nodes {
-		for pfid, pf := range node.PhysicalFunctions {
-			if err := validate(
-				pf.BBDevConfig.ACC100,
-				field.NewPath("spec",
-					fmt.Sprintf("nodes[%d]", nid),
-					fmt.Sprintf("physicalFunctions[%d]", pfid),
-					"bbDevConfig",
-					"acc100",
-					"[downlink4G|uplink4G|downlink5G|uplink5G]",
-					"numQueueGroups")); err != nil {
-
-				errs = append(errs, err)
-			}
-		}
-	}
 	return
 }

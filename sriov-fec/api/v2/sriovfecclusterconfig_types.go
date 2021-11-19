@@ -195,7 +195,6 @@ type NodeConfig struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="SyncStatus",type=string,JSONPath=`.status.syncStatus`
 // +kubebuilder:storageversion
 // +kubebuilder:resource:shortName=sfcc
 

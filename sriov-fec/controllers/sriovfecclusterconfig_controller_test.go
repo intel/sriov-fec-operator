@@ -150,13 +150,13 @@ var _ = Describe("SriovControllerTest", func() {
 			return cc
 		}
 
-		createDummyReconcileRequest := func() ctrl.Request {
-			return ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "", Name: ""}}
+		createDummyReconcileRequest := func(ccName string) ctrl.Request {
+			return ctrl.Request{NamespacedName: types.NamespacedName{Namespace: NAMESPACE, Name: ccName}}
 		}
 
-		reconcile := func() *SriovFecClusterConfigReconciler {
+		reconcile := func(ccName string) *SriovFecClusterConfigReconciler {
 			reconciler := SriovFecClusterConfigReconciler{k8sClient, log, scheme.Scheme}
-			_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest())
+			_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest(ccName))
 			Expect(err).ToNot(HaveOccurred())
 			return &reconciler
 		}
@@ -200,7 +200,7 @@ var _ = Describe("SriovControllerTest", func() {
 					}
 				})
 
-				reconcile()
+				reconcile("cc")
 
 				nc := new(sriovv2.SriovFecNodeConfig)
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKey{Name: n1.Name, Namespace: NAMESPACE}, nc)).ToNot(HaveOccurred())
@@ -242,7 +242,7 @@ var _ = Describe("SriovControllerTest", func() {
 					}
 				})
 
-				reconcile()
+				reconcile("cc")
 
 				nc := new(sriovv2.SriovFecNodeConfig)
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKey{Name: n1.Name, Namespace: NAMESPACE}, nc)).ToNot(HaveOccurred())
@@ -291,7 +291,7 @@ var _ = Describe("SriovControllerTest", func() {
 					cc.Spec.PhysicalFunction = pfc
 				})
 
-				reconcile()
+				reconcile("cc")
 
 				nc := new(sriovv2.SriovFecNodeConfig)
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKey{Name: n1.Name, Namespace: NAMESPACE}, nc)).ToNot(HaveOccurred())
@@ -348,7 +348,7 @@ var _ = Describe("SriovControllerTest", func() {
 					cc.Spec.PhysicalFunction = pfc
 				})
 
-				reconcile()
+				reconcile("cc")
 
 				nc1 := new(sriovv2.SriovFecNodeConfig)
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKey{Name: n1.Name, Namespace: NAMESPACE}, nc1)).ToNot(HaveOccurred())
@@ -411,7 +411,7 @@ var _ = Describe("SriovControllerTest", func() {
 
 				reconciler := SriovFecClusterConfigReconciler{k8sClient, log, scheme.Scheme}
 
-				_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest())
+				_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest("cc1"))
 				Expect(err).ToNot(HaveOccurred())
 
 				//Check if node config was created out of cluster config
@@ -465,7 +465,7 @@ var _ = Describe("SriovControllerTest", func() {
 					cc.Spec.Priority = lowPriority
 				})
 
-				_ = reconcile()
+				_ = reconcile("high-priority-cluster-config")
 
 				cl := new(sriovv2.SriovFecNodeConfigList)
 				Expect(k8sClient.List(context.TODO(), cl)).ToNot(HaveOccurred())
@@ -518,7 +518,7 @@ var _ = Describe("SriovControllerTest", func() {
 						cc.Spec.Priority = 1
 					})
 
-					_ = reconcile()
+					_ = reconcile("config2")
 
 					cl := new(sriovv2.SriovFecNodeConfigList)
 					Expect(k8sClient.List(context.TODO(), cl)).ToNot(HaveOccurred())
@@ -569,7 +569,7 @@ var _ = Describe("SriovControllerTest", func() {
 						cc.Spec.Priority = 1
 					})
 
-					_ = reconcile()
+					_ = reconcile("config1")
 
 					cl := new(sriovv2.SriovFecNodeConfigList)
 					Expect(k8sClient.List(context.TODO(), cl)).ToNot(HaveOccurred())
@@ -618,7 +618,7 @@ var _ = Describe("SriovControllerTest", func() {
 				})
 
 				reconciler := SriovFecClusterConfigReconciler{k8sClient, log, scheme.Scheme}
-				_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest())
+				_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest("cc"))
 				Expect(err).ToNot(HaveOccurred())
 
 				nc := new(sriovv2.SriovFecNodeConfig)
@@ -654,7 +654,7 @@ var _ = Describe("SriovControllerTest", func() {
 					})
 
 					reconciler := SriovFecClusterConfigReconciler{k8sClient, log, scheme.Scheme}
-					_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest())
+					_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest("config"))
 					Expect(err).ToNot(HaveOccurred())
 
 					// Check if node config was created out of cluster config
@@ -666,7 +666,7 @@ var _ = Describe("SriovControllerTest", func() {
 					cc.Spec.NodeSelector["kubernetes.io/hostname"] = "noexisting-node"
 					Expect(k8sClient.Update(context.TODO(), cc)).ToNot(HaveOccurred())
 
-					_, err = reconciler.Reconcile(context.TODO(), createDummyReconcileRequest())
+					_, err = reconciler.Reconcile(context.TODO(), createDummyReconcileRequest("config"))
 					Expect(err).ToNot(HaveOccurred())
 
 					nodeConfigList := new(sriovv2.SriovFecNodeConfigList)
@@ -709,7 +709,7 @@ var _ = Describe("SriovControllerTest", func() {
 					})
 
 					reconciler := SriovFecClusterConfigReconciler{k8sClient, log, scheme.Scheme}
-					_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest())
+					_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest("config"))
 					Expect(err).ToNot(HaveOccurred())
 
 					// Check if node config was created out of cluster config
@@ -721,7 +721,7 @@ var _ = Describe("SriovControllerTest", func() {
 					cc.Spec.NodeSelector["kubernetes.io/hostname"] = n2.Name
 					Expect(k8sClient.Update(context.TODO(), cc)).ToNot(HaveOccurred())
 
-					_, err = reconciler.Reconcile(context.TODO(), createDummyReconcileRequest())
+					_, err = reconciler.Reconcile(context.TODO(), createDummyReconcileRequest(cc.Name))
 					Expect(err).ToNot(HaveOccurred())
 
 					nodeConfig = new(sriovv2.SriovFecNodeConfig)
@@ -745,7 +745,7 @@ var _ = Describe("SriovControllerTest", func() {
 				Expect(k8sClient.Create(context.TODO(), cc)).ToNot(HaveOccurred())
 
 				reconciler := SriovFecClusterConfigReconciler{k8sClient, log, scheme.Scheme}
-				_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest())
+				_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest(clusterConfigPrototype.Name))
 				Expect(err).ToNot(HaveOccurred())
 
 				nodeConfigs := &sriovv2.SriovFecNodeConfigList{}
