@@ -28,6 +28,7 @@ This document provides high-level system features, issues, and limitations infor
 | 1.3.0     | August 2021    | 4.8                          | 4.8.2                   |
 | 2.0.0     | September 2021 | 4.8                          | 4.8.5                   |
 | 2.0.1     | October 2021   | 4.8                          | 4.8.13                  |
+| 2.0.2     | November 2021  | 4.8                          | 4.8.12                  |
 | 2.1.0     | November 2021  | 4.9                          | 4.9.5                   |
 
 ### N3000K Operator
@@ -40,6 +41,9 @@ This document provides high-level system features, issues, and limitations infor
 # Features for Release
 ***v2.1.0***
 - Support for OCP4.9.x
+- Bugfixes
+
+***v2.0.2***
 - Bugfixes
 
 ***v2.0.1***
@@ -78,10 +82,10 @@ This document provides high-level system features, issues, and limitations infor
 
 # Changes to Existing Features
 
-***v2.1.0***
+***v2.0.2***
 - Added webhook that converts existing SriovFecClusterConfigs with `nodes` field to SriovFecClusterConfig with `nodeSelector` and `acceleratorSelectors`
-- Added webhook that prohibits creation of  SriovFecClusterConfig with `nodes` field
-- Daemon's reconciliation process trigger has been adjusted to cover multi-reboot scenarios  
+- Added webhook that prohibits creation of  SriovFecClusterConfig with `nodes` field.
+- Daemon's reconciliation process trigger has been adjusted to cover multi-reboot scenarios
 
 ***v2.0.1***
 - Daemon reconcile loop has been redesigned 
@@ -122,8 +126,9 @@ This document provides high-level system features, issues, and limitations infor
 - There are no unsupported or discontinued features relevant to this release.
 
 # Fixed Issues
-***v2.1.0***
-- SriovFecNodeConfig stucks in InProgress state(issue observed in case of multiple reboots)   
+
+***2.0.2***
+- SriovFecNodeConfig stucks in InProgress state(issue observed in case of multiple reboots)
 
 ***v1.2.1***
 - [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/otcshare/openshift-operator/issues/270)
@@ -160,10 +165,11 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - RT Kernel (the OPAE Docker images are built for specific kernel version)
 
 # Supported Operating Systems
-***v2.1.0*** was tested using the following:
-- OpenShift: 4.9.5
-- OS: Red Hat Enterprise Linux CoreOS 49.84.202110220538-0 (Ootpa) 
-- Kubernetes: v1.22.0-rc.0+a44d0f0
+
+***v2.0.2*** was tested using the following:
+- OpenShift: 4.8.13
+- OS: Red Hat Enterprise Linux CoreOS 48.84.202109210859-0 (Ootpa)
+- Kubernetes: v1.21.1+a620f50
 - RT Kernel: 4.18.0-305.19.1.rt7.91.el8_4.x86_64
 
 ***v2.0.1*** was tested using the following:
@@ -216,8 +222,6 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 
 # Package Versions 
 Package:
-- Prometheus: 1.7.1
-- Golang: 1.16
-- Kubernetes: 1.22
+- Golang: 1.15
 - DPDK: v20.11
 - pf-bb-config-app: v21.6

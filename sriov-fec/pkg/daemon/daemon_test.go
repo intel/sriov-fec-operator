@@ -158,6 +158,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 				AfterEach(func() {
 					By("tearing down the test environment")
+					_ = testEnv.Stop()
 				})
 
 				Context("Requested spec/config is correct and refers to existing accelerators", func() {

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020 Intel Corporation
 
-FROM registry.access.redhat.com/ubi8:8.4 as builder
+FROM registry.access.redhat.com/ubi8:8.4-213 as builder
 
 ARG KERNEL_VERSION
 ENV KERNEL_VERSION=$KERNEL_VERSION
@@ -64,7 +64,7 @@ RUN ./n3000-$OPAE_VERSION-rte-el8-setup.sh extract && \
     cp /opae-prepare/n3000-$OPAE_VERSION-rte/opae/opae-intel-fpga-driver-*.src.rpm /opae-drivers/ && \
     rm -rf /opae-prepare
 
-FROM registry.access.redhat.com/ubi8:8.4
+FROM registry.access.redhat.com/ubi8:8.4-213
 
 ARG VERSION
 ### Required OpenShift Labels

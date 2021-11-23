@@ -14,8 +14,8 @@ resources:
   domain: intel.com
   group: sriovfec
   kind: SriovFecClusterConfig
-  path: github.com/otcshare/openshift-operator/sriov-fec/api/v1
-  version: v1
+  path: github.com/otcshare/openshift-operator/sriov-fec/api/v2
+  version: v2
   webhooks:
     validation: true
     webhookVersion: v1
@@ -25,6 +25,6 @@ resources:
   domain: intel.com
   group: sriovfec
   kind: SriovFecNodeConfig
-  path: github.com/otcshare/openshift-operator/sriov-fec/api/v1
-  version: v1
+  path: github.com/otcshare/openshift-operator/sriov-fec/api/v2
+  version: v2
 version: "3"
