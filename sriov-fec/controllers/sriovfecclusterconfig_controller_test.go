@@ -306,10 +306,12 @@ var _ = Describe("SriovControllerTest", func() {
 						VFAmount:    pfc.VFAmount,
 						BBDevConfig: pfc.BBDevConfig,
 					}))
+				Expect(nc.Spec.DrainSkip).To(BeFalse())
 
 				nc2 := new(sriovv2.SriovFecNodeConfig)
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKey{Name: n2.Name, Namespace: NAMESPACE}, nc2)).ToNot(HaveOccurred())
 				Expect(nc2.Spec.PhysicalFunctions).To(BeEmpty())
+				Expect(nc2.Spec.DrainSkip).To(BeFalse())
 
 			})
 		})
@@ -734,6 +736,38 @@ var _ = Describe("SriovControllerTest", func() {
 					Expect(k8sClient.Get(context.TODO(), client.ObjectKey{Namespace: NAMESPACE, Name: n1.Name}, nodeConfig)).ToNot(HaveOccurred())
 					Expect(nodeConfig.Spec.PhysicalFunctions).To(BeEmpty())
 				})
+			})
+		})
+
+		When("drainSkip is specified on CC level", func() {
+			It("should be rewritten to matching NC", func() {
+				n1 := createNode("first-node", func(n *corev1.Node) {
+					n.Labels["kubernetes.io/hostname"] = n.Name
+				})
+
+				createNodeInventory(n1.Name, []sriovv2.SriovAccelerator{
+					{
+						DeviceID:   n1.Name,
+						PCIAddress: "0000:15:00.1",
+						VFs:        []sriovv2.VF{},
+					},
+				})
+
+				createAcceleratorConfig("config", func(cc *sriovv2.SriovFecClusterConfig) {
+					cc.Spec.NodeSelector["kubernetes.io/hostname"] = n1.Name
+					cc.Spec.AcceleratorSelector = sriovv2.AcceleratorSelector{
+						PCIAddress: "0000:15:00.1",
+					}
+					cc.Spec.DrainSkip = true
+				})
+
+				reconciler := SriovFecClusterConfigReconciler{k8sClient, log, scheme.Scheme}
+				_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest("config"))
+				Expect(err).ToNot(HaveOccurred())
+
+				nodeConfig := new(sriovv2.SriovFecNodeConfig)
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKey{Name: n1.Name, Namespace: NAMESPACE}, nodeConfig)).ToNot(HaveOccurred())
+				Expect(nodeConfig.Spec.DrainSkip).To(BeTrue())
 			})
 		})
 
