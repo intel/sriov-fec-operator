@@ -20,6 +20,7 @@ Copyright (c) 2020-2021 Intel Corporation
 - [Appendix 1 - Developer Notes](#appendix-1---developer-notes)
   - [Uninstalling Previously Installed Operator](#uninstalling-previously-installed-operator)
   - [Setting Up Operator Registry Locally](#setting-up-operator-registry-locally)
+  - [Running Operator on SNO](#running-operator-on-sno)
 - [Appendix 2 - OpenNESS Operator for Wireless FEC Accelerators Examples](#appendix-2---openness-operator-for-wireless-fec-accelerators-examples)
   - [N3000 FEC](#n3000-fec)
     - [Sample CR for Wireless FEC (N3000)](#sample-cr-for-wireless-fec-n3000)
@@ -530,6 +531,10 @@ Then delete the items and the namespace:
 ### Setting Up Operator Registry Locally
 
 If needed the user can set up a local registry for the operators' images. For more information please see [openshift-pacn3000-operator.md](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-pacn3000-operator.md#setting-up-operator-registry-locally)
+
+### Running operator on SNO
+
+If user needs to run operator on SNO (Single Node Openshift), then user should provide ClusterConfigs (which are described in following chapters) with `spec.drainSkip: true` to avoid node draining, because it is impossible to drain node if there's only 1 node.
 
 ## Appendix 2 - OpenNESS Operator for Wireless FEC Accelerators Examples
 
