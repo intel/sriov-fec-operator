@@ -29,7 +29,7 @@ This document provides high-level system features, issues, and limitations infor
 | 2.0.0     | September 2021 | 4.8                          | 4.8.5                   |
 | 2.0.1     | October 2021   | 4.8                          | 4.8.13                  |
 | 2.0.2     | November 2021  | 4.8                          | 4.8.12                  |
-| 2.1.0     | November 2021  | 4.9                          | 4.9.5                   |
+| 2.1.0     | November 2021  | 4.9                          | 4.9.7                   |
 
 ### N3000K Operator
 
@@ -127,6 +127,10 @@ This document provides high-level system features, issues, and limitations infor
 
 # Fixed Issues
 
+***2.1.0*** 
+- SriovFecClusterConfig.spec.drainSkip was not rewritten into SriovFecNodeConfig.spec.drainSkip so SNO worker 
+  was trying to drain its workloads 
+
 ***2.0.2***
 - SriovFecNodeConfig stucks in InProgress state(issue observed in case of multiple reboots)
 
@@ -165,6 +169,12 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - RT Kernel (the OPAE Docker images are built for specific kernel version)
 
 # Supported Operating Systems
+
+***v2.1.0*** was tested using the following:
+- OpenShift: 4.9.7
+- OS: Red Hat Enterprise Linux CoreOS 49.84.202111022104-0 (Ootpa)
+- Kubernetes: v1.22.2+5e38c72
+- RT Kernel: 4.18.0-305.25.1.rt7.97.el8_4.x86_64
 
 ***v2.0.2*** was tested using the following:
 - OpenShift: 4.8.13
@@ -222,6 +232,6 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 
 # Package Versions 
 Package:
-- Golang: 1.15
+- Golang: 1.16
 - DPDK: v20.11
 - pf-bb-config-app: v21.6
