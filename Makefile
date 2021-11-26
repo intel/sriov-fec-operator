@@ -3,7 +3,7 @@
 
 IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
 REQUIRED_OPERATOR_SDK_VERSION ?= v1.14.0
-VERSION ?= 2.0.1
+VERSION ?= 2.1.0
 TLS_VERIFY ?= false
 
 build_all:
