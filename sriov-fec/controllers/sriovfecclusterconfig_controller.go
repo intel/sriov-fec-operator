@@ -184,6 +184,7 @@ func (r *SriovFecClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConf
 			VFAmount:    cc.Spec.PhysicalFunction.VFAmount,
 			BBDevConfig: cc.Spec.PhysicalFunction.BBDevConfig,
 		}
+		newNodeConfig.Spec.DrainSkip = newNodeConfig.Spec.DrainSkip || cc.Spec.DrainSkip
 		newNodeConfig.Spec.PhysicalFunctions = append(newNodeConfig.Spec.PhysicalFunctions, pf)
 	}
 

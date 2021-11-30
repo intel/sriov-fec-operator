@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020 Intel Corporation
 
-FROM golang:1.14 as builder
+FROM golang:1.16 as builder
 
 WORKDIR /workspace
 COPY go.mod go.sum ./
@@ -10,7 +10,7 @@ RUN go mod download
 COPY main.go .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o node_labeler main.go
 
-FROM registry.access.redhat.com/ubi8:8.4-213
+FROM registry.access.redhat.com/ubi8:8.5-200
 
 ARG VERSION
 ### Required OpenShift Labels
