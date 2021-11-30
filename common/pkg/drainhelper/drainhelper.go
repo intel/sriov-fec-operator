@@ -91,6 +91,7 @@ func NewDrainHelper(log *logrus.Logger, cs *clientset.Clientset, nodeName, names
 		nodeName:  nodeName,
 
 		drainer: &drain.Helper{
+			Ctx:                 context.Background(),
 			Client:              cs,
 			Force:               true,
 			IgnoreAllDaemonSets: true,

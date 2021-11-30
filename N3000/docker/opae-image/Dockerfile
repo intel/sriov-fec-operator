@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020 Intel Corporation
 
-FROM registry.access.redhat.com/ubi8:8.4-213
+FROM registry.access.redhat.com/ubi8:8.5-200
 
 RUN dnf install --disablerepo=*  --enablerepo=ubi-8-appstream --enablerepo=ubi-8-baseos -y \
      python3 json-c procps-ng cpio
