@@ -7,9 +7,9 @@ metadata:
   name: config
 spec:
   acceleratorSelector:
-    driver: anyDriver
+    driver: pci-pf-stub
   physicalFunction:
-    pfDriver: pfDirver
+    pfDriver: pci-pf-stub
     vfDriver: vfDriver
     vfAmount: 2
     bbDevConfig: {}

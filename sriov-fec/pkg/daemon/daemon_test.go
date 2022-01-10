@@ -7,24 +7,25 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	sriovv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"os"
-	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"time"
 )
 
 var (
@@ -57,8 +58,9 @@ var _ = Describe("NodeConfigReconciler", func() {
 			workdir = testTmpFolder
 			sysBusPciDevices = testTmpFolder
 			sysBusPciDrivers = testTmpFolder
-			Expect(createFiles(filepath.Join(sysBusPciDevices, pciAddress), "driver_override", vfNumFile)).To(Succeed())
-			Expect(createFiles(filepath.Join(sysBusPciDrivers, "PFdriver"), "bind")).To(Succeed())
+			Expect(createFiles(filepath.Join(sysBusPciDevices, pciAddress), "driver_override", vfNumFilePciPfStub)).To(Succeed())
+			Expect(createFiles(filepath.Join(sysBusPciDevices, pciAddress), "driver_override", vfNumFileIgbUio)).To(Succeed())
+			Expect(createFiles(filepath.Join(sysBusPciDrivers, "igb_uio"), "bind")).To(Succeed())
 			Expect(createFiles(filepath.Join(sysBusPciDrivers, "pci-pf-stub"), "bind")).To(Succeed())
 
 			getVFconfigured = func(string) int {
@@ -164,7 +166,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 				Context("Requested spec/config is correct and refers to existing accelerators", func() {
 					It("spec/config should be applied", func() {
 						osExecMock := new(runExecCmdMock).
-							onCall([]string{"chroot", "/host/", "modprobe", "PFdriver"}).
+							onCall([]string{"chroot", "/host/", "modprobe", "igb_uio"}).
 							Return("", nil).
 							onCall([]string{"chroot", "/host/", "modprobe", "v"}).
 							Return("", nil).
@@ -245,7 +247,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 							procCmdlineFilePath = "testdata/cmdline_test"
 
 							expectedApplyConfigRelatedCalls := new(runExecCmdMock).
-								onCall([]string{"chroot", "/host/", "modprobe", "PFdriver"}).Return("", nil).
+								onCall([]string{"chroot", "/host/", "modprobe", "igb_uio"}).Return("", nil).
 								onCall([]string{"chroot", "/host/", "modprobe", "v"}).Return("", nil).
 								onCall([]string{"/sriov_workdir/pf_bb_config", "FPGA_5GNR", "-c", fmt.Sprintf("%s.ini", filepath.Join(workdir, pciAddress)), "-p", pciAddress}).Return("", nil)
 

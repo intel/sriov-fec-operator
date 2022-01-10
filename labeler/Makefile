@@ -7,6 +7,11 @@ TLS_VERIFY ?= true
 
 # Operator image registry
 IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
+ifeq (,$(shell which kubectl))
+ CONTAINER_TOOL ?= podman
+else
+ CONTAINER_TOOL ?= docker
+endif
 # Add suffix directly to IMAGE_REGISTRY to enable empty registry(local images)
 ifneq ($(strip $(IMAGE_REGISTRY)),)
 override IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
@@ -33,14 +38,17 @@ fmt:
 vet:
 	go vet ./...
 
-# Build the docker image
+# Build the image
 image:
 	cp ../LICENSE TEMP_LICENSE_COPY
-	podman build . -t ${LABELER_IMAGE} --build-arg=VERSION=$(IMG_VERSION)
+	$(CONTAINER_TOOL) build . -t ${LABELER_IMAGE} --build-arg=VERSION=$(IMG_VERSION)
 
-# Push the docker image
-push:
+# Push the image
+podman-push:
 	podman push ${LABELER_IMAGE} --tls-verify=$(TLS_VERIFY)
+
+docker-push:
+	docker push ${LABELER_IMAGE}
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.22
@@ -66,4 +74,4 @@ endef
 test: fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" NAMESPACE=default go test ./... -coverprofile cover.out
 
-build_all: image push
+build_all: image $(CONTAINER_TOOL)-push

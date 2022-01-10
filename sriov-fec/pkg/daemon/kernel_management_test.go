@@ -197,6 +197,10 @@ func (r *runExecCmdMock) execute(args []string, l *logrus.Logger) (string, error
 	l.Info("runExecCmdMock:", "command", args)
 	defer func() { r.executionCount++ }()
 
+	if len(r.executions) <= r.executionCount {
+		return "", fmt.Errorf("runExecCmdMock has been called too many times")
+	}
+
 	if reflect.DeepEqual(args, r.executions[r.executionCount].expected) {
 		execution := r.executions[r.executionCount]
 		toBeReturned := *execution.toBeReturned

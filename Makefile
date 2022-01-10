@@ -6,6 +6,12 @@ REQUIRED_OPERATOR_SDK_VERSION ?= v1.14.0
 VERSION ?= 2.1.0
 TLS_VERIFY ?= false
 
+ifeq (,$(shell which kubectl))
+ CONTAINER_TOOL ?= podman
+else
+ CONTAINER_TOOL ?= docker
+endif
+
 build_all:
 	(cd sriov-fec && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_all)
 	(cd N3000 && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_all)
@@ -14,13 +20,20 @@ build_all:
 	make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_index
 
 build_without_n3000:
-	(cd sriov-fec && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_all)
-	(cd labeler && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_all)
-	make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_index
+	(cd sriov-fec && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) CONTAINER_TOOL=$(CONTAINER_TOOL) build_all)
+	(cd labeler && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) CONTAINER_TOOL=$(CONTAINER_TOOL) build_all)
+	make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) CONTAINER_TOOL=$(CONTAINER_TOOL) build_index
 
 build_index:
-	opm index add --bundles $(IMAGE_REGISTRY)/sriov-fec-bundle:v$(VERSION) --tag localhost/n3000-operators-index:$(VERSION) $(if ifeq $(TLS_VERIFY) false, --skip-tls) -c podman --mode=semver
+	opm index add --bundles $(IMAGE_REGISTRY)/sriov-fec-bundle:v$(VERSION) --tag localhost/n3000-operators-index:$(VERSION) $(if ifeq $(TLS_VERIFY) false, --skip-tls) -c $(CONTAINER_TOOL) --mode=semver
+	make TLS_VERIFY=$(TLS_VERIFY) $(CONTAINER_TOOL)_push_index
+
+podman_push_index:
 	podman push localhost/n3000-operators-index:$(VERSION) $(IMAGE_REGISTRY)/n3000-operators-index:$(VERSION) --tls-verify=$(TLS_VERIFY)
+
+docker_push_index:
+	docker tag localhost/n3000-operators-index:$(VERSION) $(IMAGE_REGISTRY)/n3000-operators-index:$(VERSION)  
+	docker push $(IMAGE_REGISTRY)/n3000-operators-index:$(VERSION)
 
 image:
 	(cd sriov-fec && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) image)
