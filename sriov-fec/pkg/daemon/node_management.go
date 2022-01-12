@@ -216,8 +216,8 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv2.SriovFecNodeConfigSpec
 
 		if pf == nil {
 			if len(acc.VFs) > 0 {
-				n.Log.WithField("pci", acc.PCIAddress).Info("zeroing VFs")
-				if err := n.changeAmountOfVFs(pf.PFDriver, acc.PCIAddress, 0); err != nil {
+				n.Log.WithField("pci", acc.PCIAddress).WithField("driverName", acc.PFDriver).Info("zeroing VFs")
+				if err := n.changeAmountOfVFs(acc.PFDriver, acc.PCIAddress, 0); err != nil {
 					return err
 				}
 			}
