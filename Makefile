@@ -6,10 +6,10 @@ REQUIRED_OPERATOR_SDK_VERSION ?= v1.14.0
 VERSION ?= 2.1.0
 TLS_VERIFY ?= false
 
-ifeq (,$(shell which kubectl))
- CONTAINER_TOOL ?= podman
-else
+ifeq (,$(shell which oc))
  CONTAINER_TOOL ?= docker
+else
+ CONTAINER_TOOL ?= podman
 endif
 
 build_all:
