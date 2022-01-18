@@ -5,12 +5,7 @@ IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
 REQUIRED_OPERATOR_SDK_VERSION ?= v1.14.0
 VERSION ?= 2.1.0
 TLS_VERIFY ?= false
-
-ifeq (,$(shell which oc))
- CONTAINER_TOOL ?= docker
-else
- CONTAINER_TOOL ?= podman
-endif
+CONTAINER_TOOL ?= podman
 
 build_all:
 	(cd sriov-fec && make VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_all)
