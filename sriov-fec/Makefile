@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2022 Intel Corporation
 
 # Default k8s command-line tool exec
 export CLI_EXEC?=oc
 # Current Operator version
-VERSION ?= 2.1.0
+VERSION ?= 2.1.1
 # Supported channels
 CHANNELS ?= stable
 # Default channel

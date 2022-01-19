@@ -1,11 +1,13 @@
 ```text
 SPDX-License-Identifier: Apache-2.0
-Copyright (c) 2020-2021 Intel Corporation
+Copyright (c) 2020-2022 Intel Corporation
 ```
 <!-- omit in toc -->
 # Release Notes 
 This document provides high-level system features, issues, and limitations information for OpenNESS Operator for Intel® FPGA PAC N3000 and OpenNESS SR-IOV Operator for Wireless FEC Accelerators.
 - [Release history](#release-history)
+    - [SRIOV-FEC Operator](#sriov-fec-operator)
+    - [N3000K Operator](#n3000k-operator)
 - [Features for Release](#features-for-release)
 - [Changes to Existing Features](#changes-to-existing-features)
 - [Fixed Issues](#fixed-issues)
@@ -39,6 +41,7 @@ This document provides high-level system features, issues, and limitations infor
 | 2.0.1     | October 2021   | 4.8                          | 4.8.13                  |
 | 2.0.2     | November 2021  | 4.8                          | 4.8.12                  |
 | 2.1.0     | November 2021  | 4.9                          | 4.9.7                   |
+| 2.1.1     | January 2022   | 4.9                          | 4.9.7                   |
 
 ### N3000K Operator
 
@@ -48,6 +51,11 @@ This document provides high-level system features, issues, and limitations infor
 | 1.1.0     | March 2021     | 4.6                          | 4.6.16                  |
 
 # Features for Release
+
+***v2.1.1***
+- Added support for igb_uio module as a PF driver
+- Added support for Docker tool as an image building tool
+
 ***v2.1.0***
 - Support for OCP4.9.x
 - Bugfixes
@@ -178,6 +186,12 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - RT Kernel (the OPAE Docker images are built for specific kernel version)
 
 # Supported Operating Systems
+
+***v2.1.1*** was tested using the following:
+- OpenShift: 4.9.7
+- OS: Red Hat Enterprise Linux CoreOS 49.84.202111022104-0 (Ootpa)
+- Kubernetes: v1.22.2+5e38c72
+- RT Kernel: 4.18.0-305.25.1.rt7.97.el8_4.x86_64
 
 ***v2.1.0*** was tested using the following:
 - OpenShift: 4.9.7
