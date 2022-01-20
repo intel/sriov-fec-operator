@@ -7,11 +7,7 @@ TLS_VERIFY ?= true
 
 # Operator image registry
 IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
-ifeq (,$(shell which kubectl))
- CONTAINER_TOOL ?= podman
-else
- CONTAINER_TOOL ?= docker
-endif
+CONTAINER_TOOL ?= podman
 # Add suffix directly to IMAGE_REGISTRY to enable empty registry(local images)
 ifneq ($(strip $(IMAGE_REGISTRY)),)
 override IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
