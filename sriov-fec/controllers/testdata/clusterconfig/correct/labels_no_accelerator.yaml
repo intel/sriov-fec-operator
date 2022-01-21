@@ -10,7 +10,7 @@ spec:
     foo: bar
     bar: foo
   physicalFunction:
-    pfDriver: pfDirver
+    pfDriver: pci-pf-stub
     vfDriver: vfDriver
     vfAmount: 2
     bbDevConfig: {}

@@ -1,6 +1,6 @@
 ```text
 SPDX-License-Identifier: Apache-2.0
-Copyright (c) 2020-2021 Intel Corporation
+Copyright (c) 2020-2022 Intel Corporation
 ```
 <!-- omit in toc -->
 # OpenNESS Operator for Wireless FEC Accelerators documentation
@@ -13,6 +13,7 @@ Copyright (c) 2020-2021 Intel Corporation
 - [Managing NIC Devices](#managing-nic-devices)
 - [Technical Requirements and Dependencies](#technical-requirements-and-dependencies)
 - [Deploying the Operator](#deploying-the-operator)
+  - [Install dependencies](#install-dependencies)
   - [Install the Bundle](#install-the-bundle)
   - [Applying Custom Resources](#applying-custom-resources)
 - [Hardware Validation Environment](#hardware-validation-environment)
@@ -20,7 +21,7 @@ Copyright (c) 2020-2021 Intel Corporation
 - [Appendix 1 - Developer Notes](#appendix-1---developer-notes)
   - [Uninstalling Previously Installed Operator](#uninstalling-previously-installed-operator)
   - [Setting Up Operator Registry Locally](#setting-up-operator-registry-locally)
-  - [Running Operator on SNO](#running-operator-on-sno)
+  - [Running operator on SNO](#running-operator-on-sno)
 - [Appendix 2 - OpenNESS Operator for Wireless FEC Accelerators Examples](#appendix-2---openness-operator-for-wireless-fec-accelerators-examples)
   - [N3000 FEC](#n3000-fec)
     - [Sample CR for Wireless FEC (N3000)](#sample-cr-for-wireless-fec-n3000)
@@ -57,7 +58,7 @@ The workflow of the SRIOV FEC operator is shown in the following diagram:
 
 #### FEC Configuration
 
-The Intel's vRAN FEC acceleration devices/hardware expose the FEC PF device which is to be bound to PCI-PF-STUB driver in order to enable creation of the FEC VF devices. Once the FEC PF is bound to the correct driver, the user can create a number of devices to be used in Cloud Native deployment of vRAN to accelerate FEC. Once these devices are created they are to be bound to a user-space driver such as VFIO-PCI in order for them to work and be consumed in vRAN application pods. Before the device can be used by the application, the device needs to be configured - notably the mapping of queues exposed to the VFs - this is done via pf-bb-config application with the input from the CR used as a configuration.
+The Intel's vRAN FEC acceleration devices/hardware expose the FEC PF device which is to be bound to PCI-PF-STUB driver (igb_uio driver also supported) in order to enable creation of the FEC VF devices. Once the FEC PF is bound to the correct driver, the user can create a number of devices to be used in Cloud Native deployment of vRAN to accelerate FEC. Once these devices are created they are to be bound to a user-space driver such as VFIO-PCI in order for them to work and be consumed in vRAN application pods. Before the device can be used by the application, the device needs to be configured - notably the mapping of queues exposed to the VFs - this is done via pf-bb-config application with the input from the CR used as a configuration.
 
 > NOTE: For [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/smart-edge-open/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100) it is advised to create all 16 VFs. The card is configured to provide up to 8 queue groups with up to 16 queues per group. The queue groups can be divided between groups allocated to 5G/4G and Uplink/Downlink, it can be configured for 4G or 5G only, or both 4G and 5G at the same time. Each configured VF has access to all the queues. Each of the queue groups has a distinct priority level. The request for given queue group is made from application level (ie. vRAN application leveraging the FEC device).
 

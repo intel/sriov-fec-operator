@@ -5,7 +5,6 @@ package daemon
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -13,18 +12,24 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
 	sriovv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
 )
 
+const (
+	vfNumFilePciPfStub = "sriov_numvfs"
+	vfNumFileIgbUio    = "max_vfs"
+)
+
 var (
-	sysBusPciDevices = "/sys/bus/pci/devices"
-	sysBusPciDrivers = "/sys/bus/pci/drivers"
-	vfNumFile        = "sriov_numvfs"
-	workdir          = "/sriov_artifacts"
 	runExecCmd       = execCmd
 	getVFconfigured  = utils.GetVFconfigured
 	getVFList        = utils.GetVFList
+	workdir          = "/sriov_artifacts"
+	sysBusPciDevices = "/sys/bus/pci/devices"
+	sysBusPciDrivers = "/sys/bus/pci/drivers"
 )
 
 type NodeConfigurator struct {
@@ -157,14 +162,24 @@ func (n *NodeConfigurator) enableMasterBus(pciAddr string) error {
 	return nil
 }
 
-func (n *NodeConfigurator) changeAmountOfVFs(pfPCIAddress string, vfsAmount int) error {
+func (n *NodeConfigurator) changeAmountOfVFs(driver string, pfPCIAddress string, vfsAmount int) error {
 	currentAmount := getVFconfigured(pfPCIAddress)
 	if currentAmount == vfsAmount {
 		return nil
 	}
 
 	writeVfs := func(pfPCIAddress string, vfsAmount int) error {
-		unbindPath := filepath.Join(sysBusPciDevices, pfPCIAddress, vfNumFile)
+		unbindPath := filepath.Join(sysBusPciDevices, pfPCIAddress)
+
+		switch driver {
+		case "pci-pf-stub", "pci_pf_stub":
+			unbindPath = filepath.Join(unbindPath, vfNumFilePciPfStub)
+		case "igb_uio":
+			unbindPath = filepath.Join(unbindPath, vfNumFileIgbUio)
+		default:
+			return fmt.Errorf("unknown driver %v", driver)
+		}
+
 		err := ioutil.WriteFile(unbindPath, []byte(strconv.Itoa(vfsAmount)), os.ModeAppend)
 		if err != nil {
 			n.Log.WithError(err).WithField("pf", pfPCIAddress).WithField("vfsAmount", vfsAmount).Error("failed to set new amount of VFs for PF")
@@ -198,10 +213,11 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv2.SriovFecNodeConfigSpec
 	pciStubRegex := regexp.MustCompile("pci[-_]pf[-_]stub")
 	for _, acc := range inv.SriovAccelerators {
 		pf := getMatchingConfiguration(acc.PCIAddress, nodeConfig.PhysicalFunctions)
+
 		if pf == nil {
 			if len(acc.VFs) > 0 {
-				n.Log.WithField("pci", acc.PCIAddress).Info("zeroing VFs")
-				if err := n.changeAmountOfVFs(acc.PCIAddress, 0); err != nil {
+				n.Log.WithField("pci", acc.PCIAddress).WithField("driverName", acc.PFDriver).Info("zeroing VFs")
+				if err := n.changeAmountOfVFs(acc.PFDriver, acc.PCIAddress, 0); err != nil {
 					return err
 				}
 			}
@@ -220,7 +236,7 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv2.SriovFecNodeConfigSpec
 		}
 
 		if len(acc.VFs) > 0 {
-			if err := n.changeAmountOfVFs(pf.PCIAddress, 0); err != nil {
+			if err := n.changeAmountOfVFs(pf.PFDriver, pf.PCIAddress, 0); err != nil {
 				return err
 			}
 		}
@@ -229,7 +245,7 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv2.SriovFecNodeConfigSpec
 			return err
 		}
 
-		if err := n.changeAmountOfVFs(pf.PCIAddress, pf.VFAmount); err != nil {
+		if err := n.changeAmountOfVFs(pf.PFDriver, pf.PCIAddress, pf.VFAmount); err != nil {
 			return err
 		}
 

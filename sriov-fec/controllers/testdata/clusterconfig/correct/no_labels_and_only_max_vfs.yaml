@@ -9,7 +9,7 @@ spec:
   acceleratorSelector:
     maxVirtualFunctions: 4
   physicalFunction:
-    pfDriver: pfDirver
+    pfDriver: pci-pf-stub
     vfDriver: vfDriver
     vfAmount: 2
     bbDevConfig: {}

@@ -188,6 +188,11 @@ func (r *SriovFecClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConf
 		newNodeConfig.Spec.PhysicalFunctions = append(newNodeConfig.Spec.PhysicalFunctions, pf)
 	}
 
+	// copy latest known drainSkip from NodeConfig for cleanup
+	if len(acceleratorConfigContext) == 0 {
+		newNodeConfig.Spec.DrainSkip = ncc.Spec.DrainSkip
+	}
+
 	if !equality.Semantic.DeepEqual(newNodeConfig.Spec, currentNodeConfig.Spec) {
 		return r.Update(context.TODO(), newNodeConfig)
 	}

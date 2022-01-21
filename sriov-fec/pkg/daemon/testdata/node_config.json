@@ -8,7 +8,7 @@
       "physicalFunctions": [
         {
           "pciAddress": "0000:14:00.1",
-          "pfDriver": "PFdriver",
+          "pfDriver": "igb_uio",
           "vfDriver": "v",
           "vfAmount": 5,
           "bbDevConfig": {
