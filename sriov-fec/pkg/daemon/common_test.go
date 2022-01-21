@@ -6,11 +6,11 @@ package daemon
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
+	"github.com/smart-edge-open/openshift-operator/common/pkg/utils"
 )
 
 var _ = Describe("common", func() {
-	log = logrus.New()
+	log = utils.NewLogger()
 	var _ = Context("execCmd", func() {
 		var _ = It("will return error when args is empty ", func() {
 			_, err := execCmd([]string{}, log)

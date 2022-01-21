@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2022 Intel Corporation
 
 # Default k8s command-line tool exec
 export CLI_EXEC?=oc
 # Current Operator version
-VERSION ?= 2.1.0
+VERSION ?= 2.1.1
 # Supported channels
 CHANNELS ?= stable
 # Default channel
@@ -12,6 +12,8 @@ DEFAULT_CHANNEL ?= stable
 
 # Operator image registry
 IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
+CONTAINER_TOOL ?= podman
+
 # Add suffix directly to IMAGE_REGISTRY to enable empty registry(local images)
 ifneq ($(strip $(IMAGE_REGISTRY)),)
 override IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
@@ -40,8 +42,14 @@ ARCH = $(shell go env GOARCH)
 export SRIOV_FEC_OPERATOR_IMAGE ?= $(IMAGE_REGISTRY)sriov-fec-operator:$(IMG_VERSION)
 export SRIOV_FEC_DAEMON_IMAGE ?= $(IMAGE_REGISTRY)sriov-fec-daemon:$(IMG_VERSION)
 export SRIOV_FEC_LABELER_IMAGE ?= $(IMAGE_REGISTRY)n3000-labeler:$(IMG_VERSION)
-export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.9
 
+ifeq ($(CONTAINER_TOOL),podman)
+ export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.9
+ export KUBE_RBAC_PROXY_IMAGE ?= registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:86e5fa1fa294987114be200890c2e516501e424aee0fb98ece25c95e7716295b
+else
+ export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= quay.io/openshift/origin-sriov-network-device-plugin:4.9.0
+ export KUBE_RBAC_PROXY_IMAGE ?= gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+endif
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -152,21 +160,29 @@ kustomize: ## Download kustomize locally if necessary.
 .PHONY: image-sriov-fec-daemon
 image-sriov-fec-daemon:
 	cp ../LICENSE TEMP_LICENSE_COPY
-	podman build . -f Dockerfile.daemon -t $(SRIOV_FEC_DAEMON_IMAGE) --build-arg=VERSION=$(IMG_VERSION)
+	$(CONTAINER_TOOL) build . -f Dockerfile.daemon -t $(SRIOV_FEC_DAEMON_IMAGE) --build-arg=VERSION=$(IMG_VERSION)
 
 .PHONY: push-sriov-fec-daemon
-push-sriov-fec-daemon:
+podman-push-sriov-fec-daemon:
 	podman push $(SRIOV_FEC_DAEMON_IMAGE) --tls-verify=$(TLS_VERIFY)
+
+.PHONY: docker-push-sriov-fec-daemon
+docker-push-sriov-fec-daemon:
+	docker push $(SRIOV_FEC_DAEMON_IMAGE)
 
 # Build/Push operator image
 .PHONY: image-sriov-fec-operator
 image-sriov-fec-operator:
 	cp ../LICENSE TEMP_LICENSE_COPY
-	podman build . -t $(SRIOV_FEC_OPERATOR_IMAGE) --build-arg=VERSION=$(IMG_VERSION)
+	$(CONTAINER_TOOL) build . -t $(SRIOV_FEC_OPERATOR_IMAGE) --build-arg=VERSION=$(IMG_VERSION)
 
-.PHONY: push-sriov-fec-operator
-push-sriov-fec-operator:
+.PHONY: podman-push-sriov-fec-operator
+podman-push-sriov-fec-operator:
 	podman push $(SRIOV_FEC_OPERATOR_IMAGE) --tls-verify=$(TLS_VERIFY)
+
+.PHONY: docker-push-sriov-fec-operator
+docker-push-sriov-fec-operator:
+	docker push $(SRIOV_FEC_OPERATOR_IMAGE)
 
 # Build all the images
 .PHONY: image
@@ -174,7 +190,7 @@ image: image-sriov-fec-daemon image-sriov-fec-operator image-bundle
 
 # Push all the images
 .PHONY: push
-push: push-sriov-fec-daemon push-sriov-fec-operator push-bundle
+push: $(CONTAINER_TOOL)-push-sriov-fec-daemon $(CONTAINER_TOOL)-push-sriov-fec-operator $(CONTAINER_TOOL)-push-bundle
 
 check-operator-sdk-version:
 	(cd .. && make check-operator-sdk-version)
@@ -195,16 +211,24 @@ bundle: check-operator-sdk-version manifests kustomize
 # Build/Push the bundle image.
 .PHONY: image-bundle
 image-bundle: bundle
-	podman build -f bundle.Dockerfile -t $(BUNDLE_IMG) --format docker .
+	$(CONTAINER_TOOL) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
-.PHONY: push-bundle
-push-bundle:
+.PHONY: podman-push-bundle
+podman-push-bundle:
 	podman push $(BUNDLE_IMG) --tls-verify=$(TLS_VERIFY)
+
+.PHONY: docker-push-bundle
+docker-push-bundle:
+	docker push $(BUNDLE_IMG)
 
 build_all: image push
 
-docker-push: ## Push docker image with the manager.
-	podman push ${IMG} --tls-verify=false
+## Push image with the manager.
+podman-image-push:
+	podman push ${IMG} --tls-verify=$(TLS_VERIFY)
+
+docker-image-push:
+	docker push ${IMG}
 
 .PHONY: opm
 OPM = ./bin/opm
@@ -225,8 +249,8 @@ BUNDLE_IMGS ?= $(BUNDLE_IMG)
 CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION) ifneq ($(origin CATALOG_BASE_IMG), undefined) FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG) endif
 .PHONY: catalog-build
 catalog-build: opm
-	$(OPM) index add --container-tool podman --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
+	$(OPM) index add --container-tool $(CONTAINER_TOOL) --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
 
 .PHONY: catalog-push
 catalog-push: ## Push the catalog image.
-	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+	$(MAKE) $(CONTAINER_TOOL)-image-push IMG=$(CATALOG_IMG)
