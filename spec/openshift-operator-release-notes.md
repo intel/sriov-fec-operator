@@ -99,6 +99,9 @@ This document provides high-level system features, issues, and limitations infor
 
 # Changes to Existing Features
 
+***v2.X.Y***
+- Updated pf-bb-config from 21.6 to 21.11
+
 ***v2.0.2***
 - Added webhook that converts existing SriovFecClusterConfigs with `nodes` field to SriovFecClusterConfig with `nodeSelector` and `acceleratorSelectors`
 - Added webhook that prohibits creation of  SriovFecClusterConfig with `nodes` field.
