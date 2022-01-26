@@ -5,9 +5,11 @@ package daemon
 
 import (
 	"context"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"time"
@@ -358,9 +360,46 @@ func (n *nodeConfigurer) restartDevicePlugin() error {
 			return errors.Wrap(err, "failed to delete sriov-device-plugin-daemonset pod")
 		}
 
+		backoff := wait.Backoff{Steps: 300, Duration: 1 * time.Second, Factor: 1}
+		err = wait.ExponentialBackoff(backoff, n.waitForDevicePluginRestart(p.Name))
+		if err == wait.ErrWaitTimeout {
+			return fmt.Errorf("failed to restart sriov-device-plugin within specified time")
+		}
+		return err
 	}
-
 	return nil
+}
+
+func (n *nodeConfigurer) waitForDevicePluginRestart(oldPodName string) func() (bool, error) {
+	return func() (bool, error) {
+		pods := &corev1.PodList{}
+
+		err := n.List(context.TODO(), pods,
+			client.InNamespace(n.nodeNameRef.Namespace),
+			&client.MatchingLabels{"app": "sriov-device-plugin-daemonset"})
+		if err != nil {
+			n.log.WithError(err).Error("failed to list pods for sriov-device-plugin")
+			return false, err
+		}
+
+		for _, pod := range pods.Items {
+			if pod.Spec.NodeName == n.nodeNameRef.Name && pod.Name != oldPodName && isReady(pod) {
+				n.log.Info("device-plugin is running")
+				return true, nil
+			}
+
+		}
+		return false, nil
+	}
+}
+
+func isReady(p corev1.Pod) bool {
+	for _, condition := range p.Status.Conditions {
+		if condition.Type == corev1.PodReady && p.Status.Phase == corev1.PodRunning {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *NodeConfigReconciler) isCardUpdateRequired(nc *fec.SriovFecNodeConfig, detectedInventory *fec.NodeInventory) bool {
