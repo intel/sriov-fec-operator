@@ -473,6 +473,8 @@ github.com/openshift/sriov-network-device-plugin v0.0.0-20210719073155-2acaea488
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/otcshare/openshift-operator/common v0.0.0-20211110075654-f68f9ac70769 h1:wIpJnPEZjJHEIYLWDN68in4phxmn/HkAJRzzzbnGhyI=
 github.com/otcshare/openshift-operator/common v0.0.0-20211110075654-f68f9ac70769/go.mod h1:fPuvpKt24AoA9/v7v+4ykDW0/tuBK1bRw2vG2aqX1KI=
+github.com/otcshare/openshift-operator/common v0.0.0-20220203153345-06a606c2832a h1:c5TrkIBNEgGOcCHXu6+TkRF50OXq2tqfrZ6oI9goH+E=
+github.com/otcshare/openshift-operator/common v0.0.0-20220203153345-06a606c2832a/go.mod h1:fPuvpKt24AoA9/v7v+4ykDW0/tuBK1bRw2vG2aqX1KI=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=

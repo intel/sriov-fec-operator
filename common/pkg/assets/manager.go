@@ -19,7 +19,8 @@ import (
 
 // Manager loads & deploys assets specified in the Asset field
 type Manager struct {
-	Client client.Client
+	Client    client.Client
+	Namespace string
 
 	Log    *logrus.Logger
 	Assets []Asset
@@ -67,19 +68,20 @@ func (m *Manager) buildTemplateVars(ctx context.Context, setKernelVar bool) (map
 	return tp, nil
 }
 
-// LoadAndDeploy issues an asset load and then deployment
-func (m *Manager) LoadAndDeploy(ctx context.Context, setKernelVar bool) error {
-	if err := m.Load(ctx, setKernelVar); err != nil {
+// DeployConfigMaps issues an asset load from the path and then deployment
+func (m *Manager) DeployConfigMaps(ctx context.Context, setKernelVar bool) error {
+	if err := m.LoadFromFile(ctx, setKernelVar); err != nil {
 		return err
 	}
 	if err := m.Deploy(ctx); err != nil {
 		return err
 	}
+
 	return nil
 }
 
-// Load loads given assets from paths
-func (m *Manager) Load(ctx context.Context, setKernelVar bool) error {
+// LoadFromFile loads given asset from the path
+func (m *Manager) LoadFromFile(ctx context.Context, setKernelVar bool) error {
 	tv, err := m.buildTemplateVars(ctx, setKernelVar)
 	if err != nil {
 		m.Log.WithError(err).Error("failed to build template vars")
@@ -95,13 +97,46 @@ func (m *Manager) Load(ctx context.Context, setKernelVar bool) error {
 		m.Assets[idx].log = assetLogger
 		m.Assets[idx].substitutions = tv
 
-		if err := m.Assets[idx].load(); err != nil {
-			m.Log.WithError(err).WithField("path", m.Assets[idx].Path).Error("failed to load asset")
+		if err := m.Assets[idx].loadFromFile(); err != nil {
+			m.Log.WithError(err).WithField("path", m.Assets[idx].Path).Error("failed to loadFromFile asset")
 			return err
 		}
 
-		m.Log.WithField("path", m.Assets[idx].Path).WithField("objects", len(m.Assets[idx].objects)).
-			Info("asset loaded successfully")
+		m.Log.WithFields(logrus.Fields{
+			"path":           m.Assets[idx].Path,
+			"num of objects": len(m.Assets[idx].objects),
+		}).Info("asset loaded successfully")
+	}
+
+	return nil
+}
+
+// LoadFromConfigMapAndDeploy issues an asset load from the ConfigMap and then deployment
+func (m *Manager) LoadFromConfigMapAndDeploy(ctx context.Context) error {
+	if err := m.LoadFromConfigMap(ctx); err != nil {
+		return err
+	}
+	if err := m.Deploy(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// LoadFromConfigMap loads given asset from the ConfigMap
+func (m *Manager) LoadFromConfigMap(ctx context.Context) error {
+	for idx := range m.Assets {
+		m.Log.WithField("configMapName", m.Assets[idx].ConfigMapName).Info("loading asset")
+
+		if err := m.Assets[idx].loadFromConfigMap(ctx, m.Client, m.Namespace); err != nil {
+			m.Log.WithError(err).WithField("ConfigMap name", m.Assets[idx].ConfigMapName).Error("failed to loadFromConfigMap")
+			return err
+		}
+
+		m.Log.WithFields(logrus.Fields{
+			"ConfigMap name": m.Assets[idx].ConfigMapName,
+			"num of objects": len(m.Assets[idx].objects),
+		}).Info("asset loaded successfully")
 	}
 
 	return nil

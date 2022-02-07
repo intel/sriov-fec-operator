@@ -8,7 +8,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.16.0
 	github.com/openshift/api v3.9.0+incompatible
-	github.com/otcshare/openshift-operator/common v0.0.0-20211110075654-f68f9ac70769 // indirect
+	github.com/otcshare/openshift-operator/common v0.0.0-20220203153345-06a606c2832a // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	gopkg.in/ini.v1 v1.63.2

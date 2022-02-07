@@ -22,7 +22,6 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/otcshare/openshift-operator/common/pkg/utils"
 	"os"
 	"strings"
 	"time"
@@ -38,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"github.com/otcshare/openshift-operator/common/pkg/assets"
+	"github.com/otcshare/openshift-operator/common/pkg/utils"
 	sriovfecv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
 	"github.com/otcshare/openshift-operator/sriov-fec/controllers"
 	// +kubebuilder:scaffold:imports
@@ -130,25 +130,36 @@ func main() {
 	}
 
 	logger := utils.NewLogger()
-	if err := (&assets.Manager{
+	assetsManager := &assets.Manager{
 		Client:    c,
+		Namespace: controllers.NAMESPACE,
 		Log:       logger,
 		EnvPrefix: "SRIOV_FEC_",
 		Scheme:    scheme,
 		Owner:     owner,
 		Assets: []assets.Asset{
 			{
-				Path: "assets/100-labeler.yaml",
+				ConfigMapName: "labeler-config",
+				Path:          "assets/100-labeler.yaml",
 			},
 			{
-				Path: "assets/200-device-plugin.yaml",
+				ConfigMapName: "device-plugin-config",
+				Path:          "assets/200-device-plugin.yaml",
 			},
 			{
+				ConfigMapName:     "daemon-config",
 				Path:              "assets/300-daemon.yaml",
 				BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
 			},
 		},
-	}).LoadAndDeploy(context.Background(), false); err != nil {
+	}
+
+	if err := assetsManager.DeployConfigMaps(context.Background(), false); err != nil {
+		setupLog.WithError(err).Error("failed to deploy the assets")
+		os.Exit(1)
+	}
+
+	if err := assetsManager.LoadFromConfigMapAndDeploy(context.Background()); err != nil {
 		setupLog.WithError(err).Error("failed to deploy the assets")
 		os.Exit(1)
 	}

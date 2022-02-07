@@ -66,14 +66,14 @@ var _ = Describe("Asset Tests", func() {
 
 	log := utils.NewLogger()
 
-	var _ = Describe("Manager", func() {
+	var _ = Describe("Manager - load configmap from file and deploy", func() {
 		var _ = It("Run Manager with no assets (setKernel false)", func() {
 			var err error
 			log = utils.NewLogger()
 
 			manager := Manager{Client: k8sClient, Log: log}
 
-			err = manager.LoadAndDeploy(context.TODO(), false)
+			err = manager.DeployConfigMaps(context.TODO(), false)
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("Run Manager with no assets (setKernel true)", func() {
@@ -82,7 +82,7 @@ var _ = Describe("Asset Tests", func() {
 
 			manager := Manager{Client: k8sClient, Log: log}
 
-			err = manager.LoadAndDeploy(context.TODO(), true)
+			err = manager.DeployConfigMaps(context.TODO(), true)
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("Run Manager (setKernel true)", func() {
@@ -100,7 +100,7 @@ var _ = Describe("Asset Tests", func() {
 				Log:    log,
 				Assets: assets}
 
-			err = manager.LoadAndDeploy(context.TODO(), true)
+			err = manager.DeployConfigMaps(context.TODO(), true)
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("Run Manager loadFromDir (setKernel false)", func() {
@@ -118,32 +118,8 @@ var _ = Describe("Asset Tests", func() {
 				Log:    log,
 				Assets: assets}
 
-			err = manager.LoadAndDeploy(context.TODO(), false)
+			err = manager.DeployConfigMaps(context.TODO(), false)
 			Expect(err).To(HaveOccurred())
-		})
-		var _ = It("Run Manager loadFromFile (setKernel false, no retries)", func() {
-			var err error
-			log = utils.NewLogger()
-
-			assets := []Asset{
-				{
-					log:           log,
-					Path:          fakeAssetFile,
-					substitutions: map[string]string{"one": "two"},
-					BlockingReadiness: ReadinessPollConfig{
-						Retries: 1,
-					},
-				},
-			}
-
-			manager := Manager{Client: k8sClient,
-				Log:    log,
-				Assets: assets,
-				Owner:  fakeOwner,
-				Scheme: scheme.Scheme}
-
-			err = manager.LoadAndDeploy(context.TODO(), false)
-			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("Run Manager loadFromFile (setKernel false)", func() {
 			var err error
@@ -163,7 +139,7 @@ var _ = Describe("Asset Tests", func() {
 				Owner:  fakeOwner,
 				Scheme: scheme.Scheme}
 
-			err = manager.LoadAndDeploy(context.TODO(), false)
+			err = manager.DeployConfigMaps(context.TODO(), false)
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("Run LoadAndDeploy (fail setting Owner)", func() {
@@ -203,7 +179,7 @@ var _ = Describe("Asset Tests", func() {
 			err = k8sClient.Create(context.Background(), node)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = manager.LoadAndDeploy(context.TODO(), true)
+			err = manager.DeployConfigMaps(context.TODO(), true)
 			Expect(err).To(HaveOccurred())
 
 			// Cleanup
@@ -231,7 +207,7 @@ var _ = Describe("Asset Tests", func() {
 				Owner:  fakeOwner,
 				Scheme: scheme.Scheme}
 
-			err = manager.LoadAndDeploy(context.TODO(), false)
+			err = manager.DeployConfigMaps(context.TODO(), false)
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("Run Manager loadFromFile (missing file)", func() {
@@ -255,9 +231,47 @@ var _ = Describe("Asset Tests", func() {
 				Owner:  fakeOwner,
 				Scheme: scheme.Scheme}
 
-			err = manager.LoadAndDeploy(context.TODO(), false)
+			err = manager.DeployConfigMaps(context.TODO(), false)
 			Expect(err).To(HaveOccurred())
 		})
+	})
+
+	var _ = Describe("Manager - load objects from configmap and deploy", func() {
+		var _ = It("Run Manager loadFromFile (setKernel false, no retries)", func() {
+			var err error
+			log = utils.NewLogger()
+
+			assets := []Asset{
+				{
+					log:           log,
+					Path:          fakeAssetFile,
+					ConfigMapName: fakeConfigMapName,
+					substitutions: map[string]string{"one": "two"},
+					BlockingReadiness: ReadinessPollConfig{
+						Retries: 1,
+					},
+				},
+			}
+
+			manager := Manager{Client: k8sClient,
+				Log:    log,
+				Assets: assets,
+				Owner:  fakeOwner,
+				Scheme: scheme.Scheme}
+
+			getConfigMap = func(ctx context.Context, c client.Client, cmName string, ns string) (corev1.ConfigMap, error) {
+				configMap := corev1.ConfigMap{
+					Data: map[string]string{
+						"daemonSet": "apiVersion: apps/v1\nkind: DaemonSet\nmetadata:\n  labels:\n    app: accelerator-discovery\n  name: accelerator-discovery\n  namespace: default\nspec:\n  minReadySeconds: 10\n  selector:\n    matchLabels:\n      app: accelerator-discovery\n  template:\n    metadata:\n      labels:\n        app: accelerator-discovery\n      name: accelerator-discovery\n    spec:\n      serviceAccount: accelerator-discovery\n      serviceAccountName: accelerator-discovery\n      containers:\n      - image: \"N3000_LABELER_IMAGE-123\"\n        name: accelerator-discovery",
+					},
+				}
+				return configMap, nil
+			}
+
+			err = manager.LoadFromConfigMapAndDeploy(context.TODO())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
 		var _ = It("Run Manager loadFromFile (invalid retries count)", func() {
 			var err error
 			log = utils.NewLogger()
@@ -279,8 +293,64 @@ var _ = Describe("Asset Tests", func() {
 				Owner:  fakeOwner,
 				Scheme: scheme.Scheme}
 
-			err = manager.LoadAndDeploy(context.TODO(), false)
+			getConfigMap = func(ctx context.Context, c client.Client, cmName string, ns string) (corev1.ConfigMap, error) {
+				configMap := corev1.ConfigMap{
+					Data: map[string]string{
+						"daemonSet": "apiVersion: apps/v1\nkind: DaemonSet\nmetadata:\n  labels:\n    app: accelerator-discovery\n  name: accelerator-discovery\n  namespace: default\nspec:\n  minReadySeconds: 10\n  selector:\n    matchLabels:\n      app: accelerator-discovery\n  template:\n    metadata:\n      labels:\n        app: accelerator-discovery\n      name: accelerator-discovery\n    spec:\n      serviceAccount: accelerator-discovery\n      serviceAccountName: accelerator-discovery\n      containers:\n      - image: \"N3000_LABELER_IMAGE-123\"\n        name: accelerator-discovery",
+					},
+				}
+				return configMap, nil
+			}
+
+			err = manager.LoadFromConfigMapAndDeploy(context.TODO())
 			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("Run Manager loadFromConfigMap (nonexistent configmap name)", func() {
+			assets := []Asset{
+				{
+					log:           log,
+					Path:          fakeAssetFile,
+					ConfigMapName: fakeConfigMapName,
+				},
+			}
+
+			manager := Manager{Client: k8sClient,
+				Log:    log,
+				Assets: assets,
+				Owner:  fakeOwner,
+				Scheme: scheme.Scheme}
+
+			getConfigMap = getConfigMapData
+
+			Expect(manager.LoadFromConfigMapAndDeploy(context.TODO())).To(HaveOccurred())
+		})
+		var _ = It("Run Manager loadFromConfigMap (update existing valid configmap)", func() {
+			assets := []Asset{
+				{
+					log:           log,
+					Path:          fakeAssetFile,
+					ConfigMapName: fakeConfigMapName,
+				},
+			}
+
+			manager := Manager{Client: k8sClient,
+				Log:    log,
+				Assets: assets,
+				Owner:  fakeOwner,
+				Scheme: scheme.Scheme}
+
+			getConfigMap = func(ctx context.Context, c client.Client, cmName string, ns string) (corev1.ConfigMap, error) {
+				configMap := corev1.ConfigMap{
+					Data: map[string]string{
+						"configMap":         "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: supported-clv-devices\n  namespace: default\nimmutable: false\ndata:\n  fake-key-1: fake-value-1\n  fake-key-2: fake-value-2",
+						"configMap-updated": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: supported-clv-devices\n  namespace: default\nimmutable: false\ndata:\n  fake-key-1: new-fake-value-1\n  fake-key-2: fake-value-2",
+					},
+				}
+				return configMap, nil
+			}
+
+			err := manager.LoadFromConfigMapAndDeploy(context.TODO())
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })
