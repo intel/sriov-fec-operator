@@ -475,6 +475,8 @@ github.com/otcshare/openshift-operator/common v0.0.0-20211110075654-f68f9ac70769
 github.com/otcshare/openshift-operator/common v0.0.0-20211110075654-f68f9ac70769/go.mod h1:fPuvpKt24AoA9/v7v+4ykDW0/tuBK1bRw2vG2aqX1KI=
 github.com/otcshare/openshift-operator/common v0.0.0-20220203153345-06a606c2832a h1:c5TrkIBNEgGOcCHXu6+TkRF50OXq2tqfrZ6oI9goH+E=
 github.com/otcshare/openshift-operator/common v0.0.0-20220203153345-06a606c2832a/go.mod h1:fPuvpKt24AoA9/v7v+4ykDW0/tuBK1bRw2vG2aqX1KI=
+github.com/otcshare/openshift-operator/common v0.0.0-20220207083603-0f1bac66c28a h1:bJwP2ewlk0YW8c8m8xuIf6JJH+BTXFrAngBbiLIJNdc=
+github.com/otcshare/openshift-operator/common v0.0.0-20220207083603-0f1bac66c28a/go.mod h1:fPuvpKt24AoA9/v7v+4ykDW0/tuBK1bRw2vG2aqX1KI=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
