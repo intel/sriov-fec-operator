@@ -3,10 +3,10 @@ SPDX-License-Identifier: Apache-2.0
 Copyright (c) 2020-2021 Intel Corporation
 ```
 <!-- omit in toc -->
-# OpenNESS Operator for Intel® FPGA PAC N3000 documentation
+# SEO Operator for Intel® FPGA PAC N3000 documentation
 
 - [Overview](#overview)
-- [OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)](#openness-operator-for-intel-fpga-pac-n3000-programming)
+- [SEO Operator for Intel® FPGA PAC N3000 (Programming)](#seo-operator-for-intel-fpga-pac-n3000-programming)
   - [Intel® FPGA PAC N3000 (Programming)](#intel-fpga-pac-n3000-programming)
     - [Telemetry](#telemetry)
     - [Driver Container](#driver-container)
@@ -22,7 +22,7 @@ Copyright (c) 2020-2021 Intel Corporation
 - [Appendix 1 - Developer Notes](#appendix-1---developer-notes)
   - [Uninstalling Previously Installed Operator](#uninstalling-previously-installed-operator)
   - [Setting Up Operator Registry Locally](#setting-up-operator-registry-locally)
-- [Appendix 2 - OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)](#appendix-2---openness-operator-for-intel-fpga-pac-n3000-programming)
+- [Appendix 2 - SEO Operator for Intel® FPGA PAC N3000 (Programming)](#appendix-2---seo-operator-for-intel-fpga-pac-n3000-programming)
   - [N3000 Programming](#n3000-programming)
     - [Sample CR for N3000 programming (N3000)](#sample-cr-for-n3000-programming-n3000)
     - [Sample Status for N3000 programming (N3000)](#sample-status-for-n3000-programming-n3000)
@@ -30,12 +30,12 @@ Copyright (c) 2020-2021 Intel Corporation
 
 ## Overview
 
-This document provides the instructions for using the OpenNESS Operator for Intel® FPGA PAC N3000 (Programming) in Red Hat's OpenShift Container Platform. This operator was developed with aid of the Special Resource Operator framework based on the Operator SDK project.
+This document provides the instructions for using the SEO Operator for Intel® FPGA PAC N3000 (Programming) in Red Hat's OpenShift Container Platform. This operator was developed with aid of the Special Resource Operator framework based on the Operator SDK project.
 
-## OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)
+## SEO Operator for Intel® FPGA PAC N3000 (Programming)
 
-The role of the OpenNESS Operator for Intel® FPGA PAC N3000 (Programming) is to orchestrate and manage the resources/devices exposed by the Intel® FPGA PAC N3000 card within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction. For vRAN use-cases it is expected that the operator is used alongside the [OpenNESS Operator for Intel Wireless FEC Accelerator.](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md)
-The operator design of the OpenNESS Operator for Intel® FPGA PAC N3000 (Programming) supports the following device:
+The role of the SEO Operator for Intel® FPGA PAC N3000 (Programming) is to orchestrate and manage the resources/devices exposed by the Intel® FPGA PAC N3000 card within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction. For vRAN use-cases it is expected that the operator is used alongside the [SEO Operator for Intel Wireless FEC Accelerator.](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md)
+The operator design of the SEO Operator for Intel® FPGA PAC N3000 (Programming) supports the following device:
 
 * [Intel® PAC N3000 for vRAN Acceleration](https://github.com/otcshare/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration)
 
@@ -51,7 +51,7 @@ For more details, refer to:
 
 ![5G user image](images/Intel-N3000-5G-user-image.png)
 
-An example CR for the OpenNESS Operator for Intel® FPGA PAC N3000 (Programming) can be found at:
+An example CR for the SEO Operator for Intel® FPGA PAC N3000 (Programming) can be found at:
 
 * [Sample CR for N3000 programming (N3000)](#sample-cr-for-n3000-programming-n3000)
 
@@ -376,7 +376,7 @@ The PACN3000 Operator bundle has the following requirements:
 
 ## Deploying the Operator
 
-The OpenNESS Operator for Intel® FPGA PAC N3000 (Programming) is easily deployable from the OpenShift cluster via provisioning and application of the following YAML spec files:
+The SEO Operator for Intel® FPGA PAC N3000 (Programming) is easily deployable from the OpenShift cluster via provisioning and application of the following YAML spec files:
 
 ### Install the Bundle
 
@@ -455,7 +455,7 @@ Verify that the operators are installed and pods are running:
 [user@ctrl1 /home]# oc get csv
 
 NAME               DISPLAY                                        VERSION   REPLACES   PHASE
-n3000.v1.1.0       OpenNESS Operator for Intel® FPGA PAC N3000    1.1.0                Succeeded
+n3000.v1.1.0       SEO Operator for Intel® FPGA PAC N3000    1.1.0                Succeeded
 ```
 
 ```shell
@@ -505,7 +505,7 @@ spec:
 
 ## Summary
 
-The OpenNESS Operator for Intel® FPGA PAC N3000 (Programming) is a fully functional tool to manage the Intel® FPGA PAC N3000 card and its resources autonomously in a Cloud Native OpenShift environment based on the user input.
+The SEO Operator for Intel® FPGA PAC N3000 (Programming) is a fully functional tool to manage the Intel® FPGA PAC N3000 card and its resources autonomously in a Cloud Native OpenShift environment based on the user input.
 The operator handles all the necessary actions from programming/updating the FPGA to configuration and management of the resources within the OpenShift cluster.
 
 ## Appendix 1 - Developer Notes
@@ -520,7 +520,7 @@ Use the following command to identify items to delete:
 [user@ctrl1 /home]# oc get csv -n vran-acceleration-operators
 
 NAME               DISPLAY                                        VERSION   REPLACES   PHASE
-n3000.v1.1.0       OpenNESS Operator for Intel® FPGA PAC N3000    1.1.0                Succeeded
+n3000.v1.1.0       SEO Operator for Intel® FPGA PAC N3000    1.1.0                Succeeded
 ```
 
 Then delete the items and the namespace:
@@ -614,7 +614,7 @@ Wait for `packagemanifest` to be available:
  sriov-fec   N3000 operators(Local)   24s
 ```
 
-## Appendix 2 - OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)
+## Appendix 2 - SEO Operator for Intel® FPGA PAC N3000 (Programming)
 
 ### N3000 Programming
 

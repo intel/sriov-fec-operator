@@ -4,7 +4,7 @@ Copyright (c) 2020-2022 Intel Corporation
 ```
 <!-- omit in toc -->
 # Release Notes 
-This document provides high-level system features, issues, and limitations information for OpenNESS Operator for Intel® FPGA PAC N3000 and OpenNESS SR-IOV Operator for Wireless FEC Accelerators.
+This document provides high-level system features, issues, and limitations information for SEO Operator for Intel® FPGA PAC N3000 and SEO SR-IOV Operator for Wireless FEC Accelerators.
 - [Release history](#release-history)
     - [SRIOV-FEC Operator](#sriov-fec-operator)
     - [N3000K Operator](#n3000k-operator)
@@ -73,24 +73,24 @@ This document provides high-level system features, issues, and limitations infor
 - Added support for deployment on K8S
 
 ***v1.3.0***
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators OCP4.8.2 support
+- SEO SR-IOV Operator for Wireless FEC Accelerators OCP4.8.2 support
   - validated on ACC100 only
 
 ***v1.2.0***
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators OCP4.7.8 support
+- SEO SR-IOV Operator for Wireless FEC Accelerators OCP4.7.8 support
   - validated on ACC100 only
 
 ***v1.1.0***
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
+- SEO SR-IOV Operator for Wireless FEC Accelerators
   - Added support for Intel® vRAN Dedicated Accelerator ACC100
   - Independent accelerator discovery mechanism now enables standalone usage
 
 ***v1.0.0***
-- OpenNESS Operator for Intel® FPGA PAC N3000
+- SEO Operator for Intel® FPGA PAC N3000
   - N3000 operator handles the management of the FPGA configuration
   - Load the necessary drivers, allows the user to program the Intel® FPGA PAC N3000 user image and to update the firmware of the Intel® XL710 NICs
   - Download the FPGA user image and the XL710 firmware from a location specified in the CR
-- OpenNESS SRIOV-FEC Operator for Intel® FPGA PAC N3000
+- SEO SRIOV-FEC Operator for Intel® FPGA PAC N3000
   - The SRIOV FEC operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications
   - Create desired Virtual Functions for the FEC device, bind them to appropriate drivers and configure the VF's queues for desired functionality in 4G or 5G deployment
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
@@ -102,6 +102,7 @@ This document provides high-level system features, issues, and limitations infor
 ***v2.X.Y***
 - Updated pf-bb-config from 21.6 to 21.11
 - SriovFecNodeConfig changes its state to "Succeeded" only after successful restart of sriov-device-plugin
+- Renamed OpenNESS in documentation to Smart Edge Open (SEO)
 
 ***v2.0.2***
 - Added webhook that converts existing SriovFecClusterConfigs with `nodes` field to SriovFecClusterConfig with `nodeSelector` and `acceleratorSelectors`
@@ -117,18 +118,18 @@ This document provides high-level system features, issues, and limitations infor
 - Updated pf-bb-config from 21.3 to 21.6 and OperatorSDK from 1.4.2 to 1.9.0
 
 ***v1.3.0***
-- OpenNESS Operator for Intel® FPGA PAC N3000
+- SEO Operator for Intel® FPGA PAC N3000
   - out of validation process
 
 ***v1.2.0***
-- OpenNESS Operator for Intel® FPGA PAC N3000
+- SEO Operator for Intel® FPGA PAC N3000
   - out of validation process
 
 ***v1.1.0***
-- OpenNESS Operator for Intel® FPGA PAC N3000
+- SEO Operator for Intel® FPGA PAC N3000
   - n3000node- prefix was removed from N3000 resources
   - Flashing process logging improvements
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
+- SEO SR-IOV Operator for Wireless FEC Accelerators
   - Added supported vendor: 1172 - Altera Corporation
   - pf-bb-config updated to 21.3
 - Common
@@ -159,10 +160,10 @@ This document provides high-level system features, issues, and limitations infor
 - [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/otcshare/openshift-operator/issues/270)
 
 ***v1.1.0***
-- OpenNESS Operator for Intel® FPGA PAC N3000
+- SEO Operator for Intel® FPGA PAC N3000
   - Daemon in started only after confirmed driver initialization
   - Removed `hostPort:` from `fpgainfo-exporter` pod definition
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
+- SEO SR-IOV Operator for Wireless FEC Accelerators
   - Fixed status conditions to match convention introduced in N3000 operator
 - Common
   - Fixed discovery for devices with LTE bitstream
@@ -176,13 +177,13 @@ This document provides high-level system features, issues, and limitations infor
 - After a successful user image of Fortville update, when power cycling the N3000 with the RSU command, a failure to reboot properly has been observed occasionally. This results in failed SPI transactions and a loss of communication with the BMC. To resolve, reboot the server.
 
 # Release Content
-- OpenNESS Operator for Intel® FPGA PAC N3000 
-- OpenNESS SR-IOV Operator for Wireless FEC Accelerators
+- SEO Operator for Intel® FPGA PAC N3000 
+- SEO SR-IOV Operator for Wireless FEC Accelerators
 - Prometheus fpgainfo exporter
 - Documentation
 
 # Hardware and Software Compatibility
-The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
+The SEO Operator for Intel® FPGA PAC N3000 has the following requirements:
 - [Intel® FPGA PAC N3000 card](https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html)
 - vRAN RTL image for the Intel® FPGA PAC N3000 card
 - NVM utility

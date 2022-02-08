@@ -30,7 +30,7 @@ FROM registry.access.redhat.com/ubi8:8.5-200
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="OpenNESS SR-IOV Operator for Wireless FEC Accelerators daemonset" \
+LABEL name="Smart Edge Open SR-IOV Operator for Wireless FEC Accelerators daemonset" \
     vendor="Intel Corporation" \
     version=$VERSION \
     release="1" \

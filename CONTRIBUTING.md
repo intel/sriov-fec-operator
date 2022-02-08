@@ -4,7 +4,7 @@ Copyright (c) 2020 Intel Corporation
 ```
 <!-- omit in toc -->
 # Contribution Guide
-Welcome to the Open Network Edge Services Software (OpenNESS) project. OpenNESS is an open-source solution that is enriched by people like — you. Your contributions drive the network & enterprise edge computing!
+Welcome to the Smart Edge Open (SEO) project. SEO is an open-source solution that is enriched by people like — you. Your contributions drive the network & enterprise edge computing!
 
 The rest of this document consists of the following sections:
 
@@ -18,9 +18,9 @@ The rest of this document consists of the following sections:
 - [License](#license)
 
 ## Code of Conduct
-We at the OpenNESS community adhere to [Contributor Covenant](https://www.contributor-covenant.org/) as our Code of Conduct, and we expect project participants to adhere to it. Please read [the full text](CODE_OF_CONDUCT.md) so that you can understand what actions will and will not be tolerated.
+We at the SEO community adhere to [Contributor Covenant](https://www.contributor-covenant.org/) as our Code of Conduct, and we expect project participants to adhere to it. Please read [the full text](CODE_OF_CONDUCT.md) so that you can understand what actions will and will not be tolerated.
 
-Instances of abusive, harassing or otherwise unacceptable behavior should be reported by contacting info@mail.openness.org.
+Instances of abusive, harassing or otherwise unacceptable behavior should be reported by contacting https://smart-edge-open.github.io/contact/
 
 ## Maintainers
 Maintainers act as the gatekeeper to the code - ensuring that coding standards, quality, and functionality of code are maintained by the contributors. Any additions to the source code must be approved by the appropriate maintainer before they are added. The maintainers' role include:
@@ -32,7 +32,7 @@ Maintainers act as the gatekeeper to the code - ensuring that coding standards, 
 * Ensuring that any identified bugs in the relevant code are captured in the issues backlog.
 * Ensuring that the unit, integration, and regression tests are appropriate for the relevant components.
 * Ensuring that the contribution does not infringe others' Intellectual Property or the appropriate license and that it is in compliance with [Developer Certificate of Origin](http://developercertificate.org/).
-* Answering questions/emails on the relevant areas of the OpenNESS code base.
+* Answering questions/emails on the relevant areas of the SEO code base.
 
 ## Submitting Changes
 Inbound contributions are done through [pull requests](https://github.com/otcshare/openshift-operator/pulls) which include code changes, enhancements, bug fixes or new applications/features. If you are getting started, you may refer to Github's [how-to](https://help.github.com/articles/using-pull-requests/). With your contributions, we expect that you:
@@ -40,7 +40,7 @@ Inbound contributions are done through [pull requests](https://github.com/otcsha
 * certify that you wrote and/or have the right to submit the pull request,
 * agree with the [Developer Certificate of Origin](http://developercertificate.org/),
 * sign-off your contribution with `Signed-off-by` tag in the commit message(s)
-* comply with OpenNESS [licensing](#license),
+* comply with SEO [licensing](#license),
 * pass all Continuous Integration & Continuous Delivery (CI/CD) tools' checks,
 * test and verify the proper behaviour of your code, and
 * accompany the contribution with good quality documentation.
@@ -66,16 +66,13 @@ Big contributions, ideas or controversial features should be discussed with the 
 It is encouraged to use the [GitHub Issues](https://github.com/otcshare/openshift-operator/issues) tool to report any bug, issue, enhancement or to seek help.
 
 ## Resources
-Below are some useful resources for getting started with OpenNESS:
-* [OpenNESS release notes](https://github.com/open-ness/specs/blob/master/openness_releasenotes.md)
-* [OpenNESS solution index](https://github.com/open-ness/specs/blob/master/README.md)
-* [OpenNESS architecture and solution overview](https://github.com/open-ness/specs/blob/master/doc/architecture.md)
-* [OpenNESS getting started guide](https://github.com/open-ness/specs/blob/master/doc/getting-started/openness-cluster-setup.md)
-* [OpenNESS application onboarding](https://github.com/open-ness/specs/blob/master/doc/applications-onboard/network-edge-applications-onboarding.md)
-* [OpenNESS application development and porting guide](https://github.com/open-ness/specs/blob/master/doc/applications/openness_appguide.md)
+Below are some useful resources for getting started with SEO:
+* [SEO overview](https://smart-edge-open.github.io/docs/product-overview/)
+* [SEO release notes](https://smart-edge-open.github.io/release-notes/)
+* [SEO getting started guide](https://smart-edge-open.github.io/ido-specs/doc/getting-started/smartedge-open-cluster-setup/)
 
 ## Style Guide / Coding conventions
 All contributions must follow the [Development Guide](DEVELOPING.md).
 
 ## License
-OpenNESS is licensed under [Apache License, Version 2.0](LICENSE). By contributing to the project, you agree to the license and copyright terms therein and release your contribution under these terms.
+Operator is licensed under [Apache License, Version 2.0](LICENSE). By contributing to the project, you agree to the license and copyright terms therein and release your contribution under these terms.

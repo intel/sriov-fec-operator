@@ -18,7 +18,7 @@ FROM opae:${OPAE_VERSION}
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="OpenNESS Operator for Intel® FPGA PAC N3000 daemonset container" \
+LABEL name="SEO Operator for Intel® FPGA PAC N3000 daemonset container" \
     vendor="Intel Corporation" \
     version=$VERSION \
     release="1" \

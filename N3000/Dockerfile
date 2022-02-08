@@ -26,14 +26,14 @@ FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5-204
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="OpenNESS Operator for Intel® FPGA PAC N3000" \
+LABEL name="SEO Operator for Intel® FPGA PAC N3000" \
     vendor="Intel Corporation" \
     version=$VERSION \
     release="1" \
-    summary="OpenNESS Operator for Intel® FPGA PAC N3000 for 5G Cloudnative/vRAN deployment" \
-    description="OpenNESS Operator for Intel® FPGA PAC N3000 for 5G Cloudnative/vRAN \
+    summary="SEO Operator for Intel® FPGA PAC N3000 for 5G Cloudnative/vRAN deployment" \
+    description="SEO Operator for Intel® FPGA PAC N3000 for 5G Cloudnative/vRAN \
 deployment supports high performance Networking interface for 5G gNB Fronthaul and Midhaul \
-and 5G Forward Error Correction offload. OpenNESS Operator for Intel® FPGA PAC N3000 supports \
+and 5G Forward Error Correction offload. SEO Operator for Intel® FPGA PAC N3000 supports \
 Detection of the FPGA, Programming FPGA and Ethernet Firmware, Configuration and allocation \
 of SR-IOV resources to the O-DU Pods."
 
