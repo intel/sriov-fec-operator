@@ -35,14 +35,7 @@ rules:
   - use
   resourceNames:
   - privileged
-- apiGroups:
-  - policy
-  resources:
-  - podsecuritypolicies
-  verbs:
-  - use
-  resourceNames:
-  - privileged
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -75,9 +68,8 @@ roleRef:
   kind: ClusterRole
   name: n3000-daemon
   apiGroup: rbac.authorization.k8s.io
-  {{ if eq (.N3000_GENERIC_K8S|ToLower) `false` }}
   namespace: "{{ .N3000_NAMESPACE }}"
-  {{ end }}
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -88,17 +80,14 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: n3000-daemon
-  {{ if eq (.N3000_GENERIC_K8S|ToLower) `false` }}
   namespace: "{{ .N3000_NAMESPACE }}"
-  {{ end }}
 subjects:
 - kind: ServiceAccount
   name: n3000-daemon
   namespace: "{{ .N3000_NAMESPACE }}"
-  {{ if eq (.N3000_GENERIC_K8S|ToLower) `false` }}
 userNames:
 - system:serviceaccount:{{ .N3000_NAMESPACE }}:n3000-daemon
-  {{ end }}
+
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -131,10 +120,6 @@ spec:
         effect: NoSchedule
       serviceAccount: n3000-daemon
       serviceAccountName: n3000-daemon
-  {{ if eq (.N3000_GENERIC_K8S|ToLower) `true` }}
-      securityContext:
-        runAsUser: 0
-  {{ end }}
       hostPID: true
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
@@ -155,6 +140,8 @@ spec:
             mountPath: /dev/io
           - name: devpci
             mountPath: /dev/pci
+          - name: bootkernel
+            mountPath: /boot/kernel
           - name: libmodules
             mountPath: /lib/modules
           - name: classfpga
@@ -211,6 +198,9 @@ spec:
         - name: devpci
           hostPath:
             path: /dev/pci
+        - name: bootkernel
+          hostPath:
+            path: /boot/kernel
         - name: libmodules
           hostPath:
             path: /lib/modules

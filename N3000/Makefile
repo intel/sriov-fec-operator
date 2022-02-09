@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020-2021 Intel Corporation
+# Copyright (c) 2020-2022 Intel Corporation
 
 # Default k8s command-line tool exec
 export CLI_EXEC?=oc
 # Current Operator version
-VERSION ?= 1.3.0
+VERSION ?= 1.1.0
 # Supported channels
 CHANNELS ?= stable
 # Default channel
@@ -20,13 +20,16 @@ KERNEL_VERSION ?= 4.18.0-193.41.1.el8_2.x86_64
 KERNEL_SOURCE ?= yum
 # Operator image registry
 IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
+CONTAINER_TOOL ?= podman
 # Add suffix directly to IMAGE_REGISTRY to enable empty registry(local images)
-ifneq ($(strip $(IMAGE_REGISTRY)),)
+ifneq ($(and $(strip $(IMAGE_REGISTRY)), $(filter-out %/, $(IMAGE_REGISTRY))),)
 override IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
 endif
 
 # tls verify flag for pushing images
-TLS_VERIFY ?= true
+TLS_VERIFY ?= false
+
+REQUIRED_OPERATOR_SDK_VERSION ?= v1.4.2
 
 IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)n3000
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
@@ -193,12 +196,13 @@ push-n3000-operator:
 .PHONY: image
 image: image-n3000-driver image-n3000-daemon image-n3000-operator image-bundle
 
+image_all: image
+	(cd ../labeler && $(MAKE) VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) image)
+	(cd ../prometheus_fpgainfo_exporter && $(MAKE) VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) image)
+
 # Push all the images
 .PHONY: push
 push: push-n3000-driver push-n3000-daemon push-n3000-operator push-bundle
-
-check-operator-sdk-version:
-	(cd .. && make check-operator-sdk-version)
 
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
@@ -222,32 +226,36 @@ image-bundle: bundle
 push-bundle:
 	podman push $(BUNDLE_IMG) --tls-verify=$(TLS_VERIFY)
 
-build_all: image push
+build: image push
 
-docker-push: ## Push docker image with the manager.
-	podman push ${IMG} --tls-verify=false
+build_all: build
+	(cd ../labeler && $(MAKE) VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_all)
+	(cd ../prometheus_fpgainfo_exporter && $(MAKE) VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_all)
+	$(MAKE) VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_index
 
-.PHONY: opm
-OPM = ./bin/opm
-opm:
-ifeq (,$(wildcard $(OPM)))
-ifeq (,$(shell which opm 2>/dev/null))
-	@{ \
-	set -e ;\
-	mkdir -p $(dir $(OPM)) ;\
-	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$(OS)-$(ARCH)-opm ;\
-	chmod +x $(OPM) ;\
-	}
+build_index:
+	opm index add --bundles $(BUNDLE_IMG) --tag localhost/n3000-operators-index:$(VERSION) $(if ifeq $(TLS_VERIFY) false, --skip-tls) -c $(CONTAINER_TOOL) --mode=semver
+	$(MAKE) VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) $(CONTAINER_TOOL)_push_index
+
+podman_push_index:
+	podman push localhost/n3000-operators-index:$(VERSION) $(IMAGE_REGISTRY)n3000-operators-index:$(VERSION) --tls-verify=$(TLS_VERIFY)
+
+docker_push_index:
+	docker tag localhost/n3000-operators-index:$(VERSION) $(IMAGE_REGISTRY)n3000-operators-index:$(VERSION)
+	docker push $(IMAGE_REGISTRY)n3000-operators-index:$(VERSION)
+
+install_operator_sdk:
+	curl -LO https://github.com/operator-framework/operator-sdk/releases/download/$(REQUIRED_OPERATOR_SDK_VERSION)/operator-sdk_linux_amd64
+	chmod +x operator-sdk_linux_amd64 && sudo mv operator-sdk_linux_amd64 /usr/bin/operator-sdk
+
+OPERATOR_SDK_INSTALLED := $(shell command -v operator-sdk version 2> /dev/null)
+check-operator-sdk-version:
+ifndef OPERATOR_SDK_INSTALLED
+	$(info operator-sdk is not installed - downloading it)
+	$(MAKE) REQUIRED_OPERATOR_SDK_VERSION=$(REQUIRED_OPERATOR_SDK_VERSION) install_operator_sdk
 else
-OPM = $(shell which opm)
+ifneq ($(shell operator-sdk version | awk -F',' '{print $$1}' | awk -F'[""]' '{print $$2}'), $(REQUIRED_OPERATOR_SDK_VERSION))
+	$(info updating operator-sdk to $(REQUIRED_OPERATOR_SDK_VERSION))
+	$(MAKE) REQUIRED_OPERATOR_SDK_VERSION=$(REQUIRED_OPERATOR_SDK_VERSION) install_operator_sdk
 endif
 endif
-BUNDLE_IMGS ?= $(BUNDLE_IMG)
-CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION) ifneq ($(origin CATALOG_BASE_IMG), undefined) FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG) endif
-.PHONY: catalog-build
-catalog-build: opm
-	$(OPM) index add --container-tool podman --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
-
-.PHONY: catalog-push
-catalog-push: ## Push the catalog image.
-	$(MAKE) docker-push IMG=$(CATALOG_IMG)

@@ -9,7 +9,7 @@ TLS_VERIFY ?= true
 IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
 CONTAINER_TOOL ?= podman
 # Add suffix directly to IMAGE_REGISTRY to enable empty registry(local images)
-ifneq ($(strip $(IMAGE_REGISTRY)),)
+ifneq ($(and $(strip $(IMAGE_REGISTRY)), $(filter-out %/, $(IMAGE_REGISTRY))),)
 override IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
 endif
 

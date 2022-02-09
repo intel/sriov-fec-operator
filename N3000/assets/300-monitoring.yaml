@@ -31,17 +31,14 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: fpgainfo-exporter
-  {{ if eq (.N3000_GENERIC_K8S|ToLower) `false` }}
   namespace: "{{ .N3000_NAMESPACE }}"
-  {{ end }}
 subjects:
 - kind: ServiceAccount
   name: fpgainfo-exporter
   namespace: "{{ .N3000_NAMESPACE }}"
-  {{ if eq (.N3000_GENERIC_K8S|ToLower) `false` }}
 userNames:
 - system:serviceaccount:{{ .N3000_NAMESPACE }}:fpgainfo-exporter
-  {{ end }}
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role

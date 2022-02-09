@@ -6,7 +6,6 @@ kind: ConfigMap
 metadata:
   name: supported-accelerators
   namespace: "{{ .N3000_NAMESPACE }}"
-immutable: false
 data:
   accelerators.json: |
     {
@@ -51,17 +50,14 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: accelerator-discovery
-  {{ if eq (.N3000_GENERIC_K8S|ToLower) `false` }}
   namespace: "{{ .N3000_NAMESPACE }}"
-  {{ end }}
 subjects:
 - kind: ServiceAccount
   name: accelerator-discovery
   namespace: "{{ .N3000_NAMESPACE }}"
-  {{ if eq (.N3000_GENERIC_K8S|ToLower) `false` }}
 userNames:
 - system:serviceaccount:{{ .N3000_NAMESPACE }}:accelerator-discovery
-  {{ end }}
+
 ---
 apiVersion: apps/v1
 kind: DaemonSet

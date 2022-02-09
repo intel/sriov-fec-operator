@@ -16,10 +16,8 @@ metadata:
 rules:
 - apiGroups:
   - security.openshift.io
-  - policy
   resources:
   - securitycontextconstraints
-  - podsecuritypolicies
   verbs:
   - use
   resourceNames:
@@ -35,66 +33,19 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: fpga-driver
-  {{ if eq (.N3000_GENERIC_K8S|ToLower) `false` }}
   namespace: "{{ .N3000_NAMESPACE }}"
-  {{ end }}
 subjects:
 - kind: ServiceAccount
   name: fpga-driver
   namespace: "{{ .N3000_NAMESPACE }}"
-  {{ if eq (.N3000_GENERIC_K8S|ToLower) `false` }}
 userNames:
 - system:serviceaccount:{{ .N3000_NAMESPACE }}:fpga-driver
-  {{ end }}
-  {{ if eq (.N3000_GENERIC_K8S|ToLower) `true` }}
----
-apiVersion: policy/v1beta1
-kind: PodSecurityPolicy
-metadata:
-  name: fpga-driver
-  namespace:  "{{ .N3000_NAMESPACE }}"
-spec:
-  hostIPC: false
-  hostNetwork: false
-  hostPID: true
-  hostPorts: []
-  allowPrivilegeEscalation: true
-  privileged: true
-  allowedCapabilities:
-    - '*'
-  allowedUnsafeSysctls:
-    - '*'
-  allowedHostPaths: []
-  defaultAddCapabilities: []
-  fsGroup:
-    rule: RunAsAny
-  runAsGroup:
-    rule: RunAsAny
-  runAsUser:
-    rule: RunAsAny
-  seLinux:
-    rule: RunAsAny
-  supplementalGroups:
-    rule: RunAsAny
-  readOnlyRootFilesystem: false
-  requiredDropCapabilities: []
-  volumes:
-    - '*'
-  {{ else }}
+
 ---
 # Please edit the object below. Lines beginning with a '#' will be ignored,
 # and an empty file will abort the edit. If an error occurs while saving this file will be
 # reopened with the relevant failures.
 #
-apiVersion: security.openshift.io/v1
-kind: SecurityContextConstraints
-metadata:
-  annotations:
-    kubernetes.io/description: 'privileged allows access to all privileged and host
-      features and the ability to run as any user, any group, any fsGroup, and with
-      any SELinux context.  WARNING: this is the most relaxed SCC and should be used
-      only for cluster administration. Grant with caution.'
-  name: fpga-driver
 allowHostDirVolumePlugin: true
 allowHostIPC: false
 allowHostNetwork: false
@@ -106,6 +57,7 @@ allowedCapabilities:
 - '*'
 allowedUnsafeSysctls:
 - '*'
+apiVersion: security.openshift.io/v1
 defaultAddCapabilities: null
 fsGroup:
   type: RunAsAny
@@ -113,6 +65,15 @@ groups:
 - system:cluster-admins
 - system:nodes
 - system:masters
+kind: SecurityContextConstraints
+metadata:
+  annotations:
+    kubernetes.io/description: 'privileged allows access to all privileged and host
+      features and the ability to run as any user, any group, any fsGroup, and with
+      any SELinux context.  WARNING: this is the most relaxed SCC and should be used
+      only for cluster administration. Grant with caution.'
+
+  name: fpga-driver
 priority: null
 readOnlyRootFilesystem: false
 requiredDropCapabilities: null
@@ -128,7 +89,6 @@ users:
 - system:serviceaccount:{{ .N3000_NAMESPACE }}:fpga-driver
 volumes:
 - '*'
-  {{ end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -161,10 +121,6 @@ spec:
       serviceAccount: fpga-driver
       serviceAccountName: fpga-driver
       hostPID: true
-  {{ if eq (.N3000_GENERIC_K8S|ToLower) `true` }}
-      securityContext:
-        runAsUser: 0
-  {{ end }}
       containers:
       - image: "{{ .N3000_DRIVER_CONTAINER_IMAGE }}--{{ .kernel }}"
         imagePullPolicy: IfNotPresent

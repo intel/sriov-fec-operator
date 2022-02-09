@@ -2,14 +2,14 @@
 # Copyright (c) 2021 Intel Corporation
 
 # Current exporter  version
-VERSION ?= 1.3.0
+VERSION ?= 1.1.0
 # Current OPAE package version
 OPAE_VERSION ?= 1.3.8-2
 # Image registry
 IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
 
 # Add suffix directly to IMAGE_REGISTRY to enable empty registry(local images)
-ifneq ($(strip $(IMAGE_REGISTRY)),)
+ifneq ($(and $(strip $(IMAGE_REGISTRY)), $(filter-out %/, $(IMAGE_REGISTRY))),)
 override IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
 endif
 

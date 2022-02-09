@@ -3,24 +3,15 @@ layout: go.kubebuilder.io/v3
 projectName: n3000
 repo: github.com/otcshare/openshift-operator/N3000
 resources:
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: intel.com
+- crdVersion: v1
   group: fpga
   kind: N3000Cluster
-  path: github.com/otcshare/openshift-operator/N3000/api/v1
   version: v1
-- api:
-    crdVersion: v1
-    namespaced: true
-  domain: intel.com
+- crdVersion: v1
   group: fpga
   kind: N3000Node
-  path: github.com/otcshare/openshift-operator/N3000/api/v1
   version: v1
-version: "3"
+version: 3-alpha
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}

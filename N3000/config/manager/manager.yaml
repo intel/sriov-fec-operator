@@ -23,7 +23,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: n3000-operator:v1.3.0
+        image: n3000-operator:v1.1.0
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
@@ -59,12 +59,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: N3000_GENERIC_K8S
-          valueFrom:
-            configMapKeyRef:
-              optional: true
-              name: operator-configuration
-              key: isGeneric
         - name: NAME
           valueFrom:
             fieldRef:
