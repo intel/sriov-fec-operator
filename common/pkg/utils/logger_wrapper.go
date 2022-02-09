@@ -13,11 +13,16 @@ type logrusWrapper struct {
 	lastEntry *logrus.Entry
 }
 
-func (l *logrusWrapper) Enabled() bool {
+// Init implements logr.LogSink.
+func (l *logrusWrapper) Init(info logr.RuntimeInfo) {
+	return
+}
+
+func (l *logrusWrapper) Enabled(level int) bool {
 	return true
 }
 
-func (l *logrusWrapper) Info(msg string, keysAndValues ...interface{}) {
+func (l *logrusWrapper) Info(level int, msg string, keysAndValues ...interface{}) {
 	if l.lastEntry != nil {
 		l.lastEntry.WithFields(l.parseFields(keysAndValues)).Info(msg)
 		l.lastEntry = nil
@@ -35,11 +40,11 @@ func (l *logrusWrapper) Error(err error, msg string, keysAndValues ...interface{
 	}
 }
 
-func (l *logrusWrapper) V(level int) logr.Logger {
+func (l *logrusWrapper) V(level int) logr.LogSink {
 	return l
 }
 
-func (l *logrusWrapper) WithValues(keysAndValues ...interface{}) logr.Logger {
+func (l *logrusWrapper) WithValues(keysAndValues ...interface{}) logr.LogSink {
 	entry := l.getEntry()
 	entry.WithFields(l.parseFields(keysAndValues))
 	l.lastEntry = entry
@@ -64,7 +69,7 @@ func (l *logrusWrapper) getEntry() *logrus.Entry {
 	return logrus.NewEntry(l.log)
 }
 
-func (l *logrusWrapper) WithName(name string) logr.Logger {
+func (l *logrusWrapper) WithName(name string) logr.LogSink {
 	entry := l.getEntry()
 	l.lastEntry = entry.WithField("name", name)
 	return l
