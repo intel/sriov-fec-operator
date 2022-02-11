@@ -531,7 +531,73 @@ Then delete the items and the namespace:
 
 ### Setting Up Operator Registry Locally
 
-If needed the user can set up a local registry for the operators' images. For more information please see [openshift-pacn3000-operator.md](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-pacn3000-operator.md#setting-up-operator-registry-locally)
+If needed the user can set up a local registry for the operators' images.
+
+Prerequisite: Make sure that the images used by the operator are pushed to LOCAL_REGISTRY
+
+The operator-sdk CLI is required - see [Getting started with the Operator SDK](https://docs.openshift.com/container-platform/4.6/operators/operator_sdk/osdk-getting-started.html#osdk-installing-cli_osdk-getting-started).
+
+Install OPM (if not already installed):
+
+```shell
+# RELEASE_VERSION=v1.15.3
+# curl -LO https://github.com/operator-framework/operator-registry/releases/download/${RELEASE_VERSION}/linux-amd64-opm
+# chmod +x linux-amd64-opm
+# sudo mkdir -p /usr/local/bin/
+# sudo cp linux-amd64-opm /usr/local/bin/opm
+# rm -f linux-amd64-opm
+```
+
+Determine local registry address:
+
+```shell
+# export LOCAL_IMAGE_REGISTRY=<IP_ADDRESS>:<PORT>
+```
+
+Navigate to operator directory:
+
+```shell
+# cd openshift-operator/sriov-fec
+```
+
+Build and push images to local registry:
+
+```shell
+# IMAGE_REGISTRY=${LOCAL_IMAGE_REGISTRY} TLS_VERIFY=false make build_all
+```
+
+Create and push the index image:
+
+```shell
+# IMAGE_REGISTRY=${LOCAL_IMAGE_REGISTRY} TLS_VERIFY=false make build_index
+```
+
+Create the catalog source:
+
+```shell
+# cat <<EOF | oc apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+    name: intel-operators
+    namespace: openshift-marketplace
+spec:
+    sourceType: grpc
+    image: ${LOCAL_REGISTRY}/n3000-operators-index:1.1.0
+    publisher: Intel
+    displayName: N3000 operators(Local)
+EOF
+```
+
+Wait for `packagemanifest` to be available:
+
+```shell
+[user@ctrl1 /home]# oc get packagemanifests n3000 sriov-fec
+
+ NAME        CATALOG                  AGE
+ n3000       N3000 operators(Local)   24s
+ sriov-fec   N3000 operators(Local)   24s
+```
 
 ### Running operator on SNO
 

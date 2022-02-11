@@ -15,7 +15,7 @@ Copyright (c) 2020-2021 Intel Corporation
 
 ## Overview
 
-This document details the Intel's vRAN accelerator devices/hardware supported by the [SEO Operator for Wireless FEC Accelerators](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md) and/or [SEO Operator for Intel® FPGA PAC N3000 (Programming)](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-pacn3000-operator.md) in Red Hat's OpenShift Container Platform, using a Special Resource Operator framework based on the Operator SDK project.
+This document details the Intel's vRAN accelerator devices/hardware supported by the [SEO Operator for Wireless FEC Accelerators](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md) in Red Hat's OpenShift Container Platform.
 
 ## Intel® PAC N3000 for vRAN Acceleration
 
@@ -55,12 +55,6 @@ The 5G Wireless Acceleration reference design provides IP (Intel® FPGA IP and s
 ### SEO Operator for Intel® FPGA PAC N3000
 
 The role of the operator for the Intel® FPGA PAC N3000 card is to orchestrate and manage the resources/devices exposed by the card within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
-The operator design for PAC N3000 is a bundle operator consisting of two distinct operators:
-
-* [SEO Operator for Intel® FPGA PAC N3000 (Programming)](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-pacn3000-operator.md)
-* [SEO Operator for Wireless FEC Accelerators](https://github.com/otcshare/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md)
-
-It is expected that both of the operators are deployed.
 
 ## Intel® vRAN Dedicated Accelerator ACC100
 
