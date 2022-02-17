@@ -158,7 +158,7 @@ type SriovFecClusterConfigSpec struct {
 
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// Physical function (card) config
-	PhysicalFunction PhysicalFunctionConfig `json:"physicalFunction,omitempty"`
+	PhysicalFunction PhysicalFunctionConfig `json:"physicalFunction"`
 
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// Higher priority policies can override lower ones.
