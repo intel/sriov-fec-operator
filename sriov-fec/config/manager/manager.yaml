@@ -75,11 +75,5 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        - name: SRIOV_FEC_GENERIC_K8S
-          valueFrom:
-            configMapKeyRef:
-              optional: true
-              name: operator-configuration
-              key: isGeneric
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

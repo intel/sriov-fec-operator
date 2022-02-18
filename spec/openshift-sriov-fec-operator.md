@@ -358,18 +358,6 @@ The SEO Operator for Wireless FEC Accelerators is easily deployable from the Ope
 ### Install dependencies
 If operator is being installed on Kubernetes then run steps marked as (KUBERNETES).
 If operator is being installed on Openshift run only (OCP) steps.
-(KUBERNETES) Create configmap:
-```shell
-[user@ctrl1 /home]# cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  namespace: vran-acceleration-operators
-  name: operator-configuration
-data:
-  isGeneric: "true"
-EOF
-```
 (KUBERNETES) If Kubernetes doesn't have installed OLM (Operator lifecycle manager) start from installing Operator-sdk (https://olm.operatorframework.io/)
 After Operator-sdk installation run following command
 ```shell

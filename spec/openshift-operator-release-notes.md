@@ -104,6 +104,7 @@ This document provides high-level system features, issues, and limitations infor
 - SriovFecNodeConfig changes its state to "Succeeded" only after successful restart of sriov-device-plugin
 - Renamed OpenNESS in documentation to Smart Edge Open (SEO)
 - `physicalFunction` in `SriovFecClusterConfig` CR is now required
+- Operator automatically detects type of cluster(Openshift/Kubernetes) and uses corresponding dependencies
 
 ***v2.0.2***
 - Added webhook that converts existing SriovFecClusterConfigs with `nodes` field to SriovFecClusterConfig with `nodeSelector` and `acceleratorSelectors`
