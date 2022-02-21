@@ -143,11 +143,6 @@ type PhysicalFunctionConfigExt struct {
 // SriovFecClusterConfigSpec defines the desired state of SriovFecClusterConfig
 type SriovFecClusterConfigSpec struct {
 
-	// List of node configurations. This element is deprecated and should not be use because it will be removed in next release of sriov-fec operator.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	// +kubebuilder:validation:Optional
-	Nodes []NodeConfig `json:"nodes,omitempty"`
-
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// Selector describes target node for this spec
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
@@ -186,14 +181,6 @@ type SriovFecClusterConfigStatus struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	SyncStatus    SyncStatus `json:"syncStatus,omitempty"`
 	LastSyncError string     `json:"lastSyncError,omitempty"`
-}
-
-type NodeConfig struct {
-	// Name of the node
-	NodeName string `json:"nodeName"`
-	// List of physical functions (cards) configs
-	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	PhysicalFunctions []PhysicalFunctionConfigExt `json:"physicalFunctions"`
 }
 
 // +kubebuilder:object:root=true

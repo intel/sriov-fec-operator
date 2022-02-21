@@ -105,6 +105,7 @@ This document provides high-level system features, issues, and limitations infor
 - Renamed OpenNESS in documentation to Smart Edge Open (SEO)
 - `physicalFunction` in `SriovFecClusterConfig` CR is now required
 - Operator automatically detects type of cluster(Openshift/Kubernetes) and uses corresponding dependencies
+- `SriovFecClusterConfig.nodes` field is not supported anymore, SFCC should rely on `nodeSelector` and `acceleratorSelectors` fields
 
 ***v2.0.2***
 - Added webhook that converts existing SriovFecClusterConfigs with `nodes` field to SriovFecClusterConfig with `nodeSelector` and `acceleratorSelectors`
