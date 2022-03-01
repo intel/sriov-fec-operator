@@ -5,7 +5,7 @@ package drainhelper
 
 import (
 	"context"
-	"github.com/otcshare/openshift-operator/common/pkg/utils"
+	"github.com/otcshare/openshift-operator/sriov-fec/pkg/common/utils"
 	"os"
 	"strconv"
 	"time"

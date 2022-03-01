@@ -4,7 +4,8 @@
 package daemon
 
 import (
-	"github.com/otcshare/openshift-operator/common/pkg/utils"
+	"github.com/go-logr/logr"
+	"github.com/otcshare/openshift-operator/sriov-fec/pkg/common/utils"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
@@ -34,7 +35,7 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(utils.NewLogWrapper())
+	logf.SetLogger(logr.New(utils.NewLogWrapper()))
 	var err error
 	testTmpFolder, err = ioutil.TempDir("/tmp", "bbdevconfig_test")
 	Expect(err).ShouldNot(HaveOccurred())

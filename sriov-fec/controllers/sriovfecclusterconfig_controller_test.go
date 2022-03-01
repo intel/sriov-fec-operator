@@ -26,6 +26,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"time"
 
 	"github.com/onsi/gomega/gstruct"
@@ -815,7 +816,11 @@ var _ = Describe("SriovControllerTest", func() {
 		var kctl kubectl
 		BeforeEach(func() {
 			fmt.Printf("Running initkubectl")
-			kctl = testEnv.ControlPlane.KubeCtl()
+			adminInfo := envtest.User{Name: "admin", Groups: []string{"system:masters"}}
+			user, err := testEnv.ControlPlane.AddUser(adminInfo, nil)
+			Expect(err).ToNot(HaveOccurred())
+			kctl, err = user.Kubectl()
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		_ = Context("Verifying Correct SriovFecClusterConfigs", func() {

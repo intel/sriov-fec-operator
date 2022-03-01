@@ -23,6 +23,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/go-logr/logr"
+	"github.com/otcshare/openshift-operator/sriov-fec/pkg/common/assets"
+	"github.com/otcshare/openshift-operator/sriov-fec/pkg/common/utils"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"os"
@@ -39,8 +42,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"github.com/otcshare/openshift-operator/common/pkg/assets"
-	"github.com/otcshare/openshift-operator/common/pkg/utils"
 	sriovfecv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
 	"github.com/otcshare/openshift-operator/sriov-fec/controllers"
 	// +kubebuilder:scaffold:imports
@@ -74,7 +75,7 @@ func main() {
 	flag.StringVar(&healthProbeAddr, "health-probe-bind-address", ":8081", "The address the controller binds to for serving health probes.")
 	flag.Parse()
 
-	ctrl.SetLogger(utils.NewLogWrapper())
+	ctrl.SetLogger(logr.New(utils.NewLogWrapper()))
 
 	config := ctrl.GetConfigOrDie()
 	mgr, err := ctrl.NewManager(config, ctrl.Options{

@@ -7,7 +7,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/otcshare/openshift-operator/common/pkg/utils"
+	"github.com/go-logr/logr"
+	"github.com/otcshare/openshift-operator/sriov-fec/pkg/common/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"net"
@@ -311,7 +312,7 @@ var _ = Describe("Creation of SriovFecClusterConfig with acc100 bbdevconfig", fu
 })
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(utils.NewLogWrapper())
+	logf.SetLogger(logr.New(utils.NewLogWrapper()))
 
 	ctx, cancel = context.WithCancel(context.TODO())
 

@@ -19,7 +19,8 @@ limitations under the License.
 package controllers
 
 import (
-	"github.com/otcshare/openshift-operator/common/pkg/utils"
+	"github.com/go-logr/logr"
+	"github.com/otcshare/openshift-operator/sriov-fec/pkg/common/utils"
 	"path/filepath"
 	"testing"
 
@@ -49,8 +50,7 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func(done Done) {
-	logf.SetLogger(utils.NewLogWrapper())
-
+	logf.SetLogger(logr.New(utils.NewLogWrapper()))
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{filepath.Join("..", "config", "crd", "bases")},

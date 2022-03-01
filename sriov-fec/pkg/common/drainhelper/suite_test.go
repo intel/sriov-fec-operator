@@ -4,7 +4,8 @@
 package drainhelper
 
 import (
-	"github.com/otcshare/openshift-operator/common/pkg/utils"
+	"github.com/go-logr/logr"
+	"github.com/otcshare/openshift-operator/sriov-fec/pkg/common/utils"
 	"path/filepath"
 	"testing"
 
@@ -34,7 +35,7 @@ func TestAPIs(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	var err error
-	logf.SetLogger(utils.NewLogWrapper())
+	logf.SetLogger(logr.New(utils.NewLogWrapper()))
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
