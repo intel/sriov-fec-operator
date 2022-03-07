@@ -144,7 +144,7 @@ func main() {
 		Client:    c,
 		Namespace: controllers.NAMESPACE,
 		Log:       logger,
-		EnvPrefix: "SRIOV_FEC_",
+		EnvPrefix: utils.SriovPrefix,
 		Scheme:    scheme,
 		Owner:     owner,
 		Assets: []assets.Asset{
@@ -195,7 +195,7 @@ func getClusterType(restConfig *rest.Config) error {
 	for _, v := range apiList.Groups {
 		if v.Name == "route.openshift.io" {
 			setupLog.Info("found 'route.openshift.io' API - operator is running on OpenShift")
-			err := os.Setenv("SRIOV_FEC_GENERIC_K8S", "false")
+			err = utils.SetOsEnvIfNotSet(utils.SriovPrefix+"GENERIC_K8S", "false", logr.New(utils.NewLogWrapper()))
 			if err != nil {
 				return fmt.Errorf("failed to set SRIOV_FEC_GENERIC_K8S env variable - %v", err)
 			}
@@ -204,7 +204,7 @@ func getClusterType(restConfig *rest.Config) error {
 	}
 
 	setupLog.Info("couldn't find 'route.openshift.io' API - operator is running on Kubernetes")
-	err = os.Setenv("SRIOV_FEC_GENERIC_K8S", "true")
+	err = utils.SetOsEnvIfNotSet(utils.SriovPrefix+"GENERIC_K8S", "true", logr.New(utils.NewLogWrapper()))
 	if err != nil {
 		return fmt.Errorf("failed to set SRIOV_FEC_GENERIC_K8S env variable - %v", err)
 	}

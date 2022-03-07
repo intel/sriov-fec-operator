@@ -3,6 +3,8 @@
 package utils
 
 import (
+	"github.com/go-logr/logr"
+	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -36,6 +38,33 @@ var _ = Describe("Utils", func() {
 				Devices:   map[string]string{"test": "test"},
 				NodeLabel: "LABEL",
 			}))
+		})
+	})
+})
+
+var _ = Describe("Utils", func() {
+	var _ = Describe("SetOsEnvIfNotSet", func() {
+		var _ = It("should set ENV if variable is not set", func() {
+			key := "key"
+			value := "value"
+			Expect(os.Getenv(key)).To(Equal(""))
+
+			err := SetOsEnvIfNotSet(key, value, logr.Discard())
+
+			Expect(err).To(Succeed())
+			Expect(os.Getenv(key)).To(Equal(value))
+		})
+
+		var _ = It("should not set ENV if variable is already set", func() {
+			key := "key"
+			value := "value"
+			Expect(os.Setenv(key, value)).To(Succeed())
+			Expect(os.Getenv(key)).To(Equal(value))
+
+			err := SetOsEnvIfNotSet(key, "value that should be omitted", logr.Discard())
+
+			Expect(err).To(Succeed())
+			Expect(os.Getenv(key)).To(Equal(value))
 		})
 	})
 })

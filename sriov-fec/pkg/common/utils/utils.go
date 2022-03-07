@@ -6,8 +6,10 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/go-logr/logr"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type AcceleratorDiscoveryConfig struct {
@@ -20,6 +22,7 @@ type AcceleratorDiscoveryConfig struct {
 
 const (
 	configFilesizeLimitInBytes = 10485760 //10 MB
+	SriovPrefix                = "SRIOV_FEC_"
 )
 
 func LoadDiscoveryConfig(cfgPath string) (AcceleratorDiscoveryConfig, error) {
@@ -52,4 +55,18 @@ func LoadDiscoveryConfig(cfgPath string) (AcceleratorDiscoveryConfig, error) {
 		return cfg, fmt.Errorf("Failed to unmarshal config: %v", err)
 	}
 	return cfg, nil
+}
+
+func IsK8sDeployment() bool {
+	value := os.Getenv(SriovPrefix + "GENERIC_K8S")
+	return strings.ToLower(value) == "true"
+}
+
+func SetOsEnvIfNotSet(key, value string, logger logr.Logger) error {
+	if osValue := os.Getenv(key); osValue != "" {
+		logger.Info("skipping ENV because it is already set", "key", key, "value", osValue)
+		return nil
+	}
+	logger.Info("setting ENV var", "key", key, "value", value)
+	return os.Setenv(key, value)
 }

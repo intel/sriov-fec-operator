@@ -101,6 +101,7 @@ This document provides high-level system features, issues, and limitations infor
 
 ***v2.X.Y***
 - Updated pf-bb-config from 21.6 to 21.11
+- Updated SriovDevicePlugin from 4.9 to 4.10
 - SriovFecNodeConfig changes its state to "Succeeded" only after successful restart of sriov-device-plugin
 - Renamed OpenNESS in documentation to Smart Edge Open (SEO)
 - `physicalFunction` in `SriovFecClusterConfig` CR is now required
