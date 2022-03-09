@@ -107,6 +107,7 @@ This document provides high-level system features, issues, and limitations infor
 - `physicalFunction` in `SriovFecClusterConfig` CR is now required
 - Operator automatically detects type of cluster(Openshift/Kubernetes) and uses corresponding dependencies
 - `SriovFecClusterConfig.nodes` field is not supported anymore, SFCC should rely on `nodeSelector` and `acceleratorSelectors` fields
+- Renamed repository from openshift-operator to sriov-fec-operator
 
 ***v2.0.2***
 - Added webhook that converts existing SriovFecClusterConfigs with `nodes` field to SriovFecClusterConfig with `nodeSelector` and `acceleratorSelectors`
@@ -161,7 +162,7 @@ This document provides high-level system features, issues, and limitations infor
 - SriovFecNodeConfig stucks in InProgress state(issue observed in case of multiple reboots)
 
 ***v1.2.1***
-- [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/otcshare/openshift-operator/issues/270)
+- [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/otcshare/sriov-fec-operator/issues/270)
 
 ***v1.1.0***
 - SEO Operator for Intel® FPGA PAC N3000

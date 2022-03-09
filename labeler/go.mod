@@ -1,4 +1,4 @@
-module github.com/otcshare/openshift-operator/labeler
+module github.com/otcshare/sriov-fec-operator/labeler
 
 go 1.17
 
@@ -7,8 +7,7 @@ require (
 	github.com/jaypipes/pcidb v0.6.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
-	github.com/otcshare/openshift-operator/sriov-fec v0.0.0-20220228121825-a74e83c89399
-	github.com/otcshare/openshift-operator/sriov-fec/common v0.0.0-20220224075535-87427ba89504
+	github.com/otcshare/sriov-fec-operator/sriov-fec v0.0.0-20220307115755-dce8323f8d53
 	k8s.io/api v0.23.4
 	k8s.io/apimachinery v0.23.4
 	k8s.io/client-go v0.23.4

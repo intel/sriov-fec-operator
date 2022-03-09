@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"strconv"
 
-	sriovv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
+	sriovv2 "github.com/otcshare/sriov-fec-operator/sriov-fec/api/v2"
 	"gopkg.in/ini.v1"
 )
 

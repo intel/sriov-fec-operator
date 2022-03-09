@@ -5,7 +5,7 @@ package drainhelper
 
 import (
 	"github.com/go-logr/logr"
-	"github.com/otcshare/openshift-operator/sriov-fec/pkg/common/utils"
+	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/common/utils"
 	"path/filepath"
 	"testing"
 

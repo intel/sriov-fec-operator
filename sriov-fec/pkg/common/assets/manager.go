@@ -6,7 +6,7 @@ package assets
 import (
 	"context"
 	"errors"
-	"github.com/otcshare/openshift-operator/sriov-fec/pkg/common/utils"
+	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/common/utils"
 	"github.com/sirupsen/logrus"
 	"os"
 	"strings"

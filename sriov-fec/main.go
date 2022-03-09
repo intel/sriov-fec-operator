@@ -24,8 +24,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/go-logr/logr"
-	"github.com/otcshare/openshift-operator/sriov-fec/pkg/common/assets"
-	"github.com/otcshare/openshift-operator/sriov-fec/pkg/common/utils"
+	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/common/assets"
+	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/common/utils"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"os"
@@ -42,8 +42,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	sriovfecv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
-	"github.com/otcshare/openshift-operator/sriov-fec/controllers"
+	sriovfecv2 "github.com/otcshare/sriov-fec-operator/sriov-fec/api/v2"
+	"github.com/otcshare/sriov-fec-operator/sriov-fec/controllers"
 	// +kubebuilder:scaffold:imports
 )
 

@@ -486,10 +486,8 @@ github.com/onsi/gomega v1.17.0/go.mod h1:HnhC7FXeEQY45zxNK3PPoIUhzk/80Xly9PcubAl
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/openshift/api v3.9.0+incompatible/go.mod h1:dh9o4Fs58gpFXGSYfnVxGR9PnV53I8TW84pQaJDdGiY=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
-github.com/otcshare/openshift-operator/sriov-fec v0.0.0-20220228121825-a74e83c89399 h1:uTIDMBw1mXVpFO8NRZZYByIGkj8U7o+O9D2+jPzidlE=
-github.com/otcshare/openshift-operator/sriov-fec v0.0.0-20220228121825-a74e83c89399/go.mod h1:8DwaflcHuVgm972AmR5XnKDJITYVqmPw1LFAEpTDAAE=
-github.com/otcshare/openshift-operator/sriov-fec/common v0.0.0-20220224075535-87427ba89504 h1:VT2udTprLF8psxoJzVoAzd5GeMoaSOO9gOZ3cmrQhEs=
-github.com/otcshare/openshift-operator/sriov-fec/common v0.0.0-20220224075535-87427ba89504/go.mod h1:AsxDYlPgBHuCyW9wQ01qMWV21+r+gUwCNCKA7dPcvy8=
+github.com/otcshare/sriov-fec-operator/sriov-fec v0.0.0-20220307115755-dce8323f8d53 h1:ubCOsOn6MNwT19l6JJgKZH1NapUO+nFHSdZFsJ9orBo=
+github.com/otcshare/sriov-fec-operator/sriov-fec v0.0.0-20220307115755-dce8323f8d53/go.mod h1:Efg+dbw0yuekNdxt5AJgnR/82h/mQBVQA4bKp1517F0=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=

@@ -4,7 +4,7 @@
 package v2
 
 import (
-	"github.com/otcshare/openshift-operator/sriov-fec/pkg/common/utils"
+	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/common/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"

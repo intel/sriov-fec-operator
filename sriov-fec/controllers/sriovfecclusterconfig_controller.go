@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"time"
 
-	sriovfecv2 "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
+	sriovfecv2 "github.com/otcshare/sriov-fec-operator/sriov-fec/api/v2"
 )
 
 var NAMESPACE = os.Getenv("SRIOV_FEC_NAMESPACE")

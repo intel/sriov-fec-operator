@@ -6,7 +6,7 @@ package daemon
 import (
 	"context"
 	"fmt"
-	"github.com/otcshare/openshift-operator/sriov-fec/pkg/common/utils"
+	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/common/utils"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"time"
 
-	fec "github.com/otcshare/openshift-operator/sriov-fec/api/v2"
+	fec "github.com/otcshare/sriov-fec-operator/sriov-fec/api/v2"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
