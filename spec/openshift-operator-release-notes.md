@@ -193,6 +193,11 @@ The OpenNESS Operator for Intel® FPGA PAC N3000 has the following requirements:
 - Kubernetes: v1.22.2+5e38c72
 - RT Kernel: 4.18.0-305.25.1.rt7.97.el8_4.x86_64
 
+***v2.1.1*** was tested using the following:
+- CentOS 7.9
+- Kubernetes: v1.22.2
+- RT Kernel: 3.10.0-1160.11.1.rt56.1145.el7.x86_64
+
 ***v2.1.0*** was tested using the following:
 - OpenShift: 4.9.7
 - OS: Red Hat Enterprise Linux CoreOS 49.84.202111022104-0 (Ootpa)
