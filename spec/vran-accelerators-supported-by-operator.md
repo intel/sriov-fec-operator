@@ -3,19 +3,19 @@ SPDX-License-Identifier: Apache-2.0
 Copyright (c) 2020-2021 Intel Corporation
 ```
 <!-- omit in toc -->
-# Intel's vRAN accelerators supported by OpenNESS Operators on OpenShift
+# Intel's vRAN accelerators supported by SEO Operators on OpenShift
 
 - [Overview](#overview)
 - [Intel® PAC N3000 for vRAN Acceleration](#intel-pac-n3000-for-vran-acceleration)
   - [Enabling 5G Wireless Acceleration in FlexRAN](#enabling-5g-wireless-acceleration-in-flexran)
-  - [OpenNESS Operator for Intel® FPGA PAC N3000](#openness-operator-for-intel-fpga-pac-n3000)
+  - [SEO Operator for Intel® FPGA PAC N3000](#seo-operator-for-intel-fpga-pac-n3000)
 - [Intel® vRAN Dedicated Accelerator ACC100](#intel-vran-dedicated-accelerator-acc100)
   - [Intel® vRAN Dedicated Accelerator ACC100 FlexRAN Host Interface Overview](#intel-vran-dedicated-accelerator-acc100-flexran-host-interface-overview)
-  - [OpenNESS Operator for Intel® vRAN Dedicated Accelerator ACC100](#openness-operator-for-intel-vran-dedicated-accelerator-acc100)
+  - [SEO Operator for Intel® vRAN Dedicated Accelerator ACC100](#seo-operator-for-intel-vran-dedicated-accelerator-acc100)
 
 ## Overview
 
-This document details the Intel's vRAN accelerator devices/hardware supported by the [OpenNESS Operator for Wireless FEC Accelerators](https://github.com/smart-edge-open/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md) and/or [OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)](https://github.com/smart-edge-open/openshift-operator/blob/master/spec/openshift-pacn3000-operator.md) in Red Hat's OpenShift Container Platform, using a Special Resource Operator framework based on the Operator SDK project.
+This document details the Intel's vRAN accelerator devices/hardware supported by the [SEO Operator for Wireless FEC Accelerators](https://github.com/smart-edge-open/sriov-fec-operator/blob/main/spec/openshift-sriov-fec-operator.md) in Red Hat's OpenShift Container Platform.
 
 ## Intel® PAC N3000 for vRAN Acceleration
 
@@ -44,7 +44,7 @@ The Intel® FPGA PAC N3000 card used in the FlexRAN solution exposes the followi
 * The 5GNR FEC IP components have low-density parity-check (LDPC) Encoder / LDPC Decoder, rate matching/de-matching, and UL HARQ combining
 * Interface for managing and updating the FPGA Image through Remote System Update (RSU)
 
-![Intel® PAC N3000 Host interface overview](images/openness-fpga1.png)
+![Intel® PAC N3000 Host interface overview](images/seo-fpga1.png)
 
 ### Enabling 5G Wireless Acceleration in FlexRAN
 
@@ -52,15 +52,9 @@ The 5G Wireless Acceleration reference design provides IP (Intel® FPGA IP and s
 
 ![Data flow for the user image, FEC, and Fronthaul IO](images/Intel-N3000-5G-pipeline.png)
 
-### OpenNESS Operator for Intel® FPGA PAC N3000
+### SEO Operator for Intel® FPGA PAC N3000
 
 The role of the operator for the Intel® FPGA PAC N3000 card is to orchestrate and manage the resources/devices exposed by the card within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
-The operator design for PAC N3000 is a bundle operator consisting of two distinct operators:
-
-* [OpenNESS Operator for Intel® FPGA PAC N3000 (Programming)](https://github.com/smart-edge-open/openshift-operator/blob/master/spec/openshift-pacn3000-operator.md)
-* [OpenNESS Operator for Wireless FEC Accelerators](https://github.com/smart-edge-open/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md)
-
-It is expected that both of the operators are deployed.
 
 ## Intel® vRAN Dedicated Accelerator ACC100
 
@@ -105,9 +99,9 @@ Intel® vRAN Dedicated Accelerator ACC100 card used in the FlexRAN solution expo
 
 ![Intel® vRAN Dedicated Accelerator ACC100 support](images/acc100-diagram.png)
 
-### OpenNESS Operator for Intel® vRAN Dedicated Accelerator ACC100
+### SEO Operator for Intel® vRAN Dedicated Accelerator ACC100
 
 The role of the operator for the Intel® vRAN Dedicated Accelerator ACC100 card is to orchestrate and manage the resources/devices exposed by the card within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
 The operator design for Intel® vRAN Dedicated Accelerator ACC100 consist of:
 
-* [OpenNESS Operator for Wireless FEC Accelerators](https://github.com/smart-edge-open/openshift-operator/blob/master/spec/openshift-sriov-fec-operator.md)
+* [SEO Operator for Wireless FEC Accelerators](https://github.com/smart-edge-open/sriov-fec-operator/blob/main/spec/openshift-sriov-fec-operator.md)

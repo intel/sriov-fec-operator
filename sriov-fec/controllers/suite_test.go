@@ -19,13 +19,14 @@ limitations under the License.
 package controllers
 
 import (
-	"github.com/smart-edge-open/openshift-operator/common/pkg/utils"
+	"github.com/go-logr/logr"
+	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
 	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	sriovfecv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
+	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/sriov-fec/api/v2"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -49,8 +50,7 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func(done Done) {
-	logf.SetLogger(utils.NewLogWrapper())
-
+	logf.SetLogger(logr.New(utils.NewLogWrapper()))
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{filepath.Join("..", "config", "crd", "bases")},

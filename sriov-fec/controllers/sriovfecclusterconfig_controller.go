@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"time"
 
-	sriovfecv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
+	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/sriov-fec/api/v2"
 )
 
 var NAMESPACE = os.Getenv("SRIOV_FEC_NAMESPACE")
@@ -67,12 +67,6 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.
 	if err := r.List(context.TODO(), clusterConfigList, client.InNamespace(NAMESPACE)); err != nil {
 		r.Log.WithError(err).Error("cannot obtain list of SriovFecClusterConfig, rescheduling rescheduling reconcile call")
 		return ctrl.Result{}, err
-	}
-
-	for _, sfcc := range clusterConfigList.Items {
-		if len(sfcc.Spec.Nodes) != 0 {
-			return r.convertClusterConfigWithNodesField(sfcc)
-		}
 	}
 
 	nodes, err := r.getAcceleratedNodes()
@@ -126,40 +120,6 @@ func (r *SriovFecClusterConfigReconciler) requeueIfClusterConfigExists(cc types.
 	}
 
 	return ctrl.Result{RequeueAfter: time.Minute}, nil
-}
-
-func (r *SriovFecClusterConfigReconciler) convertClusterConfigWithNodesField(sfcc sriovfecv2.SriovFecClusterConfig) (ctrl.Result, error) {
-	r.Log.Infof("converting %v", sfcc.Name)
-	for ncIdx, nodeConfig := range sfcc.Spec.Nodes {
-		for pfIdx, pf := range nodeConfig.PhysicalFunctions {
-			newCC := sfcc.DeepCopy()
-			newCC.Name = fmt.Sprintf("%s-%d-%d", newCC.Name, ncIdx, pfIdx)
-			newCC.Spec.Nodes = nil
-			newCC.Spec.NodeSelector = map[string]string{
-				"kubernetes.io/hostname": nodeConfig.NodeName,
-			}
-			newCC.Spec.AcceleratorSelector = sriovfecv2.AcceleratorSelector{
-				PCIAddress: pf.PCIAddress,
-			}
-			newCC.Spec.PhysicalFunction = sriovfecv2.PhysicalFunctionConfig{
-				PFDriver:    pf.PFDriver,
-				VFDriver:    pf.VFDriver,
-				VFAmount:    pf.VFAmount,
-				BBDevConfig: pf.BBDevConfig,
-			}
-			newCC.ResourceVersion = ""
-			err := r.Create(context.TODO(), newCC)
-			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to write converted ClusterConfig - %v", err)
-			}
-		}
-	}
-	err := r.Client.Delete(context.TODO(), &sfcc, &client.DeleteOptions{})
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to delete converted ClusterConfig - %v", err)
-	}
-	r.Log.Infof("Successfully converted %v ClusterConfig", sfcc.Name)
-	return ctrl.Result{}, nil
 }
 
 func (r *SriovFecClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConfigurationCtx) error {

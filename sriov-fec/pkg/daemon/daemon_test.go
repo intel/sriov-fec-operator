@@ -14,7 +14,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	sriovv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/sriov-fec/api/v2"
 	"github.com/sirupsen/logrus"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"

@@ -26,6 +26,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"time"
 
 	"github.com/onsi/gomega/gstruct"
@@ -35,7 +36,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	sriovv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/sriov-fec/api/v2"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -815,7 +816,11 @@ var _ = Describe("SriovControllerTest", func() {
 		var kctl kubectl
 		BeforeEach(func() {
 			fmt.Printf("Running initkubectl")
-			kctl = testEnv.ControlPlane.KubeCtl()
+			adminInfo := envtest.User{Name: "admin", Groups: []string{"system:masters"}}
+			user, err := testEnv.ControlPlane.AddUser(adminInfo, nil)
+			Expect(err).ToNot(HaveOccurred())
+			kctl, err = user.Kubectl()
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		_ = Context("Verifying Correct SriovFecClusterConfigs", func() {

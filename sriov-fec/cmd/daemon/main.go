@@ -4,13 +4,15 @@
 package main
 
 import (
-	dh "github.com/smart-edge-open/openshift-operator/common/pkg/drainhelper"
-	"github.com/smart-edge-open/openshift-operator/common/pkg/utils"
+	"github.com/go-logr/logr"
+	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/drainhelper"
+	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
+
 	"k8s.io/apimachinery/pkg/types"
 	"os"
 
-	sriovv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
-	"github.com/smart-edge-open/openshift-operator/sriov-fec/pkg/daemon"
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/sriov-fec/api/v2"
+	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/daemon"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -31,7 +33,7 @@ func init() {
 }
 
 func main() {
-	ctrl.SetLogger(utils.NewLogWrapper())
+	ctrl.SetLogger(logr.New(utils.NewLogWrapper()))
 
 	nodeName := os.Getenv("NODENAME")
 	if nodeName == "" {
@@ -65,7 +67,7 @@ func main() {
 	}
 
 	nodeNameRef := types.NamespacedName{Namespace: ns, Name: nodeName}
-	drainHelper := dh.NewDrainHelper(utils.NewLogger(), cset, nodeName, ns)
+	drainHelper := drainhelper.NewDrainHelper(utils.NewLogger(), cset, nodeName, ns)
 	configurer, err := daemon.NewNodeConfigurer(drainHelper.Run, mgr.GetClient(), nodeNameRef)
 	if err != nil {
 		setupLog.WithError(err).Error("unable to create node configurer")

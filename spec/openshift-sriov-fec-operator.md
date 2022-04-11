@@ -3,10 +3,10 @@ SPDX-License-Identifier: Apache-2.0
 Copyright (c) 2020-2022 Intel Corporation
 ```
 <!-- omit in toc -->
-# OpenNESS Operator for Wireless FEC Accelerators documentation
+# SEO Operator for Wireless FEC Accelerators documentation
 
 - [Overview](#overview)
-- [OpenNESS Operator for Wireless FEC Accelerators](#openness-operator-for-wireless-fec-accelerators)
+- [SEO Operator for Wireless FEC Accelerators](#seo-operator-for-wireless-fec-accelerators)
   - [Wireless FEC Acceleration management](#wireless-fec-acceleration-management)
     - [FEC Configuration](#fec-configuration)
     - [SRIOV Device Plugin](#sriov-device-plugin)
@@ -22,7 +22,7 @@ Copyright (c) 2020-2022 Intel Corporation
   - [Uninstalling Previously Installed Operator](#uninstalling-previously-installed-operator)
   - [Setting Up Operator Registry Locally](#setting-up-operator-registry-locally)
   - [Running operator on SNO](#running-operator-on-sno)
-- [Appendix 2 - OpenNESS Operator for Wireless FEC Accelerators Examples](#appendix-2---openness-operator-for-wireless-fec-accelerators-examples)
+- [Appendix 2 - SEO Operator for Wireless FEC Accelerators Examples](#appendix-2---seo-operator-for-wireless-fec-accelerators-examples)
   - [N3000 FEC](#n3000-fec)
     - [Sample CR for Wireless FEC (N3000)](#sample-cr-for-wireless-fec-n3000)
     - [Sample Status for Wireless FEC (N3000)](#sample-status-for-wireless-fec-n3000)
@@ -34,15 +34,15 @@ Copyright (c) 2020-2022 Intel Corporation
 
 ## Overview
 
-This document provides the instructions for using the OpenNESS Operator for Wireless FEC Accelerators in Red Hat's OpenShift Container Platform. This operator was developed with aid of the Special Resource Operator framework based on the Operator SDK project.
+This document provides the instructions for using the SEO Operator for Wireless FEC Accelerators in Red Hat's OpenShift Container Platform. This operator was developed with aid of the Special Resource Operator framework based on the Operator SDK project.
 
-## OpenNESS Operator for Wireless FEC Accelerators
+## SEO Operator for Wireless FEC Accelerators
 
-The role of the OpenNESS Operator for Intel Wireless FEC Accelerator is to orchestrate and manage the resources/devices exposed by a range of Intel's vRAN FEC acceleration devices/hardware within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
-The operator design of the OpenNESS Operator for Intel Wireless FEC Accelerator supports the following vRAN FEC accelerators:
+The role of the SEO Operator for Intel Wireless FEC Accelerator is to orchestrate and manage the resources/devices exposed by a range of Intel's vRAN FEC acceleration devices/hardware within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
+The operator design of the SEO Operator for Intel Wireless FEC Accelerator supports the following vRAN FEC accelerators:
 
-* [Intel® PAC N3000 for vRAN Acceleration](https://github.com/smart-edge-open/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration)
-* [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/smart-edge-open/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100)
+* [Intel® PAC N3000 for vRAN Acceleration](https://github.com/smart-edge-open/sriov-fec-operator/blob/main/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration)
+* [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/smart-edge-open/sriov-fec-operator/blob/main/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100)
 
 ### Wireless FEC Acceleration management
 
@@ -60,9 +60,9 @@ The workflow of the SRIOV FEC operator is shown in the following diagram:
 
 The Intel's vRAN FEC acceleration devices/hardware expose the FEC PF device which is to be bound to PCI-PF-STUB driver (igb_uio driver also supported) in order to enable creation of the FEC VF devices. Once the FEC PF is bound to the correct driver, the user can create a number of devices to be used in Cloud Native deployment of vRAN to accelerate FEC. Once these devices are created they are to be bound to a user-space driver such as VFIO-PCI in order for them to work and be consumed in vRAN application pods. Before the device can be used by the application, the device needs to be configured - notably the mapping of queues exposed to the VFs - this is done via pf-bb-config application with the input from the CR used as a configuration.
 
-> NOTE: For [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/smart-edge-open/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100) it is advised to create all 16 VFs. The card is configured to provide up to 8 queue groups with up to 16 queues per group. The queue groups can be divided between groups allocated to 5G/4G and Uplink/Downlink, it can be configured for 4G or 5G only, or both 4G and 5G at the same time. Each configured VF has access to all the queues. Each of the queue groups has a distinct priority level. The request for given queue group is made from application level (ie. vRAN application leveraging the FEC device).
+> NOTE: For [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/smart-edge-open/sriov-fec-operator/blob/main/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100) it is advised to create all 16 VFs. The card is configured to provide up to 8 queue groups with up to 16 queues per group. The queue groups can be divided between groups allocated to 5G/4G and Uplink/Downlink, it can be configured for 4G or 5G only, or both 4G and 5G at the same time. Each configured VF has access to all the queues. Each of the queue groups has a distinct priority level. The request for given queue group is made from application level (ie. vRAN application leveraging the FEC device).
 
-> NOTE: For [Intel® PAC N3000 for vRAN Acceleration](https://github.com/smart-edge-open/openshift-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration) the user can create up to 8 VF devices. Each FEC PF device provides a total of 64 queues to be configured, 32 queues for uplink and 32 queues for downlink. The queues would be typically distributed evenly across the VFs.
+> NOTE: For [Intel® PAC N3000 for vRAN Acceleration](https://github.com/smart-edge-open/sriov-fec-operator/blob/main/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration) the user can create up to 8 VF devices. Each FEC PF device provides a total of 64 queues to be configured, 32 queues for uplink and 32 queues for downlink. The queues would be typically distributed evenly across the VFs.
 
 To get all the nodes containing one of the supported vRAN FEC accelerator devices run the following command (all the commands are run in the `vran-acceleration-operators` namespace):
 ```shell
@@ -236,7 +236,7 @@ As part of the SRIOV FEC operator the K8s SRIOV Network Device plugin is being d
 }
 ```
 
-Once the SRIOV operator takes care of setting up and configuring the device, user can test the device using a sample 'test-bbdev' application from the [DPDK project (DPDK 20.11)](https://github.com/DPDK/dpdk/tree/v20.11/app/test-bbdev). An example of a prepared sample application's docker image can be found in [Intel® OpenNESS' project github EdgeApps repo](https://github.com/smart-edge-open/edgeapps/tree/master/applications/fpga-sample-app). OpenNESS is an edge computing software toolkit that enables highly optimized and performant edge platforms to on-board and manage applications and network functions with cloud-like agility across any type of network. For more information, go to [www.openness.org](https://www.openness.org).
+Once the SRIOV operator takes care of setting up and configuring the device, user can test the device using a sample 'test-bbdev' application from the [DPDK project (DPDK 20.11)](https://github.com/DPDK/dpdk/tree/v20.11/app/test-bbdev). An example of a prepared sample application's docker image can be found in [Intel® SEO project github EdgeApps repo](https://github.com/smart-edge-open/edgeapps/tree/master/applications/fpga-sample-app). SEO is an edge computing software toolkit that enables highly optimized and performant edge platforms to on-board and manage applications and network functions with cloud-like agility across any type of network. For more information, go to [www.smart-edge-open.github.io](https://smart-edge-open.github.io/).
 
 With a sample image of the DPDK application, the following pod can be created similar to the following file as an example (`intel.com/intel_fec_acc100` needs to be replaced as needed when different accelerator is used):
 
@@ -344,7 +344,7 @@ The management of the NIC SRIOV devices/resources in the OpenShift cluster is ou
 
 ## Technical Requirements and Dependencies
 
-The OpenNESS Operator for Wireless FEC Accelerators has the following requirements:
+The SEO Operator for Wireless FEC Accelerators has the following requirements:
 
 - [Intel® vRAN Dedicated Accelerator ACC100](https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf) (Optional)
 - [Intel® FPGA PAC N3000 card](https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html) (Optional)
@@ -353,23 +353,11 @@ The OpenNESS Operator for Wireless FEC Accelerators has the following requiremen
 
 ## Deploying the Operator
 
-The OpenNESS Operator for Wireless FEC Accelerators is easily deployable from the OpenShift or Kubernetes cluster via provisioning and application of the following YAML spec files:
+The SEO Operator for Wireless FEC Accelerators is easily deployable from the OpenShift or Kubernetes cluster via provisioning and application of the following YAML spec files:
 
 ### Install dependencies
 If operator is being installed on Kubernetes then run steps marked as (KUBERNETES).
 If operator is being installed on Openshift run only (OCP) steps.
-(KUBERNETES) Create configmap:
-```shell
-[user@ctrl1 /home]# cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  namespace: vran-acceleration-operators
-  name: operator-configuration
-data:
-  isGeneric: "true"
-EOF
-```
 (KUBERNETES) If Kubernetes doesn't have installed OLM (Operator lifecycle manager) start from installing Operator-sdk (https://olm.operatorframework.io/)
 After Operator-sdk installation run following command
 ```shell
@@ -381,7 +369,7 @@ After Operator-sdk installation run following command
 ```
 ### Install the Bundle
 
-To install the OpenNESS Operator for Wireless FEC Accelerators operator bundle perform the following steps:
+To install the SEO Operator for Wireless FEC Accelerators operator bundle perform the following steps:
 
 (OCP) Create the project:
 ```shell
@@ -431,7 +419,7 @@ Verify that the operators are installed and pods are running:
 ```shell
 [user@ctrl1 /home]# oc get csv
 NAME               DISPLAY                                                        VERSION   REPLACES   PHASE
-sriov-fec.v1.1.0   OpenNESS SR-IOV Operator for Wireless FEC Accelerators   1.1.0                Succeeded
+sriov-fec.v1.1.0   SEO SR-IOV Operator for Wireless FEC Accelerators   1.1.0                Succeeded
 ```
 
 ```shell
@@ -504,7 +492,7 @@ status:
 
 ## Summary
 
-The OpenNESS Operator for Wireless FEC Accelerators is a fully functional tool to manage the vRAN FEC resources autonomously in a Cloud Native OpenShift environment based on the user input.
+The SEO Operator for Wireless FEC Accelerators is a fully functional tool to manage the vRAN FEC resources autonomously in a Cloud Native OpenShift environment based on the user input.
 The operator handles all the necessary actions from creation of FEC resources to configuration and management of the resources within the OpenShift cluster.
 
 ## Appendix 1 - Developer Notes
@@ -531,13 +519,79 @@ Then delete the items and the namespace:
 
 ### Setting Up Operator Registry Locally
 
-If needed the user can set up a local registry for the operators' images. For more information please see [openshift-pacn3000-operator.md](https://github.com/smart-edge-open/openshift-operator/blob/master/spec/openshift-pacn3000-operator.md#setting-up-operator-registry-locally)
+If needed the user can set up a local registry for the operators' images.
+
+Prerequisite: Make sure that the images used by the operator are pushed to LOCAL_REGISTRY
+
+The operator-sdk CLI is required - see [Getting started with the Operator SDK](https://docs.openshift.com/container-platform/4.6/operators/operator_sdk/osdk-getting-started.html#osdk-installing-cli_osdk-getting-started).
+
+Install OPM (if not already installed):
+
+```shell
+# RELEASE_VERSION=v1.15.3
+# curl -LO https://github.com/operator-framework/operator-registry/releases/download/${RELEASE_VERSION}/linux-amd64-opm
+# chmod +x linux-amd64-opm
+# sudo mkdir -p /usr/local/bin/
+# sudo cp linux-amd64-opm /usr/local/bin/opm
+# rm -f linux-amd64-opm
+```
+
+Determine local registry address:
+
+```shell
+# export LOCAL_IMAGE_REGISTRY=<IP_ADDRESS>:<PORT>
+```
+
+Navigate to operator directory:
+
+```shell
+# cd sriov-fec-operator/sriov-fec
+```
+
+Build and push images to local registry:
+
+```shell
+# IMAGE_REGISTRY=${LOCAL_IMAGE_REGISTRY} TLS_VERIFY=false make build_all
+```
+
+Create and push the index image:
+
+```shell
+# IMAGE_REGISTRY=${LOCAL_IMAGE_REGISTRY} TLS_VERIFY=false make build_index
+```
+
+Create the catalog source:
+
+```shell
+# cat <<EOF | oc apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+    name: intel-operators
+    namespace: openshift-marketplace
+spec:
+    sourceType: grpc
+    image: ${LOCAL_REGISTRY}/n3000-operators-index:1.1.0
+    publisher: Intel
+    displayName: N3000 operators(Local)
+EOF
+```
+
+Wait for `packagemanifest` to be available:
+
+```shell
+[user@ctrl1 /home]# oc get packagemanifests n3000 sriov-fec
+
+ NAME        CATALOG                  AGE
+ n3000       N3000 operators(Local)   24s
+ sriov-fec   N3000 operators(Local)   24s
+```
 
 ### Running operator on SNO
 
 If user needs to run operator on SNO (Single Node Openshift), then user should provide ClusterConfigs (which are described in following chapters) with `spec.drainSkip: true` to avoid node draining, because it is impossible to drain node if there's only 1 node.
 
-## Appendix 2 - OpenNESS Operator for Wireless FEC Accelerators Examples
+## Appendix 2 - SEO Operator for Wireless FEC Accelerators Examples
 
 ### N3000 FEC
 

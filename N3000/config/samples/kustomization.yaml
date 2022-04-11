@@ -1,8 +1,0 @@
-# SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020 Intel Corporation
-
-## Append samples you want in your CSV to this file as resources ##
-resources:
-- fpga_v1_n3000cluster.yaml
-- fpga_v1_n3000node.yaml
-# +kubebuilder:scaffold:manifestskustomizesamples

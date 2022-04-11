@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
-	sriovv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/sriov-fec/api/v2"
 )
 
 const (
@@ -263,7 +263,7 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv2.SriovFecNodeConfigSpec
 
 		if pf.BBDevConfig.N3000 != nil || pf.BBDevConfig.ACC100 != nil {
 			bbdevConfigFilepath := filepath.Join(workdir, fmt.Sprintf("%s.ini", pf.PCIAddress))
-			if err := generateBBDevConfigFile(pf.BBDevConfig, bbdevConfigFilepath); err != nil {
+			if err := generateBBDevConfigFile(n.Log, pf.BBDevConfig, bbdevConfigFilepath); err != nil {
 				n.Log.WithError(err).WithField("pci", pf.PCIAddress).Error("failed to create bbdev config file")
 				return err
 			}
