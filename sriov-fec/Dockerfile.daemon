@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020-2021 Intel Corporation
 
-FROM golang:1.16 as builder
+FROM golang:1.17 as builder
 
 WORKDIR /workspace-pf
 
@@ -9,9 +9,9 @@ RUN git clone --depth 1 --branch r44 https://github.com/benhoyt/inih && \
     cd inih/extra  && \
     make -f Makefile.static && \
     cp libinih.a ../
-RUN git clone  --depth 1 --branch v21.6 https://github.com/intel/pf-bb-config && \
+RUN git clone  --depth 1 --branch v21.11 https://github.com/intel/pf-bb-config && \
     cd pf-bb-config && \
-    INIH_PATH=../inih make
+    INIH_PATH=../inih make CFLAGS="-D_FORTIFY_SOURCE=2 -fstack-protector-strong -fPIE -z relro -z now -z noexecstack -s -O1"
 
 
 WORKDIR /workspace-go
@@ -26,11 +26,11 @@ COPY api api/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
 
-FROM registry.access.redhat.com/ubi8:8.5-200
+FROM registry.access.redhat.com/ubi8:8.5-236.1648460182
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="OpenNESS SR-IOV Operator for Wireless FEC Accelerators daemonset" \
+LABEL name="Smart Edge Open SR-IOV Operator for Wireless FEC Accelerators daemonset" \
     vendor="Intel Corporation" \
     version=$VERSION \
     release="1" \

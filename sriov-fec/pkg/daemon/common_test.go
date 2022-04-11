@@ -6,7 +6,7 @@ package daemon
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/smart-edge-open/openshift-operator/common/pkg/utils"
+	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
 )
 
 var _ = Describe("common", func() {

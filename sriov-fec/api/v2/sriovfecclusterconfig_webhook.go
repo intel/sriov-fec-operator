@@ -4,7 +4,7 @@
 package v2
 
 import (
-	"github.com/smart-edge-open/openshift-operator/common/pkg/utils"
+	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -45,7 +45,6 @@ func (in *SriovFecClusterConfig) ValidateUpdate(_ runtime.Object) error {
 func validate(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
 
 	validators := []func(spec SriovFecClusterConfigSpec) field.ErrorList{
-		nodesFieldValidator,
 		ambiguousBBDevConfigValidator,
 		n3000LinkQueuesValidator,
 		acc100VfAmountValidator,
@@ -63,19 +62,6 @@ func validate(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
 func (in *SriovFecClusterConfig) ValidateDelete() error {
 	sriovfecclusterconfiglog.WithField("name", in.Name).Info("validate delete")
 	//do nothing
-	return nil
-}
-
-func nodesFieldValidator(spec SriovFecClusterConfigSpec) field.ErrorList {
-	if spec.Nodes != nil {
-		return field.ErrorList{
-			field.Invalid(
-				field.NewPath("spec", "nodes"),
-				spec.Nodes,
-				"using deprecated field 'nodes', which is no longer supported. Use 'acceleratorSelector' and 'nodeSelector' instead.",
-			),
-		}
-	}
 	return nil
 }
 

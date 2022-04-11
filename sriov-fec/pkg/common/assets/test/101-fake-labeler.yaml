@@ -1,43 +1,24 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2021 Intel Corporation
+# Copyright (c) 2020-2021 Intel Corporation
 
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: labeler-config
-  namespace: {{ .SRIOV_FEC_NAMESPACE }}
+  name: daemon-config
+  namespace: default
 immutable: false
 data:
-  configMap: |
+  namespace: |
     apiVersion: v1
-    kind: ConfigMap
+    kind: Namespace
     metadata:
-      name: supported-accelerators
-      namespace: {{ .SRIOV_FEC_NAMESPACE }}
-    immutable: false
-    data:
-      accelerators.json: |
-        {
-          "VendorID": {
-            "8086": "Intel Corporation",
-            "1172": "Altera Corporation"
-          },
-          "Class": "12",
-          "SubClass": "00",
-          "Devices": {
-            "0d8f": "FPGA_5GNR",
-            "5052": "FPGA_LTE",
-            "0d5c": "ACC100",
-            "0b32": ""
-          },
-          "NodeLabel": "fpga.intel.com/intel-accelerator-present"
-        }
+      name: vran-acceleration-operators
   serviceAccount: |
     apiVersion: v1
     kind: ServiceAccount
     metadata:
       name: accelerator-discovery
-      namespace: {{ .SRIOV_FEC_NAMESPACE }}
+      namespace: vran-acceleration-operators
   clusterRole: |
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRole
@@ -56,17 +37,32 @@ data:
       apiGroup: rbac.authorization.k8s.io
       kind: ClusterRole
       name: accelerator-discovery
-      {{ if eq (.SRIOV_FEC_GENERIC_K8S|ToLower) `false` }}
-      namespace: {{ .SRIOV_FEC_NAMESPACE }}
-      {{ end }}
+      namespace: vran-acceleration-operators
     subjects:
     - kind: ServiceAccount
       name: accelerator-discovery
-      namespace: {{ .SRIOV_FEC_NAMESPACE }}
-      {{ if eq (.SRIOV_FEC_GENERIC_K8S|ToLower) `false` }}
+      namespace: vran-acceleration-operators
     userNames:
-    - system:serviceaccount:{{ .SRIOV_FEC_NAMESPACE }}:accelerator-discovery
-      {{ end }}
+    - system:serviceaccount:vran-acceleration-operators:accelerator-discovery
+  configMap: |
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: n3000-labeler-config
+      namespace: vran-acceleration-operators
+    data:
+      accelerators.json: |
+        {
+          "VendorID": "8086",
+          "Class": "12",
+          "SubClass": "00",
+          "Devices": {
+            "0d8f": "FPGA_5GNR",
+            "5052": "FPGA_LTE",
+            "0b32": ""
+          },
+          "NodeLabel": "fpga.intel.com/intel-accelerator-present"
+        }
   daemonSet: |
     apiVersion: apps/v1
     kind: DaemonSet
@@ -74,7 +70,7 @@ data:
       labels:
         app: accelerator-discovery
       name: accelerator-discovery
-      namespace: {{ .SRIOV_FEC_NAMESPACE }}
+      namespace: vran-acceleration-operators
     spec:
       minReadySeconds: 10
       selector:
@@ -89,8 +85,7 @@ data:
           serviceAccount: accelerator-discovery
           serviceAccountName: accelerator-discovery
           containers:
-          - image: {{ .SRIOV_FEC_LABELER_IMAGE }}
-            imagePullPolicy: IfNotPresent
+          - image: "N3000_LABELER_IMAGE-123"
             name: accelerator-discovery
             securityContext:
               readOnlyRootFilesystem: true
@@ -106,7 +101,7 @@ data:
           volumes:
             - name: config-volume
               configMap:
-                name: supported-accelerators
+                name: n3000-labeler-config
                 items:
                 - key: accelerators.json
                   path: accelerators.json

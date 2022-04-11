@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020 Intel Corporation
 
-VERSION ?= 2.1.0
+VERSION ?= 2.2.0
 IMG_VERSION := v$(VERSION)
 TLS_VERIFY ?= true
 
@@ -9,7 +9,7 @@ TLS_VERIFY ?= true
 IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
 CONTAINER_TOOL ?= podman
 # Add suffix directly to IMAGE_REGISTRY to enable empty registry(local images)
-ifneq ($(strip $(IMAGE_REGISTRY)),)
+ifneq ($(and $(strip $(IMAGE_REGISTRY)), $(filter-out %/, $(IMAGE_REGISTRY))),)
 override IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
 endif
 
@@ -47,7 +47,7 @@ docker-push:
 	docker push ${LABELER_IMAGE}
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.22
+ENVTEST_K8S_VERSION = 1.23
 ENVTEST = $(shell pwd)/bin/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
 	echo $(ENVTEST)

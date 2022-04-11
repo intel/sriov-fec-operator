@@ -22,9 +22,18 @@ spec:
   replicas: 2
   template:
     metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
       labels:
         control-plane: controller-manager
     spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              control-plane: controller-manager
       containers:
       - command:
         - /manager
@@ -68,11 +77,5 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        - name: SRIOV_FEC_GENERIC_K8S
-          valueFrom:
-            configMapKeyRef:
-              optional: true
-              name: operator-configuration
-              key: isGeneric
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

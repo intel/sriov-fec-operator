@@ -22,7 +22,12 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/smart-edge-open/openshift-operator/common/pkg/utils"
+	"fmt"
+	"github.com/go-logr/logr"
+	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/assets"
+	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/rest"
 	"os"
 	"strings"
 	"time"
@@ -37,9 +42,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"github.com/smart-edge-open/openshift-operator/common/pkg/assets"
-	sriovfecv2 "github.com/smart-edge-open/openshift-operator/sriov-fec/api/v2"
-	"github.com/smart-edge-open/openshift-operator/sriov-fec/controllers"
+	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/sriov-fec/api/v2"
+	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -71,7 +75,7 @@ func main() {
 	flag.StringVar(&healthProbeAddr, "health-probe-bind-address", ":8081", "The address the controller binds to for serving health probes.")
 	flag.Parse()
 
-	ctrl.SetLogger(utils.NewLogWrapper())
+	ctrl.SetLogger(logr.New(utils.NewLogWrapper()))
 
 	config := ctrl.GetConfigOrDie()
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
@@ -129,26 +133,43 @@ func main() {
 		os.Exit(1)
 	}
 
+	err = getClusterType(config)
+	if err != nil {
+		setupLog.Error(err, "unable to determine cluster type")
+		os.Exit(1)
+	}
+
 	logger := utils.NewLogger()
-	if err := (&assets.Manager{
+	assetsManager := &assets.Manager{
 		Client:    c,
+		Namespace: controllers.NAMESPACE,
 		Log:       logger,
-		EnvPrefix: "SRIOV_FEC_",
+		EnvPrefix: utils.SriovPrefix,
 		Scheme:    scheme,
 		Owner:     owner,
 		Assets: []assets.Asset{
 			{
-				Path: "assets/100-labeler.yaml",
+				ConfigMapName: "labeler-config",
+				Path:          "assets/100-labeler.yaml",
 			},
 			{
-				Path: "assets/200-device-plugin.yaml",
+				ConfigMapName: "device-plugin-config",
+				Path:          "assets/200-device-plugin.yaml",
 			},
 			{
+				ConfigMapName:     "daemon-config",
 				Path:              "assets/300-daemon.yaml",
 				BlockingReadiness: assets.ReadinessPollConfig{Retries: 30, Delay: 20 * time.Second},
 			},
 		},
-	}).LoadAndDeploy(context.Background(), false); err != nil {
+	}
+
+	if err := assetsManager.DeployConfigMaps(context.Background(), false); err != nil {
+		setupLog.WithError(err).Error("failed to deploy the assets")
+		os.Exit(1)
+	}
+
+	if err := assetsManager.LoadFromConfigMapAndDeploy(context.Background()); err != nil {
 		setupLog.WithError(err).Error("failed to deploy the assets")
 		os.Exit(1)
 	}
@@ -158,4 +179,35 @@ func main() {
 		setupLog.WithError(err).Error("problem running manager")
 		os.Exit(1)
 	}
+}
+
+func getClusterType(restConfig *rest.Config) error {
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create discoveryClient - %v", err)
+	}
+
+	apiList, err := discoveryClient.ServerGroups()
+	if err != nil {
+		return fmt.Errorf("issue occurred while fetching ServerGroups - %v", err)
+	}
+
+	for _, v := range apiList.Groups {
+		if v.Name == "route.openshift.io" {
+			setupLog.Info("found 'route.openshift.io' API - operator is running on OpenShift")
+			err = utils.SetOsEnvIfNotSet(utils.SriovPrefix+"GENERIC_K8S", "false", logr.New(utils.NewLogWrapper()))
+			if err != nil {
+				return fmt.Errorf("failed to set SRIOV_FEC_GENERIC_K8S env variable - %v", err)
+			}
+			return nil
+		}
+	}
+
+	setupLog.Info("couldn't find 'route.openshift.io' API - operator is running on Kubernetes")
+	err = utils.SetOsEnvIfNotSet(utils.SriovPrefix+"GENERIC_K8S", "true", logr.New(utils.NewLogWrapper()))
+	if err != nil {
+		return fmt.Errorf("failed to set SRIOV_FEC_GENERIC_K8S env variable - %v", err)
+	}
+
+	return nil
 }
