@@ -25,21 +25,24 @@ This document provides high-level system features, issues, and limitations infor
 
 ### SRIOV-FEC Operator
 
-| Version   | Release Date   | OCP Version(s) compatibility | Verified on OCP         |
-| --------- | ---------------| ---------------------------- | ------------------------|
-| 1.0.0     | January 2021   | 4.6                          | 4.6.4                   |
-| 1.1.0     | March 2021     | 4.6                          | 4.6.16                  |
-| 1.2.0     | June 2021      | 4.7                          | 4.7.8                   |
-| 1.2.1     | June 2021      | 4.7                          | 4.7.8                   |
-| 1.3.0     | August 2021    | 4.8                          | 4.8.2                   |
-| 2.0.0     | September 2021 | 4.8                          | 4.8.5                   |
-| 2.0.1     | October 2021   | 4.8                          | 4.8.13                  |
-| 2.0.2     | November 2021  | 4.8                          | 4.8.12                  |
-| 2.1.0     | November 2021  | 4.9                          | 4.9.7                   |
-| 2.1.1     | January 2022   | 4.9                          | 4.9.7                   |
-| 2.2.0     | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5
+| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP         |
+|---------|----------------| ---------------------------- | ------------------------|
+| 1.0.0   | January 2021   | 4.6                          | 4.6.4                   |
+| 1.1.0   | March 2021     | 4.6                          | 4.6.16                  |
+| 1.2.0   | June 2021      | 4.7                          | 4.7.8                   |
+| 1.2.1   | June 2021      | 4.7                          | 4.7.8                   |
+| 1.3.0   | August 2021    | 4.8                          | 4.8.2                   |
+| 2.0.0   | September 2021 | 4.8                          | 4.8.5                   |
+| 2.0.1   | October 2021   | 4.8                          | 4.8.13                  |
+| 2.0.2   | November 2021  | 4.8                          | 4.8.12                  |
+| 2.1.0   | November 2021  | 4.9                          | 4.9.7                   |
+| 2.1.1   | January 2022   | 4.9                          | 4.9.7                   |
+| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  |
+| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  |
 
 # Features for Release
+***v2.2.1***
+- Completed validation for MacLaren Summit card
 
 ***v2.2.0***
 - Support for OCP4.10.x
@@ -133,6 +136,9 @@ This document provides high-level system features, issues, and limitations infor
 - There are no unsupported or discontinued features relevant to this release.
 
 # Fixed Issues
+
+***2.2.1***
+- Adjusting CSV by adding relatedImages tag - addressing https://github.com/smart-edge-open/sriov-fec-operator/issues/19
 
 ***2.1.0*** 
 - SriovFecClusterConfig.spec.drainSkip was not rewritten into SriovFecNodeConfig.spec.drainSkip so SNO worker 
