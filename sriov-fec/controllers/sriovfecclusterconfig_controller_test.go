@@ -36,7 +36,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	sriovv2 "github.com/otcshare/sriov-fec-operator/sriov-fec/api/v2"
+	sriovv2 "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/sriov-fec/api/v2"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

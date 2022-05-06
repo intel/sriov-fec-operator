@@ -1,4 +1,4 @@
-module github.com/otcshare/sriov-fec-operator/labeler
+module github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/labeler
 
 go 1.17
 
@@ -7,7 +7,7 @@ require (
 	github.com/jaypipes/pcidb v0.6.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
-	github.com/otcshare/sriov-fec-operator/sriov-fec v0.0.0-20220426122757-f7897f20d091
+	github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/sriov-fec v0.0.0-20220426122757-f7897f20d091
 	k8s.io/api v0.23.4
 	k8s.io/apimachinery v0.23.4
 	k8s.io/client-go v0.23.4

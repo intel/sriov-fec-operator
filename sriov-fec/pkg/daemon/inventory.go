@@ -9,7 +9,7 @@ import (
 
 	"github.com/jaypipes/ghw"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
-	sriovv2 "github.com/otcshare/sriov-fec-operator/sriov-fec/api/v2"
+	sriovv2 "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/sriov-fec/api/v2"
 )
 
 func GetSriovInventory(log *logrus.Logger) (*sriovv2.NodeInventory, error) {

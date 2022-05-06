@@ -8,7 +8,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/go-logr/logr"
-	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/common/utils"
+	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/sriov-fec/pkg/common/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"net"

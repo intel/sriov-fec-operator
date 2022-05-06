@@ -5,16 +5,16 @@ package main
 
 import (
 	"github.com/go-logr/logr"
-	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/common/drainhelper"
-	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/common/utils"
+	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/sriov-fec/pkg/common/drainhelper"
+	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/sriov-fec/pkg/common/utils"
 
 	"os"
 	"syscall"
 
 	"k8s.io/apimachinery/pkg/types"
 
-	sriovv2 "github.com/otcshare/sriov-fec-operator/sriov-fec/api/v2"
-	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/daemon"
+	sriovv2 "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/sriov-fec/api/v2"
+	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/sriov-fec/pkg/daemon"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"

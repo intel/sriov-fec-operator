@@ -12,7 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	sriovv2 "github.com/otcshare/sriov-fec-operator/sriov-fec/api/v2"
+	sriovv2 "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/sriov-fec/api/v2"
 	"gopkg.in/ini.v1"
 )
 

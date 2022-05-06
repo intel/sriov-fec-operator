@@ -1,4 +1,4 @@
-module github.com/otcshare/sriov-fec-operator/sriov-fec
+module github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/sriov-fec
 
 go 1.17
 

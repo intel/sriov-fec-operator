@@ -11,8 +11,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	sriovv2 "github.com/otcshare/sriov-fec-operator/sriov-fec/api/v2"
-	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/common/utils"
+	sriovv2 "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/sriov-fec/api/v2"
+	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/sriov-fec/pkg/common/utils"
 )
 
 func compareFiles(firstFilepath, secondFilepath string) error {
