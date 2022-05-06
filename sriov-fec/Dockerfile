@@ -22,7 +22,7 @@ COPY controllers/ controllers/
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5-230
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5-240.1648458092
 
 ARG VERSION
 ### Required OpenShift Labels

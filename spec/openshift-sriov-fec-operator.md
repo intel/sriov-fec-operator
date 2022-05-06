@@ -350,6 +350,7 @@ The SEO Operator for Wireless FEC Accelerators has the following requirements:
 - [Intel® FPGA PAC N3000 card](https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html) (Optional)
 - [OpenShift 4.9.x](https://docs.openshift.com/container-platform/4.9/release_notes/ocp-4-9-release-notes.html)
 - RT Kernel configured with [Performance Addon Operator](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.6/html/scalability_and_performance/cnf-performance-addon-operator-for-low-latency-nodes).
+- [Configured kernel parameters](https://wiki.ubuntu.com/Kernel/KernelBootParameters#Permanently_Add_a_Kernel_Boot_Parameter): `"intel_iommu=on", "iommu=pt"`
 
 ## Deploying the Operator
 

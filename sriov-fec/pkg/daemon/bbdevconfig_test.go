@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	sriovv2 "github.com/otcshare/sriov-fec-operator/sriov-fec/api/v2"
+	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/common/utils"
 )
 
 func compareFiles(firstFilepath, secondFilepath string) error {
@@ -119,53 +120,56 @@ var _ = Describe("bbdevconfig", func() {
 		ACC100: &sampleBBDevConfig1,
 	}
 	sampleBBDevConfig5 := sriovv2.BBDevConfig{}
+
+	log = utils.NewLogger()
+
 	var _ = Context("generateBBDevConfigFile", func() {
 		var _ = It("will create valid config ", func() {
 			filename := "config.cfg"
-			err := generateN3000BBDevConfigFile(&sampleBBDevConfig0, filepath.Join(testTmpFolder, filename))
+			err := generateN3000BBDevConfigFile(log, &sampleBBDevConfig0, filepath.Join(testTmpFolder, filename))
 			Expect(err).ToNot(HaveOccurred())
 			err = compareFiles(filepath.Join(testTmpFolder, filename), "testdata/bbdevconfig_test1.cfg")
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("will return error when config is nil ", func() {
 			filename := "config.cfg"
-			err := generateN3000BBDevConfigFile(nil, filepath.Join(testTmpFolder, filename))
+			err := generateN3000BBDevConfigFile(log, nil, filepath.Join(testTmpFolder, filename))
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will create valid ACC100 config ", func() {
 			filename := "config.cfg"
-			err := generateACC100BBDevConfigFile(&sampleBBDevConfig1, filepath.Join(testTmpFolder, filename))
+			err := generateACC100BBDevConfigFile(log, &sampleBBDevConfig1, filepath.Join(testTmpFolder, filename))
 			Expect(err).ToNot(HaveOccurred())
 			err = compareFiles(filepath.Join(testTmpFolder, filename), "testdata/bbdevconfig_test2.cfg")
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("will return error when ACC100 config is nil ", func() {
 			filename := "config.cfg"
-			err := generateACC100BBDevConfigFile(nil, filepath.Join(testTmpFolder, filename))
+			err := generateACC100BBDevConfigFile(log, nil, filepath.Join(testTmpFolder, filename))
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will return error when total number of queue groups for ACC100 exceeds 8 ", func() {
 			filename := "config.cfg"
-			err := generateACC100BBDevConfigFile(&sampleBBDevConfig2, filepath.Join(testTmpFolder, filename))
+			err := generateACC100BBDevConfigFile(log, &sampleBBDevConfig2, filepath.Join(testTmpFolder, filename))
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will create valid N3000 config ", func() {
 			filename := "config.cfg"
-			err := generateBBDevConfigFile(sampleBBDevConfig3, filepath.Join(testTmpFolder, filename))
+			err := generateBBDevConfigFile(log, sampleBBDevConfig3, filepath.Join(testTmpFolder, filename))
 			Expect(err).ToNot(HaveOccurred())
 			err = compareFiles(filepath.Join(testTmpFolder, filename), "testdata/bbdevconfig_test1.cfg")
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("will create valid ACC100 config ", func() {
 			filename := "config.cfg"
-			err := generateBBDevConfigFile(sampleBBDevConfig4, filepath.Join(testTmpFolder, filename))
+			err := generateBBDevConfigFile(log, sampleBBDevConfig4, filepath.Join(testTmpFolder, filename))
 			Expect(err).ToNot(HaveOccurred())
 			err = compareFiles(filepath.Join(testTmpFolder, filename), "testdata/bbdevconfig_test2.cfg")
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("will return an error when N3000 and ACC100 configs are nil ", func() {
 			filename := "config.cfg"
-			err := generateBBDevConfigFile(sampleBBDevConfig5, filepath.Join(testTmpFolder, filename))
+			err := generateBBDevConfigFile(log, sampleBBDevConfig5, filepath.Join(testTmpFolder, filename))
 			Expect(err).To(HaveOccurred())
 		})
 	})

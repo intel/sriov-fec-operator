@@ -4,10 +4,13 @@
 package daemon
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
+	"io"
 	"strconv"
+
+	"github.com/sirupsen/logrus"
 
 	sriovv2 "github.com/otcshare/sriov-fec-operator/sriov-fec/api/v2"
 	"gopkg.in/ini.v1"
@@ -40,7 +43,7 @@ const (
 	pfConfigAppFilepath = "/sriov_workdir/pf_bb_config"
 )
 
-func generateN3000BBDevConfigFile(nc *sriovv2.N3000BBDevConfig, file string) error {
+func generateN3000BBDevConfigFile(log *logrus.Logger, nc *sriovv2.N3000BBDevConfig, file string) error {
 	if nc == nil {
 		return errors.New("received nil N3000BBDevConfig")
 	}
@@ -66,6 +69,11 @@ func generateN3000BBDevConfigFile(nc *sriovv2.N3000BBDevConfig, file string) err
 	cfg.Section(dl).Key(vfqmap).SetValue(nc.Downlink.Queues.String())
 	cfg.Section(flr).Key(flr_time_out).SetValue(strconv.Itoa(nc.FLRTimeOut))
 
+	err = logBBDevConfigFile(log, cfg)
+	if err != nil {
+		return err
+	}
+
 	err = cfg.SaveTo(file)
 	if err != nil {
 		return fmt.Errorf("Unable to write config to file: %s", file)
@@ -73,7 +81,7 @@ func generateN3000BBDevConfigFile(nc *sriovv2.N3000BBDevConfig, file string) err
 	return nil
 }
 
-func generateACC100BBDevConfigFile(nc *sriovv2.ACC100BBDevConfig, file string) error {
+func generateACC100BBDevConfigFile(log *logrus.Logger, nc *sriovv2.ACC100BBDevConfig, file string) error {
 	if nc == nil {
 		return errors.New("received nil ACC100BBDevConfig")
 	}
@@ -113,6 +121,11 @@ func generateACC100BBDevConfigFile(nc *sriovv2.ACC100BBDevConfig, file string) e
 	cfg.Section(downlink5g).Key(num_aqs_per_groups).SetValue(strconv.Itoa(nc.Downlink5G.NumAqsPerGroups))
 	cfg.Section(downlink5g).Key(aq_depth_log2).SetValue(strconv.Itoa(nc.Downlink5G.AqDepthLog2))
 
+	err = logBBDevConfigFile(log, cfg)
+	if err != nil {
+		return err
+	}
+
 	err = cfg.SaveTo(file)
 	if err != nil {
 		return fmt.Errorf("Unable to write config to file: %s", file)
@@ -120,13 +133,13 @@ func generateACC100BBDevConfigFile(nc *sriovv2.ACC100BBDevConfig, file string) e
 	return nil
 }
 
-func generateBBDevConfigFile(pfCfg sriovv2.BBDevConfig, file string) error {
+func generateBBDevConfigFile(log *logrus.Logger, pfCfg sriovv2.BBDevConfig, file string) error {
 	if pfCfg.ACC100 != nil {
-		if err := generateACC100BBDevConfigFile(pfCfg.ACC100, file); err != nil {
+		if err := generateACC100BBDevConfigFile(log, pfCfg.ACC100, file); err != nil {
 			return fmt.Errorf("ACC100 config file creation failed, %s", err)
 		}
 	} else if pfCfg.N3000 != nil {
-		if err := generateN3000BBDevConfigFile(pfCfg.N3000, file); err != nil {
+		if err := generateN3000BBDevConfigFile(log, pfCfg.N3000, file); err != nil {
 			return fmt.Errorf("N3000 config file creation failed, %s", err)
 		}
 	} else {
@@ -148,4 +161,15 @@ func runPFConfig(log *logrus.Logger, deviceName, cfgFilepath, pciAddress string)
 	}
 	_, err := runExecCmd([]string{pfConfigAppFilepath, deviceName, "-c", cfgFilepath, "-p", pciAddress}, log)
 	return err
+}
+
+func logBBDevConfigFile(log *logrus.Logger, cfg *ini.File) error {
+	var b bytes.Buffer
+	writer := io.Writer(&b)
+	_, err := cfg.WriteTo(writer)
+	if err != nil {
+		return fmt.Errorf("Unable to write config to log writer, %s", err)
+	}
+	log.WithField("generated BBDevConfig", b.String()).Info("logBBDevConfigFile")
+	return nil
 }

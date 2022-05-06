@@ -10,7 +10,7 @@ RUN go mod download
 COPY main.go .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o node_labeler main.go
 
-FROM registry.access.redhat.com/ubi8:8.5-226
+FROM registry.access.redhat.com/ubi8:8.5-236.1648460182
 
 ARG VERSION
 ### Required OpenShift Labels

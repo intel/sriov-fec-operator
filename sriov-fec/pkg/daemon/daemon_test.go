@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -50,7 +51,6 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 		BeforeEach(func() {
 			//configure kernel controller
-			osReleaseFilepath = "testdata/rhcos_os_release"
 			procCmdlineFilePath = "testdata/cmdline_test"
 			configPath = "testdata/accelerators.json"
 
@@ -196,84 +196,6 @@ var _ = Describe("NodeConfigReconciler", func() {
 							)
 
 						Expect(osExecMock.verify()).To(Succeed())
-					})
-
-					When("Kernel has missing parameters", func() {
-						Specify("kernel has to be reconfigured and spec/config should be applied", func() {
-
-							expectedCallsRelatedWithReboot := new(runExecCmdMock).
-								//mocking calls for nodeConfigurator.rebootNode(...)
-								onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs"}).Return("", nil).
-								onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs", "--append", "intel_iommu=on"}).Return("", nil).
-								onCall([]string{"chroot", "--userspec", "0", "/host/", "rpm-ostree", "kargs", "--append", "iommu=pt"}).Return("", nil).
-								onCall([]string{
-									"chroot", "--userspec", "0", "/host", "systemd-run", "--unit", "sriov-fec-daemon-reboot", "--description", "sriov-fec-daemon reboot",
-									"/bin/sh", "-c", "systemctl stop kubelet.service; reboot",
-								}).Return("", nil)
-
-							//init daemon.runExecCmd
-							runExecCmd = expectedCallsRelatedWithReboot.execute
-							//manifest missing kernel params
-							procCmdlineFilePath = "testdata/cmdline_test_missing_param"
-
-							//Reconcile(...) function will be executed automatically after node reboot
-							//I have no idea how to simulate reboot/restart controller
-							//I am making resyncPeriod tiny to force immediate requeue of reconciliation process
-							resyncPeriod = time.Second
-
-							//apply nodeconfig
-							Expect(k8sClient.Patch(context.TODO(), &data.SriovFecNodeConfig, client.Merge, client.FieldOwner("test"))).To(Succeed())
-
-							//node config processing should be in progress
-							Eventually(func() (nc sriovv2.SriovFecNodeConfig, err error) {
-								return nc, k8sClient.Get(context.TODO(), data.GetNamespacedName(), &nc)
-							}, "10s").
-								Should(
-									WithTransform(
-										func(nc sriovv2.SriovFecNodeConfig) *metav1.Condition {
-											return nc.FindCondition(ConditionConfigured)
-										}, SatisfyAll(
-											Not(BeNil()),
-											WithTransform(func(c *metav1.Condition) string { return c.Reason }, Equal(string(ConfigurationInProgress))),
-										),
-									),
-								)
-
-							Eventually(func() error {
-								return expectedCallsRelatedWithReboot.verify()
-							}, "10s").Should(Succeed())
-
-							//manifest expected kernel configuration
-							procCmdlineFilePath = "testdata/cmdline_test"
-
-							expectedApplyConfigRelatedCalls := new(runExecCmdMock).
-								onCall([]string{"chroot", "/host/", "modprobe", "igb_uio"}).Return("", nil).
-								onCall([]string{"chroot", "/host/", "modprobe", "v"}).Return("", nil).
-								onCall([]string{"/sriov_workdir/pf_bb_config", "FPGA_5GNR", "-c", fmt.Sprintf("%s.ini", filepath.Join(workdir, pciAddress)), "-p", pciAddress}).Return("", nil)
-
-							//init daemon.runExecCmd
-							runExecCmd = expectedApplyConfigRelatedCalls.execute
-
-							Eventually(func() error {
-								return expectedApplyConfigRelatedCalls.verify()
-							}, "10s").Should(Succeed())
-
-							resyncPeriod = time.Minute
-
-							Eventually(func() (nc sriovv2.SriovFecNodeConfig, err error) {
-								return nc, k8sClient.Get(context.TODO(), data.GetNamespacedName(), &nc)
-							}, "10s", "0.5s").
-								Should(
-									WithTransform(
-										func(nc sriovv2.SriovFecNodeConfig) *metav1.Condition {
-											return nc.FindCondition(ConditionConfigured)
-										}, SatisfyAll(
-											Not(BeNil()),
-											WithTransform(func(c *metav1.Condition) string { return c.Reason }, Equal(string(ConfigurationSucceeded))),
-										),
-									),
-								)
-						})
 					})
 				})
 			})
@@ -583,4 +505,68 @@ func (d *TestData) NodeConfigNS() string {
 
 func initNodeConfiguratorRunExecCmd(f func([]string, *logrus.Logger) (string, error)) {
 	runExecCmd = f
+}
+
+type runExecCmdMock struct {
+	executions []struct {
+		expected     []string
+		toBeReturned *[]interface{}
+	}
+	executionCount int
+}
+
+func (r *runExecCmdMock) onCall(expected []string) *resultCatcher {
+	var tbr []interface{}
+	r.executions = append(r.executions, struct {
+		expected     []string
+		toBeReturned *[]interface{}
+	}{expected: expected, toBeReturned: &tbr})
+
+	return &resultCatcher{toBeReturned: &tbr, mock: r}
+}
+
+func (r *runExecCmdMock) execute(args []string, l *logrus.Logger) (string, error) {
+	l.Info("runExecCmdMock:", "command", args)
+	defer func() { r.executionCount++ }()
+
+	if len(r.executions) <= r.executionCount {
+		return "", fmt.Errorf("runExecCmdMock has been called too many times")
+	}
+
+	if reflect.DeepEqual(args, r.executions[r.executionCount].expected) {
+		execution := r.executions[r.executionCount]
+		toBeReturned := *execution.toBeReturned
+
+		return toBeReturned[0].(string),
+			func() error {
+				v := toBeReturned[1]
+				if v == nil {
+					return nil
+				}
+				return v.(error)
+			}()
+	}
+
+	return "", fmt.Errorf(
+		"runExecCmdMock has been called with arguments other than expected, expected: %v, actual: %v",
+		r.executions[r.executionCount],
+		args,
+	)
+}
+
+func (r *runExecCmdMock) verify() error {
+	if r.executionCount != len(r.executions) {
+		return fmt.Errorf("runExecCmdMock: exec command was not requested, expected executions(%d), actual executions(%d); expected executions: %v", len(r.executions), r.executionCount, r.executions)
+	}
+	return nil
+}
+
+type resultCatcher struct {
+	toBeReturned *[]interface{}
+	mock         *runExecCmdMock
+}
+
+func (r *resultCatcher) Return(toBeReturned ...interface{}) *runExecCmdMock {
+	*r.toBeReturned = toBeReturned
+	return r.mock
 }

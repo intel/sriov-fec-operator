@@ -135,19 +135,23 @@ data:
             image: {{ .SRIOV_FEC_DAEMON_IMAGE }}
             imagePullPolicy: IfNotPresent
             volumeMounts:
-            - name: host
-              mountPath: /host
             - name: sysbuspci
               mountPath: /sys/bus/pci
-            - name: workdir-volume
-              mountPath: /sriov_artifacts
-            - name: tmp-volume
-              mountPath: /tmp
-            - name: run-volume
-              mountPath: /run
-            - name: config-volume
-              mountPath: /sriov_config/config
+            - mountPath: /sriov_artifacts
+              name: workdir-volume
+            - mountPath: /sriov_config/config
+              name: config-volume
               readOnly: true
+            - mountPath: /host/lib
+              name: lib
+            - mountPath: /host/lib64
+              name: lib64
+            - mountPath: /host/proc
+              name: proc
+            - mountPath: /host/usr/bin
+              name: bin
+            - mountPath: /host/usr/sbin
+              name: sbin
             env:
               - name: SRIOV_FEC_NAMESPACE
                 valueFrom:
@@ -171,21 +175,35 @@ data:
                   - "ALL"
       {{ end }}
           volumes:
-          - name: host
-            hostPath:
-              path: /
-          - name: sysbuspci
-            hostPath:
+          - hostPath:
               path: /sys/bus/pci
-          - name: workdir-volume
-            emptyDir: {}
-          - name: tmp-volume
-            emptyDir: {}
-          - name: run-volume
-            emptyDir: {}
-          - name: config-volume
-            configMap:
-              name: supported-accelerators
+            name: sysbuspci
+          - emptyDir: {}
+            name: workdir-volume
+          - configMap:
+              defaultMode: 420
               items:
               - key: accelerators.json
                 path: accelerators.json
+              name: supported-accelerators
+            name: config-volume
+          - hostPath:
+              path: /usr/lib
+              type: ""
+            name: lib
+          - hostPath:
+              path: /usr/lib64
+              type: ""
+            name: lib64
+          - hostPath:
+              path: /usr/bin
+              type: ""
+            name: bin
+          - hostPath:
+              path: /usr/sbin
+              type: ""
+            name: sbin
+          - hostPath:
+              path: /proc
+              type: ""
+            name: proc

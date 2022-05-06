@@ -24,27 +24,37 @@ const (
 )
 
 var (
-	runExecCmd       = execCmd
-	getVFconfigured  = utils.GetVFconfigured
-	getVFList        = utils.GetVFList
-	workdir          = "/sriov_artifacts"
-	sysBusPciDevices = "/sys/bus/pci/devices"
-	sysBusPciDrivers = "/sys/bus/pci/drivers"
+	runExecCmd          = execCmd
+	getVFconfigured     = utils.GetVFconfigured
+	getVFList           = utils.GetVFList
+	workdir             = "/sriov_artifacts"
+	sysBusPciDevices    = "/sys/bus/pci/devices"
+	sysBusPciDrivers    = "/sys/bus/pci/drivers"
+	procCmdlineFilePath = "/host/proc/cmdline"
+	kernelParams        = []string{"intel_iommu=on", "iommu=pt"}
 )
 
 type NodeConfigurator struct {
-	Log              *logrus.Logger
-	kernelController *kernelController
+	Log *logrus.Logger
 }
 
 // anyKernelParamsMissing checks current kernel cmdline
 // returns true if /proc/cmdline requires update
 func (n *NodeConfigurator) isAnyKernelParamsMissing() (bool, error) {
-	return n.kernelController.isAnyKernelParamsMissing()
-}
+	cmdlineBytes, err := ioutil.ReadFile(procCmdlineFilePath)
+	if err != nil {
+		n.Log.WithError(err).WithField("path", procCmdlineFilePath).Error("failed to read file contents")
 
-func (n *NodeConfigurator) addMissingKernelParams() error {
-	return n.kernelController.addMissingKernelParams()
+		return false, err
+	}
+	cmdline := string(cmdlineBytes)
+	for _, param := range kernelParams {
+		if !strings.Contains(cmdline, param) {
+			n.Log.WithField("param", param).Info("missing kernel param")
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (n *NodeConfigurator) loadModule(module string) error {
@@ -52,17 +62,6 @@ func (n *NodeConfigurator) loadModule(module string) error {
 		return fmt.Errorf("module cannot be empty string")
 	}
 	_, err := runExecCmd([]string{"chroot", "/host/", "modprobe", module}, n.Log)
-	return err
-}
-
-func (n *NodeConfigurator) rebootNode() error {
-	// systemd-run command borrowed from openshift/sriov-network-operator
-	_, err := runExecCmd([]string{"chroot", "--userspec", "0", "/host",
-		"systemd-run",
-		"--unit", "sriov-fec-daemon-reboot",
-		"--description", "sriov-fec-daemon reboot",
-		"/bin/sh", "-c", "systemctl stop kubelet.service; reboot"}, n.Log)
-
 	return err
 }
 
@@ -263,7 +262,7 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv2.SriovFecNodeConfigSpec
 
 		if pf.BBDevConfig.N3000 != nil || pf.BBDevConfig.ACC100 != nil {
 			bbdevConfigFilepath := filepath.Join(workdir, fmt.Sprintf("%s.ini", pf.PCIAddress))
-			if err := generateBBDevConfigFile(pf.BBDevConfig, bbdevConfigFilepath); err != nil {
+			if err := generateBBDevConfigFile(n.Log, pf.BBDevConfig, bbdevConfigFilepath); err != nil {
 				n.Log.WithError(err).WithField("pci", pf.PCIAddress).Error("failed to create bbdev config file")
 				return err
 			}

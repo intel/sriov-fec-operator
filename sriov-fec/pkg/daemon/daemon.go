@@ -53,12 +53,6 @@ type NodeConfigReconciler struct {
 }
 
 type Drainer func(configurer func(ctx context.Context) bool, drain bool) error
-type configurationTask func(ctx context.Context) bool
-
-type configurationTaskStatus struct {
-	isRebootRequested  bool
-	configurationError error
-}
 
 func NewNodeConfigReconciler(k8sClient client.Client, configurer NodeConfigurer, nodeNameRef types.NamespacedName) (r *NodeConfigReconciler, err error) {
 
@@ -96,12 +90,9 @@ func (r *NodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (c
 		return requeueNowWithError(err)
 	}
 
-	if rebootRequested, err := r.configurer.configureNode(nc); err != nil {
+	if err := r.configurer.configureNode(nc); err != nil {
 		r.log.WithError(err).Error("error occurred during configuring node")
 		return requeueNowWithError(r.updateStatus(nc, metav1.ConditionFalse, ConfigurationFailed, err.Error()))
-	} else if rebootRequested {
-		r.log.Info("status update skipped - CR will be handled again after node reboot")
-		return requeueLater()
 	} else {
 		return requeueLaterOrNowIfError(r.updateStatus(nc, metav1.ConditionTrue, ConfigurationSucceeded, "Configured successfully"))
 	}
@@ -258,18 +249,12 @@ func (r *NodeConfigReconciler) readSriovFecNodeConfig(nn types.NamespacedName) (
 }
 
 type NodeConfigurer interface {
-	configureNode(nodeConfig *fec.SriovFecNodeConfig) (isRebootRequested bool, err error)
+	configureNode(nodeConfig *fec.SriovFecNodeConfig) error
 }
 
 func NewNodeConfigurer(drainer Drainer, client client.Client, nodeNameRef types.NamespacedName) (NodeConfigurer, error) {
 	log := utils.NewLogger()
-	kc, err := createKernelController(log)
-	if err != nil {
-		return nil, err
-	}
-
-	configurer := &NodeConfigurator{Log: log, kernelController: kc}
-
+	configurer := &NodeConfigurator{Log: log}
 	return &nodeConfigurer{log: log, drainAndExecute: drainer, configurer: configurer, Client: client, nodeNameRef: nodeNameRef}, nil
 }
 
@@ -281,56 +266,38 @@ type nodeConfigurer struct {
 	nodeNameRef     types.NamespacedName
 }
 
-func (n *nodeConfigurer) configureNode(nodeConfig *fec.SriovFecNodeConfig) (isRebootRequested bool, err error) {
-	configurationTask, configurationTaskStatus := n.createConfigurationTask(nodeConfig)
-	if err = n.drainAndExecute(configurationTask, !nodeConfig.Spec.DrainSkip); err != nil {
-		return false, err
-	}
+func (n *nodeConfigurer) configureNode(nodeConfig *fec.SriovFecNodeConfig) error {
+	var configurationError error
 
-	return configurationTaskStatus.isRebootRequested, configurationTaskStatus.configurationError
-}
-
-func (n *nodeConfigurer) createConfigurationTask(nodeConfig *fec.SriovFecNodeConfig) (configurationTask, *configurationTaskStatus) {
-	status := new(configurationTaskStatus)
-
-	task := func(ctx context.Context) bool {
+	drainFunc := func(ctx context.Context) bool {
 		missingParams, err := n.configurer.isAnyKernelParamsMissing()
 		if err != nil {
 			n.log.WithError(err).Error("failed to check for missing params")
-			status.configurationError = err
+			configurationError = err
 			return true
 		}
 
 		if missingParams {
-			n.log.Info("missing kernel params")
-
-			err := n.configurer.addMissingKernelParams()
-			if err != nil {
-				n.log.WithError(err).Error("failed to add missing params")
-				status.configurationError = err
-				return true
-			}
-
-			n.log.Info("added kernel params - rebooting")
-			if err := n.configurer.rebootNode(); err != nil {
-				n.log.WithError(err).Error("failed to request a node reboot")
-				status.configurationError = err
-				return true
-			}
-			status.isRebootRequested = true
-			return false // leave node cordoned & keep the leadership
-		}
-		if err := n.configurer.applyConfig(nodeConfig.Spec); err != nil {
-			n.log.WithError(err).Error("failed applying new PF/VF configuration")
-			status.configurationError = err
+			configurationError = errors.New("missing kernel params")
+			n.log.Error(configurationError)
 			return true
 		}
 
-		status.configurationError = n.restartDevicePlugin()
+		if err := n.configurer.applyConfig(nodeConfig.Spec); err != nil {
+			n.log.WithError(err).Error("failed applying new PF/VF configuration")
+			configurationError = err
+			return true
+		}
+
+		configurationError = n.restartDevicePlugin()
 		return true
 	}
 
-	return task, status
+	if err := n.drainAndExecute(drainFunc, !nodeConfig.Spec.DrainSkip); err != nil {
+		return err
+	}
+
+	return configurationError
 }
 
 func (n *nodeConfigurer) restartDevicePlugin() error {

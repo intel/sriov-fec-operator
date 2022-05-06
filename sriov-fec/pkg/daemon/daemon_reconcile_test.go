@@ -49,7 +49,7 @@ var _ = Describe("NodeConfigReconciler.Reconcile", func() {
 				},
 			}
 			configurer := testConfigurerProto{
-				configureNodeFunction: func(nodeConfig *sriovv2.SriovFecNodeConfig) (isRebootRequested bool, err error) {
+				configureNodeFunction: func(nodeConfig *sriovv2.SriovFecNodeConfig) (err error) {
 					for _, pf := range nodeConfig.Spec.PhysicalFunctions {
 						for i, accelerator := range nodeInventory.SriovAccelerators {
 							if accelerator.PCIAddress != pf.PCIAddress {
@@ -65,7 +65,7 @@ var _ = Describe("NodeConfigReconciler.Reconcile", func() {
 							}
 						}
 					}
-					return false, err
+					return err
 				},
 			}
 
@@ -130,9 +130,9 @@ var _ = Describe("NodeConfigReconciler.Reconcile", func() {
 })
 
 type testConfigurerProto struct {
-	configureNodeFunction func(nodeConfig *sriovv2.SriovFecNodeConfig) (isRebootRequested bool, err error)
+	configureNodeFunction func(nodeConfig *sriovv2.SriovFecNodeConfig) error
 }
 
-func (t testConfigurerProto) configureNode(nodeConfig *sriovv2.SriovFecNodeConfig) (isRebootRequested bool, err error) {
+func (t testConfigurerProto) configureNode(nodeConfig *sriovv2.SriovFecNodeConfig) error {
 	return t.configureNodeFunction(nodeConfig)
 }

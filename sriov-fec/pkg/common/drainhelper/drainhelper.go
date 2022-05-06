@@ -159,9 +159,14 @@ func (dh *DrainHelper) Run(f func(context.Context) bool, drain bool) error {
 	lec := dh.leaderElectionConfig
 	lec.Callbacks = leaderelection.LeaderCallbacks{
 		OnStartedLeading: func(ctx context.Context) {
+			defer func() {
+				dh.log.Info("cancelling the context to finish the leadership")
+				cancel()
+			}()
+
 			dh.log.Info("started leading")
 
-			uncordonAndFreeLeadership := func() {
+			uncordon := func() {
 				// always try to uncordon the node
 				// e.g. when cordoning succeeds, but draining fails
 				dh.log.Info("uncordoning node")
@@ -176,7 +181,7 @@ func (dh *DrainHelper) Run(f func(context.Context) bool, drain bool) error {
 				if err := dh.cordonAndDrain(ctx); err != nil {
 					dh.log.WithError(err).Error("cordonAndDrain failed")
 					innerErr = err
-					uncordonAndFreeLeadership()
+					uncordon()
 					return
 				}
 			}
@@ -185,11 +190,8 @@ func (dh *DrainHelper) Run(f func(context.Context) bool, drain bool) error {
 			performUncordon := f(ctx)
 			dh.log.WithField("performUncordon", performUncordon).Info("worker function - end")
 			if drain && performUncordon {
-				uncordonAndFreeLeadership()
+				uncordon()
 			}
-
-			dh.log.Info("cancelling the context to finish the leadership")
-			cancel()
 		},
 		OnStoppedLeading: func() {
 			dh.log.Info("stopped leading")

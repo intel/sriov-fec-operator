@@ -7,13 +7,10 @@ Copyright (c) 2020-2022 Intel Corporation
 This document provides high-level system features, issues, and limitations information for SEO Operator for Intel® FPGA PAC N3000 and SEO SR-IOV Operator for Wireless FEC Accelerators.
 - [Release history](#release-history)
     - [SRIOV-FEC Operator](#sriov-fec-operator)
-    - [N3000K Operator](#n3000k-operator)
 - [Features for Release](#features-for-release)
 - [Changes to Existing Features](#changes-to-existing-features)
 - [Fixed Issues](#fixed-issues)
-- [Known Issues and Limitations](#known-issues-and-limitations)
 - [Release Content](#release-content)
-- [Hardware and Software Compatibility](#hardware-and-software-compatibility)
 - [Supported Operating Systems](#supported-operating-systems)
 - [Package Versions](#package-versions)
 
@@ -23,34 +20,32 @@ This document provides high-level system features, issues, and limitations infor
 >Daemon part (running on each featured worker node) of operator drains a node (moves its workloads to another node) before applying requested configuration.  
 >Node draining doesn't work on SNO deployment. Because of that, operator's API exposes `SriovFecClusterConfig.spec.drainSkip` parameter which stops daemon doing workload migration.
 >In theory it is all what is needed to find operator usable on SNO, however, operator's validation cycle is executed _ONLY_ on multi-worker-node clusters.
->
-> Team is working to incorporate SNO deployments to existing validation cycle in the nearest future.
 
 # Release history
 
 ### SRIOV-FEC Operator
 
-| Version   | Release Date   | OCP Version(s) compatibility | Verified on OCP         |
-| --------- | ---------------| ---------------------------- | ------------------------|
-| 1.0.0     | January 2021   | 4.6                          | 4.6.4                   |
-| 1.1.0     | March 2021     | 4.6                          | 4.6.16                  |
-| 1.2.0     | June 2021      | 4.7                          | 4.7.8                   |
-| 1.2.1     | June 2021      | 4.7                          | 4.7.8                   |
-| 1.3.0     | August 2021    | 4.8                          | 4.8.2                   |
-| 2.0.0     | September 2021 | 4.8                          | 4.8.5                   |
-| 2.0.1     | October 2021   | 4.8                          | 4.8.13                  |
-| 2.0.2     | November 2021  | 4.8                          | 4.8.12                  |
-| 2.1.0     | November 2021  | 4.9                          | 4.9.7                   |
-| 2.1.1     | January 2022   | 4.9                          | 4.9.7                   |
-
-### N3000K Operator
-
-| Version   | Release Date   | OCP Version(s) compatibility | Verified on OCP
-| --------- | ---------------| ---------------------------- | ------------------------|
-| 1.0.0     | January 2021   | 4.6                          | 4.6.4                   |
-| 1.1.0     | March 2021     | 4.6                          | 4.6.16                  |
+| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP         |
+|---------|----------------| ---------------------------- | ------------------------|
+| 1.0.0   | January 2021   | 4.6                          | 4.6.4                   |
+| 1.1.0   | March 2021     | 4.6                          | 4.6.16                  |
+| 1.2.0   | June 2021      | 4.7                          | 4.7.8                   |
+| 1.2.1   | June 2021      | 4.7                          | 4.7.8                   |
+| 1.3.0   | August 2021    | 4.8                          | 4.8.2                   |
+| 2.0.0   | September 2021 | 4.8                          | 4.8.5                   |
+| 2.0.1   | October 2021   | 4.8                          | 4.8.13                  |
+| 2.0.2   | November 2021  | 4.8                          | 4.8.12                  |
+| 2.1.0   | November 2021  | 4.9                          | 4.9.7                   |
+| 2.1.1   | January 2022   | 4.9                          | 4.9.7                   |
+| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  |
+| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  |
 
 # Features for Release
+***v2.2.1***
+- Completed validation for MacLaren Summit card
+
+***v2.2.0***
+- Support for OCP4.10.x
 
 ***v2.1.1***
 - Added support for igb_uio module as a PF driver
@@ -86,20 +81,20 @@ This document provides high-level system features, issues, and limitations infor
   - Independent accelerator discovery mechanism now enables standalone usage
 
 ***v1.0.0***
-- SEO Operator for Intel® FPGA PAC N3000
-  - N3000 operator handles the management of the FPGA configuration
-  - Load the necessary drivers, allows the user to program the Intel® FPGA PAC N3000 user image and to update the firmware of the Intel® XL710 NICs
-  - Download the FPGA user image and the XL710 firmware from a location specified in the CR
 - SEO SRIOV-FEC Operator for Intel® FPGA PAC N3000
   - The SRIOV FEC operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications
   - Create desired Virtual Functions for the FEC device, bind them to appropriate drivers and configure the VF's queues for desired functionality in 4G or 5G deployment
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
-  - Prometheus fpgainfo exporter
-    - Deploys an instance of Prometheus exporter which collects metrics from the Intel® FPGA PAC N3000 card
 
 # Changes to Existing Features
 
 ***v2.X.Y***
+- Operator no longer adds missing kernel parameters `intel_iommu=on` and `iommu=pt`. User has to configure them [manually](https://wiki.ubuntu.com/Kernel/KernelBootParameters#Permanently_Add_a_Kernel_Boot_Parameter).
+
+***v2.2.0***
+- this release targets multiple OCP versions (4.8, 4.9, 4.10). Validation cycle has covered following upgrades:
+  - 4.8.x (sriov-fec 2.0.2) -> 4.10.x (sriov-fec 2.2.0)
+  - 4.9.x (sriov-fec 2.1.1) -> 4.10.x (sriov-fec 2.2.0)
 - Updated pf-bb-config from 21.6 to 21.11
 - Updated SriovDevicePlugin from 4.9 to 4.10
 - SriovFecNodeConfig changes its state to "Succeeded" only after successful restart of sriov-device-plugin
@@ -108,6 +103,8 @@ This document provides high-level system features, issues, and limitations infor
 - Operator automatically detects type of cluster(Openshift/Kubernetes) and uses corresponding dependencies
 - `SriovFecClusterConfig.nodes` field is not supported anymore, SFCC should rely on `nodeSelector` and `acceleratorSelectors` fields
 - Renamed repository from openshift-operator to sriov-fec-operator
+- Development of N3000 Operator has been suspended and its source code is not part of main branch  
+- previous `common` directory acts now as internal package of sriov-fec operator
 
 ***v2.0.2***
 - Added webhook that converts existing SriovFecClusterConfigs with `nodes` field to SriovFecClusterConfig with `nodeSelector` and `acceleratorSelectors`
@@ -122,18 +119,7 @@ This document provides high-level system features, issues, and limitations infor
 - Removed old API (v1)
 - Updated pf-bb-config from 21.3 to 21.6 and OperatorSDK from 1.4.2 to 1.9.0
 
-***v1.3.0***
-- SEO Operator for Intel® FPGA PAC N3000
-  - out of validation process
-
-***v1.2.0***
-- SEO Operator for Intel® FPGA PAC N3000
-  - out of validation process
-
 ***v1.1.0***
-- SEO Operator for Intel® FPGA PAC N3000
-  - n3000node- prefix was removed from N3000 resources
-  - Flashing process logging improvements
 - SEO SR-IOV Operator for Wireless FEC Accelerators
   - Added supported vendor: 1172 - Altera Corporation
   - pf-bb-config updated to 21.3
@@ -144,7 +130,7 @@ This document provides high-level system features, issues, and limitations infor
   - Generated bundle files were removed from repository
   - Common packages and labeler extracted from N3000/
   - Index image build target added to Makefile
-  - Both, n3000 and sriov-fec daemonsets now use `readOnlyRootFilesystem: true`
+  - sriov-fec daemonsets now use `readOnlyRootFilesystem: true`
   - Supported accelerators list moved to `supported-accelerators` configmap
   - `n3000-discovery` was renamed to `accelerator-discovery`
   - Any namespace can be now used for operators deployment
@@ -153,6 +139,9 @@ This document provides high-level system features, issues, and limitations infor
 - There are no unsupported or discontinued features relevant to this release.
 
 # Fixed Issues
+
+***2.2.1***
+- Adjusting CSV by adding relatedImages tag - addressing https://github.com/smart-edge-open/sriov-fec-operator/issues/19
 
 ***2.1.0*** 
 - SriovFecClusterConfig.spec.drainSkip was not rewritten into SriovFecNodeConfig.spec.drainSkip so SNO worker 
@@ -165,35 +154,18 @@ This document provides high-level system features, issues, and limitations infor
 - [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/otcshare/sriov-fec-operator/issues/270)
 
 ***v1.1.0***
-- SEO Operator for Intel® FPGA PAC N3000
-  - Daemon in started only after confirmed driver initialization
-  - Removed `hostPort:` from `fpgainfo-exporter` pod definition
 - SEO SR-IOV Operator for Wireless FEC Accelerators
   - Fixed status conditions to match convention introduced in N3000 operator
 - Common
   - Fixed discovery for devices with LTE bitstream
   - Fixed field optionality policies in CRDs
-  - Fixed DNS policy for n3000 daemonset
 
 ***v1.0.0***
 - n/a - this is the first release.
 
-# Known Issues and Limitations
-- After a successful user image of Fortville update, when power cycling the N3000 with the RSU command, a failure to reboot properly has been observed occasionally. This results in failed SPI transactions and a loss of communication with the BMC. To resolve, reboot the server.
-
 # Release Content
-- SEO Operator for Intel® FPGA PAC N3000 
 - SEO SR-IOV Operator for Wireless FEC Accelerators
-- Prometheus fpgainfo exporter
 - Documentation
-
-# Hardware and Software Compatibility
-The SEO Operator for Intel® FPGA PAC N3000 has the following requirements:
-- [Intel® FPGA PAC N3000 card](https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html)
-- vRAN RTL image for the Intel® FPGA PAC N3000 card
-- NVM utility
-- OpenShift
-- RT Kernel (the OPAE Docker images are built for specific kernel version)
 
 # Supported Operating Systems
 
@@ -202,6 +174,11 @@ The SEO Operator for Intel® FPGA PAC N3000 has the following requirements:
 - OS: Red Hat Enterprise Linux CoreOS 49.84.202111022104-0 (Ootpa)
 - Kubernetes: v1.22.2+5e38c72
 - RT Kernel: 4.18.0-305.25.1.rt7.97.el8_4.x86_64
+
+***v2.1.1*** was tested using the following:
+- CentOS 7.9
+- Kubernetes: v1.22.2
+- RT Kernel: 3.10.0-1160.11.1.rt56.1145.el7.x86_64
 
 ***v2.1.0*** was tested using the following:
 - OpenShift: 4.9.7
@@ -265,6 +242,6 @@ The SEO Operator for Intel® FPGA PAC N3000 has the following requirements:
 
 # Package Versions 
 Package:
-- Golang: 1.16
+- Golang: 1.17
 - DPDK: v20.11
-- pf-bb-config-app: v21.6
+- pf-bb-config-app: v21.11

@@ -8,8 +8,10 @@ import (
 	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/common/drainhelper"
 	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/common/utils"
 
-	"k8s.io/apimachinery/pkg/types"
 	"os"
+	"syscall"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	sriovv2 "github.com/otcshare/sriov-fec-operator/sriov-fec/api/v2"
 	"github.com/otcshare/sriov-fec-operator/sriov-fec/pkg/daemon"
@@ -33,6 +35,8 @@ func init() {
 }
 
 func main() {
+	syscall.Umask(0077)
+
 	ctrl.SetLogger(logr.New(utils.NewLogWrapper()))
 
 	nodeName := os.Getenv("NODENAME")
