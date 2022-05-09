@@ -259,11 +259,11 @@ build_index:
 
 .PHONY: podman_push_index
 podman_push_index:
-	podman push localhost/n3000-operators-index:$(VERSION) $(IMAGE_REGISTRY)sriov-fec-index:$(VERSION) --tls-verify=$(TLS_VERIFY)
+	podman push localhost/sriov-fec-index:$(VERSION) $(IMAGE_REGISTRY)sriov-fec-index:$(VERSION) --tls-verify=$(TLS_VERIFY)
 
 .PHONY: docker_push_index
 docker_push_index:
-	docker tag localhost/n3000-operators-index:$(VERSION) $(IMAGE_REGISTRY)sriov-fec-index:$(VERSION)
+	docker tag localhost/sriov-fec-index:$(VERSION) $(IMAGE_REGISTRY)sriov-fec-index:$(VERSION)
 	docker push $(IMAGE_REGISTRY)sriov-fec-index:$(VERSION)
 
 .PHONY: install_operator_sdk
