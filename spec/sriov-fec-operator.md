@@ -20,7 +20,6 @@ Copyright (c) 2020-2022 Intel Corporation
 - [Summary](#summary)
 - [Appendix 1 - Developer Notes](#appendix-1---developer-notes)
   - [Uninstalling Previously Installed Operator](#uninstalling-previously-installed-operator)
-  - [Setting Up Operator Registry Locally](#setting-up-operator-registry-locally)
   - [Running operator on SNO](#running-operator-on-sno)
 - [Appendix 2 - SEO Operator for Wireless FEC Accelerators Examples](#appendix-2---seo-operator-for-wireless-fec-accelerators-examples)
   - [N3000 FEC](#n3000-fec)
@@ -34,11 +33,11 @@ Copyright (c) 2020-2022 Intel Corporation
 
 ## Overview
 
-This document provides the instructions for using the SEO Operator for Wireless FEC Accelerators in Red Hat's OpenShift Container Platform. This operator was developed with aid of the Special Resource Operator framework based on the Operator SDK project.
+This document provides the instructions for using the SEO Operator for Wireless FEC Accelerators in Red Hat's OpenShift Container Platform and Kubernetes. This operator was developed with aid of the Operator SDK project.
 
 ## SEO Operator for Wireless FEC Accelerators
 
-The role of the SEO Operator for Intel Wireless FEC Accelerator is to orchestrate and manage the resources/devices exposed by a range of Intel's vRAN FEC acceleration devices/hardware within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
+The role of the SEO Operator for Intel Wireless FEC Accelerator is to orchestrate and manage the resources/devices exposed by a range of Intel's vRAN FEC acceleration devices/hardware within the OpenShift or Kubernetes cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
 The operator design of the SEO Operator for Intel Wireless FEC Accelerator supports the following vRAN FEC accelerators:
 
 * [Intel® PAC N3000 for vRAN Acceleration](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration)
@@ -46,7 +45,7 @@ The operator design of the SEO Operator for Intel Wireless FEC Accelerator suppo
 
 ### Wireless FEC Acceleration management
 
-This operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications - the FEC devices are provided by a designated hardware (ie. FPGA or eASIC PCI extension cards). It provides functionality to create desired VFs (Virtual Functions) for the FEC device, binds them to appropriate drivers and configures the VF's queues for desired functionality in 4G or 5G deployment. It also deploys an instance of the SR-IOV Network device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources. The user interacts with the operator by providing a CR (CustomResource). The operator constantly monitors the state of the CR to detect any changes and acts based on the changes detected. The CR is provided per cluster configuration. The components for individual nodes can be configured by specifying appropriate values for each component per "nodeName". Once the CR is applied or updated, the operator/daemon checks if the configuration is already applied, and, if not it binds the PFs to driver, creates desired amount of VFs, binds them to driver and runs the [pf-bb-config utility](https://github.com/intel/pf-bb-config) to configure the VF queues to the desired configuration.
+This operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications - the FEC devices are provided by a designated hardware (ie. FPGA or eASIC PCI extension cards). It provides functionality to create desired VFs (Virtual Functions) for the FEC device, binds them to appropriate drivers and configures the VF's queues for desired functionality in 4G or 5G deployment. It also deploys an instance of the SR-IOV Network device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources. The user interacts with the operator by providing a CR (CustomResource). The operator constantly monitors the state of the CR to detect any changes and acts based on the changes detected. The CR is provided per cluster configuration. The components for individual nodes can be configured by specifying appropriate values for each component per "nodeSelector". Once the CR is applied or updated, the operator/daemon checks if the configuration is already applied, and, if not it binds the PFs to driver, creates desired amount of VFs, binds them to driver and runs the [pf-bb-config utility](https://github.com/intel/pf-bb-config) to configure the VF queues to the desired configuration.
 
 This operator is a common operator for FEC device/resource management for a range on accelerator cards. For specific examples of CRs dedicated to single accelerator card only see:
 
@@ -64,7 +63,7 @@ The Intel's vRAN FEC acceleration devices/hardware expose the FEC PF device whic
 
 > NOTE: For [Intel® PAC N3000 for vRAN Acceleration](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration) the user can create up to 8 VF devices. Each FEC PF device provides a total of 64 queues to be configured, 32 queues for uplink and 32 queues for downlink. The queues would be typically distributed evenly across the VFs.
 
-To get all the nodes containing one of the supported vRAN FEC accelerator devices run the following command (all the commands are run in the `vran-acceleration-operators` namespace):
+To get all the nodes containing one of the supported vRAN FEC accelerator devices run the following command (all the commands are run in the `vran-acceleration-operators` namespace, if operator is used on Kubernetes then use `kubectl` instead of `oc`):
 ```shell
 [user@ctrl1 /home]# oc get sriovfecnodeconfig
 NAME             CONFIGURED
@@ -342,95 +341,12 @@ TestCase [ 0] : validation_tc passed
 
 The management of the NIC SRIOV devices/resources in the OpenShift cluster is out of scope of this operator. The user is expected to deploy an operator/[SRIOV Network Device plugin](https://github.com/openshift/sriov-network-device-plugin) which will handle the orchestration of SRIOV NIC VFs between pods.
 
-## Technical Requirements and Dependencies
-
-The SEO Operator for Wireless FEC Accelerators has the following requirements:
-
-- [Intel® vRAN Dedicated Accelerator ACC100](https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf) (Optional)
-- [Intel® FPGA PAC N3000 card](https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html) (Optional)
-- [OpenShift 4.9.x](https://docs.openshift.com/container-platform/4.9/release_notes/ocp-4-9-release-notes.html)
-- RT Kernel configured with [Performance Addon Operator](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.6/html/scalability_and_performance/cnf-performance-addon-operator-for-low-latency-nodes).
-- [Configured kernel parameters](https://wiki.ubuntu.com/Kernel/KernelBootParameters#Permanently_Add_a_Kernel_Boot_Parameter): `"intel_iommu=on", "iommu=pt"`
-
 ## Deploying the Operator
 
 The SEO Operator for Wireless FEC Accelerators is easily deployable from the OpenShift or Kubernetes cluster via provisioning and application of the following YAML spec files:
 
-### Install dependencies
-If operator is being installed on Kubernetes then run steps marked as (KUBERNETES).
-If operator is being installed on Openshift run only (OCP) steps.
-(KUBERNETES) If Kubernetes doesn't have installed OLM (Operator lifecycle manager) start from installing Operator-sdk (https://olm.operatorframework.io/)
-After Operator-sdk installation run following command
-```shell
-[user@ctrl1 /home]# operator-sdk olm install
-```
-(KUBERNETES) Install PCIutils on worker nodes
-```shell
-[user@ctrl1 /home]#  yum install pciutils
-```
-### Install the Bundle
-
-To install the SEO Operator for Wireless FEC Accelerators operator bundle perform the following steps:
-
-(OCP) Create the project:
-```shell
-[user@ctrl1 /home]# oc new-project vran-acceleration-operators
-```
-(KUBERNETES) Create the project:
-```shell
-[user@ctrl1 /home]# kubectl create namespace vran-acceleration-operators
-[user@ctrl1 /home]# kubectl config set-context --current --namespace=vran-acceleration-operators
-```
-Execute following commands on both OCP and KUBERNETES cluster:
-
-(KUBERNETES) In commands below use `kubectl` instead of `oc`
-
-Create an operator group and the subscriptions (all the commands are run in the `vran-acceleration-operators` namespace):
-
-```shell
-[user@ctrl1 /home]#  cat <<EOF | oc apply -f -
-apiVersion: operators.coreos.com/v1
-kind: OperatorGroup
-metadata:
-  name: vran-operators
-  namespace: vran-acceleration-operators
-spec:
-  targetNamespaces:
-    - vran-acceleration-operators
-EOF
-```
-
-```shell
-[user@ctrl1 /home]#  cat <<EOF | oc apply -f -
-apiVersion: operators.coreos.com/v1alpha1
-kind: Subscription
-metadata:
-  name: sriov-fec-subscription
-  namespace: vran-acceleration-operators
-spec:
-  channel: stable
-  name: sriov-fec
-  source: certified-operators
-  sourceNamespace: openshift-marketplace
-EOF
-```
-
-Verify that the operators are installed and pods are running:
-
-```shell
-[user@ctrl1 /home]# oc get csv
-NAME               DISPLAY                                                        VERSION   REPLACES   PHASE
-sriov-fec.v1.1.0   SEO SR-IOV Operator for Wireless FEC Accelerators   1.1.0                Succeeded
-```
-
-```shell
-[user@ctrl1 /home]# oc get pod
-NAME                                            READY   STATUS    RESTARTS   AGE                                                                              
-                                           
-sriov-device-plugin-hkq6f                       1/1     Running   0          35s                                                                              
-sriov-fec-controller-manager-78488c4c65-cpknc   2/2     Running   0          44s                                                                              
-sriov-fec-daemonset-7h8kb                       1/1     Running   0          35s                                                                              
-```
+If operator is being installed on OpenShift, then follow [deployment steps for OpenShift](openshift-deployment.md).
+Otherwise follow [steps for Kubernetes](kubernetes-deployment.md).
 
 ### Applying Custom Resources
 
@@ -508,84 +424,14 @@ Use the following command to identify items to delete:
 [user@ctrl1 /home]# oc get csv -n vran-acceleration-operators
 
 NAME               DISPLAY                                        VERSION   REPLACES   PHASE
-sriov-fec.v1.1.0   SRIOV-FEC Operator for Intel® FPGA PAC N3000   1.1.0                Succeeded
+sriov-fec.v2.2.0   SRIOV-FEC Operator for Intel® FPGA PAC N3000   2.2.0                Succeeded
 ```
 
 Then delete the items and the namespace:
 
 ```shell
-[user@ctrl1 /home]# oc delete csv sriov-fec.v1.1.0
+[user@ctrl1 /home]# oc delete csv sriov-fec.v2.2.0
 [user@ctrl1 /home]# oc delete ns vran-acceleration-operators
-```
-
-### Setting Up Operator Registry Locally
-
-If needed the user can set up a local registry for the operators' images.
-
-Prerequisite: Make sure that the images used by the operator are pushed to LOCAL_REGISTRY
-
-The operator-sdk CLI is required - see [Getting started with the Operator SDK](https://docs.openshift.com/container-platform/4.6/operators/operator_sdk/osdk-getting-started.html#osdk-installing-cli_osdk-getting-started).
-
-Install OPM (if not already installed):
-
-```shell
-# RELEASE_VERSION=v1.15.3
-# curl -LO https://github.com/operator-framework/operator-registry/releases/download/${RELEASE_VERSION}/linux-amd64-opm
-# chmod +x linux-amd64-opm
-# sudo mkdir -p /usr/local/bin/
-# sudo cp linux-amd64-opm /usr/local/bin/opm
-# rm -f linux-amd64-opm
-```
-
-Determine local registry address:
-
-```shell
-# export LOCAL_IMAGE_REGISTRY=<IP_ADDRESS>:<PORT>
-```
-
-Navigate to operator directory:
-
-```shell
-# cd sriov-fec-operator/sriov-fec
-```
-
-Build and push images to local registry:
-
-```shell
-# IMAGE_REGISTRY=${LOCAL_IMAGE_REGISTRY} TLS_VERIFY=false make build_all
-```
-
-Create and push the index image:
-
-```shell
-# IMAGE_REGISTRY=${LOCAL_IMAGE_REGISTRY} TLS_VERIFY=false make build_index
-```
-
-Create the catalog source:
-
-```shell
-# cat <<EOF | oc apply -f -
-apiVersion: operators.coreos.com/v1alpha1
-kind: CatalogSource
-metadata:
-    name: intel-operators
-    namespace: openshift-marketplace
-spec:
-    sourceType: grpc
-    image: ${LOCAL_REGISTRY}/n3000-operators-index:1.1.0
-    publisher: Intel
-    displayName: N3000 operators(Local)
-EOF
-```
-
-Wait for `packagemanifest` to be available:
-
-```shell
-[user@ctrl1 /home]# oc get packagemanifests n3000 sriov-fec
-
- NAME        CATALOG                  AGE
- n3000       N3000 operators(Local)   24s
- sriov-fec   N3000 operators(Local)   24s
 ```
 
 ### Running operator on SNO
@@ -786,6 +632,7 @@ apiVersion: sriovfec.intel.com/v2
 kind: SriovFecClusterConfig
 metadata:
   name: config
+  namespace: vran-acceleration-operators
 spec:
   priority: 1
   nodeSelector:

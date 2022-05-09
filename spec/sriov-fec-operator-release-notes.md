@@ -3,10 +3,10 @@ SPDX-License-Identifier: Apache-2.0
 Copyright (c) 2020-2022 Intel Corporation
 ```
 <!-- omit in toc -->
-# Release Notes 
+# Release Notes
 This document provides high-level system features, issues, and limitations information for SEO Operator for Intel® FPGA PAC N3000 and SEO SR-IOV Operator for Wireless FEC Accelerators.
 - [Release history](#release-history)
-    - [SRIOV-FEC Operator](#sriov-fec-operator)
+- [SRIOV-FEC Operator](#sriov-fec-operator)
 - [Features for Release](#features-for-release)
 - [Changes to Existing Features](#changes-to-existing-features)
 - [Fixed Issues](#fixed-issues)
@@ -25,22 +25,23 @@ This document provides high-level system features, issues, and limitations infor
 
 ### SRIOV-FEC Operator
 
-| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP         |
-|---------|----------------| ---------------------------- | ------------------------|
-| 1.0.0   | January 2021   | 4.6                          | 4.6.4                   |
-| 1.1.0   | March 2021     | 4.6                          | 4.6.16                  |
-| 1.2.0   | June 2021      | 4.7                          | 4.7.8                   |
-| 1.2.1   | June 2021      | 4.7                          | 4.7.8                   |
-| 1.3.0   | August 2021    | 4.8                          | 4.8.2                   |
-| 2.0.0   | September 2021 | 4.8                          | 4.8.5                   |
-| 2.0.1   | October 2021   | 4.8                          | 4.8.13                  |
-| 2.0.2   | November 2021  | 4.8                          | 4.8.12                  |
-| 2.1.0   | November 2021  | 4.9                          | 4.9.7                   |
-| 2.1.1   | January 2022   | 4.9                          | 4.9.7                   |
-| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  |
-| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  |
+| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP        |
+|---------|----------------|------------------------------|------------------------|
+| 1.0.0   | January 2021   | 4.6                          | 4.6.4                  |
+| 1.1.0   | March 2021     | 4.6                          | 4.6.16                 |
+| 1.2.0   | June 2021      | 4.7                          | 4.7.8                  |
+| 1.2.1   | June 2021      | 4.7                          | 4.7.8                  |
+| 1.3.0   | August 2021    | 4.8                          | 4.8.2                  |
+| 2.0.0   | September 2021 | 4.8                          | 4.8.5                  |
+| 2.0.1   | October 2021   | 4.8                          | 4.8.13                 |
+| 2.0.2   | November 2021  | 4.8                          | 4.8.12                 |
+| 2.1.0   | November 2021  | 4.9                          | 4.9.7                  |
+| 2.1.1   | January 2022   | 4.9                          | 4.9.7                  |
+| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5 | 
+| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5 |
 
 # Features for Release
+
 ***v2.2.1***
 - Completed validation for MacLaren Summit card
 
@@ -103,7 +104,7 @@ This document provides high-level system features, issues, and limitations infor
 - Operator automatically detects type of cluster(Openshift/Kubernetes) and uses corresponding dependencies
 - `SriovFecClusterConfig.nodes` field is not supported anymore, SFCC should rely on `nodeSelector` and `acceleratorSelectors` fields
 - Renamed repository from openshift-operator to sriov-fec-operator
-- Development of N3000 Operator has been suspended and its source code is not part of main branch  
+- Development of N3000 Operator has been suspended and its source code is not part of main branch
 - previous `common` directory acts now as internal package of sriov-fec operator
 
 ***v2.0.2***
@@ -112,7 +113,7 @@ This document provides high-level system features, issues, and limitations infor
 - Daemon's reconciliation process trigger has been adjusted to cover multi-reboot scenarios
 
 ***v2.0.1***
-- Daemon reconcile loop has been redesigned 
+- Daemon reconcile loop has been redesigned
 
 ***v2.0.0***
 - Improved existing validation rules and added new rules
@@ -134,7 +135,7 @@ This document provides high-level system features, issues, and limitations infor
   - Supported accelerators list moved to `supported-accelerators` configmap
   - `n3000-discovery` was renamed to `accelerator-discovery`
   - Any namespace can be now used for operators deployment
-  
+
 ***v1.0.0***
 - There are no unsupported or discontinued features relevant to this release.
 
@@ -143,9 +144,9 @@ This document provides high-level system features, issues, and limitations infor
 ***2.2.1***
 - Adjusting CSV by adding relatedImages tag - addressing https://github.com/smart-edge-open/sriov-fec-operator/issues/19
 
-***2.1.0*** 
-- SriovFecClusterConfig.spec.drainSkip was not rewritten into SriovFecNodeConfig.spec.drainSkip so SNO worker 
-  was trying to drain its workloads 
+***2.1.0***
+- SriovFecClusterConfig.spec.drainSkip was not rewritten into SriovFecNodeConfig.spec.drainSkip so SNO worker
+  was trying to drain its workloads
 
 ***2.0.2***
 - SriovFecNodeConfig stucks in InProgress state(issue observed in case of multiple reboots)
@@ -206,7 +207,7 @@ This document provides high-level system features, issues, and limitations infor
 
 ***v1.3.0*** was tested using the following:
 - OpenShift: 4.8.2
-- OS: Red Hat Enterprise Linux CoreOS 48.84.202107202156-0 
+- OS: Red Hat Enterprise Linux CoreOS 48.84.202107202156-0
 - Kubernetes: v1.21.1+051ac4f
 - RT Kernel: 4.18.0-305.10.2.rt7.83.el8_4.x86_64
 
@@ -240,7 +241,7 @@ This document provides high-level system features, issues, and limitations infor
 - RTL Image: 20ww27.5-2x2x25G-5GLDPC-v1.6.1-3.0.0_unsigned.bin
 - NVM Package: v7.30
 
-# Package Versions 
+# Package Versions
 Package:
 - Golang: 1.17
 - DPDK: v20.11

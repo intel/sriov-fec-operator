@@ -4,7 +4,7 @@
 # Default k8s command-line tool exec
 export CLI_EXEC?=oc
 # Current Operator version
-VERSION ?= 2.2.0
+VERSION ?= 2.2.1
 # Supported channels
 CHANNELS ?= stable
 # Default channel
@@ -21,7 +21,7 @@ endif
 # tls verify flag for pushing images
 TLS_VERIFY ?= false
 
-REQUIRED_OPERATOR_SDK_VERSION ?= v1.14.0
+REQUIRED_OPERATOR_SDK_VERSION ?= v1.17.0
 
 IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)sriov-fec
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
@@ -254,17 +254,17 @@ build_all: build
 
 .PHONY: build_index
 build_index:
-	opm index add --bundles $(BUNDLE_IMG) --tag localhost/n3000-operators-index:$(VERSION) $(if ifeq $(TLS_VERIFY) false, --skip-tls) -c $(CONTAINER_TOOL) --mode=semver
+	opm index add --bundles $(BUNDLE_IMG) --tag localhost/sriov-fec-index:$(VERSION) $(if ifeq $(TLS_VERIFY) false, --skip-tls) -c $(CONTAINER_TOOL) --mode=semver
 	$(MAKE) VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) $(CONTAINER_TOOL)_push_index
 
 .PHONY: podman_push_index
 podman_push_index:
-	podman push localhost/n3000-operators-index:$(VERSION) $(IMAGE_REGISTRY)n3000-operators-index:$(VERSION) --tls-verify=$(TLS_VERIFY)
+	podman push localhost/n3000-operators-index:$(VERSION) $(IMAGE_REGISTRY)sriov-fec-index:$(VERSION) --tls-verify=$(TLS_VERIFY)
 
 .PHONY: docker_push_index
 docker_push_index:
-	docker tag localhost/n3000-operators-index:$(VERSION) $(IMAGE_REGISTRY)n3000-operators-index:$(VERSION)
-	docker push $(IMAGE_REGISTRY)n3000-operators-index:$(VERSION)
+	docker tag localhost/n3000-operators-index:$(VERSION) $(IMAGE_REGISTRY)sriov-fec-index:$(VERSION)
+	docker push $(IMAGE_REGISTRY)sriov-fec-index:$(VERSION)
 
 .PHONY: install_operator_sdk
 install_operator_sdk:
