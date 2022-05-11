@@ -1,9 +1,35 @@
-.vscode
+testbin/
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Kubernetes Generated files - skip generated files, except for vendored files
+
+!vendor/**/zz_generated.*
+
+# operator-sdk generated files
+config/crd/bases/
+bundle/
 bundle_tmp*
-N3000/docker/driver-container/files/
-N3000/docker/opae-image/files/
-N3000/files/*/*.rpm
-N3000/files/*/*.sh
+bundle.Dockerfile
+
+# editor and IDE paraphernalia
+.idea/*
+*.swp
+*.swo
+*~
+.vscode
+
 # duplicate license file used in dockerfiles
 TEMP_LICENSE_COPY
-.idea/*

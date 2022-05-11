@@ -90,6 +90,8 @@ This document provides high-level system features, issues, and limitations infor
 # Changes to Existing Features
 
 ***v2.X.Y***
+- Flattened sriov-fec operator structure by removing the `sriov-fec` directory
+- Previous `labeler` directory acts now as internal package of sriov-fec operator
 - Operator no longer adds missing kernel parameters `intel_iommu=on` and `iommu=pt`. User has to configure them [manually](https://wiki.ubuntu.com/Kernel/KernelBootParameters#Permanently_Add_a_Kernel_Boot_Parameter).
 
 ***v2.2.0***

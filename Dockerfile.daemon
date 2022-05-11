@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020-2021 Intel Corporation
+
+FROM golang:1.17 as builder
+
+WORKDIR /workspace-pf
+
+RUN git clone --depth 1 --branch r44 https://github.com/benhoyt/inih && \
+    cd inih/extra  && \
+    make -f Makefile.static && \
+    cp libinih.a ../
+RUN git clone  --depth 1 --branch v21.11 https://github.com/intel/pf-bb-config && \
+    cd pf-bb-config && \
+    INIH_PATH=../inih make CFLAGS="-D_FORTIFY_SOURCE=2 -fstack-protector-strong -fPIE -z relro -z now -z noexecstack -s -O1"
+
+
+WORKDIR /workspace-go
+
+COPY go.mod go.sum ./
+
+RUN go mod download
+
+COPY cmd/daemon/ cmd/daemon/
+COPY pkg pkg/
+COPY api api/
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
+
+FROM registry.access.redhat.com/ubi8:8.5-236.1648460182
+
+ARG VERSION
+### Required OpenShift Labels
+LABEL name="Smart Edge Open SR-IOV Operator for Wireless FEC Accelerators daemonset" \
+    vendor="Intel Corporation" \
+    version=$VERSION \
+    release="1" \
+    summary="Manages SR-IOV resources on Wireless FEC Accelerators" \
+    description="The daemonset container is responsible for building the nodes inventory and configuring the SRIOV-FEC portion of the supported accelerators"
+
+RUN mkdir -p /usr/share/misc/ && \
+    cd /usr/share/misc/ && \
+    curl https://pci-ids.ucw.cz/v2.2/pci.ids.gz --output pci.ids.gz && \
+    gzip -d pci.ids.gz && \
+    rm -rfv ./pci.ids.gz
+USER 1001
+
+COPY TEMP_LICENSE_COPY /licenses/LICENSE
+WORKDIR /sriov_workdir
+COPY --from=builder /workspace-go/sriov_fec_daemon .
+COPY --from=builder /workspace-pf/pf-bb-config/pf_bb_config .
+
+ENTRYPOINT ["/sriov_workdir/sriov_fec_daemon"]
