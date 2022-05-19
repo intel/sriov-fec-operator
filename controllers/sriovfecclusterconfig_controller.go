@@ -55,7 +55,7 @@ type SriovFecClusterConfigReconciler struct {
 // +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecnodeconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecnodeconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=list;watch
-// +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;configmaps,verbs=*
+// +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;secrets;configmaps,verbs=*
 // +kubebuilder:rbac:groups=apps,resources=daemonsets;deployments;deployments/finalizers,verbs=*
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=*
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=*

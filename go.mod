@@ -15,6 +15,7 @@ require (
 	k8s.io/apimachinery v0.23.4
 	k8s.io/client-go v0.23.4
 	sigs.k8s.io/controller-runtime v0.11.0
+	github.com/google/uuid v1.1.2
 )
 
 require (

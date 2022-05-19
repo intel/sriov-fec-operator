@@ -235,7 +235,7 @@ var _ = Describe("Creation of SriovFecClusterConfig with acc100 bbdevconfig", fu
 		It("invalid spec should be rejected", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
-				PFDriver: "pci-pf-stub",
+				PFDriver: "vfio-pci",
 				VFAmount: 2,
 				BBDevConfig: BBDevConfig{
 					ACC100: &ACC100BBDevConfig{

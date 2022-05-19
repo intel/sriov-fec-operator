@@ -109,7 +109,7 @@ type BBDevConfig struct {
 // PhysicalFunctionConfig defines a possible configuration of a single Physical Function (PF), i.e. card
 type PhysicalFunctionConfig struct {
 	// PFDriver to bound the PFs to
-	//+kubebuilder:validation:Pattern=`(pci-pf-stub|pci_pf_stub|igb_uio)`
+	//+kubebuilder:validation:Pattern=`(pci-pf-stub|pci_pf_stub|igb_uio|vfio-pci)`
 	PFDriver string `json:"pfDriver"`
 	// VFDriver to bound the VFs to
 	VFDriver string `json:"vfDriver"`
@@ -126,7 +126,7 @@ type PhysicalFunctionConfigExt struct {
 	PCIAddress string `json:"pciAddress"`
 
 	// PFDriver to bound the PFs to
-	//+kubebuilder:validation:Pattern=`(pci-pf-stub|pci_pf_stub|igb_uio)`
+	//+kubebuilder:validation:Pattern=`(pci-pf-stub|pci_pf_stub|igb_uio|vfio-pci)`
 	PFDriver string `json:"pfDriver"`
 
 	// VFDriver to bound the VFs to
@@ -170,7 +170,7 @@ type AcceleratorSelector struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Pattern=`^[a-fA-F0-9]{4}:[a-fA-F0-9]{2}:[01][a-fA-F0-9]\.[0-7]$`
 	PCIAddress string `json:"pciAddress,omitempty"`
-	//+kubebuilder:validation:Pattern=`(pci-pf-stub|pci_pf_stub|igb_uio)`
+	//+kubebuilder:validation:Pattern=`(pci-pf-stub|pci_pf_stub|igb_uio|vfio-pci)`
 	PFDriver string `json:"driver,omitempty"`
 	MaxVFs   int    `json:"maxVirtualFunctions,omitempty"`
 }

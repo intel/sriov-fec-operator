@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -58,8 +59,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 			workdir = testTmpFolder
 			sysBusPciDevices = testTmpFolder
 			sysBusPciDrivers = testTmpFolder
-			Expect(createFiles(filepath.Join(sysBusPciDevices, pciAddress), "driver_override", vfNumFilePciPfStub)).To(Succeed())
-			Expect(createFiles(filepath.Join(sysBusPciDevices, pciAddress), "driver_override", vfNumFileIgbUio)).To(Succeed())
+			Expect(createFiles(filepath.Join(sysBusPciDevices, pciAddress), "driver_override", "reset", vfNumFileDefault, vfNumFileIgbUio)).To(Succeed())
 			Expect(createFiles(filepath.Join(sysBusPciDrivers, "igb_uio"), "bind")).To(Succeed())
 			Expect(createFiles(filepath.Join(sysBusPciDrivers, "pci-pf-stub"), "bind")).To(Succeed())
 
@@ -97,9 +97,11 @@ var _ = Describe("NodeConfigReconciler", func() {
 				}
 
 				nodeNameRef := types.NamespacedName{Namespace: _SUPPORTED_NAMESPACE, Name: _THIS_NODE_NAME}
-				configurer, _ := NewNodeConfigurer(func(operation func(ctx context.Context) bool, drain bool) error { return nil }, &onGetErrorReturningClient, nodeNameRef)
+
+				drainer := func(operation func(ctx context.Context) bool, drain bool) error { return nil }
+
 				var err error
-				reconciler, err = NewNodeConfigReconciler(&onGetErrorReturningClient, configurer, nodeNameRef)
+				reconciler, err = NewNodeConfigReconciler(&onGetErrorReturningClient, drainer, nodeNameRef, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(reconciler).ToNot(BeNil())
 			})
@@ -131,15 +133,22 @@ var _ = Describe("NodeConfigReconciler", func() {
 					Expect(err).ToNot(HaveOccurred())
 					Expect(k8sClient).ToNot(BeNil())
 
-					fakeDrainer := func(configure func(ctx context.Context) bool, drain bool) error {
-						configure(context.TODO())
-						return nil
-					}
-
 					nodeNameRef := types.NamespacedName{Namespace: _SUPPORTED_NAMESPACE, Name: _THIS_NODE_NAME}
-					configurer, _ := NewNodeConfigurer(fakeDrainer, k8sClient, nodeNameRef)
+					pfBBConfigController := NewPfBBConfigController(log, uuid.New().String())
+					configurer := NewNodeConfigurator(logrus.New(), pfBBConfigController, k8sClient, nodeNameRef)
 
-					reconciler, err := NewNodeConfigReconciler(k8sClient, configurer, nodeNameRef)
+					reconciler, err := NewNodeConfigReconciler(
+						k8sClient,
+						func(configure func(ctx context.Context) bool, drain bool) error {
+							configure(context.TODO())
+							return nil
+						},
+						nodeNameRef,
+						configurer,
+						func() error {
+							return nil
+						})
+
 					Expect(err).ToNot(HaveOccurred())
 
 					k8sManager, err := CreateManager(config, _SUPPORTED_NAMESPACE, scheme.Scheme)
@@ -166,6 +175,8 @@ var _ = Describe("NodeConfigReconciler", func() {
 				Context("Requested spec/config is correct and refers to existing accelerators", func() {
 					It("spec/config should be applied", func() {
 						osExecMock := new(runExecCmdMock).
+							onCall([]string{"/usr/sbin/chroot", "/host/", "pkill -9 -f pf_bb_config.*0000:14:00.1"}).
+							Return("", nil).
 							onCall([]string{"chroot", "/host/", "modprobe", "igb_uio"}).
 							Return("", nil).
 							onCall([]string{"chroot", "/host/", "modprobe", "v"}).
@@ -258,9 +269,8 @@ var _ = Describe("NodeConfigReconciler", func() {
 					}
 
 					nodeNameRef := types.NamespacedName{Namespace: _SUPPORTED_NAMESPACE, Name: _THIS_NODE_NAME}
-					configurer, _ := NewNodeConfigurer(drainer, k8sClient, nodeNameRef)
 
-					nodeReconciler, err := NewNodeConfigReconciler(k8sClient, configurer, nodeNameRef)
+					nodeReconciler, err := NewNodeConfigReconciler(k8sClient, drainer, nodeNameRef, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 
 					reconciler := nodeRecocnilerWrapper{

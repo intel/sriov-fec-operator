@@ -5,9 +5,10 @@ package main
 
 import (
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/drainhelper"
 	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
-
+	"io/ioutil"
 	"os"
 	"syscall"
 
@@ -70,14 +71,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	nodeNameRef := types.NamespacedName{Namespace: ns, Name: nodeName}
-	drainHelper := drainhelper.NewDrainHelper(utils.NewLogger(), cset, nodeName, ns)
-	configurer, err := daemon.NewNodeConfigurer(drainHelper.Run, mgr.GetClient(), nodeNameRef)
+	vfioTokenBytes, err := ioutil.ReadFile("/sriov_config/vfiotoken")
 	if err != nil {
-		setupLog.WithError(err).Error("unable to create node configurer")
+		setupLog.Error(err)
 		os.Exit(1)
 	}
-	reconciler, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), configurer, nodeNameRef)
+
+	vfioToken, err := uuid.ParseBytes(vfioTokenBytes)
+	if err != nil {
+		setupLog.Errorf("provided vfioToken(%s) is not in UUID format: %s", vfioTokenBytes, err)
+	}
+
+	nodeNameRef := types.NamespacedName{Namespace: ns, Name: nodeName}
+	drainHelper := drainhelper.NewDrainHelper(utils.NewLogger(), cset, nodeName, ns)
+	pfBBConfigController := daemon.NewPfBBConfigController(utils.NewLogger(), vfioToken.String())
+	nodeConfigurer := daemon.NewNodeConfigurator(utils.NewLogger(), pfBBConfigController, mgr.GetClient(), nodeNameRef)
+	devicePluginController := daemon.NewDevicePluginController(mgr.GetClient(), utils.NewLogger(), nodeNameRef)
+
+	reconciler, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), drainHelper.Run, nodeNameRef, nodeConfigurer, devicePluginController.RestartDevicePlugin)
+
 	if err != nil {
 		setupLog.WithError(err).Error("unable to create reconciler")
 		os.Exit(1)

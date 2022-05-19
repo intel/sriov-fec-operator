@@ -95,6 +95,16 @@ data:
       name: sriov-fec-daemon
       apiGroup: rbac.authorization.k8s.io
       namespace: {{ .SRIOV_FEC_NAMESPACE }}
+  secret: |
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: vfio-token
+      namespace: {{ .SRIOV_FEC_NAMESPACE }}
+    type: Opaque
+    stringData:
+      VFIO_TOKEN: 02bddbbf-bbb0-4d79-886b-91bad3fbb510
+    immutable: true
   daemonSet: |
     apiVersion: apps/v1
     kind: DaemonSet
@@ -135,6 +145,11 @@ data:
             image: {{ .SRIOV_FEC_DAEMON_IMAGE }}
             imagePullPolicy: IfNotPresent
             volumeMounts:
+            - name: devvfio
+              mountPath: /dev/vfio             
+            - name: vfiotoken
+              mountPath: /sriov_config/
+              readOnly: true    
             - name: sysbuspci
               mountPath: /sys/bus/pci
             - mountPath: /sriov_artifacts
@@ -152,6 +167,10 @@ data:
               name: bin
             - mountPath: /host/usr/sbin
               name: sbin
+            - name: logs
+              mountPath: /var/log
+            - name: tmp
+              mountPath: /tmp    
             env:
               - name: SRIOV_FEC_NAMESPACE
                 valueFrom:
@@ -187,6 +206,13 @@ data:
                 path: accelerators.json
               name: supported-accelerators
             name: config-volume
+          - name: vfiotoken
+            secret:
+              secretName: vfio-token
+              optional: false
+              items:
+               - key: VFIO_TOKEN
+                 path: vfiotoken
           - hostPath:
               path: /usr/lib
               type: ""
@@ -207,3 +233,11 @@ data:
               path: /proc
               type: ""
             name: proc
+          - hostPath:
+              path: /dev/vfio
+              type: ""
+            name: devvfio
+          - name: logs
+            emptyDir: {}
+          - name: tmp
+            emptyDir: {}    

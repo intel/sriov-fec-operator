@@ -6,9 +6,11 @@ package daemon
 import (
 	"fmt"
 	"io/ioutil"
+	"k8s.io/apimachinery/pkg/types"
 	"os"
 	"path/filepath"
 	"regexp"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 	"strings"
 
@@ -19,42 +21,33 @@ import (
 )
 
 const (
-	vfNumFilePciPfStub = "sriov_numvfs"
-	vfNumFileIgbUio    = "max_vfs"
+	vfNumFileDefault = "sriov_numvfs"
+	vfNumFileIgbUio  = "max_vfs"
 )
 
 var (
-	runExecCmd          = execCmd
-	getVFconfigured     = utils.GetVFconfigured
-	getVFList           = utils.GetVFList
-	workdir             = "/sriov_artifacts"
-	sysBusPciDevices    = "/sys/bus/pci/devices"
-	sysBusPciDrivers    = "/sys/bus/pci/drivers"
-	procCmdlineFilePath = "/host/proc/cmdline"
-	kernelParams        = []string{"intel_iommu=on", "iommu=pt"}
+	runExecCmd       = execCmd
+	getVFconfigured  = utils.GetVFconfigured
+	getVFList        = utils.GetVFList
+	workdir          = "/sriov_artifacts"
+	sysBusPciDevices = "/sys/bus/pci/devices"
+	sysBusPciDrivers = "/sys/bus/pci/drivers"
 )
 
-type NodeConfigurator struct {
-	Log *logrus.Logger
+func NewNodeConfigurator(logger *logrus.Logger, PfBBConfigController *pfBBConfigController, client client.Client, nodeNameRef types.NamespacedName) *NodeConfigurator {
+	return &NodeConfigurator{
+		Client:               client,
+		Log:                  logger,
+		nodeNameRef:          nodeNameRef,
+		pfBBConfigController: PfBBConfigController,
+	}
 }
 
-// anyKernelParamsMissing checks current kernel cmdline
-// returns true if /proc/cmdline requires update
-func (n *NodeConfigurator) isAnyKernelParamsMissing() (bool, error) {
-	cmdlineBytes, err := ioutil.ReadFile(procCmdlineFilePath)
-	if err != nil {
-		n.Log.WithError(err).WithField("path", procCmdlineFilePath).Error("failed to read file contents")
-
-		return false, err
-	}
-	cmdline := string(cmdlineBytes)
-	for _, param := range kernelParams {
-		if !strings.Contains(cmdline, param) {
-			n.Log.WithField("param", param).Info("missing kernel param")
-			return true, nil
-		}
-	}
-	return false, nil
+type NodeConfigurator struct {
+	client.Client
+	Log                  *logrus.Logger
+	nodeNameRef          types.NamespacedName
+	pfBBConfigController *pfBBConfigController
 }
 
 func (n *NodeConfigurator) loadModule(module string) error {
@@ -94,6 +87,19 @@ func (n *NodeConfigurator) unbindDeviceFromDriver(pciAddress string) error {
 	}
 
 	return err
+}
+
+func (n *NodeConfigurator) unbindIfBound(pciAddress string) error {
+	if isBound, err := n.isDeviceBoundToDriver(pciAddress); err != nil {
+		n.Log.WithField("pci", pciAddress).WithError(err).Error("failed to check if device is bound to driver")
+		return err
+	} else if isBound {
+		if err := n.unbindDeviceFromDriver(pciAddress); err != nil {
+			n.Log.WithField("pci", pciAddress).WithError(err).Error("failed to unbind device from driver")
+			return err
+		}
+	}
+	return nil
 }
 
 func (n *NodeConfigurator) bindDeviceToDriver(pciAddress, driver string) error {
@@ -171,8 +177,8 @@ func (n *NodeConfigurator) changeAmountOfVFs(driver string, pfPCIAddress string,
 		unbindPath := filepath.Join(sysBusPciDevices, pfPCIAddress)
 
 		switch driver {
-		case "pci-pf-stub", "pci_pf_stub":
-			unbindPath = filepath.Join(unbindPath, vfNumFilePciPfStub)
+		case "pci-pf-stub", "pci_pf_stub", "vfio-pci":
+			unbindPath = filepath.Join(unbindPath, vfNumFileDefault)
 		case "igb_uio":
 			unbindPath = filepath.Join(unbindPath, vfNumFileIgbUio)
 		default:
@@ -200,7 +206,76 @@ func (n *NodeConfigurator) changeAmountOfVFs(driver string, pfPCIAddress string,
 	return nil
 }
 
-func (n *NodeConfigurator) applyConfig(nodeConfig sriovv2.SriovFecNodeConfigSpec) error {
+func (n *NodeConfigurator) flrReset(pfPCIAddress string) error {
+	n.Log.Infof("executing FLR for %s", pfPCIAddress)
+
+	path := filepath.Join(sysBusPciDevices, pfPCIAddress, "reset")
+	if err := ioutil.WriteFile(path, []byte(strconv.Itoa(1)), os.ModeAppend); err != nil {
+		return fmt.Errorf("failed to execute Function Level Reset for PF (%s): %s", pfPCIAddress, err)
+	}
+	return nil
+}
+
+func (n *NodeConfigurator) cleanAcceleratorConfig(acc sriovv2.SriovAccelerator) error {
+
+	n.Log.Infof("cleaning configuration on %s", acc.PCIAddress)
+
+	if err := unbindVFs(n, acc); err != nil {
+		return err
+	}
+
+	if err := removeVFs(n, acc); err != nil {
+		return err
+	}
+
+	if err := n.flrReset(acc.PCIAddress); err != nil {
+		return err
+	}
+
+	if err := n.pfBBConfigController.stopPfBBConfig(acc.PCIAddress); err != nil {
+		return err
+	}
+	return nil
+}
+
+func removeVFs(nc *NodeConfigurator, acc sriovv2.SriovAccelerator) error {
+	if len(acc.VFs) > 0 {
+		if err := nc.changeAmountOfVFs(acc.PFDriver, acc.PCIAddress, 0); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func unbindVFs(nc *NodeConfigurator, acc sriovv2.SriovAccelerator) error {
+	existingVfs, err := getVFList(acc.PCIAddress)
+	if err != nil {
+		nc.Log.WithError(err).Error("failed to get list of newly created VFs")
+		return err
+	}
+
+	for _, vf := range existingVfs {
+		if err := nc.unbindIfBound(vf); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func loadDrivers(nc *NodeConfigurator, pfDriver string, vfDriver string) error {
+	if err := nc.loadModule(pfDriver); err != nil {
+		nc.Log.WithField("driver", pfDriver).Info("failed to load module for PF driver")
+		return err
+	}
+
+	if err := nc.loadModule(vfDriver); err != nil {
+		nc.Log.WithField("driver", vfDriver).Info("failed to load module for VF driver")
+		return err
+	}
+	return nil
+}
+
+func (n *NodeConfigurator) ApplySpec(nodeConfig sriovv2.SriovFecNodeConfigSpec) error {
 	inv, err := getSriovInventory(n.Log)
 	if err != nil {
 		n.Log.WithError(err).Error("failed to obtain current sriov inventory")
@@ -209,86 +284,70 @@ func (n *NodeConfigurator) applyConfig(nodeConfig sriovv2.SriovFecNodeConfigSpec
 
 	n.Log.WithField("inventory", inv).Info("current node status")
 
-	pciStubRegex := regexp.MustCompile("pci[-_]pf[-_]stub")
 	for _, acc := range inv.SriovAccelerators {
-		pf := getMatchingConfiguration(acc.PCIAddress, nodeConfig.PhysicalFunctions)
-
-		if pf == nil {
+		requestedConfig := getMatchingConfiguration(acc.PCIAddress, nodeConfig.PhysicalFunctions)
+		if requestedConfig == nil {
 			if len(acc.VFs) > 0 {
 				n.Log.WithField("pci", acc.PCIAddress).WithField("driverName", acc.PFDriver).Info("zeroing VFs")
-				if err := n.changeAmountOfVFs(acc.PFDriver, acc.PCIAddress, 0); err != nil {
+				if err := n.cleanAcceleratorConfig(acc); err != nil {
 					return err
 				}
 			}
+
 			continue
 		}
-
-		n.Log.WithField("requestedConfig", pf).Info("configuring PF")
-		if err := n.loadModule(pf.PFDriver); err != nil {
-			n.Log.WithField("driver", pf.PFDriver).Info("failed to load module for PF driver")
+		if err := n.configureAccelerator(acc, requestedConfig); err != nil {
 			return err
-		}
-
-		if err := n.loadModule(pf.VFDriver); err != nil {
-			n.Log.WithField("driver", pf.VFDriver).Info("failed to load module for VF driver")
-			return err
-		}
-
-		if len(acc.VFs) > 0 {
-			if err := n.changeAmountOfVFs(pf.PFDriver, pf.PCIAddress, 0); err != nil {
-				return err
-			}
-		}
-
-		if err := n.bindDeviceToDriver(pf.PCIAddress, pf.PFDriver); err != nil {
-			return err
-		}
-
-		if err := n.changeAmountOfVFs(pf.PFDriver, pf.PCIAddress, pf.VFAmount); err != nil {
-			return err
-		}
-
-		createdVfs, err := getVFList(pf.PCIAddress)
-		if err != nil {
-			n.Log.WithError(err).Error("failed to get list of newly created VFs")
-			return err
-		}
-
-		for _, vf := range createdVfs {
-			if err := n.bindDeviceToDriver(vf, pf.VFDriver); err != nil {
-				return err
-			}
-		}
-
-		if pf.BBDevConfig.N3000 != nil || pf.BBDevConfig.ACC100 != nil {
-			bbdevConfigFilepath := filepath.Join(workdir, fmt.Sprintf("%s.ini", pf.PCIAddress))
-			if err := generateBBDevConfigFile(n.Log, pf.BBDevConfig, bbdevConfigFilepath); err != nil {
-				n.Log.WithError(err).WithField("pci", pf.PCIAddress).Error("failed to create bbdev config file")
-				return err
-			}
-			defer func() {
-				if err := os.Remove(bbdevConfigFilepath); err != nil {
-					n.Log.WithError(err).WithField("path", bbdevConfigFilepath).Error("failed to remove old bbdev config file")
-				}
-			}()
-
-			deviceName := supportedAccelerators.Devices[acc.DeviceID]
-			if err := runPFConfig(n.Log, deviceName, bbdevConfigFilepath, pf.PCIAddress); err != nil {
-				n.Log.WithError(err).WithField("pci", pf.PCIAddress).Error("failed to configure device's queues")
-				return err
-			}
-		} else {
-			n.Log.Info("N3000 and ACC100 BBDevConfig are nil - queues will not be (re)configured")
-		}
-
-		if pciStubRegex.MatchString(pf.PFDriver) {
-			if err := n.enableMasterBus(pf.PCIAddress); err != nil {
-				return err
-			}
 		}
 	}
 
 	return nil
+}
+
+func (n *NodeConfigurator) configureAccelerator(acc sriovv2.SriovAccelerator, requestedConfig *sriovv2.PhysicalFunctionConfigExt) error {
+	n.Log.WithField("requestedConfig", requestedConfig).Info("configuring PF")
+
+	if err := n.cleanAcceleratorConfig(acc); err != nil {
+		return err
+	}
+
+	if err := loadDrivers(n, requestedConfig.PFDriver, requestedConfig.VFDriver); err != nil {
+		return err
+	}
+
+	if err := n.bindDeviceToDriver(requestedConfig.PCIAddress, requestedConfig.PFDriver); err != nil {
+		return err
+	}
+
+	if err := n.pfBBConfigController.initializePfBBConfig(acc, requestedConfig); err != nil {
+		return err
+	}
+
+	pciStubRegex := regexp.MustCompile("pci[-_]pf[-_]stub")
+	if pciStubRegex.MatchString(requestedConfig.PFDriver) {
+		if err := n.enableMasterBus(requestedConfig.PCIAddress); err != nil {
+			return err
+		}
+	}
+
+	if err := n.changeAmountOfVFs(requestedConfig.PFDriver, requestedConfig.PCIAddress, requestedConfig.VFAmount); err != nil {
+		return err
+	}
+
+	createdVfs, err := getVFList(acc.PCIAddress)
+	if err != nil {
+		n.Log.WithError(err).Error("failed to get list of newly created VFs")
+		return err
+	}
+
+	for _, vf := range createdVfs {
+		if err := n.bindDeviceToDriver(vf, requestedConfig.VFDriver); err != nil {
+			return err
+		}
+	}
+
+	return nil
+
 }
 
 func getMatchingConfiguration(pciAddress string, configurations []sriovv2.PhysicalFunctionConfigExt) *sriovv2.PhysicalFunctionConfigExt {

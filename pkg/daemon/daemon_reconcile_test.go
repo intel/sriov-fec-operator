@@ -35,6 +35,7 @@ var _ = Describe("NodeConfigReconciler.Reconcile", func() {
 			nodeInventory      *sriovv2.NodeInventory
 		)
 		BeforeEach(func() {
+			procCmdlineFilePath = "testdata/cmdline_test"
 			fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
 			nodeNameRef = types.NamespacedName{Name: "worker", Namespace: "testNamespace"}
 			nodeInventory = &sriovv2.NodeInventory{
@@ -49,8 +50,8 @@ var _ = Describe("NodeConfigReconciler.Reconcile", func() {
 				},
 			}
 			configurer := testConfigurerProto{
-				configureNodeFunction: func(nodeConfig *sriovv2.SriovFecNodeConfig) (err error) {
-					for _, pf := range nodeConfig.Spec.PhysicalFunctions {
+				configureNodeFunction: func(nodeConfig sriovv2.SriovFecNodeConfigSpec) (err error) {
+					for _, pf := range nodeConfig.PhysicalFunctions {
 						for i, accelerator := range nodeInventory.SriovAccelerators {
 							if accelerator.PCIAddress != pf.PCIAddress {
 								continue
@@ -73,7 +74,17 @@ var _ = Describe("NodeConfigReconciler.Reconcile", func() {
 				return nodeInventory, nil
 			}
 
-			reconciler = NodeConfigReconciler{Client: fakeClient, log: utils.NewLogger(), nodeNameRef: nodeNameRef, configurer: configurer}
+			reconciler = NodeConfigReconciler{
+				Client:      fakeClient,
+				log:         utils.NewLogger(),
+				nodeNameRef: nodeNameRef,
+				configurer:  configurer,
+				drainerAndExecute: func(configurer func(ctx context.Context) bool, drain bool) error {
+					_ = configurer(context.TODO())
+					return nil
+				}, restartDevicePlugin: func() error {
+					return nil
+				}}
 			reconcileRequestes = ctrl.Request{NamespacedName: nodeNameRef}
 		})
 
@@ -130,9 +141,9 @@ var _ = Describe("NodeConfigReconciler.Reconcile", func() {
 })
 
 type testConfigurerProto struct {
-	configureNodeFunction func(nodeConfig *sriovv2.SriovFecNodeConfig) error
+	configureNodeFunction func(nodeConfig sriovv2.SriovFecNodeConfigSpec) error
 }
 
-func (t testConfigurerProto) configureNode(nodeConfig *sriovv2.SriovFecNodeConfig) error {
+func (t testConfigurerProto) ApplySpec(nodeConfig sriovv2.SriovFecNodeConfigSpec) error {
 	return t.configureNodeFunction(nodeConfig)
 }

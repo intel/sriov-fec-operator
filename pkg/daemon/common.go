@@ -10,6 +10,12 @@ import (
 )
 
 func execCmd(args []string, log *logrus.Logger) (string, error) {
+	return execAndSuppress(args, log, func(error) bool {
+		return false
+	})
+}
+
+func execAndSuppress(args []string, log *logrus.Logger, suppressError func(e error) bool) (string, error) {
 	var cmd *exec.Cmd
 	if len(args) == 0 {
 		log.Error("provided cmd is empty")
@@ -24,8 +30,12 @@ func execCmd(args []string, log *logrus.Logger) (string, error) {
 
 	out, err := cmd.Output()
 	if err != nil {
-		log.WithField("cmd", args).WithField("output", string(out)).WithError(err).Error("failed to execute command")
-		return "", err
+		if suppressError(err) {
+			log.WithField("cmd", args).WithError(err).Info("ignoring error")
+		} else {
+			log.WithField("cmd", args).WithField("output", string(out)).WithError(err).Error("failed to execute command")
+			return string(out), err
+		}
 	}
 
 	output := string(out)
