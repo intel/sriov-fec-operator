@@ -167,6 +167,10 @@ data:
               name: bin
             - mountPath: /host/usr/sbin
               name: sbin
+            - mountPath: /host/bin
+              name: bin
+            - mountPath: /host/sbin
+              name: sbin
             - name: logs
               mountPath: /var/log
             - name: tmp
