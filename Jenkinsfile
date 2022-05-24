@@ -11,6 +11,7 @@ pipeline {
         no_proxy="${no_proxy},.intel.com"
         SNYK_API="https://snyk.devtools.intel.com/api"
         SNYK_TOKEN=credentials('SNYK_TOKEN')
+        PROTEX_PASSWORD=credentials('PROTEX_CRED')
     }
 
     stages {
@@ -98,6 +99,34 @@ pipeline {
                     '''
                 }
             }
+        }
+
+        stage ('Virus / malware scanning') {
+            steps {
+                container('go') {
+                    sh '''
+                        ci-scripts/malware_scane.sh ${WORKSPACE}
+                    '''
+                }
+            }
+        }
+
+        stage ('Scan IP') {
+            steps {
+                container('abi') {
+                    sh '''
+                        cd ${WORKSPACE}
+                        abi ip_scan --context ci-scripts/buildconfig.json --username=sbelhaik --password=$PROTEX_PASSWORD --scan_output="ip_scan"
+                        ci-scripts/check_protex_scan.sh
+                    '''
+                }
+            }
+        }
+
+        stage('archive') {
+          steps {
+            archiveArtifacts(artifacts: '**/*.txt, **/*.html, **/bin/, **/*.xlsx', followSymlinks: false)
+          }
         }
     }
 }
