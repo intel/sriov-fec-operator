@@ -5,6 +5,10 @@ pipeline {
         }
     }
 
+    options {
+        disableConcurrentBuilds()
+    }
+
     environment {
         http_proxy="http://proxy-dmz.intel.com:912/"
         https_proxy="http://proxy-dmz.intel.com:912/"
