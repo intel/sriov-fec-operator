@@ -5,7 +5,6 @@ kind: ClusterServiceVersion
 metadata:
   annotations:
     alm-examples: '[]'
-    olm.skipRange: '>=2.0.2 <=2.2.0'
     capabilities: Basic Install
     categories: Networking
     containerImage: registry.connect.redhat.com/intel/sriov-fec-operator@sha256:c2c989aa3e9f03558bf207df4524b756c89bc9234194d4f82c2ce77f6dd0b255 #TODO update before release
@@ -181,4 +180,5 @@ spec:
   provider:
     name: Intel Corporation
     url: https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html
+  replaces: sriov-fec.v2.2.1
   version: 0.0.0

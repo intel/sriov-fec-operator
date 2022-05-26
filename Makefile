@@ -4,7 +4,7 @@
 # Default k8s command-line tool exec
 export CLI_EXEC?=oc
 # Current Operator version
-VERSION ?= 2.2.1
+VERSION ?= 2.3.0
 # Supported channels
 CHANNELS ?= stable
 # Default channel
@@ -21,7 +21,7 @@ endif
 # tls verify flag for pushing images
 TLS_VERIFY ?= false
 
-REQUIRED_OPERATOR_SDK_VERSION ?= v1.17.0
+REQUIRED_OPERATOR_SDK_VERSION ?= v1.20.1
 
 IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)sriov-fec
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
