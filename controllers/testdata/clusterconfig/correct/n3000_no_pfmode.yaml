@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2022 Intel Corporation
+
+apiVersion: sriovfec.intel.com/v2
+kind: SriovFecClusterConfig
+metadata:
+  name: config
+spec:
+  nodeSelector:
+    foo: bar
+  acceleratorSelector:
+    deviceID: anyDevice
+  physicalFunction:
+    pfDriver: pci-pf-stub
+    vfDriver: vfDriver
+    vfAmount: 2
+    bbDevConfig:
+      n3000:
+        networkType: FPGA_5GNR
+        flrTimeout: 610
+        downlink:
+          bandwidth: 3
+          loadBalance: 128
+          queues:
+            vf0: 16
+            vf1: 16
+            vf2: 0
+            vf3: 0
+            vf4: 0
+            vf5: 0
+            vf6: 0
+            vf7: 0
+        uplink:
+          bandwidth: 3
+          loadBalance: 128
+          queues:
+            vf0: 16
+            vf1: 16
+            vf2: 0
+            vf3: 0
+            vf4: 0
+            vf5: 0
+            vf6: 0
+            vf7: 0

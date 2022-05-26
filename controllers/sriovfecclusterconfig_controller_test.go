@@ -803,6 +803,9 @@ var _ = Describe("SriovControllerTest", func() {
 	})
 
 	var _ = Describe("API validators", func() {
+
+		var log = logrus.New()
+
 		type kubectl interface {
 			Run(args ...string) (stdout, stderr io.Reader, err error)
 		}
@@ -831,6 +834,24 @@ var _ = Describe("SriovControllerTest", func() {
 						It(filepath.Base(path), func() {
 							_, errOut, e := kctl.Run("apply", "-f", path, "-n", "default")
 							Expect(e).ToNot(HaveOccurred(), read(errOut))
+						})
+					}
+					return nil
+				},
+			)
+
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		_ = Context("Verifying Incorrect SriovFecClusterConfigs", func() {
+			err := filepath.Walk("./testdata/clusterconfig/incorrect",
+				func(path string, info os.FileInfo, err error) error {
+					Expect(err).ToNot(HaveOccurred())
+					if !info.IsDir() {
+						It(filepath.Base(path), func() {
+							_, errOut, e := kctl.Run("apply", "-f", path, "-n", "default")
+							log.Infof("Expected error: %s", errOut)
+							Expect(e).To(HaveOccurred())
 						})
 					}
 					return nil

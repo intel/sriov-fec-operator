@@ -66,7 +66,10 @@ type UplinkDownlink struct {
 type N3000BBDevConfig struct {
 	// +kubebuilder:validation:Enum=FPGA_5GNR;FPGA_LTE
 	NetworkType string `json:"networkType"`
-	PFMode      bool   `json:"pfMode"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:false
+	// +kubebuilder:validation:Enum=false
+	PFMode bool `json:"pfMode,omitempty"`
 	// +kubebuilder:validation:Minimum=0
 	FLRTimeOut int            `json:"flrTimeout"`
 	Downlink   UplinkDownlink `json:"downlink"`
@@ -87,13 +90,18 @@ type QueueGroupConfig struct {
 
 // ACC100BBDevConfig specifies variables to configure ACC100 with
 type ACC100BBDevConfig struct {
-	PFMode bool `json:"pfMode"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:false
+	// +kubebuilder:validation:Enum=false
+	PFMode bool `json:"pfMode,omitempty"`
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=16
 	NumVfBundles int `json:"numVfBundles"`
 	// +kubebuilder:validation:Minimum=1024
 	// +kubebuilder:validation:Maximum=1024
-	MaxQueueSize int              `json:"maxQueueSize"`
+	// +kubebuilder:default:1024
+	// +kubebuilder:validation:Optional
+	MaxQueueSize int              `json:"maxQueueSize,omitempty"`
 	Uplink4G     QueueGroupConfig `json:"uplink4G"`
 	Downlink4G   QueueGroupConfig `json:"downlink4G"`
 	Uplink5G     QueueGroupConfig `json:"uplink5G"`
