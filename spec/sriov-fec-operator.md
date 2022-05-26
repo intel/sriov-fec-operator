@@ -3,7 +3,7 @@ SPDX-License-Identifier: Apache-2.0
 Copyright (c) 2020-2022 Intel Corporation
 ```
 <!-- omit in toc -->
-# SEO Operator for Wireless FEC Accelerators documentation
+# Smart Edge Open (SEO) Operator for Wireless FEC Accelerators
 
 - [Overview](#overview)
 - [SEO Operator for Wireless FEC Accelerators](#seo-operator-for-wireless-fec-accelerators)
@@ -11,7 +11,7 @@ Copyright (c) 2020-2022 Intel Corporation
     - [FEC Configuration](#fec-configuration)
     - [SRIOV Device Plugin](#sriov-device-plugin)
 - [Managing NIC Devices](#managing-nic-devices)
-- [Technical Requirements and Dependencies](#technical-requirements-and-dependencies)
+- [Secure boot](#secure-boot)
 - [Deploying the Operator](#deploying-the-operator)
   - [Install dependencies](#install-dependencies)
   - [Install the Bundle](#install-the-bundle)
@@ -45,7 +45,13 @@ The operator design of the SEO Operator for Intel Wireless FEC Accelerator suppo
 
 ### Wireless FEC Acceleration management
 
-This operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications - the FEC devices are provided by a designated hardware (ie. FPGA or eASIC PCI extension cards). It provides functionality to create desired VFs (Virtual Functions) for the FEC device, binds them to appropriate drivers and configures the VF's queues for desired functionality in 4G or 5G deployment. It also deploys an instance of the SR-IOV Network device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources. The user interacts with the operator by providing a CR (CustomResource). The operator constantly monitors the state of the CR to detect any changes and acts based on the changes detected. The CR is provided per cluster configuration. The components for individual nodes can be configured by specifying appropriate values for each component per "nodeSelector". Once the CR is applied or updated, the operator/daemon checks if the configuration is already applied, and, if not it binds the PFs to driver, creates desired amount of VFs, binds them to driver and runs the [pf-bb-config utility](https://github.com/intel/pf-bb-config) to configure the VF queues to the desired configuration.
+This operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications - the FEC devices are provided by a designated hardware (ie. FPGA or eASIC PCI extension cards). 
+It provides functionality to create desired VFs (Virtual Functions) for the FEC device, binds them to appropriate drivers and configures the VF's queues for desired functionality in 4G or 5G deployment. 
+It also deploys an instance of the [SR-IOV Network Device Plugin](https://github.com/k8snetworkplumbingwg/sriov-network-device-plugin) which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources. 
+The user interacts with the operator by providing a CR (CustomResource). 
+The operator constantly monitors the state of the CR to detect any changes and acts based on the changes detected. 
+The CR is provided per cluster configuration. The components for individual nodes can be configured by specifying appropriate values for each component per "nodeSelector".
+Once the CR is applied or updated, the operator/daemon checks if the configuration is already applied, and, if not it binds the PFs to driver, creates desired amount of VFs, binds them to driver and runs the [pf-bb-config utility](https://github.com/intel/pf-bb-config) to configure the VF queues to the desired configuration.
 
 This operator is a common operator for FEC device/resource management for a range on accelerator cards. For specific examples of CRs dedicated to single accelerator card only see:
 
@@ -340,6 +346,35 @@ TestCase [ 0] : validation_tc passed
 ## Managing NIC Devices
 
 The management of the NIC SRIOV devices/resources in the OpenShift cluster is out of scope of this operator. The user is expected to deploy an operator/[SRIOV Network Device plugin](https://github.com/openshift/sriov-network-device-plugin) which will handle the orchestration of SRIOV NIC VFs between pods.
+
+## Secure Boot
+
+Until SRIOV-FEC operator 2.3.0, `pf-bb-config` application which comes as part of SRIOV-FEC operator distribution, 
+relied on MMIO access to the PF of the ACC100 (access through mmap of the PF PCIe BAR config space using igb_uio and/or pf_pci_stub drivers).
+
+In case of enabled secure boot, this access is blocked by kernel through a feature called [lockdown](https://man7.org/linux/man-pages/man7/kernel_lockdown.7.html).
+Lockdown mode automatically prevents relying on igb_uio and/or pf_pci_stub drivers due to the direct mmap.
+In other words: when secure boot is enabled, this legacy usage is not supported.
+
+To be able to support this special mode, `pf_bb_config` application has been enhanced (v22.03) and now it could use more secure approach relying on vfio-pci.  
+
+| ![SRIOV FEC Operator Design](images/vfio/vfio-pci.svg) |
+|------------------------------------------------------|
+
+SRIOV-FEC operator 2.3.0 leverages enhancements provided by `pf_bb_config` and it provides support for vfio-pci driver. 
+It means operator would work correctly on a platforms where secure boot is enabled.
+
+'vfio-pci' driver support implemented in SRIOV-FEC operator 2.3.0 is visualized by diagram below:
+
+
+| ![SRIOV FEC Operator Design](images/vfio/vfio-pci-support-in-operator.svg) |
+|-------------------------------------------------------------------------------|
+
+Previously supported drivers `pci-pf-stub` and `igb_uio` are still supported by an operator, but they cannot be used together with secure boot feature.
+
+Please be aware that usage of `vfio-pci` driver requires following arguments added to the kernel:
+ - vfio_pci.enable_sriov=1
+ - vfio_pci.disable_idle_d3=1
 
 ## Deploying the Operator
 

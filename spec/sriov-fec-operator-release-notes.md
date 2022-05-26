@@ -39,6 +39,7 @@ This document provides high-level system features, issues, and limitations infor
 | 2.1.1   | January 2022   | 4.9                          | 4.9.7                  |
 | 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5 | 
 | 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5 |
+| 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | TODO: TBD              |
 
 # Features for Release
 
