@@ -146,7 +146,8 @@ data:
             imagePullPolicy: IfNotPresent
             volumeMounts:
             - name: devvfio
-              mountPath: /dev/vfio             
+              mountPath: /dev/vfio      
+              readOnly: true        
             - name: vfiotoken
               mountPath: /sriov_config/
               readOnly: true    
@@ -159,18 +160,24 @@ data:
               readOnly: true
             - mountPath: /host/lib
               name: lib
+              readOnly: true    
             - mountPath: /host/lib64
               name: lib64
+              readOnly: true    
             - mountPath: /host/proc
               name: proc
             - mountPath: /host/usr/bin
               name: bin
+              readOnly: true    
             - mountPath: /host/usr/sbin
               name: sbin
+              readOnly: true    
             - mountPath: /host/bin
               name: bin
+              readOnly: true    
             - mountPath: /host/sbin
               name: sbin
+              readOnly: true    
             - name: logs
               mountPath: /var/log
             - name: tmp
@@ -217,30 +224,24 @@ data:
               items:
                - key: VFIO_TOKEN
                  path: vfiotoken
-          - hostPath:
+          - name: lib
+            hostPath:
               path: /usr/lib
-              type: ""
-            name: lib
-          - hostPath:
+          - name: lib64
+            hostPath:
               path: /usr/lib64
-              type: ""
-            name: lib64
-          - hostPath:
+          - name: bin
+            hostPath:
               path: /usr/bin
-              type: ""
-            name: bin
-          - hostPath:
+          - name: sbin
+            hostPath:
               path: /usr/sbin
-              type: ""
-            name: sbin
-          - hostPath:
+          - name: proc
+            hostPath:
               path: /proc
-              type: ""
-            name: proc
-          - hostPath:
+          - name: devvfio
+            hostPath:
               path: /dev/vfio
-              type: ""
-            name: devvfio
           - name: logs
             emptyDir: {}
           - name: tmp
