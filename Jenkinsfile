@@ -13,13 +13,31 @@ pipeline {
         http_proxy="http://proxy-dmz.intel.com:912/"
         https_proxy="http://proxy-dmz.intel.com:912/"
         no_proxy="${no_proxy},.intel.com"
+        GO_VERSION="1.18.2"
+        GO_TAR="go${GO_VERSION}.linux-amd64.tar.gz"
+        GOROOT="/home/jenkins/agent/workspace/go${GO_VERSION}"
+        GOPATH="/home/jenkins/agent/workspace/go"
+        PATH="${GOROOT}/bin:${env.PATH}"
         SNYK_API="https://snyk.devtools.intel.com/api"
         SNYK_TOKEN=credentials('SNYK_TOKEN')
         PROTEX_PASSWORD=credentials('PROTEX_CRED')
     }
 
     stages {
-
+        stage ('goinstall') {
+            steps {
+                container('go') {
+                sh '''
+                            cd ..
+                            mkdir -p ${GOPATH}
+                            wget -q https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
+                            mkdir go${GO_VERSION}
+                            tar xzf go${GO_VERSION}.linux-amd64.tar.gz -C /home/jenkins/agent/workspace/go${GO_VERSION} --strip-components=1
+                            rm -rf go${GO_VERSION}.linux-amd64.tar.gz
+                '''
+                }
+            }
+        }
         stage('Prerequisites') {
             steps {
                 container('go') {

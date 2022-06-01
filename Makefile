@@ -14,6 +14,8 @@ DEFAULT_CHANNEL ?= stable
 IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
 CONTAINER_TOOL ?= podman
 
+FUZZ_TIME?=10m
+
 # Add suffix directly to IMAGE_REGISTRY to enable empty registry(local images)
 ifneq ($(and $(strip $(IMAGE_REGISTRY)), $(filter-out %/, $(IMAGE_REGISTRY))),)
 override IMAGE_REGISTRY:=$(addsuffix /,$(IMAGE_REGISTRY))
@@ -77,23 +79,21 @@ envtest: ## Download envtest-setup locally if necessary.
 	echo $(ENVTEST)
 	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
-# go-get-tool will 'go get' any package $2 and install it to $1.
-PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-define go-get-tool
-@[ -f $(1) ] || { \
-set -e ;\
-TMP_DIR=$$(mktemp -d) ;\
-cd $$TMP_DIR ;\
-go mod init tmp ;\
-echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
-rm -rf $$TMP_DIR ;\
-}
-endef
-
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" SRIOV_FEC_NAMESPACE=default go test ./... -coverprofile cover.out
+
+
+TEST_PACKAGES := $(shell find . -name "*_test.go")
+
+.PHONY: fuzz
+fuzz:
+	@for pkg in ${TEST_PACKAGES} ; do            \
+		for target in `grep -oh -EI 'Fuzz([A-Z][a-z]*)+' $$pkg` ; do     \
+			echo "Executing $$pkg#$$target";     \
+			KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" SRIOV_FEC_NAMESPACE=default go test -fuzz=$$target $$pkg/.. -fuzztime=${FUZZ_TIME} || true; \
+		done                              \
+	done
 
 # Build manager binary
 .PHONY: manager
@@ -160,14 +160,15 @@ generate: controller-gen
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
+
 define go-get-tool
 @[ -f $(1) ] || { \
 set -e ;\
 TMP_DIR=$$(mktemp -d) ;\
 cd $$TMP_DIR ;\
 go mod init tmp ;\
-echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
+echo "Installing $(2)" ;\
+GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
@@ -182,7 +183,7 @@ controller-gen: ## Download controller-gen locally if necessary.
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 .PHONY: kustomize
 kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
+	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.5)
 
 # Build/Push daemon image
 .PHONY: image-sriov-fec-daemon

@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/go-logr/logr"
+	fuzz "github.com/google/gofuzz"
 	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -385,3 +386,35 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
+
+func FuzzValidateUpdate(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		sfcc := new(SriovFecClusterConfig)
+		fuzz.NewFromGoFuzz(data).Fuzz(sfcc)
+
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("fuzzing resulted in panic. sfcc:\n %+v\n", sfcc)
+			}
+		}()
+
+		_ = sfcc.ValidateUpdate(nil)
+
+	})
+}
+
+func FuzzValidateCreate(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		sfcc := new(SriovFecClusterConfig)
+		fuzz.NewFromGoFuzz(data).Fuzz(sfcc)
+
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("fuzzing resulted in panic. sfcc:\n %+v\n", sfcc)
+			}
+		}()
+
+		_ = sfcc.ValidateCreate()
+
+	})
+}
