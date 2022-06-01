@@ -8,7 +8,7 @@ The SEO Operator for Wireless FEC Accelerators has the following requirements:
 - RT Kernel configured for OS [Centos 7](https://linuxsoft.cern.ch/cern/centos/7/rt/x86_64/repoview/kernel-rt.html) or [Ubuntu](https://askubuntu.com/questions/1349568/installing-real-time-patch-for-ubuntu-20-04)
 - [Configured kernel parameters](https://wiki.ubuntu.com/Kernel/KernelBootParameters#Permanently_Add_a_Kernel_Boot_Parameter): 
   - Always required: `"intel_iommu=on", "iommu=pt"`
-  - sriov-fec:2.3.0 comes with experimental support of `vfio-pci` driver. Configurations leveraging `vfio-pci` require following kernel parameters:
+  - sriov-fec:2.3.0 comes with initial support of `vfio-pci` driver for ACC100. Configurations leveraging `vfio-pci` require following kernel parameters:
     - vfio_pci.enable_sriov=1
     - vfio_pci.disable_idle_d3=1
     

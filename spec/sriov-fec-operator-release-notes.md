@@ -45,7 +45,7 @@ This document provides high-level system features, issues, and limitations infor
 
 ***v2.3.0***
 - pf-bb-config updated (21.11 -> 22.03)
-- Experimental support of vfio-pci driver
+- Initial support of vfio-pci driver for ACC100 
 
 ***v2.2.1***
 - Completed validation for MacLaren Summit card
