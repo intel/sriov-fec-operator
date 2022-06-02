@@ -38,24 +38,6 @@ pipeline {
                 }
             }
         }
-        stage('Prerequisites') {
-            steps {
-                container('go') {
-                    dir("$WORKSPACE") {
-                        sh '''
-                            curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin
-                            curl -fsSL https://deb.nodesource.com/setup_12.x | bash -
-                            apt-get install -y yamllint pciutils nodejs aha
-                            npm install snyk@v1.658.0 -g
-                            npm install snyk-to-html -g
-                            mkdir /usr/share/hwdata
-                            ln -s /usr/share/misc/pci.ids /usr/share/hwdata/pci.ids
-                            update-pciids
-                        '''
-                    }
-                }
-            }
-        }
 
         stage ('Build') {
             steps {
