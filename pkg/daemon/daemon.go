@@ -5,13 +5,17 @@ package daemon
 
 import (
 	"context"
+	"fmt"
 	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
+	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	"os/exec"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"strings"
 	"time"
 
 	fec "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/api/v2"
@@ -38,6 +42,9 @@ var (
 	configPath            = "/sriov_config/config/accelerators.json"
 	getSriovInventory     = GetSriovInventory
 	supportedAccelerators utils.AcceleratorDiscoveryConfig
+	procCmdlineFilePath   = "/host/proc/cmdline"
+	kernelParams          = []string{"intel_iommu=on", "iommu=pt"}
+	kernelParamsVfio      = []string{"vfio_pci.enable_sriov=1", "vfio_pci.disable_idle_d3=1"}
 )
 
 type NodeConfigReconciler struct {
@@ -75,6 +82,10 @@ func (r *NodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (c
 	nc, err := r.readSriovFecNodeConfig(req.NamespacedName)
 	if err != nil {
 		return requeueNowWithError(err)
+	}
+
+	if err := validateNodeConfig(nc.Spec); err != nil {
+		return requeueNowWithError(r.updateStatus(nc, metav1.ConditionFalse, ConfigurationFailed, err.Error()))
 	}
 
 	detectedInventory, err := r.readExistingInventory()
@@ -258,11 +269,6 @@ func (r *NodeConfigReconciler) configureNode(nodeConfig *fec.SriovFecNodeConfig)
 	var configurationError error
 
 	drainFunc := func(ctx context.Context) bool {
-		if err := verifyKernelConfiguration(); err != nil {
-			configurationError = err
-			return true
-		}
-
 		if err := r.configurer.ApplySpec(nodeConfig.Spec); err != nil {
 			r.log.WithError(err).Error("failed applying new PF/VF configuration")
 			configurationError = err
@@ -358,4 +364,41 @@ func CreateManager(config *rest.Config, namespace string, scheme *runtime.Scheme
 		LeaderElection:     false,
 		Namespace:          namespace,
 	})
+}
+
+func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {
+	cmdlineBytes, err := ioutil.ReadFile(procCmdlineFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to read file contents: path: %v, error - %v", procCmdlineFilePath, err)
+	}
+	cmdline := string(cmdlineBytes)
+	//common attributes for SRIOV
+	for _, param := range kernelParams {
+		if !strings.Contains(cmdline, param) {
+			return fmt.Errorf("missing kernel param(%s)", param)
+		}
+	}
+
+	for _, physFunc := range nodeConfig.PhysicalFunctions {
+		switch physFunc.PFDriver {
+		case "pci-pf-stub", "pci_pf_stub", "igb_uio":
+			dmesgBytes, err := exec.Command("dmesg").Output()
+			if err != nil {
+				return fmt.Errorf("failed to run 'dmesg' - %v", err.Error())
+			}
+			dmesgOut := string(dmesgBytes)
+			if strings.Contains(dmesgOut, "Secure boot enabled") {
+				return fmt.Errorf("'%s' driver doesn't supports SecureBoot. It is supported only by 'vfio-pci'", physFunc.PFDriver)
+			}
+		case "vfio-pci":
+			for _, param := range kernelParamsVfio {
+				if !strings.Contains(cmdline, param) {
+					return fmt.Errorf("missing kernel param for vfio-pci(%s)", param)
+				}
+			}
+		default:
+			return fmt.Errorf("unknown driver '%s'", physFunc.PFDriver)
+		}
+	}
+	return nil
 }
