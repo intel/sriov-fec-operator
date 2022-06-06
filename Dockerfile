@@ -2,7 +2,7 @@
 ## Copyright (c) 2020-2021 Intel Corporation
 
 # Build the manager binary
-FROM golang:1.18.2-alpine3.16 as builder
+FROM golang:1.18.3 as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests

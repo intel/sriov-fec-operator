@@ -67,7 +67,7 @@ func NewDrainHelper(log *logrus.Logger, cs *clientset.Clientset, nodeName, names
 	if leaseDurStr != "" {
 		val, err := strconv.ParseInt(leaseDurStr, 10, 64)
 		if err != nil {
-			log.WithError(err).WithField("varaible", leaseDurationEnvVarName).Error("failed to parse env variable to int64 - using default value")
+			log.WithError(err).WithField("variable", leaseDurationEnvVarName).Error("failed to parse env variable to int64 - using default value")
 		} else {
 			leaseDur = val
 		}
