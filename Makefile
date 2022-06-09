@@ -98,17 +98,17 @@ fuzz:
 # Build manager binary
 .PHONY: manager
 manager: generate fmt vet
-	go build -o bin/manager main.go
+	go build -race -o bin/manager main.go
 
 #Build daemon binary
 .PHONY: daemon
 daemon: generate fmt vet
-	go build -o bin/daemon cmd/daemon/main.go
+	go build -race -o bin/daemon cmd/daemon/main.go
 
 #Build labeler binary
 .PHONY: labeler
 labeler: generate fmt vet
-	go build -o bin/labeler cmd/labeler/main.go
+	go build -race -o bin/labeler cmd/labeler/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 .PHONY: run
