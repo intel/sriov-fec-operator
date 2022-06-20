@@ -25,21 +25,21 @@ This document provides high-level system features, issues, and limitations infor
 
 ### SRIOV-FEC Operator
 
-| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP             |
-|---------|----------------|------------------------------|-----------------------------|
-| 1.0.0   | January 2021   | 4.6                          | 4.6.4                       |
-| 1.1.0   | March 2021     | 4.6                          | 4.6.16                      |
-| 1.2.0   | June 2021      | 4.7                          | 4.7.8                       |
-| 1.2.1   | June 2021      | 4.7                          | 4.7.8                       |
-| 1.3.0   | August 2021    | 4.8                          | 4.8.2                       |
-| 2.0.0   | September 2021 | 4.8                          | 4.8.5                       |
-| 2.0.1   | October 2021   | 4.8                          | 4.8.13                      |
-| 2.0.2   | November 2021  | 4.8                          | 4.8.12                      |
-| 2.1.0   | November 2021  | 4.9                          | 4.9.7                       |
-| 2.1.1   | January 2022   | 4.9                          | 4.9.7                       |
-| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5      | 
-| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5      |
-| 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.37RC, 4.10.17RC |
+| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP         |
+|---------|----------------|------------------------------|-------------------------|
+| 1.0.0   | January 2021   | 4.6                          | 4.6.4                   |
+| 1.1.0   | March 2021     | 4.6                          | 4.6.16                  |
+| 1.2.0   | June 2021      | 4.7                          | 4.7.8                   |
+| 1.2.1   | June 2021      | 4.7                          | 4.7.8                   |
+| 1.3.0   | August 2021    | 4.8                          | 4.8.2                   |
+| 2.0.0   | September 2021 | 4.8                          | 4.8.5                   |
+| 2.0.1   | October 2021   | 4.8                          | 4.8.13                  |
+| 2.0.2   | November 2021  | 4.8                          | 4.8.12                  |
+| 2.1.0   | November 2021  | 4.9                          | 4.9.7                   |
+| 2.1.1   | January 2022   | 4.9                          | 4.9.7                   |
+| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  | 
+| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  |
+| 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17 |
 
 # Features for Release
 
@@ -177,9 +177,17 @@ This document provides high-level system features, issues, and limitations infor
 
 # Supported Operating Systems
 
-TODO: TBD: 2.3.0
-TODO: TBD: 2.2.1
-TODO: TBD: 2.2.0
+***v2.3.0*** was tested using the following:
+- OpenShift: 4.10.17
+- OS: Red Hat Enterprise Linux CoreOS 410.84.202206010432-0 (Ootpa)
+- Kubernetes: v1.23.5+3afdacb
+- RT Kernel: 4.18.0-305.49.1.rt7.121.el8_4.x86_64
+
+***v2.3.0*** was tested using the following:
+- OpenShift: 4.9.36
+- OS: Red Hat Enterprise Linux CoreOS 49.84.202205241705-0 (Ootpa)
+- Kubernetes: v1.22.8+f34b40c
+- RT Kernel: 4.18.0-305.45.1.rt7.117.el8_4.x86_64
 
 ***v2.1.1*** was tested using the following:
 - OpenShift: 4.9.7
