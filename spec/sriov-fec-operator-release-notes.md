@@ -4,7 +4,7 @@ Copyright (c) 2020-2022 Intel Corporation
 ```
 <!-- omit in toc -->
 # Release Notes
-This document provides high-level system features, issues, and limitations information for SEO Operator for Intel® FPGA PAC N3000 and SEO SR-IOV Operator for Wireless FEC Accelerators.
+This document provides high-level system features, issues, and limitations information for SEO SR-IOV Operator for Wireless FEC Accelerators.
 - [Release history](#release-history)
 - [SRIOV-FEC Operator](#sriov-fec-operator)
 - [Features for Release](#features-for-release)

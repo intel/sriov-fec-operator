@@ -22,10 +22,6 @@ Copyright (c) 2020-2022 Intel Corporation
   - [Uninstalling Previously Installed Operator](#uninstalling-previously-installed-operator)
   - [Running operator on SNO](#running-operator-on-sno)
 - [Appendix 2 - SEO Operator for Wireless FEC Accelerators Examples](#appendix-2---seo-operator-for-wireless-fec-accelerators-examples)
-  - [N3000 FEC](#n3000-fec)
-    - [Sample CR for Wireless FEC (N3000)](#sample-cr-for-wireless-fec-n3000)
-    - [Sample Status for Wireless FEC (N3000)](#sample-status-for-wireless-fec-n3000)
-    - [Sample Daemon log for Wireless FEC (N3000)](#sample-daemon-log-for-wireless-fec-n3000)
   - [ACC100 FEC](#acc100-fec)
     - [Sample CR for Wireless FEC (ACC100)](#sample-cr-for-wireless-fec-acc100)
     - [Sample Status for Wireless FEC (ACC100)](#sample-status-for-wireless-fec-acc100)
@@ -40,12 +36,11 @@ This document provides the instructions for using the SEO Operator for Wireless 
 The role of the SEO Operator for Intel Wireless FEC Accelerator is to orchestrate and manage the resources/devices exposed by a range of Intel's vRAN FEC acceleration devices/hardware within the OpenShift or Kubernetes cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
 The operator design of the SEO Operator for Intel Wireless FEC Accelerator supports the following vRAN FEC accelerators:
 
-* [Intel® PAC N3000 for vRAN Acceleration](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration)
 * [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100)
 
 ### Wireless FEC Acceleration management
 
-This operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications - the FEC devices are provided by a designated hardware (ie. FPGA or eASIC PCI extension cards). 
+This operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications - the FEC devices are provided by a designated hardware (ie. Intel® vRAN Dedicated Accelerator ACC100).
 It provides functionality to create desired VFs (Virtual Functions) for the FEC device, binds them to appropriate drivers and configures the VF's queues for desired functionality in 4G or 5G deployment. 
 It also deploys an instance of the [SR-IOV Network Device Plugin](https://github.com/k8snetworkplumbingwg/sriov-network-device-plugin) which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources. 
 The user interacts with the operator by providing a CR (CustomResource). 
@@ -55,7 +50,6 @@ Once the CR is applied or updated, the operator/daemon checks if the configurati
 
 This operator is a common operator for FEC device/resource management for a range on accelerator cards. For specific examples of CRs dedicated to single accelerator card only see:
 
-* [Sample CR for Wireless FEC (N3000)](#sample-cr-for-wireless-fec-n3000)
 * [Sample CR for Wireless FEC (ACC100)](#sample-cr-for-wireless-fec-acc100)
 
 The workflow of the SRIOV FEC operator is shown in the following diagram:
@@ -63,11 +57,9 @@ The workflow of the SRIOV FEC operator is shown in the following diagram:
 
 #### FEC Configuration
 
-The Intel's vRAN FEC acceleration devices/hardware expose the FEC PF device which is to be bound to PCI-PF-STUB driver (igb_uio driver also supported) in order to enable creation of the FEC VF devices. Once the FEC PF is bound to the correct driver, the user can create a number of devices to be used in Cloud Native deployment of vRAN to accelerate FEC. Once these devices are created they are to be bound to a user-space driver such as VFIO-PCI in order for them to work and be consumed in vRAN application pods. Before the device can be used by the application, the device needs to be configured - notably the mapping of queues exposed to the VFs - this is done via pf-bb-config application with the input from the CR used as a configuration.
+The Intel's vRAN FEC acceleration devices/hardware expose the FEC PF device which is to be bound to PCI-PF-STUB, ISB_UIO and VFIO-PCI in order to enable creation of the FEC VF devices. Once the FEC PF is bound to the correct driver, the user can create a number of devices to be used in Cloud Native deployment of vRAN to accelerate FEC. Once these devices are created they are to be bound to a user-space driver such as VFIO-PCI in order for them to work and be consumed in vRAN application pods. Before the device can be used by the application, the device needs to be configured - notably the mapping of queues exposed to the VFs - this is done via pf-bb-config application with the input from the CR used as a configuration.
 
 > NOTE: For [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100) it is advised to create all 16 VFs. The card is configured to provide up to 8 queue groups with up to 16 queues per group. The queue groups can be divided between groups allocated to 5G/4G and Uplink/Downlink, it can be configured for 4G or 5G only, or both 4G and 5G at the same time. Each configured VF has access to all the queues. Each of the queue groups has a distinct priority level. The request for given queue group is made from application level (ie. vRAN application leveraging the FEC device).
-
-> NOTE: For [Intel® PAC N3000 for vRAN Acceleration](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-pac-n3000-for-vran-acceleration) the user can create up to 8 VF devices. Each FEC PF device provides a total of 64 queues to be configured, 32 queues for uplink and 32 queues for downlink. The queues would be typically distributed evenly across the VFs.
 
 To get all the nodes containing one of the supported vRAN FEC accelerator devices run the following command (all the commands are run in the `vran-acceleration-operators` namespace, if operator is used on Kubernetes then use `kubectl` instead of `oc`):
 ```shell
@@ -102,7 +94,6 @@ status:
 
 To configure the FEC device with desired setting create a CR (An example below configures ACC100's 8/8 queue groups for 5G, 4 queue groups for Uplink and another 4 queues groups for Downlink), for the list of CRs applicable to all supported devices see:
 
-* [Sample CR for Wireless FEC (N3000)](#sample-cr-for-wireless-fec-n3000)
 * [Sample CR for Wireless FEC (ACC100)](#sample-cr-for-wireless-fec-acc100)
 
 ```yaml
@@ -160,8 +151,6 @@ node1            Succeeded
 
 From SRIOV FEC daemon pod, the user should see logs similar to the output below, if the VF queues were successfully programmed. For a list of sample log outputs for applicable devices see:
 
-* [Sample Daemon log for Wireless FEC (N3000)](#sample-daemon-log-for-wireless-fec-n3000)
-
 * [Sample Daemon log for Wireless FEC (ACC100)](#sample-daemon-log-for-wireless-fec-acc100)
 
 ```shell
@@ -174,8 +163,7 @@ sriov-fec-daemonset-h4jf8                      1/1     Running   0          19h
 {"level":"Level(-2)","ts":1616798129.251027,"logger":"daemon.drainhelper.cordonAndDrain()","msg":"node drained"}
 {"level":"Level(-4)","ts":1616798129.2510319,"logger":"daemon.drainhelper.Run()","msg":"worker function - start"}
 {"level":"Level(-4)","ts":1616798129.341839,"logger":"daemon.NodeConfigurator.applyConfig","msg":"current node status","inventory":{"sriovAccelerators":[{"vendorID":"8086","deviceID":"0b32","pciAddress":"0000:20:00.0","driver":"pci-pf-stub","maxVirtualFunctions":1,"virtualFunctions":[{"pciAddress":"0000:20:00.1","driver":"vfio-pci","deviceID":"0b33"}]},{"vendorID":"8086","deviceID":"0d5c","pciAddress":"0000:af:00.0","driver":"pci-pf-stub","maxVirtualFunctions":16,"virtualFunctions":[{"pciAddress":"0000:b0:00.0","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.1","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.2","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.3","driver":"vfio-pci","deviceID":"0d5d"}]}]}}
-{"level":"Level(-4)","ts":1616798129.3419566,"logger":"daemon.NodeConfigurator.applyConfig","msg":"configuring PF","requestedConfig":{"pciAddress":"0000:20:00.0","pfDriver":"pci-pf-stub","vfDriver":"vfio-pci","vfAmount":1,"bbDevConfig":{"n3000":{"networkType":"FPGA_5GNR","pfMode":false,"flrTimeout":610,"downlink":{"bandwidth":3,"loadBalance":128,"queues":{"vf0":16,"vf1":16,"vf2":0,"vf3":0,"vf4":0,"vf5":0,"vf6":0,"vf7":0}},"uplink":{"bandwidth":3,"loadBalance":128,"queues":{"vf0":16,"vf1":16,"vf2":0,"vf3":0,"vf4":0,"vf5":0,"vf6":0,"vf7":0}}}}}}
-{"level":"Level(-4)","ts":1616798129.3419993,"logger":"daemon.NodeConfigurator.loadModule","msg":"executing command","cmd":"/usr/sbin/chroot /host/ modprobe pci-pf-stub"}
+{"level":"Level(-4)","ts":1616798129.3419566,"logger":"daemon.NodeConfigurator.applyConfig","msg":"configuring PF","requestedConfig":{"pciAddress":"0000:20:00.0","pfDriver":"pci-pf-stub","vfDriver":"vfio-pci","vfAmount":1,"bbDevConfig":{"acc100":{"numVfBundles":1,"maxQueueSize":1024,"uplink4G":{"numQueueGroups":0,"numAqsPerGroups":16,"aqDepthLog2":4},"downlink4G":{"numQueueGroups":0,"numAqsPerGroups":16,"aqDepthLog2":4},"uplink5G":{"numQueueGroups":4,"numAqsPerGroups":16,"aqDepthLog2":4},"downlink5G":{"numQueueGroups":4,"numAqsPerGroups":16,"aqDepthLog2":4}}}}{"level":"Level(-4)","ts":1616798129.3419993,"logger":"daemon.NodeConfigurator.loadModule","msg":"executing command","cmd":"/usr/sbin/chroot /host/ modprobe pci-pf-stub"}
 {"level":"Level(-4)","ts":1616798129.3458664,"logger":"daemon.NodeConfigurator.loadModule","msg":"commands output","output":""}
 {"level":"Level(-4)","ts":1616798129.345896,"logger":"daemon.NodeConfigurator.loadModule","msg":"executing command","cmd":"/usr/sbin/chroot /host/ modprobe vfio-pci"}
 {"level":"Level(-4)","ts":1616798129.3490586,"logger":"daemon.NodeConfigurator.loadModule","msg":"commands output","output":""}
@@ -183,8 +171,6 @@ sriov-fec-daemonset-h4jf8                      1/1     Running   0          19h
 ```
 
 The user can observe the change of the cards FEC configuration. The created devices should appear similar to the following output (The '0d5c' is a PF of the FEC device and the '0d5d' is a VF of the FEC device). For a list of sample status output for applicable devices see:
-
-* [Sample Status for Wireless FEC (N3000)](#sample-status-for-wireless-fec-n3000)
 
 * [Sample Status for Wireless FEC (ACC100)](#sample-status-for-wireless-fec-acc100)
 
@@ -438,8 +424,6 @@ status:
 ## Hardware Validation Environment
 
 - Intel® vRAN Dedicated Accelerator ACC100
-- Intel® FPGA PAC N3000-2
-- Intel® FPGA PAC N3000-N
 - 2nd Generation Intel® Xeon® processor platform
 
 ## Summary
@@ -458,8 +442,8 @@ Use the following command to identify items to delete:
 ```shell
 [user@ctrl1 /home]# oc get csv -n vran-acceleration-operators
 
-NAME               DISPLAY                                        VERSION   REPLACES   PHASE
-sriov-fec.v2.2.0   SRIOV-FEC Operator for Intel® FPGA PAC N3000   2.2.0                Succeeded
+NAME               DISPLAY                                             VERSION   REPLACES   PHASE
+sriov-fec.v2.2.0   SEO SR-IOV Operator for Wireless FEC Accelerators   2.2.0                Succeeded
 ```
 
 Then delete the items and the namespace:
@@ -474,189 +458,6 @@ Then delete the items and the namespace:
 If user needs to run operator on SNO (Single Node Openshift), then user should provide ClusterConfigs (which are described in following chapters) with `spec.drainSkip: true` to avoid node draining, because it is impossible to drain node if there's only 1 node.
 
 ## Appendix 2 - SEO Operator for Wireless FEC Accelerators Examples
-
-### N3000 FEC
-
-#### Sample CR for Wireless FEC (N3000)
-
-```yaml
-apiVersion: sriovfec.intel.com/v2
-kind: SriovFecClusterConfig
-metadata:
-  name: config
-  namespace: vran-acceleration-operators
-spec:
-  priority: 1
-  nodeSelector:
-    kubernetes.io/hostname: node1
-  acceleratorSelector:
-    pciAddress: 0000.1d.00.0
-  physicalFunction:  
-    pfDriver: pci-pf-stub
-    vfDriver: vfio-pci
-    vfAmount: 2
-    bbDevConfig:
-      n3000:
-        # Network Type: either "FPGA_5GNR" or "FPGA_LTE"
-        networkType: "FPGA_5GNR"
-        # Programming mode: 0 = VF Programming, 1 = PF Programming
-        pfMode: false
-        flrTimeout: 610
-        downlink:
-          bandwidth: 3
-          loadBalance: 128
-          queues:
-            vf0: 16
-            vf1: 16
-            vf2: 0
-            vf3: 0
-            vf4: 0
-            vf5: 0
-            vf6: 0
-            vf7: 0
-        uplink:
-          bandwidth: 3
-          loadBalance: 128
-          queues:
-            vf0: 16
-            vf1: 16
-            vf2: 0
-            vf3: 0
-            vf4: 0
-            vf5: 0
-            vf6: 0
-            vf7: 0
-```
-
-#### Sample Status for Wireless FEC (N3000)
-
-```yaml
-status:
-  conditions:
-  - lastTransitionTime: "2020-12-15T17:19:37Z"
-    message: Configured successfully
-    observedGeneration: 1
-    reason: ConfigurationSucceeded
-    status: "True"
-    type: Configured
-  inventory:
-    sriovAccelerators:
-    - deviceID: 0d8f
-      driver: pci-pf-stub
-      maxVirtualFunctions: 8
-      pciAddress: 0000:1d:00.0
-      vendorID: "8086"
-      virtualFunctions:
-      - deviceID: 0d90
-        driver: vfio-pci
-        pciAddress: 0000:1d:00.1
-      - deviceID: 0d90
-        driver: vfio-pci
-        pciAddress: 0000:1d:00.2
-```
-
-#### Sample Daemon log for Wireless FEC (N3000)
-
-```shell
-2020-12-16T12:46:47.720Z        INFO    daemon.NodeConfigurator.applyConfig     configuring PF  {"requestedConfig": {"pciAddress":"0000:1d:00.0","pfDriver":"pci-pf-stub","vfDriver":"vfio-pci","vfAmount":2,"bbDevConfig":{"n3000":{
-"networkType":"FPGA_5GNR","pfMode":false,"flrTimeout":610,"downlink":{"bandwidth":3,"loadBalance":128,"queues":{"vf0":16,"vf1":16}},"uplink":{"bandwidth":3,"loadBalance":128,"queues":{"vf0":16,"vf1":16}}}}}}                      
-2020-12-16T12:46:47.720Z        INFO    daemon.NodeConfigurator.loadModule      executing command       {"cmd": "/usr/sbin/chroot /host/ modprobe pci-pf-stub"}                                                                      
-2020-12-16T12:46:47.724Z        INFO    daemon.NodeConfigurator.loadModule      commands output {"output": ""}                                                                                                                       
-2020-12-16T12:46:47.724Z        INFO    daemon.NodeConfigurator.loadModule      executing command       {"cmd": "/usr/sbin/chroot /host/ modprobe vfio-pci"}                                                                         
-2020-12-16T12:46:47.727Z        INFO    daemon.NodeConfigurator.loadModule      commands output {"output": ""}                                                                                                                       
-2020-12-16T12:46:47.727Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:1d:00.0/driver_override"}                                                                        
-2020-12-16T12:46:47.727Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/pci-pf-stub/bind"}                                                                                            
-2020-12-16T12:46:47.998Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:1d:00.1/driver_override"}                                                                        
-2020-12-16T12:46:47.998Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/vfio-pci/bind"}                                                                                               
-2020-12-16T12:46:47.998Z        INFO    daemon.NodeConfigurator device's driver_override path   {"path": "/sys/bus/pci/devices/0000:1d:00.2/driver_override"}                                                                        
-2020-12-16T12:46:47.998Z        INFO    daemon.NodeConfigurator driver bind path        {"path": "/sys/bus/pci/drivers/vfio-pci/bind"}                                                                                               
-2020-12-16T12:46:47.999Z        INFO    daemon.NodeConfigurator.applyConfig     executing command       {"cmd": "/sriov_workdir/pf_bb_config FPGA_5GNR -c /sriov_artifacts/0000:1d:00.0.ini -p 0000:1d:00.0"}                        
-2020-12-16T12:46:48.017Z        INFO    daemon.NodeConfigurator.applyConfig     commands output {"output": "ERROR: Section (FLR) or name (flr_time_out) is not valid.
-FEC FPGA RTL v3.0
-UL.DL Weights = 3.3
-UL.DL Load Balance = 1
-28.128
-Queue-PF/VF Mapping Table = READY
-Ring Descriptor Size = 256 bytes
-
---------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
-        |  PF | VF0 | VF1 | VF2 | VF3 | VF4 | VF5 | VF6 | VF7 |
---------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
-UL-Q'00 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'01 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'02 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'03 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'04 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'05 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'06 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'07 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'08 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'09 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'10 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'11 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'12 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'13 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'14 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'15 |     |  X  |     |     |     |     |     |     |     |
-UL-Q'16 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'17 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'18 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'19 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'20 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'21 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'22 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'23 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'24 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'25 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'26 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'27 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'28 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'29 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'30 |     |     |  X  |     |     |     |     |     |     |
-UL-Q'31 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'32 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'33 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'34 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'35 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'36 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'37 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'38 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'39 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'40 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'41 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'42 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'43 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'44 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'45 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'46 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'47 |     |  X  |     |     |     |     |     |     |     |
-DL-Q'48 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'49 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'50 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'51 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'52 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'53 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'54 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'55 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'56 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'57 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'58 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'59 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'60 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'61 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'62 |     |     |  X  |     |     |     |     |     |     |
-DL-Q'63 |     |     |  X  |     |     |     |     |     |     |
---------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
-
-Mode of operation = VF-mode
-FPGA_5GNR PF [0000:1d:00.0] configuration complete!"}
-2020-12-16T12:46:48.017Z        INFO    daemon.NodeConfigurator.enableMasterBus executing command       {"cmd": "/usr/sbin/chroot /host/ setpci -v -s 0000:1d:00.0 COMMAND"}
-2020-12-16T12:46:48.037Z        INFO    daemon.NodeConfigurator.enableMasterBus commands output {"output": "0000:1d:00.0 @04 = 0102\n"}
-2020-12-16T12:46:48.037Z        INFO    daemon.NodeConfigurator.enableMasterBus executing command       {"cmd": "/usr/sbin/chroot /host/ setpci -v -s 0000:1d:00.0 COMMAND=0106"}
-2020-12-16T12:46:48.054Z        INFO    daemon.NodeConfigurator.enableMasterBus commands output {"output": "0000:1d:00.0 @04 0106\n"}
-2020-12-16T12:46:48.054Z        INFO    daemon.NodeConfigurator.enableMasterBus MasterBus set   {"pci": "0000:1d:00.0", "output": "0000:1d:00.0 @04 0106\n"}
-2020-12-16T12:46:48.160Z        INFO    daemon.drainhelper.Run()        worker function - end   {"performUncordon": true}
-```
 
 ### ACC100 FEC
 

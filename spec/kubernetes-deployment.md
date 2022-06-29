@@ -2,8 +2,7 @@
 
 The SEO Operator for Wireless FEC Accelerators has the following requirements:
 
-- [Intel® vRAN Dedicated Accelerator ACC100](https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf) (Optional)
-- [Intel® FPGA PAC N3000 card](https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html) (Optional)
+- [Intel® vRAN Dedicated Accelerator ACC100](https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf)
 - [Kubernetes 1.22](https://kubernetes.io/blog/2021/08/04/kubernetes-1-22-release-announcement/)
 - RT Kernel configured for OS [Centos 7](https://linuxsoft.cern.ch/cern/centos/7/rt/x86_64/repoview/kernel-rt.html) or [Ubuntu](https://askubuntu.com/questions/1349568/installing-real-time-patch-for-ubuntu-20-04)
 - [Configured kernel parameters](https://wiki.ubuntu.com/Kernel/KernelBootParameters#Permanently_Add_a_Kernel_Boot_Parameter): 
