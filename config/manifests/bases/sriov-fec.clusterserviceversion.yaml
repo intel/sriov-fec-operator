@@ -165,11 +165,11 @@ spec:
   - vRAN
   - ORAN
   links:
-  - name: Sriov Fec
-    url: https://sriov-fec.domain
+  - name: SRIOV-FEC source code
+    url: https://github.com/smart-edge-open/sriov-fec-operator
   maturity: alpha
   provider:
     name: Intel Corporation
     url: https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf
-  replaces: sriov-fec.v2.2.1
+  replaces: sriov-fec.v2.3.0
   version: 0.0.0

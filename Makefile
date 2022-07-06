@@ -47,7 +47,7 @@ ARCH = $(shell go env GOARCH)
 # Images URLs to use for all building/pushing image targets
 export SRIOV_FEC_OPERATOR_IMAGE ?= $(IMAGE_REGISTRY)sriov-fec-operator:$(IMG_VERSION)
 export SRIOV_FEC_DAEMON_IMAGE ?= $(IMAGE_REGISTRY)sriov-fec-daemon:$(IMG_VERSION)
-export SRIOV_FEC_LABELER_IMAGE ?= $(IMAGE_REGISTRY)vran-labeler:$(IMG_VERSION)
+export SRIOV_FEC_LABELER_IMAGE ?= $(IMAGE_REGISTRY)n3000-labeler:$(IMG_VERSION)
 
 ifeq ($(CONTAINER_TOOL),podman)
  export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.10
