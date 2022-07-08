@@ -40,7 +40,7 @@ This document provides high-level system features, issues, and limitations infor
 | 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  | 
 | 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  |
 | 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17 |
-| 2.3.1   | June 2022      | 4.8, 4.9, 4.10               | TBD                     |
+| 2.3.1   | July 2022      | 4.8, 4.9, 4.10               | 4.8.46, 4.9.41, 4.10.21 |
 
 # Features for Release
 
@@ -184,8 +184,11 @@ This document provides high-level system features, issues, and limitations infor
 
 # Supported Operating Systems
 
-***v2.3.1*** 
-  TBD
+***v2.3.1***
+- OpenShift: 4.10.21
+- OS: Red Hat Enterprise Linux CoreOS 410.84.202206010432-0 (Ootpa)
+- Kubernetes: v1.23.5+3afdacb
+- RT Kernel: 4.18.0-305.49.1.rt7.121.el8_4.x86_64
 
 ***v2.3.0*** was tested using the following:
 - OpenShift: 4.10.17
