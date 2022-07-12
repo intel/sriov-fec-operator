@@ -115,29 +115,24 @@ spec:
         displayName: Inventory
         path: inventory
       version: v2
-  description: "The Intel® FPGA Programmable Acceleration Card N3000 (Intel® FPGA
-    PAC N3000) is a highly customizable FPGA SmartNIC which enables high-throughput,
-    low latency and high-bandwith applications.  It allows the optimization of data
-    plane performance to reduce total cost of ownership while maintaining a high degree
-    of flexibility.  The Intel FPGA PAC N3000 plays a key role in accelerating 5G
+  description: "The vRAN Dedicated Accelerator ACC100, based on Intel eASIC technology is designed 
+    to offload and accelerate the computing-intensive process of forward error correction (FEC) for 
+    4G/LTE and 5G technology, freeing up processing power. Intel eASIC devices are structured ASICs,
+    an intermediate technology between FPGAs and standard application-specific integrated circuits (ASICs).
+    It allows the optimization of data plane performance to reduce total cost of ownership while maintaining a high degree
+    of flexibility.  The Intel ACC100 plays a key role in accelerating 5G
     and network functions virtualization (NFV) adoption for ecosystem partners such
     as telecommunications equipment manufacturers (TEMs) virtual network functions
     (VNF) vendors, system integrators and telcos, to bring scalable and high-performance
-    solutions to market. The Intel FPGA PAC N3000 includes a variant that is design
+    solutions to market. The Intel ACC100 includes a variant that is design
     to be Network Equipment Building System (NEBS)-friendly, and features a Root-of-Trust
     device that helps protect systems from FPGA host security exploits. This document
-    explains how the FPGA resource can be used on the Smart Edge Open
+    explains how the ACC100 resource can be used on the Smart Edge Open
     (SEO) platform for accelerating network functions and edge application workloads.
-    We use the Intel® FPGA PAC N3000 as a reference FPGA PAC and use LTE/5G Forward
-    Error Correction (FEC) as an example workload that accelerates the 5G or 4G L1
+    We use LTE/5G Forward Error Correction (FEC) as an example workload that accelerates the 5G or 4G L1
     base station network function. The same concept and mechanism is applicable for
-    application acceleration workloads like AI and ML on FPGA for Inference applications.
-    The Intel® FPGA PAC N3000 is a full-duplex, 100 Gbps in-system, re-programmable
-    acceleration card for multi-workload networking application acceleration. It has
-    an optimal memory mixture designed for network functions, with an integrated network
-    interface card (NIC) in a small form factor that enables high throughput, low
-    latency, and low power per bit for a custom networking pipeline. The ACC100 supports
-    the O-RAN adopted DPDK BBDev API - an API which Intel contributed to the opensource
+    application acceleration workloads like AI and ML on eASIC for Inference applications. 
+    The ACC100 supports the O-RAN adopted DPDK BBDev API - an API which Intel contributed to the opensource
     community to enable choice and TTM for FEC acceleration solutions. The FlexRAN
     software reference architecture supports the ACC100 which enables users to quickly
     evaluate and build platforms for the wide range of vRAN networks. Reduces platform
@@ -166,19 +161,15 @@ spec:
   - supported: true
     type: AllNamespaces
   keywords:
-  - N3000
-  - N3000-2
-  - N3000-n
   - ACC100
   - vRAN
   - ORAN
-  - fpga accelerator
   links:
-  - name: Sriov Fec
-    url: https://sriov-fec.domain
+  - name: SRIOV-FEC source code
+    url: https://github.com/smart-edge-open/sriov-fec-operator
   maturity: alpha
   provider:
     name: Intel Corporation
-    url: https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html
-  replaces: sriov-fec.v2.2.1
+    url: https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf
+  replaces: sriov-fec.v2.3.0
   version: 0.0.0

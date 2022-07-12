@@ -2,14 +2,13 @@
 
 The SEO Operator for Wireless FEC Accelerators has the following requirements:
 
-- [Intel® vRAN Dedicated Accelerator ACC100](https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf) (Optional)
-- [Intel® FPGA PAC N3000 card](https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-n3000/overview.html) (Optional)
+- [Intel® vRAN Dedicated Accelerator ACC100](https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf)
 - [OpenShift 4.10.x](https://docs.openshift.com/container-platform/4.10/release_notes/ocp-4-10-release-notes.html)
 - RT Kernel configured with [Performance Addon Operator](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.6/html/scalability_and_performance/cnf-performance-addon-operator-for-low-latency-nodes).
 - sriov-fec:2.3.0 comes with initial support of `vfio-pci` driver for ACC100. Configurations leveraging `vfio-pci` require following kernel parameters:
     - vfio_pci.enable_sriov=1
     - vfio_pci.disable_idle_d3=1
-
+- BIOS with enabled settings "Intel® Virtualization Technology for Directed I/O" (VT-d), "Single Root I/O Virtualization" (SR-IOV) and "Input–Output Memory Management Unit" (IOMMU)
 
 ### Install the Bundle
 

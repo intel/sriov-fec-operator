@@ -114,33 +114,7 @@ package common <<rectangle>> {
     }
 
     class BBDevConfig {
-        N3000  *N3000BBDevConfig
         ACC100 *ACC100BBDevConfig
-    }
-
-    class N3000BBDevConfig {
-        NetworkType string
-        PFMode bool
-        FLRTimeOut int
-        Downlink UplinkDownlink
-        Uplink UplinkDownlink
-    }
-
-    class UplinkDownlinkQueues {
-        VF0 int
-        VF1 int
-        VF2 int
-        VF3 int
-        VF4 int
-        VF5 int
-        VF6 int
-        VF7 int
-    }
-
-    class UplinkDownlink {
-        Bandwidth int
-        LoadBalance int
-        Queues UplinkDownlinkQueues
     }
 
     class ACC100BBDevConfig {
@@ -163,11 +137,8 @@ package common <<rectangle>> {
 
 
 PhysicalFunctionConfig --> BBDevConfig
-BBDevConfig --> N3000BBDevConfig
 BBDevConfig --> ACC100BBDevConfig
 ACC100BBDevConfig -- QueueGroupConfig
-N3000BBDevConfig -- UplinkDownlink
-UplinkDownlink --> UplinkDownlinkQueues
 PhysicalFunctionConfig <|---- PhysicalFunctionExtConfig
 PhysicalFunctionConfig <--- SriovFecClusterConfigSpec
 SriovFecClusterConfigSpec --> SriovAcceleratorSelector

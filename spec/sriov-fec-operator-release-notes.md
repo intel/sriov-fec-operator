@@ -4,7 +4,7 @@ Copyright (c) 2020-2022 Intel Corporation
 ```
 <!-- omit in toc -->
 # Release Notes
-This document provides high-level system features, issues, and limitations information for SEO Operator for Intel® FPGA PAC N3000 and SEO SR-IOV Operator for Wireless FEC Accelerators.
+This document provides high-level system features, issues, and limitations information for SEO SR-IOV Operator for Wireless FEC Accelerators.
 - [Release history](#release-history)
 - [SRIOV-FEC Operator](#sriov-fec-operator)
 - [Features for Release](#features-for-release)
@@ -40,8 +40,12 @@ This document provides high-level system features, issues, and limitations infor
 | 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  | 
 | 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  |
 | 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17 |
+| 2.3.1   | July 2022      | 4.8, 4.9, 4.10               | 4.8.46, 4.9.41, 4.10.21 |
 
 # Features for Release
+
+***v2.3.1***
+- Bugfixes
 
 ***v2.3.0***
 - pf-bb-config updated (21.11 -> 22.03)
@@ -94,7 +98,7 @@ This document provides high-level system features, issues, and limitations infor
 
 # Changes to Existing Features
 
-***v2.X.Y***
+***v2.3.0***
 - Flattened sriov-fec operator structure by removing the `sriov-fec` directory
 - Previous `labeler` directory acts now as internal package of sriov-fec operator
 - Operator no longer adds missing kernel parameters `intel_iommu=on` and `iommu=pt`. User has to configure them [manually](https://wiki.ubuntu.com/Kernel/KernelBootParameters#Permanently_Add_a_Kernel_Boot_Parameter).
@@ -148,6 +152,9 @@ This document provides high-level system features, issues, and limitations infor
 
 # Fixed Issues
 
+***2.3.1***
+- fix for pf_bb_config throwing "MMIO is not accessible causing UR error over PCIe"
+
 ***2.2.1***
 - Adjusting CSV by adding relatedImages tag - addressing https://github.com/smart-edge-open/sriov-fec-operator/issues/19
 
@@ -176,6 +183,12 @@ This document provides high-level system features, issues, and limitations infor
 - Documentation
 
 # Supported Operating Systems
+
+***v2.3.1***
+- OpenShift: 4.10.21
+- OS: Red Hat Enterprise Linux CoreOS 410.84.202206010432-0 (Ootpa)
+- Kubernetes: v1.23.5+3afdacb
+- RT Kernel: 4.18.0-305.49.1.rt7.121.el8_4.x86_64
 
 ***v2.3.0*** was tested using the following:
 - OpenShift: 4.10.17
@@ -262,6 +275,6 @@ This document provides high-level system features, issues, and limitations infor
 
 # Package Versions
 Package:
-- Golang: 1.17
+- Golang: 1.18
 - DPDK: v20.11
-- pf-bb-config-app: v21.11
+- pf-bb-config-app: v22.03

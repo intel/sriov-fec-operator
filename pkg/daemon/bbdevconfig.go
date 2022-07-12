@@ -7,16 +7,15 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/ini.v1"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
-	"gopkg.in/ini.v1"
 )
 
 const (
@@ -183,6 +182,7 @@ func (p *pfBBConfigController) initializePfBBConfig(acc sriovv2.SriovAccelerator
 		if strings.ToLower(pf.PFDriver) == strings.ToLower("vfio-pci") {
 			token = &p.sharedVfioToken
 		}
+
 		if err := p.runPFConfig(deviceName, bbdevConfigFilepath, pf.PCIAddress, token); err != nil {
 			p.log.WithError(err).WithField("pci", pf.PCIAddress).Error("failed to configure device's queues")
 			return err

@@ -48,7 +48,7 @@ data:
     apiVersion: v1
     kind: ConfigMap
     metadata:
-      name: vran-labeler-config
+      name: n3000-labeler-config
       namespace: vran-acceleration-operators
     data:
       accelerators.json: |
@@ -101,7 +101,7 @@ data:
           volumes:
             - name: config-volume
               configMap:
-                name: vran-labeler-config
+                name: n3000-labeler-config
                 items:
                 - key: accelerators.json
                   path: accelerators.json

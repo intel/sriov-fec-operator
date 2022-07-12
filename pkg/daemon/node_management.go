@@ -5,6 +5,9 @@ package daemon
 
 import (
 	"fmt"
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"k8s.io/apimachinery/pkg/types"
 	"os"
@@ -13,11 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 	"strings"
-
-	"github.com/sirupsen/logrus"
-
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
-	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
+	"time"
 )
 
 const (
@@ -213,6 +212,10 @@ func (n *NodeConfigurator) flrReset(pfPCIAddress string) error {
 	if err := ioutil.WriteFile(path, []byte(strconv.Itoa(1)), os.ModeAppend); err != nil {
 		return fmt.Errorf("failed to execute Function Level Reset for PF (%s): %s", pfPCIAddress, err)
 	}
+
+	// In some cases we have noticed that FLR can take a while - according to spec it shouldn't be longer than 100ms.
+	// if FLR is running on card, then pf-bb-config will fail.
+	time.Sleep(500 * time.Millisecond)
 	return nil
 }
 
@@ -319,7 +322,7 @@ func (n *NodeConfigurator) configureAccelerator(acc sriovv2.SriovAccelerator, re
 		return err
 	}
 
-	if err := n.pfBBConfigController.initializePfBBConfig(acc, requestedConfig); err != nil {
+	if err := n.changeAmountOfVFs(requestedConfig.PFDriver, requestedConfig.PCIAddress, requestedConfig.VFAmount); err != nil {
 		return err
 	}
 
@@ -328,10 +331,6 @@ func (n *NodeConfigurator) configureAccelerator(acc sriovv2.SriovAccelerator, re
 		if err := n.enableMasterBus(requestedConfig.PCIAddress); err != nil {
 			return err
 		}
-	}
-
-	if err := n.changeAmountOfVFs(requestedConfig.PFDriver, requestedConfig.PCIAddress, requestedConfig.VFAmount); err != nil {
-		return err
 	}
 
 	createdVfs, err := getVFList(acc.PCIAddress)
@@ -344,6 +343,10 @@ func (n *NodeConfigurator) configureAccelerator(acc sriovv2.SriovAccelerator, re
 		if err := n.bindDeviceToDriver(vf, requestedConfig.VFDriver); err != nil {
 			return err
 		}
+	}
+
+	if err := n.pfBBConfigController.initializePfBBConfig(acc, requestedConfig); err != nil {
+		return err
 	}
 
 	return nil
