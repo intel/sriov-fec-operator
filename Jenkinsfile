@@ -39,6 +39,16 @@ pipeline {
             }
         }
 
+        stage ('Copyright tag check') {
+            steps {
+                container('go') {
+                    sh '''
+                        ci-scripts/copyright_check.sh ${WORKSPACE}
+                    '''
+                }
+            }
+        }
+
         stage ('Build') {
             steps {
                 container('go') {
