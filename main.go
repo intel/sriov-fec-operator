@@ -96,7 +96,6 @@ func main() {
 	if err = (&controllers.SriovFecClusterConfigReconciler{
 		Client: mgr.GetClient(),
 		Log:    log,
-		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.WithField("controller", "SriovFecClusterConfig").WithError(err).Error("unable to create controller")
 		os.Exit(1)

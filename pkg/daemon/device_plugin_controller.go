@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,21 +42,16 @@ func (d *devicePluginController) RestartDevicePlugin() error {
 		d.log.Info("there is no running instance of device plugin, nothing to restart")
 	}
 
-	for _, p := range pods.Items {
-		if p.Spec.NodeName != d.nodeNameRef.Name {
+	for _, pod := range pods.Items {
+		if pod.Spec.NodeName != d.nodeNameRef.Name {
 			continue
 		}
-		if err := d.Delete(context.TODO(), &corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: p.Namespace,
-				Name:      p.Name,
-			},
-		}, &client.DeleteOptions{}); err != nil {
+		if err := d.Delete(context.TODO(), &pod, &client.DeleteOptions{}); err != nil {
 			return errors.Wrap(err, "failed to delete sriov-device-plugin-daemonset pod")
 		}
 
 		backoff := wait.Backoff{Steps: 300, Duration: 1 * time.Second, Factor: 1}
-		err = wait.ExponentialBackoff(backoff, d.waitForDevicePluginRestart(p.Name))
+		err = wait.ExponentialBackoff(backoff, d.waitForDevicePluginRestart(pod.Name))
 		if err == wait.ErrWaitTimeout {
 			return fmt.Errorf("failed to restart sriov-device-plugin within specified time")
 		}

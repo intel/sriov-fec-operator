@@ -40,7 +40,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -159,7 +158,7 @@ var _ = Describe("SriovControllerTest", func() {
 		}
 
 		reconcile := func(ccName string) *SriovFecClusterConfigReconciler {
-			reconciler := SriovFecClusterConfigReconciler{k8sClient, log, scheme.Scheme}
+			reconciler := SriovFecClusterConfigReconciler{k8sClient, log}
 			_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest(ccName))
 			Expect(err).ToNot(HaveOccurred())
 			return &reconciler
@@ -415,7 +414,7 @@ var _ = Describe("SriovControllerTest", func() {
 					}
 				})
 
-				reconciler := SriovFecClusterConfigReconciler{k8sClient, log, scheme.Scheme}
+				reconciler := SriovFecClusterConfigReconciler{k8sClient, log}
 
 				_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest("cc1"))
 				Expect(err).ToNot(HaveOccurred())
@@ -623,7 +622,7 @@ var _ = Describe("SriovControllerTest", func() {
 					}
 				})
 
-				reconciler := SriovFecClusterConfigReconciler{k8sClient, log, scheme.Scheme}
+				reconciler := SriovFecClusterConfigReconciler{k8sClient, log}
 				_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest("cc"))
 				Expect(err).ToNot(HaveOccurred())
 
@@ -659,7 +658,7 @@ var _ = Describe("SriovControllerTest", func() {
 						}
 					})
 
-					reconciler := SriovFecClusterConfigReconciler{k8sClient, log, scheme.Scheme}
+					reconciler := SriovFecClusterConfigReconciler{k8sClient, log}
 					_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest("config"))
 					Expect(err).ToNot(HaveOccurred())
 
@@ -714,7 +713,7 @@ var _ = Describe("SriovControllerTest", func() {
 						}
 					})
 
-					reconciler := SriovFecClusterConfigReconciler{k8sClient, log, scheme.Scheme}
+					reconciler := SriovFecClusterConfigReconciler{k8sClient, log}
 					_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest("config"))
 					Expect(err).ToNot(HaveOccurred())
 
@@ -763,7 +762,7 @@ var _ = Describe("SriovControllerTest", func() {
 					cc.Spec.DrainSkip = true
 				})
 
-				reconciler := SriovFecClusterConfigReconciler{k8sClient, log, scheme.Scheme}
+				reconciler := SriovFecClusterConfigReconciler{k8sClient, log}
 				_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest("config"))
 				Expect(err).ToNot(HaveOccurred())
 
@@ -782,7 +781,7 @@ var _ = Describe("SriovControllerTest", func() {
 				cc.Namespace = v1.NamespaceSystem
 				Expect(k8sClient.Create(context.TODO(), cc)).ToNot(HaveOccurred())
 
-				reconciler := SriovFecClusterConfigReconciler{k8sClient, log, scheme.Scheme}
+				reconciler := SriovFecClusterConfigReconciler{k8sClient, log}
 				_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest(clusterConfigPrototype.Name))
 				Expect(err).ToNot(HaveOccurred())
 
