@@ -71,6 +71,15 @@ func ambiguousBBDevConfigValidator(spec SriovFecClusterConfigSpec) (errs field.E
 			field.NewPath("spec").Child("physicalFunction").Child("bbDevConfig"),
 			"specified bbDevConfig cannot contain acc100 and n3000 configuration in the same time")
 		errs = append(errs, err)
+		return
+	}
+
+	if spec.PhysicalFunction.BBDevConfig.N3000 == nil && spec.PhysicalFunction.BBDevConfig.ACC100 == nil {
+		err := field.Forbidden(
+			field.NewPath("spec").Child("physicalFunction").Child("bbDevConfig"),
+			"bbDevConfig section cannot be empty")
+		errs = append(errs, err)
+		return
 	}
 	return
 }

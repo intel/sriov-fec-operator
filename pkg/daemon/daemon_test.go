@@ -181,6 +181,8 @@ var _ = Describe("NodeConfigReconciler", func() {
 							Return("", nil).
 							onCall([]string{"chroot", "/host/", "modprobe", "v"}).
 							Return("", nil).
+							onCall([]string{"chroot", "/host/", "setpci", "-v", "-s", "0000:14:00.1", "COMMAND=06"}).
+							Return("", nil).
 							onCall([]string{"/sriov_workdir/pf_bb_config", "FPGA_5GNR", "-c", fmt.Sprintf("%s.ini", filepath.Join(workdir, pciAddress)), "-p", pciAddress}).
 							Return("", nil)
 

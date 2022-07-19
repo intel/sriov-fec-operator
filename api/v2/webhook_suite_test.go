@@ -57,7 +57,7 @@ var _ = Describe("Creation of SriovFecClusterConfig without n3000 bbdevconfig", 
 		_ = k8sClient.Delete(context.TODO(), &ccPrototype)
 	})
 
-	It("should be accepted", func() {
+	It("should be rejected", func() {
 		cc := ccPrototype.DeepCopy()
 		cc.Spec = SriovFecClusterConfigSpec{
 			PhysicalFunction: PhysicalFunctionConfig{
@@ -65,7 +65,9 @@ var _ = Describe("Creation of SriovFecClusterConfig without n3000 bbdevconfig", 
 				BBDevConfig: BBDevConfig{},
 			},
 		}
-		Expect(k8sClient.Create(context.TODO(), cc)).To(Succeed())
+		Expect(k8sClient.Create(context.TODO(), cc)).To(
+			MatchError(
+				ContainSubstring("bbDevConfig section cannot be empty")))
 	})
 })
 
