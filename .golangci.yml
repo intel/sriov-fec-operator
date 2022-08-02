@@ -7,5 +7,5 @@ issues:
   exclude-rules:
     - linters:
         - staticcheck
-      text: "SA1019:"
 
+      text: "(SA6005: | SA1019:)"

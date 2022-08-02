@@ -78,6 +78,7 @@ pipeline {
     options {
         disableConcurrentBuilds()
         timestamps()
+        skipDefaultCheckout()
         timeout(time: 1, unit: 'HOURS')
     }
 
@@ -95,6 +96,7 @@ pipeline {
         GOROOT="/home/jenkins/agent/workspace/go${GO_VERSION}"
         GOPATH="/home/jenkins/agent/workspace/go"
         PATH="${GOROOT}/bin:${env.PATH}"
+        GOLANGCI_LINT_VERSION="1.47.3"
         SNYK_API="https://snyk.devtools.intel.com/api"
         SNYK_TOKEN=credentials('SNYK_TOKEN')
         PROTEX_PASSWORD=credentials('PROTEX_CRED')
@@ -185,6 +187,8 @@ pipeline {
                 container('go') {
                     sh '''
                         cd ${REPO_DIR}
+                        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v${GOLANGCI_LINT_VERSION}
+                        export PATH=$PATH:$(go env GOPATH)/bin
                         ci-scripts/go_lint.sh
                     '''
                 }
@@ -195,7 +199,6 @@ pipeline {
             steps {
                 container('go') {
                     sh '''
-                        cd ${REPO_DIR}
                         echo "Run Snyk"
                         PROJECT_NAME="sriov-fec-operator"
                         snyk config set endpoint=$SNYK_API
@@ -211,7 +214,8 @@ pipeline {
             steps {
                 container('go') {
                     sh '''
-                        ci-scripts/dockerfile_check.sh ${WORKSPACE}
+                        cd ${REPO_DIR}
+                        ci-scripts/dockerfile_check.sh .
                     '''
                 }
             }
@@ -257,7 +261,7 @@ pipeline {
              steps {
                  container('abi') {
                      sh '''
-                         cd ${WORKSPACE}
+                         cd ${REPO_DIR}
                          abi ip_scan --context ci-scripts/buildconfig.json --username=sbelhaik --password=$PROTEX_PASSWORD --scan_output="ip_scan"
                          ci-scripts/check_protex_scan.sh
                      '''
