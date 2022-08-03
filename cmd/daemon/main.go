@@ -40,17 +40,8 @@ func main() {
 
 	ctrl.SetLogger(logr.New(utils.NewLogWrapper()))
 
-	nodeName := os.Getenv("NODENAME")
-	if nodeName == "" {
-		setupLog.Error("NODENAME environment variable is empty")
-		os.Exit(1)
-	}
-
-	ns := os.Getenv("SRIOV_FEC_NAMESPACE")
-	if ns == "" {
-		setupLog.Error("SRIOV_FEC_NAMESPACE environment variable is empty")
-		os.Exit(1)
-	}
+	nodeName := getNodeNameFromEnvOrDie()
+	ns := getSriovFecNameSpaceFromEnvOrDie()
 
 	config := ctrl.GetConfigOrDie()
 	directClient, err := client.New(config, client.Options{Scheme: scheme})
@@ -109,4 +100,22 @@ func main() {
 		setupLog.WithError(err).Error("problem running manager")
 		os.Exit(1)
 	}
+}
+
+func getSriovFecNameSpaceFromEnvOrDie() string {
+	ns := os.Getenv("SRIOV_FEC_NAMESPACE")
+	if ns == "" {
+		setupLog.Error("SRIOV_FEC_NAMESPACE environment variable is empty")
+		os.Exit(1)
+	}
+	return ns
+}
+
+func getNodeNameFromEnvOrDie() string {
+	nodeName := os.Getenv("NODENAME")
+	if nodeName == "" {
+		setupLog.Error("NODENAME environment variable is empty")
+		os.Exit(1)
+	}
+	return nodeName
 }

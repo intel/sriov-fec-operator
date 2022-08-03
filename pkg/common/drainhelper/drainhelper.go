@@ -196,12 +196,7 @@ func (dh *DrainHelper) Run(f func(context.Context) bool, drain bool) error {
 		OnStoppedLeading: func() {
 			dh.log.Info("stopped leading")
 		},
-		OnNewLeader: func(id string) {
-			if id != dh.nodeName {
-				dh.log.WithField("this", dh.nodeName).WithField("leader", id).
-					Info("new leader elected")
-			}
-		},
+		OnNewLeader: dh.onNewLeaderFunction,
 	}
 
 	le, err := leaderelection.NewLeaderElector(lec)
@@ -217,6 +212,12 @@ func (dh *DrainHelper) Run(f func(context.Context) bool, drain bool) error {
 	}
 
 	return innerErr
+}
+
+func (dh *DrainHelper) onNewLeaderFunction(id string) {
+	if id != dh.nodeName {
+		dh.log.WithField("this", dh.nodeName).WithField("leader", id).Info("new leader elected")
+	}
 }
 
 func (dh *DrainHelper) cordonAndDrain(ctx context.Context) error {

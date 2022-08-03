@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type AcceleratorDiscoveryConfig struct {
@@ -55,11 +54,6 @@ func LoadDiscoveryConfig(cfgPath string) (AcceleratorDiscoveryConfig, error) {
 		return cfg, fmt.Errorf("Failed to unmarshal config: %v", err)
 	}
 	return cfg, nil
-}
-
-func IsK8sDeployment() bool {
-	value := os.Getenv(SriovPrefix + "GENERIC_K8S")
-	return strings.ToLower(value) == "true"
 }
 
 func SetOsEnvIfNotSet(key, value string, logger logr.Logger) error {
