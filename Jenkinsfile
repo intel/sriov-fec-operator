@@ -205,6 +205,9 @@ pipeline {
                         snyk --insecure auth $SNYK_TOKEN
                         snyk test --insecure --json --all-projects --detection-depth=10 | snyk-to-html -t /usr/lib/node_modules/snyk-to-html/template/test-cve-report.hbs -o ${REPO_DIR}/${PROJECT_NAME}_snyk_report.html
                         snyk monitor -d --insecure --project="${PROJECT_NAME}" --all-projects --detection-depth=10
+                        
+                        cd ${REPO_DIR}
+                        ci-scripts/check_snyk_scan.sh ${PROJECT_NAME}_snyk_report.html
                     '''
                 }
             }
