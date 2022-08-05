@@ -21,18 +21,21 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/go-logr/logr"
 	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/assets"
 	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"strings"
-	"time"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	sriovfecv2 "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/api/v2"
 	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/controllers"
@@ -181,6 +184,20 @@ func initializeSriovFecClusterConfigReconciler(mgr manager.Manager) {
 }
 
 func createAndConfigureManager(config *rest.Config, metricsAddr string, healthProbeAddr string, enableLeaderElection bool) manager.Manager {
+	ws := webhook.Server{
+		TLSMinVersion: "1.2",
+		TLSOpts: []func(*tls.Config){
+			func(cfg *tls.Config) {
+				// Enabled TLS 1.2 cipher suites. TLS 1.3 cipher suites are not configurable.
+				cfg.CipherSuites = []uint16{
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+				}
+			},
+		},
+	}
+
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
@@ -189,6 +206,7 @@ func createAndConfigureManager(config *rest.Config, metricsAddr string, healthPr
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "98e78623.intel.com",
 		Namespace:              controllers.NAMESPACE,
+		WebhookServer:          &ws,
 	})
 	if err != nil {
 		setupLog.WithError(err).Error("unable to start manager")

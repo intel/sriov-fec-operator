@@ -50,8 +50,8 @@ func (*InvalidRuntimeType) GetFinalizers() []string                             
 func (*InvalidRuntimeType) SetFinalizers(finalizers []string)                      {}
 func (*InvalidRuntimeType) GetOwnerReferences() []v1.OwnerReference                { return nil }
 func (*InvalidRuntimeType) SetOwnerReferences([]v1.OwnerReference)                 {}
-func (*InvalidRuntimeType) GetClusterName() string                                 { return "" }
-func (*InvalidRuntimeType) SetClusterName(clusterName string)                      {}
+func (*InvalidRuntimeType) GetZZZ_DeprecatedClusterName() string                   { return "" }
+func (*InvalidRuntimeType) SetZZZ_DeprecatedClusterName(clusterName string)        {}
 func (*InvalidRuntimeType) GetManagedFields() []v1.ManagedFieldsEntry              { return nil }
 func (*InvalidRuntimeType) SetManagedFields(managedFields []v1.ManagedFieldsEntry) {}
 
