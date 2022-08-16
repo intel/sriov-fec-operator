@@ -41,8 +41,12 @@ This document provides high-level system features, issues, and limitations infor
 | 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  |
 | 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17 |
 | 2.3.1   | July 2022      | 4.8, 4.9, 4.10               | 4.8.46, 4.9.41, 4.10.21 |
+| 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | TBD                     |
 
 # Features for Release
+***v2.4.0***
+- pf-bb-config updated (22.03 -> 22.07)
+- Added support for Ubuntu 22.04
 
 ***v2.3.1***
 - Bugfixes
@@ -97,6 +101,8 @@ This document provides high-level system features, issues, and limitations infor
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
 
 # Changes to Existing Features
+***v2.4.0***
+- SriovFecClusterConfig.spec.physicalFunction.bbDevConfig field is now marked as 'required'
 
 ***v2.3.0***
 - Flattened sriov-fec operator structure by removing the `sriov-fec` directory
@@ -183,6 +189,14 @@ This document provides high-level system features, issues, and limitations infor
 - Documentation
 
 # Supported Operating Systems
+***v2.4.0***
+Openshift
+#TBD
+
+***v2.4.0***
+- Kubernetes 1.23.5+c285e78
+- OS: Ubuntu 22.04 LTS (Jammy Jellyfish)
+- Kernel: 5.15.0-43-generic
 
 ***v2.3.1***
 - OpenShift: 4.10.21
@@ -276,5 +290,5 @@ This document provides high-level system features, issues, and limitations infor
 # Package Versions
 Package:
 - Golang: 1.18
-- DPDK: v20.11
-- pf-bb-config-app: v22.03
+- DPDK: v21.11
+- pf-bb-config-app: v22.07
