@@ -131,7 +131,7 @@ pipeline {
                     gitTool: 'Default', 
                     submoduleCfg: [], 
                     userRemoteConfigs: [[
-                        credentialsId: 'sys_seo_ops',
+                        credentialsId: 'gh_jenkins_auth',
                         url: params.REPO_URL]]])
             }
         }
