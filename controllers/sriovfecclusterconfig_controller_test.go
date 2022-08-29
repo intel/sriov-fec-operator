@@ -200,6 +200,7 @@ var _ = Describe("SriovControllerTest", func() {
 					}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
 						PFDriver: "pci-pf-stub",
+						VFAmount: 1,
 					}
 				})
 
@@ -242,6 +243,7 @@ var _ = Describe("SriovControllerTest", func() {
 					}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
 						PFDriver: "pci-pf-stub",
+						VFAmount: 1,
 					}
 				})
 
@@ -405,12 +407,14 @@ var _ = Describe("SriovControllerTest", func() {
 					cc.Spec.AcceleratorSelector = sriovv2.AcceleratorSelector{DeviceID: "id1"}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
 						PFDriver: "pci-pf-stub",
+						VFAmount: 1,
 					}
 				})
 				_ = createAcceleratorConfig("cc2", func(cc *sriovv2.SriovFecClusterConfig) {
 					cc.Spec.AcceleratorSelector = sriovv2.AcceleratorSelector{DeviceID: "id2"}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
 						PFDriver: "igb_uio",
+						VFAmount: 1,
 					}
 				})
 

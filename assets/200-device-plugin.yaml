@@ -80,7 +80,16 @@ data:
                         "devices": ["0d5d"],
                         "drivers": ["pci-pf-stub", "vfio-pci"]
                     }
+                },
+                {
+                "resourceName": "intel_fec_acc200",
+                "deviceType": "accelerator",
+                "selectors": {
+                    "vendors": ["8086"],
+                    "devices": ["57c1"],
+                    "drivers": ["pci-pf-stub", "vfio-pci"]
                 }
+            }
             ]
         }
   daemonSet: |

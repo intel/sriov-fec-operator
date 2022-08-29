@@ -23,10 +23,10 @@ import (
 
 var (
 	testTmpFolder string
-	log           = logrus.New()
 )
 
 func TestAPIs(t *testing.T) {
+	log = logrus.New()
 	RegisterFailHandler(Fail)
 
 	RunSpecsWithDefaultAndCustomReporters(t,

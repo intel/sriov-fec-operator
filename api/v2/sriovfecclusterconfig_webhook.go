@@ -4,6 +4,7 @@
 package v2
 
 import (
+	"fmt"
 	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,6 +49,8 @@ func validate(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
 		ambiguousBBDevConfigValidator,
 		n3000LinkQueuesValidator,
 		acc100VfAmountValidator,
+		acc200VfAmountValidator,
+		acc200NumQueueGroupsValidator,
 		acc100NumQueueGroupsValidator,
 	}
 
@@ -65,16 +68,30 @@ func (in *SriovFecClusterConfig) ValidateDelete() error {
 	return nil
 }
 
+func hasAmbiguousBBDevConfigs(bbDevConfig BBDevConfig) *field.Error {
+
+	var found interface{}
+	for _, config := range []interface{}{bbDevConfig.N3000, bbDevConfig.ACC100, bbDevConfig.ACC200} {
+		if !isNil(config) && !isNil(found) {
+			return field.Forbidden(
+				field.NewPath("spec").Child("physicalFunction").Child("bbDevConfig"),
+				"specified bbDevConfig cannot contain multiple configurations")
+		}
+		found = config
+	}
+	return nil
+}
+
 func ambiguousBBDevConfigValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
-	if spec.PhysicalFunction.BBDevConfig.N3000 != nil && spec.PhysicalFunction.BBDevConfig.ACC100 != nil {
-		err := field.Forbidden(
-			field.NewPath("spec").Child("physicalFunction").Child("bbDevConfig"),
-			"specified bbDevConfig cannot contain acc100 and n3000 configuration in the same time")
+	if err := hasAmbiguousBBDevConfigs(spec.PhysicalFunction.BBDevConfig); err != nil {
 		errs = append(errs, err)
 		return
 	}
 
-	if spec.PhysicalFunction.BBDevConfig.N3000 == nil && spec.PhysicalFunction.BBDevConfig.ACC100 == nil {
+	if spec.PhysicalFunction.BBDevConfig.N3000 == nil &&
+		spec.PhysicalFunction.BBDevConfig.ACC100 == nil &&
+		spec.PhysicalFunction.BBDevConfig.ACC200 == nil {
+
 		err := field.Forbidden(
 			field.NewPath("spec").Child("physicalFunction").Child("bbDevConfig"),
 			"bbDevConfig section cannot be empty")
@@ -122,13 +139,6 @@ func acc100VfAmountValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorLi
 			return nil
 		}
 
-		if vfAmount == 0 && accConfig.NumVfBundles != 0 {
-			return field.Invalid(
-				path,
-				accConfig.NumVfBundles,
-				"non zero value of numVfBundles cannot be accepted when physicalFunction.vfAmount equals 0")
-		}
-
 		if vfAmount != accConfig.NumVfBundles {
 			return field.Invalid(
 				path,
@@ -142,6 +152,33 @@ func acc100VfAmountValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorLi
 		spec.PhysicalFunction.BBDevConfig.ACC100,
 		spec.PhysicalFunction.VFAmount,
 		field.NewPath("spec").Child("physicalFunction").Child("bbDevConfig", "acc100", "numVfBundles"),
+	); err != nil {
+		errs = append(errs, err)
+	}
+
+	return
+}
+
+func acc200VfAmountValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
+
+	validate := func(accConfig *ACC200BBDevConfig, vfAmount int, path *field.Path) *field.Error {
+		if accConfig == nil {
+			return nil
+		}
+
+		if vfAmount != accConfig.NumVfBundles {
+			return field.Invalid(
+				path,
+				accConfig.NumVfBundles,
+				"value should be the same as physicalFunction.vfAmount")
+		}
+		return nil
+	}
+
+	if err := validate(
+		spec.PhysicalFunction.BBDevConfig.ACC200,
+		spec.PhysicalFunction.VFAmount,
+		field.NewPath("spec").Child("physicalFunction").Child("bbDevConfig", "acc200", "numVfBundles"),
 	); err != nil {
 		errs = append(errs, err)
 	}
@@ -172,6 +209,36 @@ func acc100NumQueueGroupsValidator(spec SriovFecClusterConfigSpec) (errs field.E
 	}
 
 	if err := validate(spec.PhysicalFunction.BBDevConfig.ACC100, field.NewPath("spec", "physicalFunction", "bbDevConfig", "acc100", "[downlink4G|uplink4G|downlink5G|uplink5G]", "numQueueGroups")); err != nil {
+		errs = append(errs, err)
+	}
+
+	return
+}
+
+func acc200NumQueueGroupsValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
+
+	validate := func(accConfig *ACC200BBDevConfig, path *field.Path) *field.Error {
+		if accConfig == nil {
+			return nil
+		}
+
+		downlink4g := accConfig.Downlink4G.NumQueueGroups
+		uplink4g := accConfig.Uplink4G.NumQueueGroups
+		downlink5g := accConfig.Downlink5G.NumQueueGroups
+		uplink5g := accConfig.Uplink5G.NumQueueGroups
+		qfft := accConfig.QFFT.NumQueueGroups
+
+		if sum := downlink5g + uplink5g + downlink4g + uplink4g + qfft; sum > acc200maxQueueGroups {
+			return field.Invalid(
+				field.NewPath("spec", "physicalFunction", "bbDevConfig", "acc100", "[downlink4G|uplink4G|downlink5G|uplink5G]", "numQueueGroups"),
+				sum,
+				fmt.Sprintf("sum of all numQueueGroups should not be greater than %d", acc200maxQueueGroups),
+			)
+		}
+		return nil
+	}
+
+	if err := validate(spec.PhysicalFunction.BBDevConfig.ACC200, field.NewPath("spec", "physicalFunction", "bbDevConfig", "acc100", "[downlink4G|uplink4G|downlink5G|uplink5G|qfft]", "numQueueGroups")); err != nil {
 		errs = append(errs, err)
 	}
 

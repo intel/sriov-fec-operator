@@ -6,6 +6,7 @@ package v2
 import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"reflect"
 )
 
 type ByPriority []SriovFecClusterConfig
@@ -52,4 +53,8 @@ func (s AcceleratorSelector) isDeviceIDMatching(a SriovAccelerator) bool {
 
 func (in *SriovFecNodeConfig) FindCondition(conditionType string) *metav1.Condition {
 	return meta.FindStatusCondition(in.Status.Conditions, conditionType)
+}
+
+func isNil(v interface{}) bool {
+	return v == nil || (reflect.ValueOf(v).Kind() == reflect.Ptr && reflect.ValueOf(v).IsNil())
 }
