@@ -6,7 +6,7 @@ export CLI_EXEC?=oc
 # Container format for podman. Required to build containers with "ManifestType": "application/vnd.oci.image.manifest.v2+json",
 export BUILDAH_FORMAT=docker
 # Current Operator version
-VERSION ?= 2.3.1
+VERSION ?= 2.3.0
 # Supported channels
 CHANNELS ?= stable
 # Default channel
