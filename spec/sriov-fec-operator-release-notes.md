@@ -189,7 +189,7 @@ This document provides high-level system features, issues, and limitations infor
 # Supported Operating Systems
 
 ***v2.4.0***
-- OpenShift: 4.1.2
+- OpenShift: 4.11.2
 - OS: Red Hat Enterprise Linux CoreOS 411.86.202208191320-0 (Ootpa)
 - Kubernetes: v1.24.0+b62823b
 - RT Kernel: 4.18.0-372.19.1.rt7.176.el8_6.x86_64
