@@ -41,12 +41,16 @@ This document provides high-level system features, issues, and limitations infor
 | 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  |
 | 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17 |
 | 2.3.1   | July 2022      | 4.8, 4.9, 4.10               | 4.8.46, 4.9.41, 4.10.21 |
-| 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | TBD                     |
+| 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.41, 4.10.21, 4.11.2 |
+| 2.5.0   | September 2022 | 4.9, 4.10, 4.11              | TBD                     |
 
 # Features for Release
-***v2.4.0***
+***v2.5.0***
 - pf-bb-config updated (22.03 -> 22.07)
 - Added support for Ubuntu 22.04
+
+***v2.4.0***
+- Support for OCP4.11.x
 
 ***v2.3.1***
 - Bugfixes
@@ -189,14 +193,19 @@ This document provides high-level system features, issues, and limitations infor
 - Documentation
 
 # Supported Operating Systems
-***v2.4.0***
-Openshift
-#TBD
+***v2.5.0***
+- OpenShift: TBD
 
-***v2.4.0***
+***v2.5.0***
 - Kubernetes 1.23.5+c285e78
 - OS: Ubuntu 22.04 LTS (Jammy Jellyfish)
 - Kernel: 5.15.0-43-generic
+
+***v2.4.0***
+- OpenShift: 4.11.2
+- OS: Red Hat Enterprise Linux CoreOS 411.86.202208191320-0 (Ootpa)
+- Kubernetes: v1.24.0+b62823b
+- RT Kernel: 4.18.0-372.19.1.rt7.176.el8_6.x86_64
 
 ***v2.3.1***
 - OpenShift: 4.10.21
