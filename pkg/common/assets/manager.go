@@ -6,6 +6,8 @@ package assets
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/google/uuid"
 	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -47,12 +49,22 @@ func (m *Manager) buildTemplateVars(ctx context.Context, setKernelVar bool) (map
 		}
 	}
 
+	//default value for VFIO_TOKEN
+	vfioTokenName := m.EnvPrefix + "VFIO_TOKEN"
+	if tp[vfioTokenName] == "" {
+		tp[vfioTokenName] = "02bddbbf-bbb0-4d79-886b-91bad3fbb510"
+	}
+	_, err := uuid.Parse(tp[vfioTokenName])
+	if err != nil {
+		return tp, fmt.Errorf("provided VFIO token '%v' is not a valid UUID", tp[vfioTokenName])
+	}
+
 	if !setKernelVar {
 		return tp, nil
 	}
 
 	nodes := &corev1.NodeList{}
-	err := m.Client.List(ctx, nodes, &client.MatchingLabels{"fpga.intel.com/intel-accelerator-present": ""})
+	err = m.Client.List(ctx, nodes, &client.MatchingLabels{"fpga.intel.com/intel-accelerator-present": ""})
 	if err != nil {
 		return nil, err
 	}

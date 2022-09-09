@@ -48,6 +48,7 @@ This document provides high-level system features, issues, and limitations infor
 ***v2.5.0***
 - pf-bb-config updated (22.03 -> 22.07)
 - Added support for Ubuntu 22.04
+- Improved documentation for VFIO token
 
 ***v2.4.0***
 - Support for OCP4.11.x
