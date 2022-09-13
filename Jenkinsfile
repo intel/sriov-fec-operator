@@ -14,7 +14,7 @@ def updatePRStatus(String status){
                     buildMessage: 
                         [
                             failureMsg: [content: 'Can\'t set status; build failed!.'], 
-                            successMsg: [content: 'Can\'t set status; build succeeded.']
+                            successMsg: [content: 'Successfully set status; build succeeded.']
                         ],
                 )     
             }
@@ -27,7 +27,7 @@ def updatePRStatus(String status){
                     buildMessage: 
                         [
                             failureMsg: [content: 'Can\'t set status; build failed!.'], 
-                            successMsg: [content: 'Can\'t set status; build succeeded.']
+                            successMsg: [content: 'Successfully set status; build succeeded.']
                         ]
                 )     
             }
@@ -40,7 +40,7 @@ def updatePRStatus(String status){
                     buildMessage: 
                         [
                             failureMsg: [content: 'Can\'t set status; build failed!.'], 
-                            successMsg: [content: 'Can\'t set status; build succeeded.']
+                            successMsg: [content: 'Successfully set status; build succeeded.']
                         ]
                 )     
             }
@@ -53,7 +53,7 @@ def updatePRStatus(String status){
                     buildMessage: 
                         [
                             failureMsg: [content: 'Can\'t set status; build failed!.'], 
-                            successMsg: [content: 'Can\'t set status; build succeeded.']
+                            successMsg: [content: 'Successfully set status; build succeeded.']
                         ]
                 )     
             }
