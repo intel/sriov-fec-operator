@@ -260,17 +260,17 @@ pipeline {
             }
         }
 
-         stage ('Protex') {
-             steps {
-                 container('abi') {
-                     sh '''
-                         cd ${REPO_DIR}
-                         abi ip_scan --context ci-scripts/buildconfig.json --username=sbelhaik --password=$PROTEX_PASSWORD --scan_output="ip_scan"
-                         ci-scripts/check_protex_scan.sh
-                     '''
-                 }
-             }
-         }
+//          stage ('Protex') {
+//              steps {
+//                  container('abi') {
+//                      sh '''
+//                          cd ${REPO_DIR}
+//                          abi ip_scan --context ci-scripts/buildconfig.json --username=sbelhaik --password=$PROTEX_PASSWORD --scan_output="ip_scan"
+//                          ci-scripts/check_protex_scan.sh
+//                      '''
+//                  }
+//              }
+//          }
 
         stage('archive') {
           steps {
