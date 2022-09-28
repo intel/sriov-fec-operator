@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2021 Intel Corporation
+// Copyright (c) 2020-2022 Intel Corporation
 
 package assets
 
@@ -162,65 +162,64 @@ func (a *Asset) setOwner(owner metav1.Object, obj runtime.Object, s *runtime.Sch
 	return nil
 }
 
-func (a *Asset) createOrUpdate(ctx context.Context, c client.Client, o metav1.Object, s *runtime.Scheme) error {
+func (a *Asset) createOrUpdate(ctx context.Context, c client.Client, owner metav1.Object, s *runtime.Scheme) error {
 	for _, obj := range a.objects {
-		a.log.WithField("asset", a.Path).WithField("kind", obj.GetObjectKind()).
-			Info("create or update")
+		if err := a.createOrUpdateObject(ctx, c, obj, owner, s); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-		err := a.setOwner(o, obj, s)
-		if err != nil {
+func (a *Asset) createOrUpdateObject(ctx context.Context, c client.Client, toBeCreated client.Object, owner metav1.Object, s *runtime.Scheme) error {
+
+	a.log.WithField("asset", a.Path).WithField("kind", toBeCreated.GetObjectKind()).Info("create or update")
+
+	if err := a.setOwner(owner, toBeCreated, s); err != nil {
+		return err
+	}
+
+	gvk := toBeCreated.GetObjectKind().GroupVersionKind()
+	old := &unstructured.Unstructured{}
+	old.SetGroupVersionKind(gvk)
+	key := client.ObjectKeyFromObject(toBeCreated)
+
+	if err := c.Get(ctx, key, old); err != nil {
+		if !apierr.IsNotFound(err) {
+			a.log.WithError(err).WithField("key", key).WithField("GroupVersionKind", gvk).Error("Failed to get an object")
 			return err
 		}
 
-		gvk := obj.GetObjectKind().GroupVersionKind()
-		old := &unstructured.Unstructured{}
-		old.SetGroupVersionKind(gvk)
-		key := client.ObjectKeyFromObject(obj)
-		if err := c.Get(ctx, key, old); err != nil {
-			if !apierr.IsNotFound(err) {
-				a.log.WithError(err).WithField("key", key).WithField("GroupVersionKind", gvk).
-					Error("Failed to get an object")
-				return err
-			}
-
-			// Object does not exist
-			if err := c.Create(ctx, obj); err != nil {
-				a.log.WithError(err).WithField("key", key).WithField("GroupVersionKind", gvk).
-					Error("Create failed")
-				return err
-			}
-			a.log.WithField("key", key).WithField("GroupVersionKind", gvk).
-				Info("Object created")
-		} else {
-			if strings.ToLower(old.GetObjectKind().GroupVersionKind().Kind) == "configmap" {
-				isImmutable, ok := old.Object["immutable"].(bool)
-				if !ok {
-					a.log.WithField("key", key).WithField("GroupVersionKind", gvk).
-						Info("Failed to read 'immutable' field.")
-				} else {
-					if isImmutable {
-						a.log.WithField("key", key).WithField("GroupVersionKind", gvk).
-							Info("Skipping update because it is marked as immutable")
-						continue
-					}
-				}
-			}
-
-			if !equality.Semantic.DeepDerivative(obj, old) {
-				obj.SetResourceVersion(old.GetResourceVersion())
-				if err := c.Update(ctx, obj); err != nil {
-					a.log.WithError(err).WithField("key", key).WithField("GroupVersionKind", gvk).
-						Error("Update failed")
-					return err
-				}
+		// Object does not exist
+		if err := c.Create(ctx, toBeCreated); err != nil {
+			a.log.WithError(err).WithField("key", key).WithField("GroupVersionKind", gvk).Error("Create failed")
+			return err
+		}
+		a.log.WithField("key", key).WithField("GroupVersionKind", gvk).Info("Object created")
+	} else {
+		if strings.ToLower(old.GetObjectKind().GroupVersionKind().Kind) == "configmap" {
+			isImmutable, ok := old.Object["immutable"].(bool)
+			if !ok {
 				a.log.WithField("key", key).WithField("GroupVersionKind", gvk).
-					Info("Object updated")
-			} else {
-				a.log.WithField("key", key).WithField("GroupVersionKind", gvk).
-					Info("Object has not changed")
+					Info("Failed to read 'immutable' field.")
+			} else if isImmutable {
+				a.log.WithField("key", key).WithField("GroupVersionKind", gvk).Info("Skipping update because it is marked as immutable")
+				return nil
 			}
 		}
+
+		if !equality.Semantic.DeepDerivative(toBeCreated, old) {
+			toBeCreated.SetResourceVersion(old.GetResourceVersion())
+			if err := c.Update(ctx, toBeCreated); err != nil {
+				a.log.WithError(err).WithField("key", key).WithField("GroupVersionKind", gvk).Error("Update failed")
+				return err
+			}
+			a.log.WithField("key", key).WithField("GroupVersionKind", gvk).Info("Object updated")
+		} else {
+			a.log.WithField("key", key).WithField("GroupVersionKind", gvk).Info("Object has not changed")
+		}
 	}
+
 	return nil
 }
 

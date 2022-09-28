@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2021 Intel Corporation
+// Copyright (c) 2020-2022 Intel Corporation
 
 /*
 
@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"os"
@@ -46,8 +45,7 @@ var NAMESPACE = os.Getenv("SRIOV_FEC_NAMESPACE")
 // SriovFecClusterConfigReconciler reconciles a SriovFecClusterConfig object
 type SriovFecClusterConfigReconciler struct {
 	client.Client
-	Log    *logrus.Logger
-	Scheme *runtime.Scheme
+	Log *logrus.Logger
 }
 
 // +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecclusterconfigs,verbs=get;list;watch;create;update;patch;delete

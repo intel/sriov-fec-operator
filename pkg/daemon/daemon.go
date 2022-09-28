@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2021 Intel Corporation
+// Copyright (c) 2020-2022 Intel Corporation
 
 package daemon
 
@@ -373,10 +373,8 @@ func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {
 	}
 	cmdline := string(cmdlineBytes)
 	//common attributes for SRIOV
-	for _, param := range kernelParams {
-		if !strings.Contains(cmdline, param) {
-			return fmt.Errorf("missing kernel param(%s)", param)
-		}
+	if err := validateOrdinalKernelParams(cmdline); err != nil {
+		return err
 	}
 
 	for _, physFunc := range nodeConfig.PhysicalFunctions {
@@ -391,13 +389,29 @@ func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {
 				return fmt.Errorf("'%s' driver doesn't supports SecureBoot. It is supported only by 'vfio-pci'", physFunc.PFDriver)
 			}
 		case "vfio-pci":
-			for _, param := range kernelParamsVfio {
-				if !strings.Contains(cmdline, param) {
-					return fmt.Errorf("missing kernel param for vfio-pci(%s)", param)
-				}
+			if err := validateVfioKernelParams(cmdline); err != nil {
+				return err
 			}
 		default:
 			return fmt.Errorf("unknown driver '%s'", physFunc.PFDriver)
+		}
+	}
+	return nil
+}
+
+func validateVfioKernelParams(cmdline string) error {
+	for _, param := range kernelParamsVfio {
+		if !strings.Contains(cmdline, param) {
+			return fmt.Errorf("missing kernel param for vfio-pci(%s)", param)
+		}
+	}
+	return nil
+}
+
+func validateOrdinalKernelParams(cmdline string) error {
+	for _, param := range kernelParams {
+		if !strings.Contains(cmdline, param) {
+			return fmt.Errorf("missing kernel param(%s)", param)
 		}
 	}
 	return nil

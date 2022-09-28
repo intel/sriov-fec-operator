@@ -28,6 +28,7 @@ data:
             "0d8f": "FPGA_5GNR",
             "5052": "FPGA_LTE",
             "0d5c": "ACC100",
+            "57c0": "ACC200", 
             "0b32": ""
           },
           "NodeLabel": "fpga.intel.com/intel-accelerator-present"

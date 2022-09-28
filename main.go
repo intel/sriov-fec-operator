@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2021 Intel Corporation
+// Copyright (c) 2020-2022 Intel Corporation
 
 /*
 
@@ -21,17 +21,24 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/go-logr/logr"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/assets"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
-	"os"
-	"strings"
-	"time"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	"github.com/smart-edge-open/sriov-fec-operator/controllers"
 	secv1 "github.com/openshift/api/security/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,10 +47,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
-
-	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
-	"github.com/smart-edge-open/sriov-fec-operator/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -78,67 +81,27 @@ func main() {
 	ctrl.SetLogger(logr.New(utils.NewLogWrapper()))
 
 	config := ctrl.GetConfigOrDie()
-	mgr, err := ctrl.NewManager(config, ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		HealthProbeBindAddress: healthProbeAddr,
-		Port:                   9443,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "98e78623.intel.com",
-		Namespace:              controllers.NAMESPACE,
-	})
-	if err != nil {
-		setupLog.WithError(err).Error("unable to start manager")
-		os.Exit(1)
-	}
+	mgr := createAndConfigureManager(config, metricsAddr, healthProbeAddr, enableLeaderElection)
 
-	log := utils.NewLogger()
-	if err = (&controllers.SriovFecClusterConfigReconciler{
-		Client: mgr.GetClient(),
-		Log:    log,
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.WithField("controller", "SriovFecClusterConfig").WithError(err).Error("unable to create controller")
-		os.Exit(1)
-	}
-	if err = (&sriovfecv2.SriovFecClusterConfig{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.WithError(err).WithField("webhook", "SriovFecClusterConfig").Error("unable to create webhook")
-		os.Exit(1)
-	}
+	initializeSriovFecClusterConfigReconciler(mgr)
 	// +kubebuilder:scaffold:builder
 
-	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
-		setupLog.WithError(err).Error("unable to set up health check")
-		os.Exit(1)
-	}
-	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
-		setupLog.WithError(err).Error("unable to set up ready check")
-		os.Exit(1)
-	}
+	c := createClient(config)
 
-	c, err := client.New(config, client.Options{Scheme: scheme})
-	if err != nil {
-		setupLog.WithError(err).Error("failed to create client")
+	operatorDeployment := fetchOperatorDeployment(c)
+
+	determineClusterType(config)
+
+	deployOperatorAssets(c, operatorDeployment)
+
+	setupLog.Info("starting manager")
+	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+		setupLog.WithError(err).Error("problem running manager")
 		os.Exit(1)
 	}
+}
 
-	namespace := os.Getenv("SRIOV_FEC_NAMESPACE")
-	owner := &appsv1.Deployment{}
-	err = c.Get(context.Background(), client.ObjectKey{
-		Namespace: namespace,
-		Name:      operatorDeploymentName,
-	}, owner)
-	if err != nil {
-		setupLog.WithError(err).Error("Unable to get operator deployment")
-		os.Exit(1)
-	}
-
-	err = getClusterType(config)
-	if err != nil {
-		setupLog.Error(err, "unable to determine cluster type")
-		os.Exit(1)
-	}
-
+func deployOperatorAssets(c client.Client, operatorDeployment *appsv1.Deployment) {
 	logger := utils.NewLogger()
 	assetsManager := &assets.Manager{
 		Client:    c,
@@ -146,7 +109,7 @@ func main() {
 		Log:       logger,
 		EnvPrefix: utils.SriovPrefix,
 		Scheme:    scheme,
-		Owner:     owner,
+		Owner:     operatorDeployment,
 		Assets: []assets.Asset{
 			{
 				ConfigMapName: "labeler-config",
@@ -173,12 +136,92 @@ func main() {
 		setupLog.WithError(err).Error("failed to deploy the assets")
 		os.Exit(1)
 	}
+}
 
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.WithError(err).Error("problem running manager")
+func determineClusterType(config *rest.Config) {
+	if err := getClusterType(config); err != nil {
+		setupLog.Error(err, "unable to determine cluster type")
 		os.Exit(1)
 	}
+}
+
+func fetchOperatorDeployment(c client.Client) *appsv1.Deployment {
+	namespace := os.Getenv("SRIOV_FEC_NAMESPACE")
+	owner := &appsv1.Deployment{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Namespace: namespace,
+		Name:      operatorDeploymentName,
+	}, owner)
+	if err != nil {
+		setupLog.WithError(err).Error("Unable to get operator deployment")
+		os.Exit(1)
+	}
+	return owner
+}
+
+func createClient(config *rest.Config) client.Client {
+	c, err := client.New(config, client.Options{Scheme: scheme})
+	if err != nil {
+		setupLog.WithError(err).Error("failed to create client")
+		os.Exit(1)
+	}
+	return c
+}
+
+func initializeSriovFecClusterConfigReconciler(mgr manager.Manager) {
+	log := utils.NewLogger()
+	if err := (&controllers.SriovFecClusterConfigReconciler{
+		Client: mgr.GetClient(),
+		Log:    log,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.WithField("controller", "SriovFecClusterConfig").WithError(err).Error("unable to create controller")
+		os.Exit(1)
+	}
+	if err := (&sriovfecv2.SriovFecClusterConfig{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.WithError(err).WithField("webhook", "SriovFecClusterConfig").Error("unable to create webhook")
+		os.Exit(1)
+	}
+}
+
+func createAndConfigureManager(config *rest.Config, metricsAddr string, healthProbeAddr string, enableLeaderElection bool) manager.Manager {
+	ws := webhook.Server{
+		TLSMinVersion: "1.2",
+		TLSOpts: []func(*tls.Config){
+			func(cfg *tls.Config) {
+				// Enabled TLS 1.2 cipher suites. TLS 1.3 cipher suites are not configurable.
+				cfg.CipherSuites = []uint16{
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+				}
+			},
+		},
+	}
+
+	mgr, err := ctrl.NewManager(config, ctrl.Options{
+		Scheme:                 scheme,
+		MetricsBindAddress:     metricsAddr,
+		HealthProbeBindAddress: healthProbeAddr,
+		Port:                   9443,
+		LeaderElection:         enableLeaderElection,
+		LeaderElectionID:       "98e78623.intel.com",
+		Namespace:              controllers.NAMESPACE,
+		WebhookServer:          &ws,
+	})
+	if err != nil {
+		setupLog.WithError(err).Error("unable to start manager")
+		os.Exit(1)
+	}
+
+	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
+		setupLog.WithError(err).Error("unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
+		setupLog.WithError(err).Error("unable to set up ready check")
+		os.Exit(1)
+	}
+	return mgr
 }
 
 func getClusterType(restConfig *rest.Config) error {
@@ -205,6 +248,12 @@ func getClusterType(restConfig *rest.Config) error {
 
 	setupLog.Info("couldn't find 'route.openshift.io' API - operator is running on Kubernetes")
 	err = utils.SetOsEnvIfNotSet(utils.SriovPrefix+"GENERIC_K8S", "true", logr.New(utils.NewLogWrapper()))
+
+	if err != nil {
+		setupLog.Error(err, "unable to determine cluster type")
+		os.Exit(1)
+	}
+
 	if err != nil {
 		return fmt.Errorf("failed to set SRIOV_FEC_GENERIC_K8S env variable - %v", err)
 	}

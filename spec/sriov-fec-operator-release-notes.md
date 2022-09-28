@@ -25,25 +25,30 @@ This document provides high-level system features, issues, and limitations infor
 
 ### SRIOV-FEC Operator
 
-| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP          |
-|---------|----------------|------------------------------|--------------------------|
-| 1.0.0   | January 2021   | 4.6                          | 4.6.4                    |
-| 1.1.0   | March 2021     | 4.6                          | 4.6.16                   |
-| 1.2.0   | June 2021      | 4.7                          | 4.7.8                    |
-| 1.2.1   | June 2021      | 4.7                          | 4.7.8                    |
-| 1.3.0   | August 2021    | 4.8                          | 4.8.2                    |
-| 2.0.0   | September 2021 | 4.8                          | 4.8.5                    |
-| 2.0.1   | October 2021   | 4.8                          | 4.8.13                   |
-| 2.0.2   | November 2021  | 4.8                          | 4.8.12                   |
-| 2.1.0   | November 2021  | 4.9                          | 4.9.7                    |
-| 2.1.1   | January 2022   | 4.9                          | 4.9.7                    |
-| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5   | 
-| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5   |
-| 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17  |
-| 2.3.1   | July 2022      | 4.8, 4.9, 4.10               | 4.8.46, 4.9.41, 4.10.21  |
-| 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.41, 4.10.21, 4.11.2  |  
+| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP         |
+|---------|----------------|------------------------------|-------------------------|
+| 1.0.0   | January 2021   | 4.6                          | 4.6.4                   |
+| 1.1.0   | March 2021     | 4.6                          | 4.6.16                  |
+| 1.2.0   | June 2021      | 4.7                          | 4.7.8                   |
+| 1.2.1   | June 2021      | 4.7                          | 4.7.8                   |
+| 1.3.0   | August 2021    | 4.8                          | 4.8.2                   |
+| 2.0.0   | September 2021 | 4.8                          | 4.8.5                   |
+| 2.0.1   | October 2021   | 4.8                          | 4.8.13                  |
+| 2.0.2   | November 2021  | 4.8                          | 4.8.12                  |
+| 2.1.0   | November 2021  | 4.9                          | 4.9.7                   |
+| 2.1.1   | January 2022   | 4.9                          | 4.9.7                   |
+| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  | 
+| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  |
+| 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17 |
+| 2.3.1   | July 2022      | 4.8, 4.9, 4.10               | 4.8.46, 4.9.41, 4.10.21 |
+| 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.41, 4.10.21, 4.11.2 |
+| 2.5.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.48, 4.10.34, 4.11.5 |
 
 # Features for Release
+***v2.5.0***
+- pf-bb-config updated (22.03 -> 22.07)
+- Added support for Ubuntu 22.04
+- Improved documentation for VFIO token
 
 ***v2.4.0***
 - Support for OCP4.11.x
@@ -101,6 +106,8 @@ This document provides high-level system features, issues, and limitations infor
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
 
 # Changes to Existing Features
+***v2.4.0***
+- SriovFecClusterConfig.spec.physicalFunction.bbDevConfig field is now marked as 'required'
 
 ***v2.3.0***
 - Flattened sriov-fec operator structure by removing the `sriov-fec` directory
@@ -187,6 +194,16 @@ This document provides high-level system features, issues, and limitations infor
 - Documentation
 
 # Supported Operating Systems
+***v2.5.0***
+- OpenShift: 4.11.5
+- OS: Red Hat Enterprise Linux CoreOS 411.86.202209140028-0 (Ootpa)
+- Kubernetes: v1.24.0+3882f8f
+- RT Kernel: 4.18.0-372.26.1.rt7.183.el8_6.x86_64
+
+***v2.5.0***
+- Kubernetes 1.23.5+c285e78
+- OS: Ubuntu 22.04 LTS (Jammy Jellyfish)
+- Kernel: 5.15.0-43-generic
 
 ***v2.4.0***
 - OpenShift: 4.11.2
@@ -286,5 +303,5 @@ This document provides high-level system features, issues, and limitations infor
 # Package Versions
 Package:
 - Golang: 1.18
-- DPDK: v20.11
-- pf-bb-config-app: v22.03
+- DPDK: v21.11
+- pf-bb-config-app: v22.07

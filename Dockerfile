@@ -1,5 +1,5 @@
 ## SPDX-License-Identifier: Apache-2.0
-## Copyright (c) 2020-2021 Intel Corporation
+## Copyright (c) 2020-2022 Intel Corporation
 
 # Build the manager binary
 FROM golang:1.18.3 as builder
@@ -22,7 +22,7 @@ COPY controllers/ controllers/
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.6-751
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.6-941
 
 ARG VERSION
 ### Required OpenShift Labels

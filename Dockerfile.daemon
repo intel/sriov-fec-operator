@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020-2021 Intel Corporation
+# Copyright (c) 2020-2022 Intel Corporation
 
 FROM golang:1.18.3 as builder
 
@@ -10,11 +10,11 @@ RUN git clone --depth 1 --branch r44 https://github.com/benhoyt/inih && \
     make -f Makefile.static && \
     cp libinih.a ../
 
-RUN git clone --depth 1 --branch v22.03 https://github.com/intel/pf-bb-config && \
+RUN git clone --depth 1 --branch v22.07 https://github.com/intel/pf-bb-config && \
     cd pf-bb-config && \
     VERSION_STRING=$(git describe --tags --long) && \
     sed -i "s/#VERSION_STRING#/${VERSION_STRING}/g" config_app.c && \
-    make CFLAGS="-D_FORTIFY_SOURCE=2 -fstack-protector-strong -fPIE -z relro -z now -z noexecstack -s -O1"
+    make
 
 
 WORKDIR /workspace-go
@@ -29,7 +29,7 @@ COPY api api/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
 
-FROM registry.access.redhat.com/ubi8:8.6-754
+FROM registry.access.redhat.com/ubi8:8.6-943
 
 ARG VERSION
 ### Required OpenShift Labels

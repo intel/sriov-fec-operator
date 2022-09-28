@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2021 Intel Corporation
+// Copyright (c) 2020-2022 Intel Corporation
 
 package v2
 
 import (
 	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type SyncStatus string
+
+const (
+	acc100maxQueueGroups = 8
+	acc200maxQueueGroups = 16
+)
 
 var (
 	// InProgressSync indicates that the synchronization of the CR is in progress
@@ -108,10 +112,54 @@ type ACC100BBDevConfig struct {
 	Downlink5G   QueueGroupConfig `json:"downlink5G"`
 }
 
+func (in *ACC100BBDevConfig) Validate() error {
+	totalQueueGroups := in.Uplink4G.NumQueueGroups + in.Downlink4G.NumQueueGroups + in.Uplink5G.NumQueueGroups + in.Downlink5G.NumQueueGroups
+	if totalQueueGroups > acc100maxQueueGroups {
+		return fmt.Errorf("total number of requested queue groups (4G/5G) %v exceeds the maximum (%d)", totalQueueGroups, acc100maxQueueGroups)
+	}
+	return nil
+}
+
+// ACC200BBDevConfig specifies variables to configure ACC200 with
+type ACC200BBDevConfig struct {
+	ACC100BBDevConfig `json:",inline"`
+	QFFT              QueueGroupConfig `json:"qfft"`
+}
+
+func (in *ACC200BBDevConfig) Validate() error {
+	totalQueueGroups := in.Uplink4G.NumQueueGroups + in.Downlink4G.NumQueueGroups + in.Uplink5G.NumQueueGroups + in.Downlink5G.NumQueueGroups + in.QFFT.NumQueueGroups
+	if totalQueueGroups > acc200maxQueueGroups {
+		return fmt.Errorf("total number of requested queue groups (4G/5G/QFFT) %v exceeds the maximum (%d)", totalQueueGroups, acc200maxQueueGroups)
+	}
+	return nil
+}
+
 // BBDevConfig is a struct containing configuration for various FEC cards
 type BBDevConfig struct {
 	N3000  *N3000BBDevConfig  `json:"n3000,omitempty"`
 	ACC100 *ACC100BBDevConfig `json:"acc100,omitempty"`
+	ACC200 *ACC200BBDevConfig `json:"acc200,omitempty"`
+}
+
+type validator interface {
+	Validate() error
+}
+
+func (in *BBDevConfig) Validate() error {
+
+	if err := hasAmbiguousBBDevConfigs(*in); err != nil {
+		return err
+	}
+
+	for _, config := range []interface{}{in.ACC200, in.ACC100, in.N3000} {
+		if !isNil(config) {
+			if validator, ok := config.(validator); ok {
+				return validator.Validate()
+			}
+		}
+	}
+
+	return nil
 }
 
 // PhysicalFunctionConfig defines a possible configuration of a single Physical Function (PF), i.e. card
@@ -122,7 +170,7 @@ type PhysicalFunctionConfig struct {
 	// VFDriver to bound the VFs to
 	VFDriver string `json:"vfDriver"`
 	// VFAmount is an amount of VFs to be created
-	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=1
 	VFAmount int `json:"vfAmount"`
 	// BBDevConfig is a config for PF's queues
 	BBDevConfig BBDevConfig `json:"bbDevConfig"`

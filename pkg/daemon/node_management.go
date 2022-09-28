@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2021 Intel Corporation
+// Copyright (c) 2020-2022 Intel Corporation
 
 package daemon
 
@@ -12,11 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -129,40 +126,16 @@ func (n *NodeConfigurator) bindDeviceToDriver(pciAddress, driver string) error {
 	return err
 }
 
-func (n *NodeConfigurator) enableMasterBus(pciAddr string) error {
-	const MASTER_BUS_BIT int64 = 4
-	cmd := []string{"chroot", "/host/", "setpci", "-v", "-s", pciAddr, "COMMAND"}
-	out, err := runExecCmd(cmd, n.Log)
+func (n *NodeConfigurator) configureCommandRegister(pciAddr string) error {
+	// Configures PCI COMMAND register that enables
+	// 0X02 bit - PCI_COMMAND_MEMORY which is required for MMIO in pf-bb-config
+	// 0X04 bit - PCI_COMMAND_MASTER which required for PF to correctly manage VFs
+	cmd := []string{"chroot", "/host/", "setpci", "-v", "-s", pciAddr, "COMMAND=06"}
+	_, err := runExecCmd(cmd, n.Log)
 	if err != nil {
-		n.Log.WithError(err).Error("failed to get the PCI flags for: " + pciAddr)
+		n.Log.WithError(err).Error("failed to configure PCI command bridge for card: " + pciAddr)
 		return err
 	}
-
-	values := strings.Split(out, " = ")
-	if len(values) != 2 {
-		return fmt.Errorf("unexpected output form \"%s\": %s", strings.Join(cmd, " "), out)
-	}
-
-	v, err := strconv.ParseInt(strings.Replace(values[1], "\n", "", 1), 16, 16)
-	if err != nil {
-		n.Log.WithError(err).WithField("value", v).Error("failed to parse the value")
-		return err
-	}
-
-	if v&MASTER_BUS_BIT == MASTER_BUS_BIT {
-		n.Log.Info("MasterBus already set for " + pciAddr)
-		return nil
-	}
-
-	v = v | MASTER_BUS_BIT
-	cmd = []string{"chroot", "/host/", "setpci", "-v", "-s", pciAddr, fmt.Sprintf("COMMAND=0%x", v)}
-	out, err = runExecCmd(cmd, n.Log)
-	if err != nil {
-		n.Log.WithField("output", out).WithError(err).Error("failed to set MasterBus bit")
-		return err
-	}
-
-	n.Log.WithField("pci", pciAddr).WithField("output", out).Info("MasterBus set")
 	return nil
 }
 
@@ -213,14 +186,10 @@ func (n *NodeConfigurator) flrReset(pfPCIAddress string) error {
 		return fmt.Errorf("failed to execute Function Level Reset for PF (%s): %s", pfPCIAddress, err)
 	}
 
-	// In some cases we have noticed that FLR can take a while - according to spec it shouldn't be longer than 100ms.
-	// if FLR is running on card, then pf-bb-config will fail.
-	time.Sleep(500 * time.Millisecond)
 	return nil
 }
 
 func (n *NodeConfigurator) cleanAcceleratorConfig(acc sriovv2.SriovAccelerator) error {
-
 	n.Log.Infof("cleaning configuration on %s", acc.PCIAddress)
 
 	if err := unbindVFs(n, acc); err != nil {
@@ -322,15 +291,16 @@ func (n *NodeConfigurator) configureAccelerator(acc sriovv2.SriovAccelerator, re
 		return err
 	}
 
-	if err := n.changeAmountOfVFs(requestedConfig.PFDriver, requestedConfig.PCIAddress, requestedConfig.VFAmount); err != nil {
+	if err := n.configureCommandRegister(requestedConfig.PCIAddress); err != nil {
 		return err
 	}
 
-	pciStubRegex := regexp.MustCompile("pci[-_]pf[-_]stub")
-	if pciStubRegex.MatchString(requestedConfig.PFDriver) {
-		if err := n.enableMasterBus(requestedConfig.PCIAddress); err != nil {
-			return err
-		}
+	if err := n.pfBBConfigController.initializePfBBConfig(acc, requestedConfig); err != nil {
+		return err
+	}
+
+	if err := n.changeAmountOfVFs(requestedConfig.PFDriver, requestedConfig.PCIAddress, requestedConfig.VFAmount); err != nil {
+		return err
 	}
 
 	createdVfs, err := getVFList(acc.PCIAddress)
@@ -343,10 +313,6 @@ func (n *NodeConfigurator) configureAccelerator(acc sriovv2.SriovAccelerator, re
 		if err := n.bindDeviceToDriver(vf, requestedConfig.VFDriver); err != nil {
 			return err
 		}
-	}
-
-	if err := n.pfBBConfigController.initializePfBBConfig(acc, requestedConfig); err != nil {
-		return err
 	}
 
 	return nil

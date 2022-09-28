@@ -26,6 +26,7 @@ Copyright (c) 2020-2022 Intel Corporation
     - [Sample CR for Wireless FEC (ACC100)](#sample-cr-for-wireless-fec-acc100)
     - [Sample Status for Wireless FEC (ACC100)](#sample-status-for-wireless-fec-acc100)
     - [Sample Daemon log for Wireless FEC (ACC100)](#sample-daemon-log-for-wireless-fec-acc100)
+- [Appendix 3 - Gathering logs for bug report](#appendix-3---gathering-logs-for-bug-report)
 
 ## Overview
 
@@ -362,6 +363,10 @@ Please be aware that usage of `vfio-pci` driver requires following arguments add
  - vfio_pci.enable_sriov=1
  - vfio_pci.disable_idle_d3=1
 
+If `vfio-pci` PF driver is used, then access to VF requires `UUID` token. Token is identical for all nodes in cluster, has default value of `02bddbbf-bbb0-4d79-886b-91bad3fbb510` and could be changed by
+    setting `SRIOV_FEC_VFIO_TOKEN` in `subscription.spec.config.env` field. Applications that are using VFs should provide token via EAL parameters - e.g
+    `./test-bbdev.py -e="--vfio-vf-token=02bddbbf-bbb0-4d79-886b-91bad3fbb510 -a0000:f7:00.1"`
+
 ## Deploying the Operator
 
 The SEO Operator for Wireless FEC Accelerators is easily deployable from the OpenShift or Kubernetes cluster via provisioning and application of the following YAML spec files:
@@ -577,4 +582,32 @@ ors":[{"vendorID":"8086","deviceID":"0b32","pciAddress":"0000:20:00.0","driver":
 {"level":"Level(-4)","ts":1616794346.8040674,"logger":"daemon.updateInventory","msg":"obtained inventory","inv":{"sriovAccelerators":[{"vendorID":"8086","deviceID":"0b32","pciAddress":"0000:20:00.0","driver":"","maxVirtualFunctions":1,"virtualFunctions":[]},{"vendorID":"8086","deviceID":"0d5c","pciAddress":"0000:af:00.0","driver":"pci-pf-stub","maxVirtualFunctions":16,"virtualFunctions":[{"pciAddress":"0000:b0:00.0","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.1","driver":"vfio-pci","deviceID":"0d5d"}]}]}}
 {"level":"Level(-4)","ts":1616794346.9058325,"logger":"daemon","msg":"Update ignored, generation unchanged"}
 {"level":"Level(-2)","ts":1616794346.9065044,"logger":"daemon.Reconcile","msg":"Reconciled","namespace":"vran-acceleration-operators","name":"pg-itengdvs02r.altera.com"}
+```
+
+## Appendix 3 - Gathering logs for bug report
+To gather logs for filing bug report please run `gather_sriovfec_logs.sh` script downloaded from https://github.com/smart-edge-open/sriov-fec-operator/blob/main/gather_sriovfec_logs.sh
+
+```
+Usage: ./gather_sriovfec_gather_sriovfec_logs.sh [K8S_BIN] [NAMESPACE]
+
+Positional arguments:
+ K8S_BIN    Orchestrator binary (default: oc)
+ NAMESPACE  Namespace with SRIOV-FEC operator pods (default: vran-acceleration-operators)
+```
+
+Example
+```shell
+[user@ctrl1 /home]# ./gather_sriovfec_gather_sriovfec_logs.sh
+Getting information about nodes
+Getting information about pods in vran-acceleration-operators
+Getting information about ClusterConfigs in vran-acceleration-operators
+Getting information about NodeConfigs in vran-acceleration-operators
+Getting information about system configurations in vran-acceleration-operators
+sriov-fec-ctrl1-Wed Aug 24 15:09:57 UTC 2022/
+...
+sriov-fec-ctrl1-Wed Aug 24 15:09:57 UTC 2022/systemLogs/lspci-worker-1.log
+Please attach 'sriov-fec.logs.tar.gz' to bug report. If you had to apply some configs and deleted them to reproduce issue, attach them as well.
+
+[user@ctrl1 /home]# ls -F
+ gather_sriovfec_logs.sh*  'sriov-fec-ctrl1-Wed Aug 24 15:09:57 UTC 2022'/   sriov-fec.logs.tar.gz
 ```

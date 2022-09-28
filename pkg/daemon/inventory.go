@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2021 Intel Corporation
+// Copyright (c) 2020-2022 Intel Corporation
 
 package daemon
 
 import (
 	"errors"
+	commonUtils "github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	"github.com/jaypipes/ghw/pkg/pci"
 	"github.com/sirupsen/logrus"
 
 	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
@@ -13,13 +15,13 @@ import (
 )
 
 func GetSriovInventory(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
-	pci, err := ghw.PCI()
+	pciInfo, err := ghw.PCI()
 	if err != nil {
 		log.WithError(err).Error("failed to get PCI info")
 		return nil, err
 	}
 
-	devices := pci.ListDevices()
+	devices := pciInfo.ListDevices()
 	if len(devices) == 0 {
 		log.Info("got 0 pci devices")
 		err := errors.New("pci.ListDevices() returned 0 devices")
@@ -30,19 +32,7 @@ func GetSriovInventory(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
 		SriovAccelerators: []sriovv2.SriovAccelerator{},
 	}
 
-	for _, device := range devices {
-
-		_, isWhitelisted := supportedAccelerators.VendorID[device.Vendor.ID]
-		if !(isWhitelisted &&
-			device.Class.ID == supportedAccelerators.Class &&
-			device.Subclass.ID == supportedAccelerators.SubClass) {
-			continue
-		}
-
-		if _, ok := supportedAccelerators.Devices[device.Product.ID]; !ok {
-			continue
-		}
-
+	for _, device := range commonUtils.Filter(devices, isKnownDevice) {
 		if !utils.IsSriovPF(device.Address) {
 			log.WithField("pci", device.Address).Info("ignoring non SriovPF capable device")
 			continue
@@ -84,7 +74,7 @@ func GetSriovInventory(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
 				vfInfo.Driver = driver
 			}
 
-			if vfDeviceInfo := pci.GetDevice(vf); vfDeviceInfo == nil {
+			if vfDeviceInfo := pciInfo.GetDevice(vf); vfDeviceInfo == nil {
 				log.WithField("pci", vf).Info("failed to get device info for vf")
 			} else {
 				vfInfo.DeviceID = vfDeviceInfo.Product.ID
@@ -97,4 +87,14 @@ func GetSriovInventory(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
 	}
 
 	return accelerators, nil
+}
+
+func isKnownDevice(device *pci.Device) bool {
+	_, hasKnownVendor := supportedAccelerators.VendorID[device.Vendor.ID]
+	_, hasKnownDeviceId := supportedAccelerators.Devices[device.Product.ID]
+
+	return hasKnownVendor &&
+		hasKnownDeviceId &&
+		device.Class.ID == supportedAccelerators.Class &&
+		device.Subclass.ID == supportedAccelerators.SubClass
 }

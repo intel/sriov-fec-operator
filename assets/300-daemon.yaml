@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020-2021 Intel Corporation
+# Copyright (c) 2020-2022 Intel Corporation
 
 apiVersion: v1
 kind: ConfigMap
@@ -103,7 +103,7 @@ data:
       namespace: {{ .SRIOV_FEC_NAMESPACE }}
     type: Opaque
     stringData:
-      VFIO_TOKEN: 02bddbbf-bbb0-4d79-886b-91bad3fbb510
+      VFIO_TOKEN: {{ .SRIOV_FEC_VFIO_TOKEN }}
     immutable: true
   daemonSet: |
     apiVersion: apps/v1

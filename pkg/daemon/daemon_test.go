@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2021 Intel Corporation
+// Copyright (c) 2020-2022 Intel Corporation
 
 package daemon
 
@@ -180,6 +180,8 @@ var _ = Describe("NodeConfigReconciler", func() {
 							onCall([]string{"chroot", "/host/", "modprobe", "igb_uio"}).
 							Return("", nil).
 							onCall([]string{"chroot", "/host/", "modprobe", "v"}).
+							Return("", nil).
+							onCall([]string{"chroot", "/host/", "setpci", "-v", "-s", "0000:14:00.1", "COMMAND=06"}).
 							Return("", nil).
 							onCall([]string{"/sriov_workdir/pf_bb_config", "FPGA_5GNR", "-c", fmt.Sprintf("%s.ini", filepath.Join(workdir, pciAddress)), "-p", pciAddress}).
 							Return("", nil)

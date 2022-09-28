@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2021 Intel Corporation
+// Copyright (c) 2020-2022 Intel Corporation
 
 package daemon
 
@@ -23,10 +23,10 @@ import (
 
 var (
 	testTmpFolder string
-	log           = logrus.New()
 )
 
 func TestAPIs(t *testing.T) {
+	log = logrus.New()
 	RegisterFailHandler(Fail)
 
 	RunSpecsWithDefaultAndCustomReporters(t,

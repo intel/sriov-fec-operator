@@ -115,6 +115,7 @@ package common <<rectangle>> {
 
     class BBDevConfig {
         ACC100 *ACC100BBDevConfig
+        ACC200 *ACC200BBDevConfig
     }
 
     class ACC100BBDevConfig {
@@ -125,6 +126,17 @@ package common <<rectangle>> {
         Downlink4G   QueueGroupConfig
         Uplink5G     QueueGroupConfig
         Downlink5G   QueueGroupConfig
+    }
+
+    class ACC200BBDevConfig {
+        PFMode bool
+        NumVfBundles int
+        MaxQueueSize int
+        Uplink4G     QueueGroupConfig
+        Downlink4G   QueueGroupConfig
+        Uplink5G     QueueGroupConfig
+        Downlink5G   QueueGroupConfig
+        QFFT         QueueGroupConfig
     }
 
     class QueueGroupConfig {
@@ -138,7 +150,9 @@ package common <<rectangle>> {
 
 PhysicalFunctionConfig --> BBDevConfig
 BBDevConfig --> ACC100BBDevConfig
+BBDevConfig --> ACC200BBDevConfig
 ACC100BBDevConfig -- QueueGroupConfig
+ACC200BBDevConfig -- QueueGroupConfig
 PhysicalFunctionConfig <|---- PhysicalFunctionExtConfig
 PhysicalFunctionConfig <--- SriovFecClusterConfigSpec
 SriovFecClusterConfigSpec --> SriovAcceleratorSelector
