@@ -6,6 +6,7 @@ package daemon
 import (
 	"fmt"
 	sriovv2 "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/api/v2"
+	sriovutils "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -149,9 +150,9 @@ func (n *NodeConfigurator) changeAmountOfVFs(driver string, pfPCIAddress string,
 		unbindPath := filepath.Join(sysBusPciDevices, pfPCIAddress)
 
 		switch driver {
-		case "pci-pf-stub", "pci_pf_stub", "vfio-pci":
+		case sriovutils.PCI_PF_STUB_DASH, sriovutils.PCI_PF_STUB_UNDERSCORE, sriovutils.VFIO_PCI:
 			unbindPath = filepath.Join(unbindPath, vfNumFileDefault)
-		case "igb_uio":
+		case sriovutils.IGB_UIO:
 			unbindPath = filepath.Join(unbindPath, vfNumFileIgbUio)
 		default:
 			return fmt.Errorf("unknown driver %v", driver)

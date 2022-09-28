@@ -55,12 +55,13 @@ func main() {
 		setupLog.WithError(err).Error("failed to create clientset")
 		os.Exit(1)
 	}
-
-	mgr, err := daemon.CreateManager(config, ns, scheme)
+	mgr, err := daemon.CreateManager(config, ns, scheme, 8080)
 	if err != nil {
 		setupLog.WithError(err).Error("unable to start manager")
 		os.Exit(1)
 	}
+
+	daemon.StartTelemetryDaemon(mgr, nodeName, ns, directClient, setupLog)
 
 	vfioTokenBytes, err := ioutil.ReadFile("/sriov_config/vfiotoken")
 	if err != nil {
@@ -80,7 +81,6 @@ func main() {
 	devicePluginController := daemon.NewDevicePluginController(mgr.GetClient(), utils.NewLogger(), nodeNameRef)
 
 	reconciler, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), drainHelper.Run, nodeNameRef, nodeConfigurer, devicePluginController.RestartDevicePlugin)
-
 	if err != nil {
 		setupLog.WithError(err).Error("unable to create reconciler")
 		os.Exit(1)

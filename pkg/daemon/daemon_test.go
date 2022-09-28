@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -60,8 +61,8 @@ var _ = Describe("NodeConfigReconciler", func() {
 			sysBusPciDevices = testTmpFolder
 			sysBusPciDrivers = testTmpFolder
 			Expect(createFiles(filepath.Join(sysBusPciDevices, pciAddress), "driver_override", "reset", vfNumFileDefault, vfNumFileIgbUio)).To(Succeed())
-			Expect(createFiles(filepath.Join(sysBusPciDrivers, "igb_uio"), "bind")).To(Succeed())
-			Expect(createFiles(filepath.Join(sysBusPciDrivers, "pci-pf-stub"), "bind")).To(Succeed())
+			Expect(createFiles(filepath.Join(sysBusPciDrivers, utils.IGB_UIO), "bind")).To(Succeed())
+			Expect(createFiles(filepath.Join(sysBusPciDrivers, utils.PCI_PF_STUB_DASH), "bind")).To(Succeed())
 
 			getVFconfigured = func(string) int {
 				return 0
@@ -151,7 +152,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 					Expect(err).ToNot(HaveOccurred())
 
-					k8sManager, err := CreateManager(config, _SUPPORTED_NAMESPACE, scheme.Scheme)
+					k8sManager, err := CreateManager(config, _SUPPORTED_NAMESPACE, scheme.Scheme, 0)
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(reconciler.SetupWithManager(k8sManager)).ToNot(HaveOccurred())
@@ -161,13 +162,12 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 					//initialize empty SriovFecNodeConfig
 					Expect(reconciler.CreateEmptyNodeConfigIfNeeded(k8sClient)).To(Succeed())
-
 					go func() {
 						Expect(k8sManager.Start(context.TODO())).ToNot(HaveOccurred())
 					}()
 				})
 
-				AfterEach(func() {
+				JustAfterEach(func() {
 					By("tearing down the test environment")
 					_ = testEnv.Stop()
 				})
@@ -177,7 +177,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 						osExecMock := new(runExecCmdMock).
 							onCall([]string{"/usr/sbin/chroot", "/host/", "pkill -9 -f pf_bb_config.*0000:14:00.1"}).
 							Return("", nil).
-							onCall([]string{"chroot", "/host/", "modprobe", "igb_uio"}).
+							onCall([]string{"chroot", "/host/", "modprobe", utils.IGB_UIO}).
 							Return("", nil).
 							onCall([]string{"chroot", "/host/", "modprobe", "v"}).
 							Return("", nil).
@@ -283,7 +283,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 						},
 					}
 
-					k8sManager, err := CreateManager(config, _SUPPORTED_NAMESPACE, scheme.Scheme)
+					k8sManager, err := CreateManager(config, _SUPPORTED_NAMESPACE, scheme.Scheme, 0)
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(reconciler.SetupWithManager(k8sManager)).ToNot(HaveOccurred())

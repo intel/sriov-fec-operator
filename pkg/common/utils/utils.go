@@ -20,8 +20,12 @@ type AcceleratorDiscoveryConfig struct {
 }
 
 const (
-	configFilesizeLimitInBytes = 10485760 //10 MB
-	SriovPrefix                = "SRIOV_FEC_"
+	CONFIG_FILE_SIZE_LIMIT_IN_BYTES = 10485760 //10 MB
+	SRIOV_PREFIX                    = "SRIOV_FEC_"
+	PCI_PF_STUB_DASH                = "pci-pf-stub"
+	PCI_PF_STUB_UNDERSCORE          = "pci_pf_stub"
+	VFIO_PCI                        = "vfio-pci"
+	IGB_UIO                         = "igb_uio"
 )
 
 func LoadDiscoveryConfig(cfgPath string) (AcceleratorDiscoveryConfig, error) {
@@ -39,9 +43,9 @@ func LoadDiscoveryConfig(cfgPath string) (AcceleratorDiscoveryConfig, error) {
 	}
 
 	// check file size
-	if stat.Size() > configFilesizeLimitInBytes {
+	if stat.Size() > CONFIG_FILE_SIZE_LIMIT_IN_BYTES {
 		return cfg, fmt.Errorf("Config file size %d, exceeds limit %d bytes",
-			stat.Size(), configFilesizeLimitInBytes)
+			stat.Size(), CONFIG_FILE_SIZE_LIMIT_IN_BYTES)
 	}
 
 	cfgData := make([]byte, stat.Size())

@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/rest"
 	"os/exec"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"strconv"
 	"strings"
 	"time"
 
@@ -316,7 +317,38 @@ func (r *NodeConfigReconciler) isCardUpdateRequired(nc *fec.SriovFecNodeConfig, 
 		return false
 	}
 
-	return isGenerationChanged() || exposedInventoryOutdated()
+	bbDevConfigDaemonIsDead := func() bool {
+		for _, acc := range detectedInventory.SriovAccelerators {
+			if acc.PFDriver == "vfio-pci" {
+				if !pfBbConfigProcExists(r.log, acc.PCIAddress) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	return isGenerationChanged() || exposedInventoryOutdated() || bbDevConfigDaemonIsDead()
+}
+
+func pfBbConfigProcExists(log *logrus.Logger, pciAddr string) bool {
+	procExists := false
+	_, err := execAndSuppress([]string{
+		"chroot",
+		"/host/",
+		"pgrep",
+		"-f",
+		fmt.Sprintf("pf_bb_config.*%s", pciAddr),
+	}, log, func(e error) bool {
+		if ee, ok := e.(*exec.ExitError); ok && ee.ExitCode() == 0 {
+			procExists = true
+		}
+		return false
+	})
+	if err != nil {
+		log.WithError(err).Error("failed to determine status of pf-bb-config daemon")
+	}
+	return procExists
 }
 
 func isReady(p corev1.Pod) bool {
@@ -357,10 +389,10 @@ OUTER:
 	return false
 }
 
-func CreateManager(config *rest.Config, namespace string, scheme *runtime.Scheme) (manager.Manager, error) {
+func CreateManager(config *rest.Config, namespace string, scheme *runtime.Scheme, metricsPort int) (manager.Manager, error) {
 	return ctrl.NewManager(config, ctrl.Options{
 		Scheme:             scheme,
-		MetricsBindAddress: "0",
+		MetricsBindAddress: ":" + strconv.Itoa(metricsPort),
 		LeaderElection:     false,
 		Namespace:          namespace,
 	})
@@ -379,7 +411,7 @@ func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {
 
 	for _, physFunc := range nodeConfig.PhysicalFunctions {
 		switch physFunc.PFDriver {
-		case "pci-pf-stub", "pci_pf_stub", "igb_uio":
+		case utils.PCI_PF_STUB_DASH, utils.PCI_PF_STUB_UNDERSCORE, utils.IGB_UIO:
 			dmesgBytes, err := exec.Command("dmesg").Output()
 			if err != nil {
 				return fmt.Errorf("failed to run 'dmesg' - %v", err.Error())

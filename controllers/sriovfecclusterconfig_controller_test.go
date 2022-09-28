@@ -22,6 +22,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	"io"
 	"io/ioutil"
 	"os"
@@ -67,7 +68,7 @@ var (
 			NodeSelector: map[string]string{},
 			PhysicalFunction: sriovv2.PhysicalFunctionConfig{
 				//PCIAddress: "0000:14:00.1",
-				PFDriver: "pci-pf-stub",
+				PFDriver: utils.PCI_PF_STUB_DASH,
 				VFDriver: "v",
 				VFAmount: 5,
 				BBDevConfig: sriovv2.BBDevConfig{
@@ -199,7 +200,7 @@ var _ = Describe("SriovControllerTest", func() {
 						VendorID: "vendor",
 					}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: "pci-pf-stub",
+						PFDriver: utils.PCI_PF_STUB_DASH,
 						VFAmount: 1,
 					}
 				})
@@ -242,7 +243,7 @@ var _ = Describe("SriovControllerTest", func() {
 						VendorID: "notExistingVendor",
 					}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: "pci-pf-stub",
+						PFDriver: utils.PCI_PF_STUB_DASH,
 						VFAmount: 1,
 					}
 				})
@@ -284,7 +285,7 @@ var _ = Describe("SriovControllerTest", func() {
 				})
 
 				pfc := sriovv2.PhysicalFunctionConfig{
-					PFDriver: "pci-pf-stub",
+					PFDriver: utils.PCI_PF_STUB_DASH,
 					VFDriver: "vfio-pci",
 					VFAmount: 3,
 				}
@@ -343,7 +344,7 @@ var _ = Describe("SriovControllerTest", func() {
 				})
 
 				pfc := sriovv2.PhysicalFunctionConfig{
-					PFDriver: "pci-pf-stub",
+					PFDriver: utils.PCI_PF_STUB_DASH,
 					VFDriver: "vfio-pci",
 					VFAmount: 3,
 				}
@@ -406,14 +407,14 @@ var _ = Describe("SriovControllerTest", func() {
 				_ = createAcceleratorConfig("cc1", func(cc *sriovv2.SriovFecClusterConfig) {
 					cc.Spec.AcceleratorSelector = sriovv2.AcceleratorSelector{DeviceID: "id1"}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: "pci-pf-stub",
+						PFDriver: utils.PCI_PF_STUB_DASH,
 						VFAmount: 1,
 					}
 				})
 				_ = createAcceleratorConfig("cc2", func(cc *sriovv2.SriovFecClusterConfig) {
 					cc.Spec.AcceleratorSelector = sriovv2.AcceleratorSelector{DeviceID: "id2"}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: "igb_uio",
+						PFDriver: utils.IGB_UIO,
 						VFAmount: 1,
 					}
 				})
@@ -455,7 +456,7 @@ var _ = Describe("SriovControllerTest", func() {
 						VendorID: "testvendor",
 					}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: "pci-pf-stub",
+						PFDriver: utils.PCI_PF_STUB_DASH,
 						VFDriver: "vfDriver",
 						VFAmount: 1,
 					}
@@ -467,7 +468,7 @@ var _ = Describe("SriovControllerTest", func() {
 						PCIAddress: "0000:15:00.1",
 					}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: "igb_uio",
+						PFDriver: utils.IGB_UIO,
 						VFDriver: "secondVfDriver",
 						VFAmount: 2,
 					}
@@ -505,7 +506,7 @@ var _ = Describe("SriovControllerTest", func() {
 							VendorID: "testvendor",
 						}
 						cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-							PFDriver: "pci-pf-stub",
+							PFDriver: utils.PCI_PF_STUB_DASH,
 							VFDriver: "vfDriver",
 							VFAmount: 1,
 						}
@@ -520,7 +521,7 @@ var _ = Describe("SriovControllerTest", func() {
 							PCIAddress: "0000:15:00.1",
 						}
 						cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-							PFDriver: "igb_uio",
+							PFDriver: utils.IGB_UIO,
 							VFDriver: "secondVfDriver",
 							VFAmount: 2,
 						}
@@ -559,7 +560,7 @@ var _ = Describe("SriovControllerTest", func() {
 							PCIAddress: "0000:15:00.1",
 						}
 						cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-							PFDriver: "igb_uio",
+							PFDriver: utils.IGB_UIO,
 							VFDriver: "secondVfDriver",
 							VFAmount: 2,
 						}
@@ -571,7 +572,7 @@ var _ = Describe("SriovControllerTest", func() {
 							VendorID: "testvendor",
 						}
 						cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-							PFDriver: "pci-pf-stub",
+							PFDriver: utils.PCI_PF_STUB_DASH,
 							VFDriver: "vfDriver",
 							VFAmount: 1,
 						}
@@ -620,7 +621,7 @@ var _ = Describe("SriovControllerTest", func() {
 						VendorID: "testvendor",
 					}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: "pci-pf-stub",
+						PFDriver: utils.PCI_PF_STUB_DASH,
 						VFDriver: "vfDriver",
 						VFAmount: 2,
 					}

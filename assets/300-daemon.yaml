@@ -144,6 +144,9 @@ data:
           - name: sriov-fec-daemon
             image: {{ .SRIOV_FEC_DAEMON_IMAGE }}
             imagePullPolicy: IfNotPresent
+            ports:
+            - containerPort: 8080
+              name: bbdevconfig
             volumeMounts:
             - name: devvfio
               mountPath: /dev/vfio      
