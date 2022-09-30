@@ -101,6 +101,8 @@ pipeline {
         SNYK_TOKEN=credentials('SNYK_TOKEN')
         PROTEX_PASSWORD=credentials('PROTEX_CRED')
         REPO_DIR="sriov-fec-operator"
+        BDBA_TOKEN=credentials('BDBA_TOKEN')
+        BDBA_URL="https://bdba001.icloud.intel.com"
     }
 
     stages {
@@ -178,6 +180,36 @@ pipeline {
                         cd ${REPO_DIR}
                         ci-scripts/sriov-fec_test.sh .
                     '''
+                }
+            }
+        }
+
+        stage('pf-bb-config BDBA Scan') {
+            steps {
+                container('abi') {
+                    sh '''
+                        cd .. && git clone https://github.com/intel/pf-bb-config
+                        cd pf-bb-config
+                        ./build.sh
+                        zip pf_bb_config.zip pf_bb_config
+                        ls -l
+                        abi binary_scan scan --zip_file pf_bb_config.zip --report_name "pf_bb_config_bdba_report" --include_html --include_components --api_token $BDBA_TOKEN --tool_url $BDBA_URL --tool_group 32 --timeout 20
+                     '''
+                }
+            }
+        }
+
+        stage('BDBA Scan') {
+            steps {
+                container('abi') {
+                    sh '''
+                        cd ${REPO_DIR}
+                        rm -r .git Makefile spec/sriov-fec-selector-based-api.puml spec/images/*
+                        find . -name main.go -type f -delete
+                        zip -r -q sriov-fec.zip . 
+                        ls -la
+                        abi binary_scan scan --zip_file sriov-fec.zip --report_name "sriov-fec_bdba_report" --include_html --include_components --api_token $BDBA_TOKEN --tool_url $BDBA_URL --tool_group 32 --timeout 20
+                     '''
                 }
             }
         }
@@ -260,17 +292,19 @@ pipeline {
             }
         }
 
-//          stage ('Protex') {
-//              steps {
-//                  container('abi') {
-//                      sh '''
-//                          cd ${REPO_DIR}
-//                          abi ip_scan --context ci-scripts/buildconfig.json --username=sbelhaik --password=$PROTEX_PASSWORD --scan_output="ip_scan"
-//                          ci-scripts/check_protex_scan.sh
-//                      '''
-//                  }
-//              }
-//          }
+         stage ('Protex') {
+             steps {
+                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                     container('abi') {
+                         sh '''
+                             cd ${REPO_DIR}
+                             abi ip_scan --context ci-scripts/buildconfig.json --username=sbelhaik --password=$PROTEX_PASSWORD --scan_output="ip_scan"
+                             ci-scripts/check_protex_scan.sh
+                         '''
+                     }
+                 }
+             }
+         }
 
         stage('archive') {
           steps {
