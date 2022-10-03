@@ -45,6 +45,9 @@ This document provides high-level system features, issues, and limitations infor
 | 2.5.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.48, 4.10.34, 4.11.5 |
 
 # Features for Release
+v2.X.Y
+- added support pf-bb-config telemetry
+
 ***v2.5.0***
 - pf-bb-config updated (22.03 -> 22.07)
 - Added support for Ubuntu 22.04
