@@ -39,6 +39,6 @@ WORKDIR /
 COPY --from=builder /workspace/manager .
 COPY assets assets/
 
-USER nobody
+USER 1001
 
 ENTRYPOINT ["/manager"]
