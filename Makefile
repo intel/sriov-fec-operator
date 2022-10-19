@@ -340,7 +340,13 @@ build_all: build
 
 .PHONY: build_index
 build_index: opm
-	$(OPM) index add --bundles $(BUNDLE_IMG) --tag localhost/sriov-fec-index:$(VERSION) $(if ifeq $(TLS_VERIFY) false, --skip-tls) -c $(CONTAINER_TOOL) --mode=semver
+	rm -fr sriov-fec-index
+	mkdir sriov-fec-index
+	opm init sriov-fec --default-channel=stable --output yaml > sriov-fec-index/index.yaml
+	opm render $(BUNDLE_IMG) --output=yaml >> sriov-fec-index/index.yaml
+	echo -e "---\nschema: olm.channel\npackage: sriov-fec\nname: stable\nentries:\n- name: sriov-fec.v$(VERSION)" >> sriov-fec-index/index.yaml
+	opm validate sriov-fec-index
+	podman build . -f sriov-fec-index.Dockerfile -t sriov-fec-index:$(VERSION)
 	$(MAKE) VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) $(CONTAINER_TOOL)_push_index
 
 .PHONY: podman_push_index
