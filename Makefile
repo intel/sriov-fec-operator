@@ -258,6 +258,7 @@ bundle: check-operator-sdk-version manifests kustomize
 # Build/Push the bundle image.
 .PHONY: image-bundle
 image-bundle: bundle
+	cp LICENSE TEMP_LICENSE_COPY
 	$(CONTAINER_TOOL) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 	$(CONTAINER_TOOL) tag $(BUNDLE_IMG) ghcr.io/smart-edge-open/sriov-fec-bundle:$(VERSION)
 
