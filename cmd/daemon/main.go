@@ -72,10 +72,17 @@ func main() {
 	vfioToken, err := uuid.ParseBytes(vfioTokenBytes)
 	if err != nil {
 		setupLog.Errorf("provided vfioToken(%s) is not in UUID format: %s", vfioTokenBytes, err)
+		os.Exit(1)
+	}
+
+	isSingleNodeCluster, err := utils.IsSingleNodeCluster(directClient)
+	if err != nil {
+		setupLog.WithError(err).Errorf("failed to determine cluster type")
+		os.Exit(1)
 	}
 
 	nodeNameRef := types.NamespacedName{Namespace: ns, Name: nodeName}
-	drainHelper := drainhelper.NewDrainHelper(utils.NewLogger(), cset, nodeName, ns)
+	drainHelper := drainhelper.NewDrainHelper(utils.NewLogger(), cset, nodeName, ns, isSingleNodeCluster)
 	pfBBConfigController := daemon.NewPfBBConfigController(utils.NewLogger(), vfioToken.String())
 	nodeConfigurer := daemon.NewNodeConfigurator(utils.NewLogger(), pfBBConfigController, mgr.GetClient(), nodeNameRef)
 	devicePluginController := daemon.NewDevicePluginController(mgr.GetClient(), utils.NewLogger(), nodeNameRef)

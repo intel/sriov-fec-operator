@@ -94,6 +94,20 @@ func main() {
 
 	deployOperatorAssets(c, operatorDeployment)
 
+	isSingleNode, err := utils.IsSingleNodeCluster(c)
+	if err != nil {
+		setupLog.WithError(err).Error("failed to get Nodes information")
+		os.Exit(1)
+	}
+
+	if !isSingleNode {
+		*operatorDeployment.Spec.Replicas = 2
+		err := c.Update(context.TODO(), operatorDeployment)
+		if err != nil {
+			setupLog.WithError(err).Error("failed to scale down number of replicas. Ignoring error.")
+		}
+	}
+
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.WithError(err).Error("problem running manager")

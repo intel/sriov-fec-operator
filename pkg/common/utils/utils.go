@@ -4,11 +4,14 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"os"
 	"path/filepath"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type AcceleratorDiscoveryConfig struct {
@@ -67,4 +70,16 @@ func SetOsEnvIfNotSet(key, value string, logger logr.Logger) error {
 	}
 	logger.Info("setting ENV var", "key", key, "value", value)
 	return os.Setenv(key, value)
+}
+
+func IsSingleNodeCluster(c client.Client) (bool, error) {
+	nodeList := &corev1.NodeList{}
+	err := c.List(context.TODO(), nodeList)
+	if err != nil {
+		return false, err
+	}
+	if len(nodeList.Items) == 1 {
+		return true, nil
+	}
+	return false, nil
 }

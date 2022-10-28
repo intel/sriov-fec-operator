@@ -46,7 +46,9 @@ This document provides high-level system features, issues, and limitations infor
 
 # Features for Release
 v2.X.Y
-- added support pf-bb-config telemetry
+- Added support for pf-bb-config telemetry
+- Improved timeouts for LeaderElection functionality
+- Manager deployment always starts from 1 replica and scales to 2 for multinode clusters
 
 ***v2.5.0***
 - pf-bb-config updated (22.03 -> 22.07)
