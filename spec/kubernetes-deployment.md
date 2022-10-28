@@ -15,10 +15,8 @@ The SEO Operator for Wireless FEC Accelerators has the following requirements:
     - vfio_pci.disable_idle_d3=1
 - BIOS with enabled settings "Intel® Virtualization Technology for Directed I/O" (VT-d), "Single Root I/O Virtualization" (SR-IOV) and "Input–Output Memory Management Unit" (IOMMU)
 
-### Setting Up CatalogSource
+### Building images
 Prerequisite: Make sure that the images used by the operator are pushed to IMAGE_REGISTRY and all nodes in cluster have access to IMAGE_REGISTRY
-
-If operator is built from source, then user has to create CatalogSource for OLM.
 
 The operator-sdk CLI is required - see [Getting started with the Operator SDK](https://docs.openshift.com/container-platform/4.6/operators/operator_sdk/osdk-getting-started.html#osdk-installing-cli_osdk-getting-started).
 
@@ -57,41 +55,9 @@ Build and push images to local registry:
 # IMAGE_REGISTRY=${IMAGE_REGISTRY} TLS_VERIFY=false VERSION=${VERSION} make build_all
 ```
 
-Create and push the index image:
-
-```shell
-# IMAGE_REGISTRY=${IMAGE_REGISTRY} TLS_VERIFY=false VERSION=${VERSION} make build_index
-```
-
-Create the catalog source:
-
-```shell
-# cat <<EOF | kubectl apply -f -
-apiVersion: operators.coreos.com/v1alpha1
-kind: CatalogSource
-metadata:
-    name: intel-operators
-    namespace: openshift-marketplace
-spec:
-    sourceType: grpc
-    image: ${IMAGE_REGISTRY}/sriov-fec-index:${VERSION}
-    publisher: Intel
-    displayName: SRIOV-FEC operator(Local)
-EOF
-```
-
-Wait for `packagemanifest` to be available:
-
-```shell
-[user@ctrl1 /home]# kubectl get packagemanifests sriov-fec
-
- NAME        CATALOG                     AGE
- sriov-fec   SRIOV-FEC operator(Local)   24s
-```
-
 ### Install dependencies
 
-If Kubernetes doesn't have installed OLM (Operator lifecycle manager) start from installing Operator-sdk (https://olm.operatorframework.io/)
+If Kubernetes doesn't have installed OLM (Operator Lifecycle Manager - https://olm.operatorframework.io/) start from installing Operator SDK (https://sdk.operatorframework.io/)
 
 After Operator-sdk installation run following command
 ```shell
@@ -101,45 +67,19 @@ Install PCIutils on worker nodes
 ```shell
 [user@ctrl1 /home]# yum install pciutils
 ```
-### Install the Bundle
+### Install the Operator
 
 To install the SEO Operator for Wireless FEC Accelerators operator bundle perform the following steps:
 
-Create the project:
+Create the namespace for project:
 ```shell
 [user@ctrl1 /home]# kubectl create namespace vran-acceleration-operators
 [user@ctrl1 /home]# kubectl config set-context --current --namespace=vran-acceleration-operators
 ```
-Execute following commands on cluster:
 
-Create an operator group and the subscriptions (all the commands are run in the `vran-acceleration-operators` namespace):
-
-```shell
-[user@ctrl1 /home]#  cat <<EOF | kubectl apply -f -
-apiVersion: operators.coreos.com/v1
-kind: OperatorGroup
-metadata:
-  name: vran-operators
-  namespace: vran-acceleration-operators
-spec:
-  targetNamespaces:
-    - vran-acceleration-operators
-EOF
+Install operator using `bundle` image
 ```
-
-```shell
-[user@ctrl1 /home]#  cat <<EOF | kubectl apply -f -
-apiVersion: operators.coreos.com/v1alpha1
-kind: Subscription
-metadata:
-  name: sriov-fec-subscription
-  namespace: vran-acceleration-operators
-spec:
-  channel: stable
-  name: sriov-fec
-  source: intel-operators
-  sourceNamespace: olm
-EOF
+# operator-sdk run bundle ${IMAGE_REGISTRY}/sriov-fec-bundle:v${VERSION} --namespace vran-acceleration-operators --install-mode OwnNamespace
 ```
 
 Verify that the operator is installed and pods are running:
@@ -159,4 +99,10 @@ sriov-fec-controller-manager-78488c4c65-cpknc   2/2     Running   0          44s
 sriov-fec-daemonset-7h8kb                       1/1     Running   0          35s                                                                              
 ```
 
-In following chapters (for [example](sriov-fec-sriov-fec-operator.md#uninstalling-previously-installed-operator) , use `kubectl` instead of `oc` in commands.
+### Uninstalling Previously Installed Operator
+
+To uninstall operator execute command
+
+```shell
+[user@ctrl1 /home]# operator-sdk cleanup sriov-fec --namespace vran-acceleration-operators
+```

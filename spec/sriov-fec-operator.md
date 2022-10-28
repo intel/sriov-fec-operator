@@ -20,7 +20,6 @@ Copyright (c) 2020-2022 Intel Corporation
 - [Hardware Validation Environment](#hardware-validation-environment)
 - [Summary](#summary)
 - [Appendix 1 - Developer Notes](#appendix-1---developer-notes)
-  - [Uninstalling Previously Installed Operator](#uninstalling-previously-installed-operator)
   - [Running operator on SNO](#running-operator-on-sno)
 - [Appendix 2 - SEO Operator for Wireless FEC Accelerators Examples](#appendix-2---seo-operator-for-wireless-fec-accelerators-examples)
   - [ACC100 FEC](#acc100-fec)
@@ -477,26 +476,6 @@ The SEO Operator for Wireless FEC Accelerators is a fully functional tool to man
 The operator handles all the necessary actions from creation of FEC resources to configuration and management of the resources within the OpenShift cluster.
 
 ## Appendix 1 - Developer Notes
-
-### Uninstalling Previously Installed Operator
-
-If the operator has been previously installed, the user needs to perform the following steps to delete the operator deployment.
-
-Use the following command to identify items to delete:
-
-```shell
-[user@ctrl1 /home]# oc get csv -n vran-acceleration-operators
-
-NAME               DISPLAY                                             VERSION   REPLACES   PHASE
-sriov-fec.v2.2.0   SEO SR-IOV Operator for Wireless FEC Accelerators   2.2.0                Succeeded
-```
-
-Then delete the items and the namespace:
-
-```shell
-[user@ctrl1 /home]# oc delete csv sriov-fec.v2.2.0
-[user@ctrl1 /home]# oc delete ns vran-acceleration-operators
-```
 
 ### Running operator on SNO
 

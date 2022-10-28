@@ -69,3 +69,30 @@ sriov-device-plugin-hkq6f                       1/1     Running   0          35s
 sriov-fec-controller-manager-78488c4c65-cpknc   2/2     Running   0          44s                                                                              
 sriov-fec-daemonset-7h8kb                       1/1     Running   0          35s                                                                              
 ```
+
+### Uninstalling Previously Installed Operator
+
+If the operator has been previously installed, the user needs to perform the following steps to delete the operator deployment.
+
+Use the following command to identify items to delete:
+
+```shell
+[user@ctrl1 /home]# oc get csv -n vran-acceleration-operators
+
+NAME               DISPLAY                                             VERSION   REPLACES   PHASE
+sriov-fec.v2.2.0   SEO SR-IOV Operator for Wireless FEC Accelerators   2.2.0                Succeeded
+```
+
+```shell
+[user@ctrl1 /home]# oc get subscription
+NAME                     PACKAGE     SOURCE            CHANNEL
+sriov-fec-subscription   sriov-fec   intel-operators   stable
+```
+
+Then delete the items and the namespace:
+
+```shell
+[user@ctrl1 /home]# oc delete csv sriov-fec.v2.2.0
+[user@ctrl1 /home]# oc delete sub sriov-fec-subscription
+[user@ctrl1 /home]# oc delete ns vran-acceleration-operators
+```
