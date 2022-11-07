@@ -320,7 +320,9 @@ func (r *NodeConfigReconciler) isCardUpdateRequired(nc *fec.SriovFecNodeConfig, 
 	bbDevConfigDaemonIsDead := func() bool {
 		for _, acc := range detectedInventory.SriovAccelerators {
 			if acc.PFDriver == "vfio-pci" {
-				if !pfBbConfigProcExists(r.log, acc.PCIAddress) {
+				if pfBbConfigProcIsDead(r.log, acc.PCIAddress) {
+					r.log.WithField("pciAddress", acc.PCIAddress).
+						Info("pf-bb-config process for card is not running")
 					return true
 				}
 			}
@@ -331,24 +333,25 @@ func (r *NodeConfigReconciler) isCardUpdateRequired(nc *fec.SriovFecNodeConfig, 
 	return isGenerationChanged() || exposedInventoryOutdated() || bbDevConfigDaemonIsDead()
 }
 
-func pfBbConfigProcExists(log *logrus.Logger, pciAddr string) bool {
-	procExists := false
-	_, err := execAndSuppress([]string{
+func pfBbConfigProcIsDead(log *logrus.Logger, pciAddr string) bool {
+	stdout, err := execCmd([]string{
 		"chroot",
 		"/host/",
 		"pgrep",
-		"-f",
+		"--count",
+		"--full",
 		fmt.Sprintf("pf_bb_config.*%s", pciAddr),
-	}, log, func(e error) bool {
-		if ee, ok := e.(*exec.ExitError); ok && ee.ExitCode() == 0 {
-			procExists = true
-		}
-		return false
-	})
+	}, log)
 	if err != nil {
 		log.WithError(err).Error("failed to determine status of pf-bb-config daemon")
+		return true
 	}
-	return procExists
+	matchingProcCount, err := strconv.Atoi(stdout[0:1]) //stdout contains characters like '\n', so we are removing them
+	if err != nil {
+		log.WithError(err).Error("failed to convert 'pgrep' output to int")
+		return true
+	}
+	return matchingProcCount == 0
 }
 
 func isReady(p corev1.Pod) bool {
