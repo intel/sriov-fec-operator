@@ -90,7 +90,7 @@ pipeline {
     environment {
         http_proxy="http://proxy-dmz.intel.com:912/"
         https_proxy="http://proxy-dmz.intel.com:912/"
-        no_proxy="${no_proxy},.intel.com"
+        no_proxy="${no_proxy},10.237.0.0/16,.intel.com,_.docker.internal"
         GO_VERSION="1.18.2"
         GO_TAR="go${GO_VERSION}.linux-amd64.tar.gz"
         GOROOT="/home/jenkins/agent/workspace/go${GO_VERSION}"
@@ -103,6 +103,10 @@ pipeline {
         REPO_DIR="sriov-fec-operator"
         BDBA_TOKEN=credentials('BDBA_TOKEN')
         BDBA_URL="https://bdba001.icloud.intel.com"
+        CHECKMARX_PASSWORD=credentials('CHECKMARX_CRED')
+        USERNAME='sys_seo_devops'
+        CHECKMARX_ID="348829"
+
     }
 
     stages {
@@ -292,23 +296,41 @@ pipeline {
             }
         }
 
-         stage ('Protex') {
-             steps {
-                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                     container('abi') {
-                         sh '''
-                             cd ${REPO_DIR}
-                             abi ip_scan --context ci-scripts/buildconfig.json --username=sbelhaik --password=$PROTEX_PASSWORD --scan_output="ip_scan"
-                             ci-scripts/check_protex_scan.sh
-                         '''
-                     }
-                 }
-             }
-         }
+        stage ('Protex') {
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    container('abi') {
+                        sh '''
+                            cd ${REPO_DIR}
+                            abi ip_scan --context ci-scripts/buildconfig.json --username=sbelhaik --password=$PROTEX_PASSWORD --scan_output="ip_scan"
+                            ci-scripts/check_protex_scan.sh
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Checkmarx'){
+            steps{
+                container('abi'){
+                    sh '''
+                        mkdir -p checkmarx
+                        cp -rf ${REPO_DIR} checkmarx/
+                        cd checkmarx
+                        zip -r check.zip ${REPO_DIR}/
+                        pwd
+                        ls -lah
+                        sed -i 's/\"isPublic\": False,/\"isPublic\": True,/' /usr/local/lib/python3.8/dist-packages/abi/scan_static_security/StaticSecurityScanner.py
+                        abi static_security_scan scan --zip_file check.zip --username "INTEL-AMR\\\\${USERNAME}" --password "${CHECKMARX_PASSWORD}" --server_url "https://sast.intel.com" --project_id $CHECKMARX_ID --report_name checkmarx --report_type pdf --timeout 180
+                        mv OWRBuild/static_security_scan/static_security_scanresults_checkmarx.pdf .
+                    '''
+                }
+            }
+        }
 
         stage('archive') {
           steps {
-            archiveArtifacts(artifacts: '**/*.txt, **/*.html, **/bin/, **/*.xlsx, **/*.log', followSymlinks: false)
+            archiveArtifacts(artifacts: '**/*.txt, **/*.html, **/bin/, **/*.xlsx, **/*.log, **/static_security_scanresults_checkmarx.pdf', followSymlinks: false)
           }
         }
     }
