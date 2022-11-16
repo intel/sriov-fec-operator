@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
 	"os"
 	"strings"
 
@@ -177,4 +178,21 @@ func (m *Manager) Deploy(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func FetchOperatorDeployment(c client.Client, log *logrus.Logger) *appsv1.Deployment {
+	n := os.Getenv("NAME")
+	operatorDeploymentName := n[:strings.LastIndex(n[:strings.LastIndex(n, "-")], "-")]
+
+	namespace := os.Getenv("SRIOV_FEC_NAMESPACE")
+	owner := &appsv1.Deployment{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Namespace: namespace,
+		Name:      operatorDeploymentName,
+	}, owner)
+	if err != nil {
+		log.WithError(err).Error("Unable to get operator deployment")
+		os.Exit(1)
+	}
+	return owner
 }

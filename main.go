@@ -25,7 +25,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -51,9 +50,8 @@ import (
 )
 
 var (
-	scheme                 = runtime.NewScheme()
-	setupLog               = utils.NewLogger()
-	operatorDeploymentName string
+	scheme   = runtime.NewScheme()
+	setupLog = utils.NewLogger()
 )
 
 func init() {
@@ -62,8 +60,6 @@ func init() {
 	utilruntime.Must(secv1.AddToScheme(scheme))
 	utilruntime.Must(sriovfecv2.AddToScheme(scheme))
 
-	n := os.Getenv("NAME")
-	operatorDeploymentName = n[:strings.LastIndex(n[:strings.LastIndex(n, "-")], "-")]
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -88,7 +84,7 @@ func main() {
 
 	c := createClient(config)
 
-	operatorDeployment := fetchOperatorDeployment(c)
+	operatorDeployment := assets.FetchOperatorDeployment(c, setupLog)
 
 	determineClusterType(config)
 
@@ -157,20 +153,6 @@ func determineClusterType(config *rest.Config) {
 		setupLog.Error(err, "unable to determine cluster type")
 		os.Exit(1)
 	}
-}
-
-func fetchOperatorDeployment(c client.Client) *appsv1.Deployment {
-	namespace := os.Getenv("SRIOV_FEC_NAMESPACE")
-	owner := &appsv1.Deployment{}
-	err := c.Get(context.Background(), client.ObjectKey{
-		Namespace: namespace,
-		Name:      operatorDeploymentName,
-	}, owner)
-	if err != nil {
-		setupLog.WithError(err).Error("Unable to get operator deployment")
-		os.Exit(1)
-	}
-	return owner
 }
 
 func createClient(config *rest.Config) client.Client {

@@ -8,6 +8,7 @@ import (
 	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
@@ -351,6 +352,54 @@ var _ = Describe("Asset Tests", func() {
 
 			err := manager.LoadFromConfigMapAndDeploy(context.TODO())
 			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
+	var _ = Describe("test propagation of Tolerations", func() {
+		var _ = It("should propagate tolerations", func() {
+			ds := &appsv1.DaemonSet{
+				TypeMeta: v1.TypeMeta{
+					Kind:       "daemonset",
+					APIVersion: "apps/v1",
+				},
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "test-ds",
+					Namespace: "default",
+				},
+				Spec: appsv1.DaemonSetSpec{
+					Selector: &v1.LabelSelector{
+						MatchLabels: map[string]string{"a": "b"},
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: v1.ObjectMeta{
+							Labels: map[string]string{"a": "b"},
+						},
+						Spec: corev1.PodSpec{
+							Tolerations: []corev1.Toleration{},
+							Containers: []corev1.Container{{
+								Name:  "test",
+								Image: "test",
+							}},
+						},
+					},
+				},
+			}
+			Expect(ds.Spec.Template.Spec.Tolerations).To(BeEmpty())
+
+			newObj, err := propagateTolerations(k8sClient, log, ds)
+
+			Expect(err).To(Succeed())
+			uns, err := runtime.DefaultUnstructuredConverter.ToUnstructured(newObj)
+			Expect(err).To(Succeed())
+			newDs := &appsv1.DaemonSet{}
+			err = runtime.DefaultUnstructuredConverter.FromUnstructured(uns, newDs)
+
+			Expect(newDs.Spec.Template.Spec.Tolerations).ToNot(BeEmpty())
+
+			toleration := newDs.Spec.Template.Spec.Tolerations[0]
+			Expect(toleration.Key).To(Equal(tolerationKey))
+			Expect(toleration.Effect).To(Equal(tolerationEffect))
+			Expect(toleration.Operator).To(Equal(tolerationOperator))
 		})
 	})
 })
