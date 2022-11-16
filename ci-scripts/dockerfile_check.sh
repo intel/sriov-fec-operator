@@ -6,11 +6,11 @@ function run_dockerfile_check()
     hadolint -v
     cd ${OPERATOR_HOME}
     find . -type f -name "Dockerfile*" -not -path './go*' -print -exec sha256sum {} ';' | tee hadolint-scan.txt
-    find . -name "Dockerfile*" -not -path './go*' -print -exec hadolint --ignore DL3000 --ignore DL3003 {} ';' | tee -a hadolint-scan.txt
+    find . -name "Dockerfile*" -not -path './go*' -print -exec hadolint {} ';' | tee -a hadolint-scan.txt
     echo "========================================" >> hadolint-scan.txt
     HADOCHECK=$(find . -type f -name "Dockerfile*" -not -path './go*')
     if [ -n "$HADOCHECK" ]; then
-        find . -name "Dockerfile*" | xargs hadolint --ignore DL3003 --ignore DL3003; EXITCODE=$?
+        find . -name "Dockerfile*" | xargs hadolint; EXITCODE=$?
         if [ $EXITCODE -eq 0 ]; then     
             echo "xargs exit code: " $EXITCODE - "No issues found" >> hadolint-scan.txt
         else

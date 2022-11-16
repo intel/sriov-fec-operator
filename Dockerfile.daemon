@@ -5,14 +5,18 @@ FROM golang:1.18.3 as builder
 
 WORKDIR /workspace-pf
 
-RUN git clone --depth 1 --branch r44 https://github.com/benhoyt/inih && \
-    cd inih/extra  && \
-    make -f Makefile.static && \
+RUN git clone --depth 1 --branch r44 https://github.com/benhoyt/inih
+
+WORKDIR /workspace-pf/inih/extra
+
+RUN make -f Makefile.static && \
     cp libinih.a ../
 
-RUN git clone --depth 1 --branch v22.07 https://github.com/intel/pf-bb-config && \
-    cd pf-bb-config && \
-    VERSION_STRING=$(git describe --tags --long) && \
+RUN git clone --depth 1 --branch v22.07 https://github.com/intel/pf-bb-config /workspace-pf/pf-bb-config
+
+WORKDIR /workspace-pf/pf-bb-config
+
+RUN VERSION_STRING=$(git describe --tags --long) && \
     sed -i "s/#VERSION_STRING#/${VERSION_STRING}/g" config_app.c && \
     make
 
@@ -40,9 +44,11 @@ LABEL name="Smart Edge Open SR-IOV Operator for Wireless FEC Accelerators daemon
     summary="Manages SR-IOV resources on Wireless FEC Accelerators" \
     description="The daemonset container is responsible for building the nodes inventory and configuring the SRIOV-FEC portion of the supported accelerators"
 
-RUN mkdir -p /usr/share/misc/ && \
-    cd /usr/share/misc/ && \
-    curl https://pci-ids.ucw.cz/v2.2/pci.ids.gz --output pci.ids.gz && \
+RUN mkdir -p /usr/share/misc/
+
+WORKDIR /usr/share/misc/
+
+RUN curl https://pci-ids.ucw.cz/v2.2/pci.ids.gz --output pci.ids.gz && \
     gzip -d pci.ids.gz && \
     rm -rfv ./pci.ids.gz
 

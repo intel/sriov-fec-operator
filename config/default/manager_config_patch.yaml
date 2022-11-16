@@ -11,6 +11,9 @@ spec:
     spec:
       containers:
       - name: manager
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
         args:
         - "--config=controller_manager_config.yaml"
         volumeMounts:

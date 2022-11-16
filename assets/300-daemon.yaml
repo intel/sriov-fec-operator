@@ -24,10 +24,25 @@ data:
     - apiGroups:
       - sriovfec.intel.com
       resources:
-      - '*'
-      - sriov-fecnodes
+      - sriovfecclusterconfigs
+      - sriovfecnodeconfigs
       verbs:
-      - '*'
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    - apiGroups:
+      - sriovfec.intel.com
+      resources:
+      - sriovfecclusterconfigs/status
+      - sriovfecnodeconfigs/status
+      verbs:
+      - get
+      - update
+      - patch
     - apiGroups:
       - security.openshift.io
       resources:
@@ -41,7 +56,13 @@ data:
       resources:
       - leases
       verbs:
-      - '*'
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
   roleBinding: |
     apiVersion: rbac.authorization.k8s.io/v1
     kind: RoleBinding
@@ -71,7 +92,7 @@ data:
     rules:
     - apiGroups: [""]
       resources: ["pods"]
-      verbs: ["*"]
+      verbs: ["get","list","watch","create","update", "patch", "delete"]
     - apiGroups: [""]
       resources: ["nodes"]
       verbs: ["get", "list", "watch", "patch", "update"]

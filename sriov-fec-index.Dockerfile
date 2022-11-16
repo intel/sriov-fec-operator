@@ -7,8 +7,10 @@ ENTRYPOINT ["/bin/opm"]
 CMD ["serve", "/configs"]
 
 # Copy declarative config root into image at /configs
-ADD sriov-fec-index /configs
+COPY sriov-fec-index /configs
 
 # Set DC-specific label for the location of the DC root directory
 # in the image
 LABEL operators.operatorframework.io.index.configs.v1=/configs
+
+USER 1001
