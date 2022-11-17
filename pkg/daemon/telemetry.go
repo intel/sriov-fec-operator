@@ -159,13 +159,13 @@ func getMetrics(nodeName, namespace string, c client.Client, log *logrus.Logger,
 
 		if len(nodeConfig.Status.Conditions) > 0 && nodeConfig.Status.Conditions[0].Reason == string(fec.SucceededSync) {
 			for _, acc := range nodeConfig.Status.Inventory.SriovAccelerators {
-				if acc.PFDriver == "vfio-pci" {
+				if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
 					getTelemetry(acc.PCIAddress, acc.VFs, telemetryGatherer, log)
 				}
 			}
 		} else {
 			for _, acc := range nodeConfig.Status.Inventory.SriovAccelerators {
-				if acc.PFDriver == "vfio-pci" {
+				if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
 					if len(nodeConfig.Status.Conditions) != 0 {
 						telemetryGatherer.updateVfCount(acc.PCIAddress, nodeConfig.Status.Conditions[0].Reason, 0)
 					} else {

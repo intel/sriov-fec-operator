@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	"os"
 	"os/exec"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"strconv"
@@ -45,7 +45,6 @@ var (
 	supportedAccelerators utils.AcceleratorDiscoveryConfig
 	procCmdlineFilePath   = "/host/proc/cmdline"
 	kernelParams          = []string{"intel_iommu=on", "iommu=pt"}
-	kernelParamsVfio      = []string{"vfio_pci.enable_sriov=1", "vfio_pci.disable_idle_d3=1"}
 )
 
 type NodeConfigReconciler struct {
@@ -319,7 +318,7 @@ func (r *NodeConfigReconciler) isCardUpdateRequired(nc *fec.SriovFecNodeConfig, 
 
 	bbDevConfigDaemonIsDead := func() bool {
 		for _, acc := range detectedInventory.SriovAccelerators {
-			if acc.PFDriver == "vfio-pci" {
+			if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
 				if pfBbConfigProcIsDead(r.log, acc.PCIAddress) {
 					r.log.WithField("pciAddress", acc.PCIAddress).
 						Info("pf-bb-config process for card is not running")
@@ -402,7 +401,7 @@ func CreateManager(config *rest.Config, namespace string, scheme *runtime.Scheme
 }
 
 func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {
-	cmdlineBytes, err := ioutil.ReadFile(procCmdlineFilePath)
+	cmdlineBytes, err := os.ReadFile(procCmdlineFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to read file contents: path: %v, error - %v", procCmdlineFilePath, err)
 	}
@@ -423,21 +422,10 @@ func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {
 			if strings.Contains(dmesgOut, "Secure boot enabled") {
 				return fmt.Errorf("'%s' driver doesn't supports SecureBoot. It is supported only by 'vfio-pci'", physFunc.PFDriver)
 			}
-		case "vfio-pci":
-			if err := validateVfioKernelParams(cmdline); err != nil {
-				return err
-			}
+		case utils.VFIO_PCI:
+			//do nothing
 		default:
 			return fmt.Errorf("unknown driver '%s'", physFunc.PFDriver)
-		}
-	}
-	return nil
-}
-
-func validateVfioKernelParams(cmdline string) error {
-	for _, param := range kernelParamsVfio {
-		if !strings.Contains(cmdline, param) {
-			return fmt.Errorf("missing kernel param for vfio-pci(%s)", param)
 		}
 	}
 	return nil

@@ -6,6 +6,7 @@ package daemon
 import (
 	"fmt"
 	sriovv2 "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/api/v2"
+	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
@@ -45,7 +46,7 @@ func (p *pfBBConfigController) initializePfBBConfig(acc sriovv2.SriovAccelerator
 		deviceName := supportedAccelerators.Devices[acc.DeviceID]
 
 		var token *string
-		if strings.ToLower(pf.PFDriver) == strings.ToLower("vfio-pci") {
+		if strings.EqualFold(pf.PFDriver, utils.VFIO_PCI) {
 			token = &p.sharedVfioToken
 		}
 

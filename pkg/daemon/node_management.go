@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -51,7 +52,7 @@ func (n *NodeConfigurator) loadModule(module string) error {
 	if module == "" {
 		return fmt.Errorf("module cannot be empty string")
 	}
-	_, err := runExecCmd([]string{"chroot", "/host/", "modprobe", module}, n.Log)
+	_, err := runExecCmd(append([]string{"chroot", "/host/", "modprobe", module}, appendMandatoryArgs(module)...), n.Log)
 	return err
 }
 
@@ -327,4 +328,11 @@ func getMatchingConfiguration(pciAddress string, configurations []sriovv2.Physic
 		}
 	}
 	return nil
+}
+
+func appendMandatoryArgs(driver string) []string {
+	if strings.EqualFold(driver, sriovutils.VFIO_PCI) {
+		return []string{"enable_sriov=1", "disable_idle_d3=1"}
+	}
+	return []string{}
 }

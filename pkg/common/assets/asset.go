@@ -205,7 +205,7 @@ func (a *Asset) createOrUpdateObject(ctx context.Context, c client.Client, toBeC
 		}
 		a.log.WithField("key", key).WithField("GroupVersionKind", gvk).Info("Object created")
 	} else {
-		if strings.ToLower(old.GetObjectKind().GroupVersionKind().Kind) == "configmap" {
+		if strings.EqualFold(old.GetObjectKind().GroupVersionKind().Kind, "configmap") {
 			isImmutable, ok := old.Object["immutable"].(bool)
 			if !ok {
 				a.log.WithField("key", key).WithField("GroupVersionKind", gvk).
