@@ -152,7 +152,7 @@ var _ = Describe("readFileWithTelemetry", func() {
 })
 
 var _ = Describe("parseCounters", func() {
-	tg := NewTelemetryGatherer()
+	tg := newTelemetryGatherer()
 	BeforeEach(func() {
 		tg.resetMetrics()
 	})
@@ -280,7 +280,7 @@ var _ = Describe("parseCounters", func() {
 })
 
 var _ = Describe("parseDeviceStatus", func() {
-	tg := NewTelemetryGatherer()
+	tg := newTelemetryGatherer()
 	BeforeEach(func() {
 		tg.resetMetrics()
 	})

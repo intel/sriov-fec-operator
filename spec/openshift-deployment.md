@@ -69,6 +69,65 @@ sriov-device-plugin-hkq6f                       1/1     Running   0          35s
 sriov-fec-controller-manager-78488c4c65-cpknc   2/2     Running   0          44s                                                                              
 sriov-fec-daemonset-7h8kb                       1/1     Running   0          35s                                                                              
 ```
+### Configuration for telemetry
+
+Openshift comes with pre-installed [kube-prometheus](https://github.com/prometheus-operator/kube-prometheus).
+
+Assuming that operator is deployed in `vran-acceleration-operators` and Prometheus stack is deployed in `openshift-monitoring` namespace, you will have to apply following CRs:
+
+```
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus-k8s
+  namespace: vran-acceleration-operators
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-k8s
+  namespace: vran-acceleration-operators
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prometheus-k8s
+subjects:
+- kind: ServiceAccount
+  name: prometheus-k8s
+  namespace: openshift-monitoring
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: bbdevconfig
+  namespace: openshift-monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+    - vran-acceleration-operators
+  podMetricsEndpoints:
+  - port: bbdevconfig
+    path: /bbdevconfig
+    interval: 1m
+    relabelings:
+    - action: replace
+      sourceLabels:
+      - __meta_kubernetes_pod_node_name
+      targetLabel: instance
+  selector:
+    matchLabels:
+      app: sriov-fec-daemonset
+```
+If any of the operators is deployed in different namespace, then modify namespace accordingly.
 
 ### Uninstalling Previously Installed Operator
 

@@ -432,37 +432,37 @@ Operator exposes telemetry from pf-bb-config application for any supported card 
       changing value of `SRIOV_FEC_METRIC_GATHER_INTERVAL` env var in operators subscription.
 
 There are 5 available metrics:
-- Bytes_Processed_Per_VFs - represents number of bytes that are processed by VF
-  - `Pci_Address` - represents unique BDF for VF
-  - `Queue_Type` - represents queue type for VF. Available values: `5GDL`, `5GUL`, `FFT`
-- Code_Blocks_Per_VFs - number of code blocks processed by VF
-  - `Pci_Address` - represents unique BDF for VF
-  - `Queue_Type` - represents queue type for VF. Available values: `5GDL`, `5GUL`, `FFT`
-- Counters_Per_Engine - number of code blocks processed by Engine
-  - `Engine_ID` - represents integer ID of engine on card
-  - `Pci_Address` - represents unique BDF for card on which engine is located
-  - `Queue_Type` - represents queue type for VF. Available values: `5GDL`, `5GUL`, `FFT`
-- Vf_Count - describes number of configured VFs on card
-  - `Pci_Address` - represents unique BDF for PF
-  - `Status` - represents current status of SriovFecNodeConfig. Available values: `InProgress`, `Succeeded`, `Failed`, `Ignored`
-- Vf_Status - equals to 1 if `Status` is `RTE_BBDEV_DEV_CONFIGURED` or `RTE_BBDEV_DEV_ACTIVE` and 0 otherwise
-  - `Pci_Address` - represents unique BDF for VF
-  - `Status` - represents status as exposed by pf-bb-config. Available values: `RTE_BBDEV_DEV_NOSTATUS`, `RTE_BBDEV_DEV_NOT_SUPPORTED`, `RTE_BBDEV_DEV_RESET`,
+- bytes_processed_per_vfs - represents number of bytes that are processed by VF
+  - `pci_address` - represents unique BDF for VF
+  - `queue_type` - represents queue type for VF. Available values: `5GDL`, `5GUL`, `FFT`
+- code_blocks_per_vfs - number of code blocks processed by VF
+  - `pci_address` - represents unique BDF for VF
+  - `queue_type` - represents queue type for VF. Available values: `5GDL`, `5GUL`, `FFT`
+- counters_per_engine - number of code blocks processed by Engine
+  - `engine_id` - represents integer ID of engine on card
+  - `pci_address` - represents unique BDF for card on which engine is located
+  - `queue_type` - represents queue type for VF. Available values: `5GDL`, `5GUL`, `FFT`
+- vf_count - describes number of configured VFs on card
+  - `pci_address` - represents unique BDF for PF
+  - `status` - represents current status of SriovFecNodeConfig. Available values: `InProgress`, `Succeeded`, `Failed`, `Ignored`
+- vf_status - equals to 1 if `status` is `RTE_BBDEV_DEV_CONFIGURED` or `RTE_BBDEV_DEV_ACTIVE` and 0 otherwise
+  - `pci_address` - represents unique BDF for VF
+  - `status` - represents status as exposed by pf-bb-config. Available values: `RTE_BBDEV_DEV_NOSTATUS`, `RTE_BBDEV_DEV_NOT_SUPPORTED`, `RTE_BBDEV_DEV_RESET`,
     `RTE_BBDEV_DEV_CONFIGURED`, `RTE_BBDEV_DEV_ACTIVE`, `RTE_BBDEV_DEV_FATAL_ERR`, `RTE_BBDEV_DEV_RESTART_REQ`, `RTE_BBDEV_DEV_RECONFIG_REQ`, `RTE_BBDEV_DEV_CORRECT_ERR`
 
 If SriovFecNodeConfig for node is in `Succeeded` state, then all those metrics are exposed
 ```
-Bytes_Processed_Per_VFs{Pci_Address="0000:cb:00.0",Queue_Type="5GUL"} 0
-Bytes_Processed_Per_VFs{Pci_Address="0000:cb:00.0",Queue_Type="5GDL"} 0
-Code_Blocks_Per_VFs{Pci_Address="0000:cb:00.0",Queue_Type="5GUL"} 0
-Code_Blocks_Per_VFs{Pci_Address="0000:cb:00.0",Queue_Type="5GDL"} 0
-Counters_Per_Engine{Engine_ID="0",Pci_Address="0000:ca:00.0",Queue_Type="5GUL"} 0
-Vf_Count{Pci_Address="0000:ca:00.0",Status="Succeeded"} 1
-Vf_Status{Pci_Address="0000:cb:00.0",Status="RTE_BBDEV_DEV_CONFIGURED"} 1
+bytes_processed_per_vfs{pci_address="0000:cb:00.0",queue_type="5GUL"} 0
+bytes_processed_per_vfs{pci_address="0000:cb:00.0",queue_type="5GDL"} 0
+code_blocks_per_vfs{pci_address="0000:cb:00.0",queue_type="5GUL"} 0
+code_blocks_per_vfs{pci_address="0000:cb:00.0",queue_type="5GDL"} 0
+counters_per_engine{engine_id="0",pci_address="0000:ca:00.0",queue_type="5GUL"} 0
+vf_count{pci_address="0000:ca:00.0",status="Succeeded"} 1
+vf_status{pci_address="0000:cb:00.0",status="RTE_BBDEV_DEV_CONFIGURED"} 1
 ```
-Otherwise only a `Vf_count` metric is exposed
+Otherwise only a `vf_count` metric is exposed
 ```
-Vf_Count{Pci_Address="0000:ca:00.0",Status="Failed"} 0
+vf_count{pci_address="0000:ca:00.0",status="Failed"} 0
 ```
 
 ## Hardware Validation Environment

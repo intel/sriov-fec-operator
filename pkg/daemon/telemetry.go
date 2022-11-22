@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	pciAddressLabel = "Pci_Address"
-	queueTypeLabel  = "Queue_Type"
-	engineIdLabel   = "Engine_ID"
-	statusLabel     = "Status"
+	pciAddressLabel = "pci_address"
+	queueTypeLabel  = "queue_type"
+	engineIdLabel   = "engine_id"
+	statusLabel     = "status"
 )
 
 type telemetryGatherer struct {
@@ -31,43 +31,34 @@ type telemetryGatherer struct {
 	metricUpdates                                                         []func()
 }
 
-func NewTelemetryGatherer() *telemetryGatherer {
+func newTelemetryGatherer() *telemetryGatherer {
 	t := &telemetryGatherer{}
 	t.codeBlocksGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "Code_Blocks_Per_VFs",
-		Help: `Code_Blocks_Per_VFs - number of code blocks processed by VF
-      - 'Pci_Address' - represents unique BDF for VF
-      - 'Queue_Type' - represents queue type for Vfs. Available values: '5GDL', '5GUL', 'FFT'`,
+		Name: "code_blocks_per_vfs",
+		Help: `number of code blocks processed by VF. 'pci_address' - represents unique BDF for VF. 'queue_type' - represents queue type for Vfs. Available values: '5GDL', '5GUL', 'FFT'`,
 	}, []string{pciAddressLabel, queueTypeLabel})
 
 	t.bytesGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "Bytes_Processed_Per_VFs",
-		Help: `Bytes_Processed_Per_VFs - represents number of bytes that are processed by VF
-      - 'Pci_Address' - represents unique BDF for VF
-      - 'Queue_Type' - represents queue type for Vfs. Available values: '5GDL', '5GUL', 'FFT'`,
+		Name: "bytes_processed_per_vfs",
+		Help: `represents number of bytes that are processed by VF. 'pci_address' - represents unique BDF for VF. 'queue_type' - represents queue type for Vfs. Available values: '5GDL', '5GUL', 'FFT'`,
 	}, []string{pciAddressLabel, queueTypeLabel})
 
 	t.engineGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "Counters_Per_Engine",
-		Help: `Counters_Per_Engine - number of code blocks processed by Engine
-      - 'Engine_ID' - represents integer ID of engine on card
-      - 'Pci_Address' - represents unique BDF for card on which engine is located
-      - 'Queue_Type' - represents queue type for Vfs. Available values: '5GDL', '5GUL', 'FFT'`,
+		Name: "counters_per_engine",
+		Help: `number of code blocks processed by Engine. 'engine_id' - represents integer ID of engine on card. 'pci_address' - represents unique BDF for card on which engine is located. 'queue_type' - represents queue type for Vfs. Available values: '5GDL', '5GUL', 'FFT'`,
 	}, []string{engineIdLabel, pciAddressLabel, queueTypeLabel})
 
+	vfStatusGaugeHelp := `equals to 1 if 'status' is 'RTE_BBDEV_DEV_CONFIGURED' or 'RTE_BBDEV_DEV_ACTIVE' and 0 otherwise.` +
+		`'pci_address' - represents unique BDF for VF.'status' - represents status as exposed by pf-bb-config.` +
+		`Available values: 'RTE_BBDEV_DEV_NOSTATUS', 'RTE_BBDEV_DEV_NOT_SUPPORTED', 'RTE_BBDEV_DEV_RESET','RTE_BBDEV_DEV_CONFIGURED', 'RTE_BBDEV_DEV_ACTIVE', 'RTE_BBDEV_DEV_FATAL_ERR', 'RTE_BBDEV_DEV_RESTART_REQ', 'RTE_BBDEV_DEV_RECONFIG_REQ', 'RTE_BBDEV_DEV_CORRECT_ERR'`
 	t.vfStatusGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "Vf_Status",
-		Help: `Vf_Status - equals to 1 if 'Status' is 'RTE_BBDEV_DEV_CONFIGURED' or 'RTE_BBDEV_DEV_ACTIVE' and 0 otherwise
-      - 'Pci_Address' - represents unique BDF for VF
-      - 'Status' - represents status as exposed by pf-bb-config. Available values: 'RTE_BBDEV_DEV_NOSTATUS', 'RTE_BBDEV_DEV_NOT_SUPPORTED', 'RTE_BBDEV_DEV_RESET',
-      'RTE_BBDEV_DEV_CONFIGURED', 'RTE_BBDEV_DEV_ACTIVE', 'RTE_BBDEV_DEV_FATAL_ERR', 'RTE_BBDEV_DEV_RESTART_REQ', 'RTE_BBDEV_DEV_RECONFIG_REQ', 'RTE_BBDEV_DEV_CORRECT_ERR'`,
+		Name: "vf_status",
+		Help: vfStatusGaugeHelp,
 	}, []string{pciAddressLabel, statusLabel})
 
 	t.vfCountGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "Vf_Count",
-		Help: `Vf_Count - describes number of configured VFs on card
-      - 'Pci_Address' - represents unique BDF for PF
-      - 'Status' - represents current status of SriovFecNodeConfig. Available values: 'InProgress', 'Succeeded', 'Failed', 'Ignored'`,
+		Name: "vf_count",
+		Help: `describes number of configured VFs on card.'pci_address' - represents unique BDF for PF.'status' - represents current status of SriovFecNodeConfig. Available values: 'InProgress', 'Succeeded', 'Failed', 'Ignored'`,
 	}, []string{pciAddressLabel, statusLabel})
 	return t
 }
@@ -120,7 +111,7 @@ func (t *telemetryGatherer) getGauges() []*prometheus.GaugeVec {
 
 func StartTelemetryDaemon(mgr manager.Manager, nodeName string, ns string, directClient client.Client, log *logrus.Logger) {
 	reg := prometheus.NewRegistry()
-	telemetryGatherer := NewTelemetryGatherer()
+	telemetryGatherer := newTelemetryGatherer()
 	for _, collector := range telemetryGatherer.getGauges() {
 		reg.MustRegister(collector)
 	}
