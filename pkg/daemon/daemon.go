@@ -5,9 +5,11 @@ package daemon
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
+	"io/fs"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -317,7 +319,7 @@ func (r *NodeConfigReconciler) isCardUpdateRequired(nc *fec.SriovFecNodeConfig, 
 	}
 
 	bbDevConfigDaemonIsDead := func() bool {
-		for _, acc := range detectedInventory.SriovAccelerators {
+		for _, acc := range nc.Spec.PhysicalFunctions {
 			if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
 				if pfBbConfigProcIsDead(r.log, acc.PCIAddress) {
 					r.log.WithField("pciAddress", acc.PCIAddress).
@@ -423,10 +425,34 @@ func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {
 				return fmt.Errorf("'%s' driver doesn't supports SecureBoot. It is supported only by 'vfio-pci'", physFunc.PFDriver)
 			}
 		case utils.VFIO_PCI:
-			//do nothing
+			err := moduleParameterIsEnabled(utils.VFIO_PCI_UNDERSCORE, "enable_sriov")
+			if err != nil {
+				return err
+			}
+			err = moduleParameterIsEnabled(utils.VFIO_PCI_UNDERSCORE, "disable_idle_d3")
+			if err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("unknown driver '%s'", physFunc.PFDriver)
 		}
+	}
+	return nil
+}
+
+func moduleParameterIsEnabled(moduleName, parameter string) error {
+	value, err := os.ReadFile("/sys/module/" + moduleName + "/parameters/" + parameter)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			// module is not loaded - we will automatically append required parameter during modprobe
+			return nil
+		} else {
+			return fmt.Errorf("failed to check parameter %v for %v module - %v", parameter, moduleName, err)
+		}
+	}
+
+	if strings.Contains(strings.ToLower(string(value)), "n") {
+		return fmt.Errorf(moduleName + " is loaded and doesn't has " + parameter + " set")
 	}
 	return nil
 }

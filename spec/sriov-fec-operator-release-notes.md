@@ -25,30 +25,30 @@ This document provides high-level system features, issues, and limitations infor
 
 ### SRIOV-FEC Operator
 
-| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP         |
-|---------|----------------|------------------------------|-------------------------|
-| 1.0.0   | January 2021   | 4.6                          | 4.6.4                   |
-| 1.1.0   | March 2021     | 4.6                          | 4.6.16                  |
-| 1.2.0   | June 2021      | 4.7                          | 4.7.8                   |
-| 1.2.1   | June 2021      | 4.7                          | 4.7.8                   |
-| 1.3.0   | August 2021    | 4.8                          | 4.8.2                   |
-| 2.0.0   | September 2021 | 4.8                          | 4.8.5                   |
-| 2.0.1   | October 2021   | 4.8                          | 4.8.13                  |
-| 2.0.2   | November 2021  | 4.8                          | 4.8.12                  |
-| 2.1.0   | November 2021  | 4.9                          | 4.9.7                   |
-| 2.1.1   | January 2022   | 4.9                          | 4.9.7                   |
-| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  | 
-| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  |
-| 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17 |
-| 2.3.1   | July 2022      | 4.8, 4.9, 4.10               | 4.8.46, 4.9.41, 4.10.21 |
-| 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.41, 4.10.21, 4.11.2 |
-| 2.5.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.48, 4.10.34, 4.11.5 |
+| Version | Release Date          | OCP Version(s) compatibility | Verified on OCP            |
+|---------|-----------------------|------------------------------|----------------------------|
+| 1.0.0   | January 2021          | 4.6                          | 4.6.4                      |
+| 1.1.0   | March 2021            | 4.6                          | 4.6.16                     |
+| 1.2.0   | June 2021             | 4.7                          | 4.7.8                      |
+| 1.2.1   | June 2021             | 4.7                          | 4.7.8                      |
+| 1.3.0   | August 2021           | 4.8                          | 4.8.2                      |
+| 2.0.0   | September 2021        | 4.8                          | 4.8.5                      |
+| 2.0.1   | October 2021          | 4.8                          | 4.8.13                     |
+| 2.0.2   | November 2021         | 4.8                          | 4.8.12                     |
+| 2.1.0   | November 2021         | 4.9                          | 4.9.7                      |
+| 2.1.1   | January 2022          | 4.9                          | 4.9.7                      |
+| 2.2.0   | March 2022            | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5     | 
+| 2.2.1   | April 2022            | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5     |
+| 2.3.0   | May 2022              | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17    |
+| 2.3.1   | July 2022             | 4.8, 4.9, 4.10               | 4.8.46, 4.9.41, 4.10.21    |
+| 2.4.0   | September 2022        | 4.9, 4.10, 4.11              | 4.9.41, 4.10.21, 4.11.2    |
+| 2.5.0   | September 2022        | 4.9, 4.10, 4.11              | 4.9.48, 4.10.34, 4.11.5    |
+| 2.6.0   | December/January 2022 | 4.10, 4.11, 4.12             | 4.10.42, 4.11.16, 4.12-rc1 |
 
 # Features for Release
-v2.X.Y
+***v2.6.0***
+- pf-bb-config updated (22.07 -> 22.11)
 - Added support for pf-bb-config telemetry
-- Improved timeouts for LeaderElection functionality
-- Manager deployment always starts from 1 replica and scales to 2 for multinode clusters
 
 ***v2.5.0***
 - pf-bb-config updated (22.03 -> 22.07)
@@ -111,6 +111,11 @@ v2.X.Y
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
 
 # Changes to Existing Features
+***v2.6.0***
+- Improved timeouts for LeaderElection functionality
+- Manager deployment always starts with 1 replica and scales to 2 for multi-node clusters
+- Base images are updated to ubi9.1 instead of ubi8.6
+
 ***v2.4.0***
 - SriovFecClusterConfig.spec.physicalFunction.bbDevConfig field is now marked as 'required'
 
@@ -199,6 +204,12 @@ v2.X.Y
 - Documentation
 
 # Supported Operating Systems
+***v2.6.0***
+- OpenShift: 4.12.0-rc.1
+- OS: Red Hat Enterprise Linux CoreOS 412.86.202211142021-0
+- Kubernetes: v1.25.2+cd98eda
+- RT Kernel: 4.18.0-425.3.1.rt7.213.el8.x86_64
+
 ***v2.5.0***
 - OpenShift: 4.11.5
 - OS: Red Hat Enterprise Linux CoreOS 411.86.202209140028-0 (Ootpa)
@@ -308,5 +319,4 @@ v2.X.Y
 # Package Versions
 Package:
 - Golang: 1.18
-- DPDK: v21.11
-- pf-bb-config-app: v22.07
+- pf-bb-config-app: v22.11

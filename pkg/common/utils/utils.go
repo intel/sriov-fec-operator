@@ -28,6 +28,7 @@ const (
 	PCI_PF_STUB_DASH                = "pci-pf-stub"
 	PCI_PF_STUB_UNDERSCORE          = "pci_pf_stub"
 	VFIO_PCI                        = "vfio-pci"
+	VFIO_PCI_UNDERSCORE             = "vfio_pci"
 	IGB_UIO                         = "igb_uio"
 )
 

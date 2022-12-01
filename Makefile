@@ -6,7 +6,7 @@ export CLI_EXEC?=oc
 # Container format for podman. Required to build containers with "ManifestType": "application/vnd.oci.image.manifest.v2+json",
 export BUILDAH_FORMAT=docker
 # Current Operator version
-VERSION ?= 2.5.0
+VERSION ?= 2.6.0
 # Supported channels
 CHANNELS ?= stable
 # Default channel
@@ -25,7 +25,7 @@ endif
 # tls verify flag for pushing images
 TLS_VERIFY ?= false
 
-REQUIRED_OPERATOR_SDK_VERSION ?= v1.23.0
+REQUIRED_OPERATOR_SDK_VERSION ?= v1.25.2
 
 IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)sriov-fec
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
@@ -112,8 +112,7 @@ $(ENVTEST): $(LOCALBIN)
 
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" SRIOV_FEC_NAMESPACE=default go test ./... -coverprofile cover.out
-
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" SRIOV_FEC_NAMESPACE=default go test ./... -coverprofile cover.out
 
 TEST_PACKAGES := $(shell find . -name "*_test.go")
 
@@ -122,7 +121,7 @@ fuzz:
 	@for pkg in ${TEST_PACKAGES} ; do            \
 		for target in `grep -oh -EI 'Fuzz([A-Z][a-z]*)+' $$pkg` ; do     \
 			echo "Executing $$pkg#$$target";     \
-			KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" SRIOV_FEC_NAMESPACE=default go test -fuzz=$$target $$pkg/.. -fuzztime=${FUZZ_TIME} || true; \
+			KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" SRIOV_FEC_NAMESPACE=default go test -fuzz=$$target $$pkg/.. -fuzztime=${FUZZ_TIME} || true; \
 		done                              \
 	done
 
@@ -251,7 +250,7 @@ bundle: check-operator-sdk-version manifests kustomize
 	operator-sdk bundle validate ./bundle
 	FOLDER=. COPYRIGHT_FILE=COPYRIGHT ./copyright.sh
 	cat COPYRIGHT bundle.Dockerfile >bundle.tmp
-	printf "\nLABEL com.redhat.openshift.versions=\"=v4.8-v4.10\"\n" >> bundle.tmp
+	printf "\nLABEL com.redhat.openshift.versions=\"=v4.10-v4.12\"\n" >> bundle.tmp
 	printf "\nCOPY TEMP_LICENSE_COPY /licenses/LICENSE\n" >> bundle.tmp
 	mv bundle.tmp bundle.Dockerfile
 
@@ -351,7 +350,7 @@ else
 endif
 	echo -e "---\nschema: olm.channel\npackage: sriov-fec\nname: stable\nentries:\n- name: sriov-fec.v$(VERSION)" >> sriov-fec-index/index.yaml
 	$(OPM) validate sriov-fec-index
-	podman build . -f sriov-fec-index.Dockerfile -t sriov-fec-index:$(VERSION)
+	$(CONTAINER_TOOL) build . -f sriov-fec-index.Dockerfile -t localhost/sriov-fec-index:$(VERSION)
 	$(MAKE) VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) $(CONTAINER_TOOL)_push_index
 
 .PHONY: podman_push_index

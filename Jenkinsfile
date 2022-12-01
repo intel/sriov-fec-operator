@@ -188,6 +188,24 @@ pipeline {
             }
         }
 
+        stage('Checkmarx'){
+            steps{
+                container('abi'){
+                    sh '''
+                        mkdir -p checkmarx
+                        cp -rf ${REPO_DIR} checkmarx/
+                        cd checkmarx
+                        zip -r check.zip ${REPO_DIR}/
+                        pwd
+                        ls -lah
+                        sed -i 's/\"isPublic\": False,/\"isPublic\": True,/' /usr/local/lib/python3.8/dist-packages/abi/scan_static_security/StaticSecurityScanner.py
+                        abi static_security_scan scan --zip_file check.zip --username "INTEL-AMR\\\\${USERNAME}" --password "${CHECKMARX_PASSWORD}" --server_url "https://sast.intel.com" --project_id $CHECKMARX_ID --report_name checkmarx --report_type pdf --timeout 180
+                        mv OWRBuild/static_security_scan/static_security_scanresults_checkmarx.pdf .
+                    '''
+                }
+            }
+        }
+
         stage('pf-bb-config BDBA Scan') {
             steps {
                 container('abi') {
@@ -306,24 +324,6 @@ pipeline {
                             ci-scripts/check_protex_scan.sh
                         '''
                     }
-                }
-            }
-        }
-
-        stage('Checkmarx'){
-            steps{
-                container('abi'){
-                    sh '''
-                        mkdir -p checkmarx
-                        cp -rf ${REPO_DIR} checkmarx/
-                        cd checkmarx
-                        zip -r check.zip ${REPO_DIR}/
-                        pwd
-                        ls -lah
-                        sed -i 's/\"isPublic\": False,/\"isPublic\": True,/' /usr/local/lib/python3.8/dist-packages/abi/scan_static_security/StaticSecurityScanner.py
-                        abi static_security_scan scan --zip_file check.zip --username "INTEL-AMR\\\\${USERNAME}" --password "${CHECKMARX_PASSWORD}" --server_url "https://sast.intel.com" --project_id $CHECKMARX_ID --report_name checkmarx --report_type pdf --timeout 180
-                        mv OWRBuild/static_security_scan/static_security_scanresults_checkmarx.pdf .
-                    '''
                 }
             }
         }

@@ -237,8 +237,10 @@ func parseCounters(fieldLine, valueLine string, vfs []fec.VF, pfPciAddr string, 
 
 	valueLineFormatted := strings.Split(strings.TrimSpace(value), " ")
 
-	if len(valueLineFormatted) != len(vfs) {
-		log.WithField("metrics", len(valueLine)).WithField("vfs", len(vfs)).Errorf("number of metrics doesn't equals to number of VFs")
+	if !strings.Contains(fieldName, "Engine") && len(valueLineFormatted) != len(vfs) {
+		log.WithField("metrics", len(valueLine)).WithField("pciAddr", pfPciAddr).
+			WithField("fieldName", fieldName).WithField("vfs", len(vfs)).
+			Errorf("number of metrics doesn't equals to number of VFs")
 		return
 	}
 

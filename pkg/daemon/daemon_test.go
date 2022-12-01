@@ -89,7 +89,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 				onGetErrorReturningClient := testClient{
 					Client: fake.NewClientBuilder().Build(),
-					get: func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+					get: func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 						return errors.NewNotFound(sriovv2.GroupVersion.WithResource("SriovFecNodeConfig").GroupResource(), "cannot get")
 					},
 					create: func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
@@ -454,11 +454,11 @@ func (n *nodeRecocnilerWrapper) Reconcile(ctx context.Context, req ctrl.Request)
 
 type testClient struct {
 	client.Client
-	get    func(ctx context.Context, key client.ObjectKey, obj client.Object) error
+	get    func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error
 	create func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error
 }
 
-func (e *testClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+func (e *testClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	return e.get(ctx, key, obj)
 }
 
