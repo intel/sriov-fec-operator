@@ -159,7 +159,7 @@ data:
           serviceAccount: sriov-fec-daemon
           serviceAccountName: sriov-fec-daemon
           hostPID: true
-          hostNetwork: false
+          hostNetwork: true
           dnsPolicy: ClusterFirstWithHostNet
           containers:
           - name: sriov-fec-daemon
