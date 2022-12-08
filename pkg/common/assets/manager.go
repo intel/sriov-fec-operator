@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
