@@ -5,11 +5,11 @@ package daemon
 
 import (
 	"errors"
-	commonUtils "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
+	commonUtils "github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
 	"github.com/jaypipes/ghw/pkg/pci"
 	"github.com/sirupsen/logrus"
 
-	sriovv2 "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/api/v2"
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/sriov-fec/api/v2"
 	"github.com/jaypipes/ghw"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
 )

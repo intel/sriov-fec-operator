@@ -6,7 +6,7 @@ package daemon
 import (
 	"context"
 	"fmt"
-	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
+	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	fec "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/api/v2"
+	fec "github.com/smart-edge-open/sriov-fec-operator/sriov-fec/api/v2"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

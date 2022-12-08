@@ -194,7 +194,7 @@ kustomize: ## Download kustomize locally if necessary.
 image-sriov-fec-daemon:
 	cp LICENSE TEMP_LICENSE_COPY
 	$(CONTAINER_TOOL) build . -f Dockerfile.daemon -t $(SRIOV_FEC_DAEMON_IMAGE) --build-arg=VERSION=$(IMG_VERSION)
-	$(CONTAINER_TOOL) tag $(SRIOV_FEC_DAEMON_IMAGE) ghcr.io/intel-collab/sriov-fec-daemon:$(VERSION)
+	$(CONTAINER_TOOL) tag $(SRIOV_FEC_DAEMON_IMAGE) ghcr.io/smart-edge-open/sriov-fec-daemon:$(VERSION)
 	
 .PHONY: push-sriov-fec-daemon
 podman-push-sriov-fec-daemon:
@@ -209,7 +209,7 @@ docker-push-sriov-fec-daemon:
 image-sriov-fec-labeler:
 	cp LICENSE TEMP_LICENSE_COPY
 	$(CONTAINER_TOOL) build . -f Dockerfile.labeler -t ${SRIOV_FEC_LABELER_IMAGE} --build-arg=VERSION=$(IMG_VERSION)
-	$(CONTAINER_TOOL) tag $(SRIOV_FEC_LABELER_IMAGE) ghcr.io/intel-collab/sriov-fec-labeler:$(VERSION)
+	$(CONTAINER_TOOL) tag $(SRIOV_FEC_LABELER_IMAGE) ghcr.io/smart-edge-open/sriov-fec-labeler:$(VERSION)
 
 .PHONY: push-sriov-fec-labeler
 podman-push-sriov-fec-labeler:
@@ -224,7 +224,7 @@ docker-push-sriov-fec-labeler:
 image-sriov-fec-operator:
 	cp LICENSE TEMP_LICENSE_COPY
 	$(CONTAINER_TOOL) build . -t $(SRIOV_FEC_OPERATOR_IMAGE) --build-arg=VERSION=$(IMG_VERSION)
-	$(CONTAINER_TOOL) tag $(SRIOV_FEC_OPERATOR_IMAGE) ghcr.io/intel-collab/sriov-fec-operator:$(VERSION)
+	$(CONTAINER_TOOL) tag $(SRIOV_FEC_OPERATOR_IMAGE) ghcr.io/smart-edge-open/sriov-fec-operator:$(VERSION)
 
 .PHONY: podman-push-sriov-fec-operator
 podman-push-sriov-fec-operator:
@@ -259,28 +259,28 @@ bundle: check-operator-sdk-version manifests kustomize
 .PHONY: image-bundle
 image-bundle: bundle
 	$(CONTAINER_TOOL) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
-	$(CONTAINER_TOOL) tag $(BUNDLE_IMG) ghcr.io/intel-collab/sriov-fec-bundle:$(VERSION)
+	$(CONTAINER_TOOL) tag $(BUNDLE_IMG) ghcr.io/smart-edge-open/sriov-fec-bundle:$(VERSION)
 
 .PHONY: podman-push-bundle
 podman-push-bundle:
 	podman push $(BUNDLE_IMG) --tls-verify=$(TLS_VERIFY)
 	
-# push images into github container registry in Intel-Collab
+# push images into github container registry in smart-edge-open
 .PHONY: push-sriov-fec-daemon-ghcr
 push-sriov-fec-daemon-ghcr:
-	$(CONTAINER_TOOL) push ghcr.io/intel-collab/sriov-fec-daemon:$(VERSION)  
+	$(CONTAINER_TOOL) push ghcr.io/smart-edge-open/sriov-fec-daemon:$(VERSION)  
 
 .PHONY: push-sriov-fec-operator-ghcr
 push-sriov-fec-operator-ghcr:
-	$(CONTAINER_TOOL) push ghcr.io/intel-collab/sriov-fec-operator:$(VERSION)
+	$(CONTAINER_TOOL) push ghcr.io/smart-edge-open/sriov-fec-operator:$(VERSION)
 
 .PHONY: push-sriov-fec-bundle-ghcr
 push-sriov-fec-bundle-ghcr:
-	$(CONTAINER_TOOL) push ghcr.io/intel-collab/sriov-fec-bundle:$(VERSION)
+	$(CONTAINER_TOOL) push ghcr.io/smart-edge-open/sriov-fec-bundle:$(VERSION)
 
 .PHONY: push-sriov-fec-labeler-ghcr
 push-sriov-fec-labeler-ghcr:
-	$(CONTAINER_TOOL) push ghcr.io/intel-collab/sriov-fec-labeler:$(VERSION)
+	$(CONTAINER_TOOL) push ghcr.io/smart-edge-open/sriov-fec-labeler:$(VERSION)
 
 .PHONY: push-all-ghcr
 push-all-ghcr: push-sriov-fec-daemon-ghcr push-sriov-fec-operator-ghcr push-sriov-fec-bundle-ghcr push-sriov-fec-labeler-ghcr
@@ -288,42 +288,42 @@ push-all-ghcr: push-sriov-fec-daemon-ghcr push-sriov-fec-operator-ghcr push-srio
 # pull images from github container registry
 .PHONY: pull-sriov-fec-daemon-ghcr
 pull-sriov-fec-daemon-ghcr:
-	docker pull ghcr.io/intel-collab/sriov-fec-daemon:$(VERSION)  
+	docker pull ghcr.io/smart-edge-open/sriov-fec-daemon:$(VERSION)  
 
 .PHONY: pull-sriov-fec-operator-ghcr
 pull-sriov-fec-operator-ghcr:
-	docker pull ghcr.io/intel-collab/sriov-fec-operator:$(VERSION)
+	docker pull ghcr.io/smart-edge-open/sriov-fec-operator:$(VERSION)
 
 .PHONY: pull-bundle-ghcr	
 pull-bundle-ghcr:
-	docker pull ghcr.io/intel-collab/sriov-fec-bundle:$(VERSION)
+	docker pull ghcr.io/smart-edge-open/sriov-fec-bundle:$(VERSION)
 
 .PHONY: pull-labeler-ghcr
 pull-labeler-ghcr:
-	docker pull ghcr.io/intel-collab/sriov-fec-labeler:$(VERSION)
+	docker pull ghcr.io/smart-edge-open/sriov-fec-labeler:$(VERSION)
 
 .PHONY: pull-all-ghcr     
 pull-all-ghcr: pull-sriov-fec-daemon-ghcr pull-sriov-fec-operator-ghcr pull-bundle-ghcr pull-labeler-ghcr
 
 .PHONY: scan-sriov-fec-daemon-image
 scan-sriov-fec-daemon-image:
-	snyk container test ghcr.io/intel-collab/sriov-fec-daemon:$(VERSION) || true
-	snyk container monitor --exclude-base-image-vulns ghcr.io/intel-collab/sriov-fec-daemon:$(VERSION)
+	snyk container test ghcr.io/smart-edge-open/sriov-fec-daemon:$(VERSION) || true
+	snyk container monitor --exclude-base-image-vulns ghcr.io/smart-edge-open/sriov-fec-daemon:$(VERSION)
 
 .PHONY: scan-sriov-fec-operator-image
 scan-sriov-fec-operator-image:i
-	snyk container test ghcr.io/intel-collab/sriov-fec-operator:$(VERSION) || true
-	snyk container monitor --exclude-base-image-vulns ghcr.io/intel-collab/sriov-fec-operator:$(VERSION)
+	snyk container test ghcr.io/smart-edge-open/sriov-fec-operator:$(VERSION) || true
+	snyk container monitor --exclude-base-image-vulns ghcr.io/smart-edge-open/sriov-fec-operator:$(VERSION)
 
 .PHONY: scan-sriov-fec-bundle-image
 scan-sriov-fec-bundle-image:
-	snyk container test ghcr.io/intel-collab/sriov-fec-bundle:$(VERSION) || true
-	snyk container monitor --exclude-base-image-vulns ghcr.io/intel-collab/sriov-fec-bundle:$(VERSION)
+	snyk container test ghcr.io/smart-edge-open/sriov-fec-bundle:$(VERSION) || true
+	snyk container monitor --exclude-base-image-vulns ghcr.io/smart-edge-open/sriov-fec-bundle:$(VERSION)
 
 .PHONY: scan-sriov-fec-labeler-image
 scan-sriov-fec-labeler-image:
-	snyk container test ghcr.io/intel-collab/sriov-fec-labeler:$(VERSION) || true
-	snyk container monitor --exclude-base-image-vulns ghcr.io/intel-collab/sriov-fec-labeler:$(VERSION)
+	snyk container test ghcr.io/smart-edge-open/sriov-fec-labeler:$(VERSION) || true
+	snyk container monitor --exclude-base-image-vulns ghcr.io/smart-edge-open/sriov-fec-labeler:$(VERSION)
 
 .PHONY: scan_all
 scan_all: scan-sriov-fec-daemon-image scan-sriov-fec-operator-image scan-sriov-fec-bundle-image scan-sriov-fec-labeler-image

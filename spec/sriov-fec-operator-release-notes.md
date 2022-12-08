@@ -181,7 +181,7 @@ This document provides high-level system features, issues, and limitations infor
 - SriovFecNodeConfig stucks in InProgress state(issue observed in case of multiple reboots)
 
 ***v1.2.1***
-- [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/issues/270)
+- [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/smart-edge-open/sriov-fec-operator/sriov-fec/issues/270)
 
 ***v1.1.0***
 - SEO SR-IOV Operator for Wireless FEC Accelerators

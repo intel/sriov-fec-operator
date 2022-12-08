@@ -5,7 +5,7 @@ package assets
 
 import (
 	"github.com/go-logr/logr"
-	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
+	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
 	"path/filepath"
 	"testing"
 

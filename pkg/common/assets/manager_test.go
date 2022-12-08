@@ -5,7 +5,7 @@ package assets
 
 import (
 	"context"
-	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
+	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
