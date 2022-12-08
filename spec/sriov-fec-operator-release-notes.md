@@ -25,26 +25,30 @@ This document provides high-level system features, issues, and limitations infor
 
 ### SRIOV-FEC Operator
 
-| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP         |
-|---------|----------------|------------------------------|-------------------------|
-| 1.0.0   | January 2021   | 4.6                          | 4.6.4                   |
-| 1.1.0   | March 2021     | 4.6                          | 4.6.16                  |
-| 1.2.0   | June 2021      | 4.7                          | 4.7.8                   |
-| 1.2.1   | June 2021      | 4.7                          | 4.7.8                   |
-| 1.3.0   | August 2021    | 4.8                          | 4.8.2                   |
-| 2.0.0   | September 2021 | 4.8                          | 4.8.5                   |
-| 2.0.1   | October 2021   | 4.8                          | 4.8.13                  |
-| 2.0.2   | November 2021  | 4.8                          | 4.8.12                  |
-| 2.1.0   | November 2021  | 4.9                          | 4.9.7                   |
-| 2.1.1   | January 2022   | 4.9                          | 4.9.7                   |
-| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  | 
-| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5  |
-| 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17 |
-| 2.3.1   | July 2022      | 4.8, 4.9, 4.10               | 4.8.46, 4.9.41, 4.10.21 |
-| 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.41, 4.10.21, 4.11.2 |
-| 2.5.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.48, 4.10.34, 4.11.5 |
+| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP            |
+|---------|----------------|------------------------------|----------------------------|
+| 1.0.0   | January 2021   | 4.6                          | 4.6.4                      |
+| 1.1.0   | March 2021     | 4.6                          | 4.6.16                     |
+| 1.2.0   | June 2021      | 4.7                          | 4.7.8                      |
+| 1.2.1   | June 2021      | 4.7                          | 4.7.8                      |
+| 1.3.0   | August 2021    | 4.8                          | 4.8.2                      |
+| 2.0.0   | September 2021 | 4.8                          | 4.8.5                      |
+| 2.0.1   | October 2021   | 4.8                          | 4.8.13                     |
+| 2.0.2   | November 2021  | 4.8                          | 4.8.12                     |
+| 2.1.0   | November 2021  | 4.9                          | 4.9.7                      |
+| 2.1.1   | January 2022   | 4.9                          | 4.9.7                      |
+| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5     | 
+| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5     |
+| 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17    |
+| 2.3.1   | July 2022      | 4.8, 4.9, 4.10               | 4.8.46, 4.9.41, 4.10.21    |
+| 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.41, 4.10.21, 4.11.2    |
+| 2.5.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.48, 4.10.34, 4.11.5    |
+| 2.6.0   | December 2022  | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12-rc2 |
 
 # Features for Release
+***v2.6.0***
+- Support for OCP4.12.x
+
 ***v2.5.0***
 - pf-bb-config updated (22.03 -> 22.07)
 - Added support for Ubuntu 22.04
@@ -177,7 +181,7 @@ This document provides high-level system features, issues, and limitations infor
 - SriovFecNodeConfig stucks in InProgress state(issue observed in case of multiple reboots)
 
 ***v1.2.1***
-- [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/smart-edge-open/sriov-fec-operator/issues/270)
+- [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/issues/270)
 
 ***v1.1.0***
 - SEO SR-IOV Operator for Wireless FEC Accelerators
@@ -194,6 +198,12 @@ This document provides high-level system features, issues, and limitations infor
 - Documentation
 
 # Supported Operating Systems
+***v2.6.0***
+- OpenShift: 4.12.0-rc.2
+- OS: Red Hat Enterprise Linux CoreOS 412.86.202211142021-0
+- Kubernetes: v1.25.2+cd98eda
+- RT Kernel: 4.18.0-425.3.1.rt7.213.el8.x86_64
+
 ***v2.5.0***
 - OpenShift: 4.11.5
 - OS: Red Hat Enterprise Linux CoreOS 411.86.202209140028-0 (Ootpa)
@@ -303,5 +313,4 @@ This document provides high-level system features, issues, and limitations infor
 # Package Versions
 Package:
 - Golang: 1.18
-- DPDK: v21.11
 - pf-bb-config-app: v22.07

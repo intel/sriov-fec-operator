@@ -35,7 +35,7 @@ Maintainers act as the gatekeeper to the code - ensuring that coding standards, 
 * Answering questions/emails on the relevant areas of the SEO code base.
 
 ## Submitting Changes
-Inbound contributions are done through [pull requests](https://github.com/smart-edge-open/sriov-fec-operator/pulls) which include code changes, enhancements, bug fixes or new applications/features. If you are getting started, you may refer to Github's [how-to](https://help.github.com/articles/using-pull-requests/). With your contributions, we expect that you:
+Inbound contributions are done through [pull requests](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pulls) which include code changes, enhancements, bug fixes or new applications/features. If you are getting started, you may refer to Github's [how-to](https://help.github.com/articles/using-pull-requests/). With your contributions, we expect that you:
 
 * certify that you wrote and/or have the right to submit the pull request,
 * agree with the [Developer Certificate of Origin](http://developercertificate.org/),
@@ -63,7 +63,7 @@ Big contributions, ideas or controversial features should be discussed with the 
 6. Merging the pull requests can only be performed by the maintainer(s).
 
 ## How to report an issue/bug/enhancement
-It is encouraged to use the [GitHub Issues](https://github.com/smart-edge-open/sriov-fec-operator/issues) tool to report any bug, issue, enhancement or to seek help.
+It is encouraged to use the [GitHub Issues](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/issues) tool to report any bug, issue, enhancement or to seek help.
 
 ## Resources
 Below are some useful resources for getting started with SEO:

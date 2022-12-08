@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	fuzz "github.com/google/gofuzz"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"net"

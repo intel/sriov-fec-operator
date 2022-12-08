@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	sriovv2 "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/api/v2"
 	"gopkg.in/ini.v1"
 	"io"
 )
