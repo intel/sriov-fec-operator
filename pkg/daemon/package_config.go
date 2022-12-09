@@ -3,6 +3,6 @@
 
 package daemon
 
-import "github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
+import "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 
 var log = utils.NewLogger()

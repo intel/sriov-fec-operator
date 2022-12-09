@@ -20,11 +20,11 @@ package controllers
 
 import (
 	"github.com/go-logr/logr"
-	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
+	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	"path/filepath"
 	"testing"
 
-	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/sriov-fec/api/v2"
+	sriovfecv2 "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/api/v2"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
