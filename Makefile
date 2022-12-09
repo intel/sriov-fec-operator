@@ -6,7 +6,8 @@ export CLI_EXEC?=oc
 # Container format for podman. Required to build containers with "ManifestType": "application/vnd.oci.image.manifest.v2+json",
 export BUILDAH_FORMAT=docker
 # Current Operator version
-VERSION ?= 2.5.0
+VERSION ?= 2.6.0
+
 # Supported channels
 CHANNELS ?= stable
 # Default channel
@@ -251,14 +252,15 @@ bundle: check-operator-sdk-version manifests kustomize
 	operator-sdk bundle validate ./bundle
 	FOLDER=. COPYRIGHT_FILE=COPYRIGHT ./copyright.sh
 	cat COPYRIGHT bundle.Dockerfile >bundle.tmp
-	printf "\nLABEL com.redhat.openshift.versions=\"=v4.8-v4.10\"\n" >> bundle.tmp
+
+	printf "\nLABEL com.redhat.openshift.versions=\"=v4.10-v4.12\"\n" >> bundle.tmp
+
 	printf "\nCOPY TEMP_LICENSE_COPY /licenses/LICENSE\n" >> bundle.tmp
 	mv bundle.tmp bundle.Dockerfile
 
 # Build/Push the bundle image.
 .PHONY: image-bundle
 image-bundle: bundle
-	cp LICENSE TEMP_LICENSE_COPY
 	$(CONTAINER_TOOL) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 	$(CONTAINER_TOOL) tag $(BUNDLE_IMG) ghcr.io/smart-edge-open/sriov-fec-bundle:$(VERSION)
 
