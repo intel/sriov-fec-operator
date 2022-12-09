@@ -198,12 +198,15 @@ This document provides high-level system features, issues, and limitations infor
 - Documentation
 
 # Supported Operating Systems
+<<<<<<< HEAD
 ***v2.6.0***
 - OpenShift: 4.12.0-rc.2
 - OS: Red Hat Enterprise Linux CoreOS 412.86.202211142021-0
 - Kubernetes: v1.25.2+cd98eda
 - RT Kernel: 4.18.0-425.3.1.rt7.213.el8.x86_64
 
+=======
+>>>>>>> d2167dd47bc5e8cae48355bdd94e85d6a87d8b1d
 ***v2.5.0***
 - OpenShift: 4.11.5
 - OS: Red Hat Enterprise Linux CoreOS 411.86.202209140028-0 (Ootpa)
@@ -313,4 +316,8 @@ This document provides high-level system features, issues, and limitations infor
 # Package Versions
 Package:
 - Golang: 1.18
+<<<<<<< HEAD
+=======
+- DPDK: v21.11
+>>>>>>> d2167dd47bc5e8cae48355bdd94e85d6a87d8b1d
 - pf-bb-config-app: v22.07
