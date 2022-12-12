@@ -56,7 +56,7 @@ type SriovFecClusterConfigReconciler struct {
 // +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;secrets;configmaps,verbs=get;list;create;update
 // +kubebuilder:rbac:groups=apps,resources=daemonsets;deployments;deployments/finalizers,verbs=get;list;create;update
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=get;list;create;update
-// +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=*
+// +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=use,resourceNames=privileged
 // +kubebuilder:rbac:groups="",resources=pods/eviction,verbs=create
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch;delete
 
