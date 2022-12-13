@@ -9,7 +9,6 @@ import (
 	sriovutils "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
 	"k8s.io/apimachinery/pkg/types"
 	"os"
 	"path/filepath"
@@ -79,7 +78,7 @@ func (n *NodeConfigurator) unbindDeviceFromDriver(pciAddress string) error {
 	}
 	n.Log.WithField("pciAddress", pciAddress).WithField("driver", driverPath).Info("driver to unbound device from")
 	unbindPath := filepath.Join(driverPath, "unbind")
-	err = ioutil.WriteFile(unbindPath, []byte(pciAddress), os.ModeAppend)
+	err = writeFileWithTimeout(unbindPath, pciAddress)
 	if err != nil {
 		n.Log.WithError(err).WithField("pciAddress", pciAddress).WithField("unbindPath", unbindPath).Error("failed to unbind driver from device")
 	}
@@ -113,14 +112,14 @@ func (n *NodeConfigurator) bindDeviceToDriver(pciAddress, driver string) error {
 
 	driverOverridePath := filepath.Join(sysBusPciDevices, pciAddress, "driver_override")
 	n.Log.WithField("path", driverOverridePath).Info("device's driver_override path")
-	if err := ioutil.WriteFile(driverOverridePath, []byte(driver), os.ModeAppend); err != nil {
+	if err := writeFileWithTimeout(driverOverridePath, driver); err != nil {
 		n.Log.WithError(err).WithField("path", driverOverridePath).WithField("driver", driver).Error("failed to override driver")
 		return err
 	}
 
 	driverBindPath := filepath.Join(sysBusPciDrivers, driver, "bind")
 	n.Log.WithField("path", driverBindPath).Info("driver bind path")
-	err := ioutil.WriteFile(driverBindPath, []byte(pciAddress), os.ModeAppend)
+	err := writeFileWithTimeout(driverBindPath, pciAddress)
 	if err != nil {
 		n.Log.WithError(err).WithField("pciAddress", pciAddress).WithField("driverBindPath", driverBindPath).Error("failed to bind driver to device")
 	}
@@ -159,7 +158,7 @@ func (n *NodeConfigurator) changeAmountOfVFs(driver string, pfPCIAddress string,
 			return fmt.Errorf("unknown driver %v", driver)
 		}
 
-		err := ioutil.WriteFile(unbindPath, []byte(strconv.Itoa(vfsAmount)), os.ModeAppend)
+		err := writeFileWithTimeout(unbindPath, strconv.Itoa(vfsAmount))
 		if err != nil {
 			n.Log.WithError(err).WithField("pf", pfPCIAddress).WithField("vfsAmount", vfsAmount).Error("failed to set new amount of VFs for PF")
 			return fmt.Errorf("failed to set new amount of VFs (%d) for PF (%s): %w", vfsAmount, pfPCIAddress, err)
@@ -184,7 +183,7 @@ func (n *NodeConfigurator) flrReset(pfPCIAddress string) error {
 	n.Log.Infof("executing FLR for %s", pfPCIAddress)
 
 	path := filepath.Join(sysBusPciDevices, pfPCIAddress, "reset")
-	if err := ioutil.WriteFile(path, []byte(strconv.Itoa(1)), os.ModeAppend); err != nil {
+	if err := writeFileWithTimeout(path, strconv.Itoa(1)); err != nil {
 		return fmt.Errorf("failed to execute Function Level Reset for PF (%s): %s", pfPCIAddress, err)
 	}
 

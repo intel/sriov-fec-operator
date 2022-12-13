@@ -165,6 +165,18 @@ data:
           - name: sriov-fec-daemon
             image: {{ .SRIOV_FEC_DAEMON_IMAGE }}
             imagePullPolicy: IfNotPresent
+            livenessProbe:
+              httpGet:
+                path: /healthz
+                port: 8081
+              initialDelaySeconds: 15
+              periodSeconds: 20
+            readinessProbe:
+              httpGet:
+                path: /readyz
+                port: 8081
+              initialDelaySeconds: 5
+              periodSeconds: 10
             ports:
             - containerPort: 8080
               name: bbdevconfig

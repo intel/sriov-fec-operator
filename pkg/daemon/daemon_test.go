@@ -152,7 +152,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 					Expect(err).ToNot(HaveOccurred())
 
-					k8sManager, err := CreateManager(config, _SUPPORTED_NAMESPACE, scheme.Scheme, 0)
+					k8sManager, err := CreateManager(config, scheme.Scheme, _SUPPORTED_NAMESPACE, 0, 0, log)
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(reconciler.SetupWithManager(k8sManager)).ToNot(HaveOccurred())
@@ -283,7 +283,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 						},
 					}
 
-					k8sManager, err := CreateManager(config, _SUPPORTED_NAMESPACE, scheme.Scheme, 0)
+					k8sManager, err := CreateManager(config, scheme.Scheme, _SUPPORTED_NAMESPACE, 0, 0, log)
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(reconciler.SetupWithManager(k8sManager)).ToNot(HaveOccurred())

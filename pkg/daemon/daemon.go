@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/rest"
 	"os"
 	"os/exec"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"strconv"
 	"strings"
@@ -378,7 +379,7 @@ func findOrCreateConfigurationStatusCondition(nc *fec.SriovFecNodeConfig) metav1
 	return *configurationStatusCondition
 }
 
-//returns error if requested configuration refers to not existing inventory/accelerator
+// returns error if requested configuration refers to not existing inventory/accelerator
 func isConfigurationOfNonExistingInventoryRequested(requestedConfiguration []fec.PhysicalFunctionConfigExt, existingInventory *fec.NodeInventory) bool {
 OUTER:
 	for _, pf := range requestedConfiguration {
@@ -393,13 +394,27 @@ OUTER:
 	return false
 }
 
-func CreateManager(config *rest.Config, namespace string, scheme *runtime.Scheme, metricsPort int) (manager.Manager, error) {
-	return ctrl.NewManager(config, ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: ":" + strconv.Itoa(metricsPort),
-		LeaderElection:     false,
-		Namespace:          namespace,
+func CreateManager(config *rest.Config, scheme *runtime.Scheme, namespace string, metricsPort int, HealthProbePort int, log *logrus.Logger) (manager.Manager, error) {
+	mgr, err := ctrl.NewManager(config, ctrl.Options{
+		Scheme:                 scheme,
+		MetricsBindAddress:     ":" + strconv.Itoa(metricsPort),
+		LeaderElection:         false,
+		Namespace:              namespace,
+		HealthProbeBindAddress: ":" + strconv.Itoa(HealthProbePort),
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
+		log.WithError(err).Error("unable to set up health check")
+		return nil, err
+	}
+	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
+		log.WithError(err).Error("unable to set up ready check")
+		return nil, err
+	}
+	return mgr, nil
 }
 
 func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {

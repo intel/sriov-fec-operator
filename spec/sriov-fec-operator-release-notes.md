@@ -120,6 +120,7 @@ This document provides high-level system features, issues, and limitations infor
 - Manager deployment always starts with 1 replica and scales to 2 for multi-node clusters
 - Base images are updated to ubi9.1 instead of ubi8.6
 - Reduced RBAC permissions required by operator
+- Daemon now has readiness and liveliness probes
 
 ***v2.4.0***
 - SriovFecClusterConfig.spec.physicalFunction.bbDevConfig field is now marked as 'required'

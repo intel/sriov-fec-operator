@@ -55,7 +55,7 @@ func main() {
 		setupLog.WithError(err).Error("failed to create clientset")
 		os.Exit(1)
 	}
-	mgr, err := daemon.CreateManager(config, ns, scheme, 8080)
+	mgr, err := daemon.CreateManager(config, scheme, ns, 8080, 8081, setupLog)
 	if err != nil {
 		setupLog.WithError(err).Error("unable to start manager")
 		os.Exit(1)
