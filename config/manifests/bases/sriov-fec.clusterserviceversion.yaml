@@ -120,7 +120,7 @@ spec:
     4G/LTE and 5G technology, freeing up processing power. Intel eASIC devices are structured ASICs,
     an intermediate technology between FPGAs and standard application-specific integrated circuits (ASICs).
     It allows the optimization of data plane performance to reduce total cost of ownership while maintaining a high degree
-    of flexibility.  The Intel ACC100 plays a key role in accelerating 5G
+    of flexibility.  The Intel ACC100 and ACC200 plays a key role in accelerating 5G
     and network functions virtualization (NFV) adoption for ecosystem partners such
     as telecommunications equipment manufacturers (TEMs) virtual network functions
     (VNF) vendors, system integrators and telcos, to bring scalable and high-performance

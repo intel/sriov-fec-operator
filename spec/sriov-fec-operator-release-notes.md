@@ -50,6 +50,7 @@ This document provides high-level system features, issues, and limitations infor
 ***v2.6.1***
 - pf-bb-config updated (22.07 -> 22.11)
 - Added support for pf-bb-config telemetry
+- Added support for ACC200 cards (SPR-EE)
 
 ***v2.6.0***
 - Support for OCP4.12.x

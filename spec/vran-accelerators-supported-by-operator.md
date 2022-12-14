@@ -9,6 +9,7 @@ Copyright (c) 2020-2022 Intel Corporation
 - [Intel® vRAN Dedicated Accelerator ACC100](#intel-vran-dedicated-accelerator-acc100)
   - [Intel® vRAN Dedicated Accelerator ACC100 FlexRAN Host Interface Overview](#intel-vran-dedicated-accelerator-acc100-flexran-host-interface-overview)
   - [SEO Operator for Intel® vRAN Dedicated Accelerator ACC100](#seo-operator-for-intel-vran-dedicated-accelerator-acc100)
+- [Intel® ACC200 vRAN Dedicated Accelerator](#intel-acc200-vran-dedicated-accelerator)
 
 ## Overview
 
@@ -63,3 +64,9 @@ The role of the operator for the Intel® vRAN Dedicated Accelerator ACC100 card 
 The operator design for Intel® vRAN Dedicated Accelerator ACC100 consist of:
 
 * [SEO Operator for Wireless FEC Accelerators](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/sriov-fec-operator.md)
+
+# Intel® ACC200 vRAN Dedicated Accelerator
+
+The Intel® vRAN Dedicated Accelerator ACC200 peripheral enables cost-effective 4G and 5G next-generation virtualized Radio Access Network (vRAN) solutions integrated on Sapphire Rapids Edge Enhanced Processor (SPR-EE) Intel® 7 based Xeon® multi-core server processor.
+
+The ACC200 includes a 5G Low Density Parity Check (LDPC) encoder/decoder, rate match/dematch, Hybrid Automatic Repeat Request (HARQ) with access to DDR memory for buffer management, a 4G Turbo encoder/decoder, a Fast Fourier Transform (FFT) block providing DFT/iDFT processing offload for the 5G Sounding Reference Signal (SRS), a Queue Manager (QMGR), and a DMA subsystem. There is no dedicated on-card memory for HARQ, this is using coherent memory on the CPU side.

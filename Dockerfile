@@ -31,7 +31,7 @@ LABEL name="SEO SR-IOV Operator for Wireless FEC Accelerators" \
     version=$VERSION \
     release="1" \
     summary="SEO SR-IOV Operator for Wireless FEC Accelerators for 5G Cloudnative/vRAN deployment" \
-    description="SEO SR-IOV Operator for Wireless FEC Accelerators ACC100 for 5G Cloudnative/vRAN deployment"
+    description="SEO SR-IOV Operator for Wireless FEC Accelerators ACC100 and ACC200 for 5G Cloudnative/vRAN deployment"
 
 COPY TEMP_LICENSE_COPY /licenses/LICENSE
 

@@ -26,6 +26,9 @@ Copyright (c) 2020-2022 Intel Corporation
     - [Sample CR for Wireless FEC (ACC100)](#sample-cr-for-wireless-fec-acc100)
     - [Sample Status for Wireless FEC (ACC100)](#sample-status-for-wireless-fec-acc100)
     - [Sample Daemon log for Wireless FEC (ACC100)](#sample-daemon-log-for-wireless-fec-acc100)
+  - [ACC200 FEC](#acc200-fec)
+    - [Sample CR for Wireless FEC (ACC200)](#sample-cr-for-wireless-fec-acc200)
+    - [Sample Status for Wireless FEC (ACC200)](#sample-status-for-wireless-fec-acc200)
 - [Appendix 3 - Gathering logs for bug report](#appendix-3---gathering-logs-for-bug-report)
 
 ## Overview
@@ -38,6 +41,7 @@ The role of the SEO Operator for Intel Wireless FEC Accelerator is to orchestrat
 The operator design of the SEO Operator for Intel Wireless FEC Accelerator supports the following vRAN FEC accelerators:
 
 * [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100)
+* [Intel® vRAN Dedicated Accelerator ACC200](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc200)
 
 ### Wireless FEC Acceleration management
 
@@ -58,7 +62,7 @@ The workflow of the SRIOV FEC operator is shown in the following diagram:
 
 #### FEC Configuration
 
-The Intel's vRAN FEC acceleration devices/hardware expose the FEC PF device which is to be bound to PCI-PF-STUB, ISB_UIO and VFIO-PCI in order to enable creation of the FEC VF devices. Once the FEC PF is bound to the correct driver, the user can create a number of devices to be used in Cloud Native deployment of vRAN to accelerate FEC. Once these devices are created they are to be bound to a user-space driver such as VFIO-PCI in order for them to work and be consumed in vRAN application pods. Before the device can be used by the application, the device needs to be configured - notably the mapping of queues exposed to the VFs - this is done via pf-bb-config application with the input from the CR used as a configuration.
+The Intel's vRAN FEC acceleration devices/hardware expose the FEC PF device which is to be bound to PCI-PF-STUB, IGB_UIO and VFIO-PCI in order to enable creation of the FEC VF devices. Once the FEC PF is bound to the correct driver, the user can create a number of devices to be used in Cloud Native deployment of vRAN to accelerate FEC. Once these devices are created they are to be bound to a user-space driver such as VFIO-PCI in order for them to work and be consumed in vRAN application pods. Before the device can be used by the application, the device needs to be configured - notably the mapping of queues exposed to the VFs - this is done via pf-bb-config application with the input from the CR used as a configuration.
 
 > NOTE: For [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100) it is advised to create all 16 VFs. The card is configured to provide up to 8 queue groups with up to 16 queues per group. The queue groups can be divided between groups allocated to 5G/4G and Uplink/Downlink, it can be configured for 4G or 5G only, or both 4G and 5G at the same time. Each configured VF has access to all the queues. Each of the queue groups has a distinct priority level. The request for given queue group is made from application level (ie. vRAN application leveraging the FEC device).
 
@@ -603,6 +607,77 @@ ors":[{"vendorID":"8086","deviceID":"0b32","pciAddress":"0000:20:00.0","driver":
 {"level":"Level(-2)","ts":1616794346.9065044,"logger":"daemon.Reconcile","msg":"Reconciled","namespace":"vran-acceleration-operators","name":"pg-itengdvs02r.altera.com"}
 ```
 
+### ACC200 FEC
+#### Sample CR for Wireless FEC (ACC200)
+ACC200 introduces new section - `qfft`
+```yaml
+apiVersion: sriovfec.intel.com/v2
+kind: SriovFecClusterConfig
+metadata:
+  name: config
+  namespace: vran-acceleration-operators
+spec:
+  acceleratorSelector:
+    pciAddress: 0000:f7:00.0
+  nodeSelector:
+    kubernetes.io/hostname: r02s01-r08
+  physicalFunction:
+    bbDevConfig:
+      acc200:
+        downlink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        downlink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        maxQueueSize: 1024
+        numVfBundles: 2
+        pfMode: false
+        qfft:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        uplink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        uplink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+    pfDriver: vfio-pci
+    vfAmount: 2
+    vfDriver: vfio-pci
+  priority: 1
+
+```
+#### Sample Status for Wireless FEC (ACC200)
+```yaml
+status:
+  conditions:
+    - lastTransitionTime: "2022-11-25T12:43:29Z"
+      message: Configured successfully
+      observedGeneration: 58
+      reason: Succeeded
+      status: "True"
+      type: Configured
+  inventory:
+    sriovAccelerators:
+      - deviceID: 57c0
+        driver: pci-pf-stub
+        maxVirtualFunctions: 16
+        pciAddress: 0000:f7:00.0
+        vendorID: "8086"
+        virtualFunctions:
+          - deviceID: 57c1
+            driver: vfio-pci
+            pciAddress: 0000:f7:00.1
+          - deviceID: 57c1
+            driver: vfio-pci
+            pciAddress: 0000:f7:00.2
+```
 ## Appendix 3 - Gathering logs for bug report
 To gather logs for filing bug report please run `gather_sriovfec_logs.sh` script downloaded from https://github.com/smart-edge-open/sriov-fec-operator/blob/main/gather_sriovfec_logs.sh
 
