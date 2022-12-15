@@ -3,17 +3,17 @@ SPDX-License-Identifier: Apache-2.0
 Copyright (c) 2020-2022 Intel Corporation
 ```
 <!-- omit in toc -->
-# Intel's vRAN accelerators supported by SEO Operators on OpenShift
+# Intel's vRAN accelerators supported by SRIOV-FEC Operator on OpenShift
 
 - [Overview](#overview)
 - [Intel® vRAN Dedicated Accelerator ACC100](#intel-vran-dedicated-accelerator-acc100)
   - [Intel® vRAN Dedicated Accelerator ACC100 FlexRAN Host Interface Overview](#intel-vran-dedicated-accelerator-acc100-flexran-host-interface-overview)
-  - [SEO Operator for Intel® vRAN Dedicated Accelerator ACC100](#seo-operator-for-intel-vran-dedicated-accelerator-acc100)
+  - [SRIOV-FEC Operator for Intel® vRAN Dedicated Accelerator ACC100](#sriov-fec-operator-for-intel-vran-dedicated-accelerator-acc100)
 - [Intel® ACC200 vRAN Dedicated Accelerator](#intel-acc200-vran-dedicated-accelerator)
 
 ## Overview
 
-This document details the Intel's vRAN accelerator devices/hardware supported by the [SEO Operator for Wireless FEC Accelerators](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/openshift-sriov-fec-operator.md) in Red Hat's OpenShift Container Platform.
+This document details the Intel's vRAN accelerator devices/hardware supported by the [SRIOV-FEC Operator for Wireless FEC Accelerators](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/openshift-sriov-fec-operator.md) in Red Hat's OpenShift Container Platform.
 
 ## Intel® vRAN Dedicated Accelerator ACC100
 
@@ -58,12 +58,12 @@ Intel® vRAN Dedicated Accelerator ACC100 card used in the FlexRAN solution expo
 
 ![Intel® vRAN Dedicated Accelerator ACC100 support](images/acc100-diagram.png)
 
-### SEO Operator for Intel® vRAN Dedicated Accelerator ACC100
+### SRIOV-FEC Operator for Intel® vRAN Dedicated Accelerator ACC100
 
 The role of the operator for the Intel® vRAN Dedicated Accelerator ACC100 card is to orchestrate and manage the resources/devices exposed by the card within the OpenShift cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
 The operator design for Intel® vRAN Dedicated Accelerator ACC100 consist of:
 
-* [SEO Operator for Wireless FEC Accelerators](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/sriov-fec-operator.md)
+* [SRIOV-FEC Operator for Wireless FEC Accelerators](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/sriov-fec-operator.md)
 
 # Intel® ACC200 vRAN Dedicated Accelerator
 

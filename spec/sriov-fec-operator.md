@@ -3,10 +3,10 @@ SPDX-License-Identifier: Apache-2.0
 Copyright (c) 2020-2022 Intel Corporation
 ```
 <!-- omit in toc -->
-# Smart Edge Open (SEO) Operator for Wireless FEC Accelerators
+# SRIOV-FEC Operator for Wireless FEC Accelerators
 
 - [Overview](#overview)
-- [SEO Operator for Wireless FEC Accelerators](#seo-operator-for-wireless-fec-accelerators)
+- [SRIOV-FEC Operator for Wireless FEC Accelerators](#sriov-fec-operator-for-wireless-fec-accelerators)
   - [Wireless FEC Acceleration management](#wireless-fec-acceleration-management)
     - [FEC Configuration](#fec-configuration)
     - [SRIOV Device Plugin](#sriov-device-plugin)
@@ -21,7 +21,7 @@ Copyright (c) 2020-2022 Intel Corporation
 - [Summary](#summary)
 - [Appendix 1 - Developer Notes](#appendix-1---developer-notes)
   - [Running operator on SNO](#running-operator-on-sno)
-- [Appendix 2 - SEO Operator for Wireless FEC Accelerators Examples](#appendix-2---seo-operator-for-wireless-fec-accelerators-examples)
+- [Appendix 2 - SRIOV-FEC Operator for Wireless FEC Accelerators Examples](#appendix-2---sriov-fec-operator-for-wireless-fec-accelerators-examples)
   - [ACC100 FEC](#acc100-fec)
     - [Sample CR for Wireless FEC (ACC100)](#sample-cr-for-wireless-fec-acc100)
     - [Sample Status for Wireless FEC (ACC100)](#sample-status-for-wireless-fec-acc100)
@@ -33,12 +33,12 @@ Copyright (c) 2020-2022 Intel Corporation
 
 ## Overview
 
-This document provides the instructions for using the SEO Operator for Wireless FEC Accelerators in Red Hat's OpenShift Container Platform and Kubernetes. This operator was developed with aid of the Operator SDK project.
+This document provides the instructions for using the SRIOV-FEC Operator for Wireless FEC Accelerators in Red Hat's OpenShift Container Platform and Kubernetes. This operator was developed with aid of the Operator SDK project.
 
-## SEO Operator for Wireless FEC Accelerators
+## SRIOV-FEC Operator for Wireless FEC Accelerators
 
-The role of the SEO Operator for Intel Wireless FEC Accelerator is to orchestrate and manage the resources/devices exposed by a range of Intel's vRAN FEC acceleration devices/hardware within the OpenShift or Kubernetes cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
-The operator design of the SEO Operator for Intel Wireless FEC Accelerator supports the following vRAN FEC accelerators:
+The role of the SRIOV-FEC Operator for Intel Wireless FEC Accelerator is to orchestrate and manage the resources/devices exposed by a range of Intel's vRAN FEC acceleration devices/hardware within the OpenShift or Kubernetes cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
+The operator design of the SRIOV-FEC Operator for Intel Wireless FEC Accelerator supports the following vRAN FEC accelerators:
 
 * [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100)
 * [Intel® vRAN Dedicated Accelerator ACC200](https://github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc200)
@@ -373,7 +373,7 @@ If `vfio-pci` PF driver is used, then access to VF requires `UUID` token. Token 
 
 ## Deploying the Operator
 
-The SEO Operator for Wireless FEC Accelerators is easily deployable from the OpenShift or Kubernetes cluster via provisioning and application of the following YAML spec files:
+The SRIOV-FEC Operator for Wireless FEC Accelerators is easily deployable from the OpenShift or Kubernetes cluster via provisioning and application of the following YAML spec files:
 
 If operator is being installed on OpenShift, then follow [deployment steps for OpenShift](openshift-deployment.md).
 Otherwise follow [steps for Kubernetes](kubernetes-deployment.md).
@@ -476,7 +476,7 @@ vf_count{pci_address="0000:ca:00.0",status="Failed"} 0
 
 ## Summary
 
-The SEO Operator for Wireless FEC Accelerators is a fully functional tool to manage the vRAN FEC resources autonomously in a Cloud Native OpenShift environment based on the user input.
+The SRIOV-FEC Operator for Wireless FEC Accelerators is a fully functional tool to manage the vRAN FEC resources autonomously in a Cloud Native OpenShift environment based on the user input.
 The operator handles all the necessary actions from creation of FEC resources to configuration and management of the resources within the OpenShift cluster.
 
 ## Appendix 1 - Developer Notes
@@ -485,7 +485,7 @@ The operator handles all the necessary actions from creation of FEC resources to
 
 If user needs to run operator on SNO (Single Node Openshift), then user should provide ClusterConfigs (which are described in following chapters) with `spec.drainSkip: true` to avoid node draining, because it is impossible to drain node if there's only 1 node.
 
-## Appendix 2 - SEO Operator for Wireless FEC Accelerators Examples
+## Appendix 2 - SRIOV-FEC Operator for Wireless FEC Accelerators Examples
 
 ### ACC100 FEC
 

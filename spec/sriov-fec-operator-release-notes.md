@@ -4,7 +4,7 @@ Copyright (c) 2020-2022 Intel Corporation
 ```
 <!-- omit in toc -->
 # Release Notes
-This document provides high-level system features, issues, and limitations information for SEO SR-IOV Operator for Wireless FEC Accelerators.
+This document provides high-level system features, issues, and limitations information for SRIOV-FEC Operator for Wireless FEC Accelerators.
 - [Release history](#release-history)
 - [SRIOV-FEC Operator](#sriov-fec-operator)
 - [Features for Release](#features-for-release)
@@ -51,6 +51,7 @@ This document provides high-level system features, issues, and limitations infor
 - pf-bb-config updated (22.07 -> 22.11)
 - Added support for pf-bb-config telemetry
 - Added support for ACC200 cards (SPR-EE)
+- Operator now propagates `Tolerations` from Subscription to managed Daemonsets
 
 ***v2.6.0***
 - Support for OCP4.12.x
@@ -122,6 +123,7 @@ This document provides high-level system features, issues, and limitations infor
 - Base images are updated to ubi9.1 instead of ubi8.6
 - Reduced RBAC permissions required by operator
 - Daemon now has readiness and liveliness probes
+- Removed mentions of Smart Edge Open from documentation. Operator is now standalone project.
 
 ***v2.4.0***
 - SriovFecClusterConfig.spec.physicalFunction.bbDevConfig field is now marked as 'required'
@@ -207,7 +209,7 @@ This document provides high-level system features, issues, and limitations infor
 - n/a - this is the first release.
 
 # Release Content
-- SEO SR-IOV Operator for Wireless FEC Accelerators
+- SRIOV-FEC Operator for Wireless FEC Accelerators
 - Documentation
 
 # Supported Operating Systems

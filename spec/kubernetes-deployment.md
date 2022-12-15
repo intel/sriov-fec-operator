@@ -3,7 +3,7 @@
 
 ## Technical Requirements and Dependencies
 
-The SEO Operator for Wireless FEC Accelerators has the following requirements:
+The SRIOV-FEC Operator for Wireless FEC Accelerators has the following requirements:
 
 - [Intel® vRAN Dedicated Accelerator ACC100](https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf)
 - [Kubernetes 1.22](https://kubernetes.io/blog/2021/08/04/kubernetes-1-22-release-announcement/)
@@ -69,7 +69,7 @@ Install PCIutils on worker nodes
 ```
 ### Install the Operator
 
-To install the SEO Operator for Wireless FEC Accelerators operator bundle perform the following steps:
+To install the SRIOV-FEC Operator for Wireless FEC Accelerators operator bundle perform the following steps:
 
 Create the namespace for project:
 ```shell
@@ -87,7 +87,7 @@ Verify that the operator is installed and pods are running:
 ```shell
 [user@ctrl1 /home]# kubectl get csv
 NAME               DISPLAY                                                        VERSION   REPLACES   PHASE
-sriov-fec.v2.2.0   SEO SR-IOV Operator for Wireless FEC Accelerators              2.2.0                Succeeded
+sriov-fec.v2.2.0   SR-IOV Operator for Wireless FEC Accelerators              2.2.0                Succeeded
 ```
 
 ```shell

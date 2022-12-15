@@ -26,12 +26,12 @@ FROM registry.access.redhat.com/ubi9/ubi-minimal:9.1.0-1656
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="SEO SR-IOV Operator for Wireless FEC Accelerators" \
+LABEL name="SR-IOV Operator for Wireless FEC Accelerators" \
     vendor="Intel Corporation" \
     version=$VERSION \
     release="1" \
-    summary="SEO SR-IOV Operator for Wireless FEC Accelerators for 5G Cloudnative/vRAN deployment" \
-    description="SEO SR-IOV Operator for Wireless FEC Accelerators ACC100 and ACC200 for 5G Cloudnative/vRAN deployment"
+    summary="SR-IOV Operator for Wireless FEC Accelerators for 5G Cloudnative/vRAN deployment" \
+    description="SR-IOV Operator for Wireless FEC Accelerators ACC100 and ACC200 for 5G Cloudnative/vRAN deployment"
 
 COPY TEMP_LICENSE_COPY /licenses/LICENSE
 

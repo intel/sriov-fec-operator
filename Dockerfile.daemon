@@ -37,7 +37,7 @@ FROM registry.access.redhat.com/ubi9/ubi:9.1.0-1646.1669023907
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="Smart Edge Open SR-IOV Operator for Wireless FEC Accelerators daemonset" \
+LABEL name="SR-IOV Operator for Wireless FEC Accelerators daemonset" \
     vendor="Intel Corporation" \
     version=$VERSION \
     release="1" \

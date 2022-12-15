@@ -3,7 +3,7 @@
 
 ## Technical Requirements and Dependencies
 
-The SEO Operator for Wireless FEC Accelerators has the following requirements:
+The SRIOV-FEC Operator for Wireless FEC Accelerators has the following requirements:
 
 - [Intel® vRAN Dedicated Accelerator ACC100](https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf)
 - [OpenShift 4.10.x](https://docs.openshift.com/container-platform/4.10/release_notes/ocp-4-10-release-notes.html)
@@ -15,7 +15,7 @@ The SEO Operator for Wireless FEC Accelerators has the following requirements:
 
 ### Install the Bundle
 
-To install the SEO Operator for Wireless FEC Accelerators operator bundle perform the following steps:
+To install the SRIOV-FEC Operator for Wireless FEC Accelerators operator bundle perform the following steps:
 
 Create the project:
 ```shell
@@ -58,7 +58,7 @@ Verify that the operators are installed and pods are running:
 ```shell
 [user@ctrl1 /home]# oc get csv
 NAME               DISPLAY                                                        VERSION   REPLACES   PHASE
-sriov-fec.v2.2.0   SEO SR-IOV Operator for Wireless FEC Accelerators              2.2.0                Succeeded
+sriov-fec.v2.2.0   SR-IOV Operator for Wireless FEC Accelerators              2.2.0                Succeeded
 ```
 
 ```shell
@@ -139,7 +139,7 @@ Use the following command to identify items to delete:
 [user@ctrl1 /home]# oc get csv -n vran-acceleration-operators
 
 NAME               DISPLAY                                             VERSION   REPLACES   PHASE
-sriov-fec.v2.2.0   SEO SR-IOV Operator for Wireless FEC Accelerators   2.2.0                Succeeded
+sriov-fec.v2.2.0   SR-IOV Operator for Wireless FEC Accelerators   2.2.0                Succeeded
 ```
 
 ```shell
