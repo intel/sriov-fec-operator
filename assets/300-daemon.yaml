@@ -159,8 +159,8 @@ data:
           serviceAccount: sriov-fec-daemon
           serviceAccountName: sriov-fec-daemon
           hostPID: true
-          hostNetwork: true
-          dnsPolicy: ClusterFirstWithHostNet
+          hostNetwork: false
+          dnsPolicy: Default
           containers:
           - name: sriov-fec-daemon
             image: {{ .SRIOV_FEC_DAEMON_IMAGE }}
@@ -187,8 +187,8 @@ data:
             - name: vfiotoken
               mountPath: /sriov_config/
               readOnly: true    
-            - name: sysbuspci
-              mountPath: /sys/bus/pci
+            - name: sys
+              mountPath: /sys
             - mountPath: /sriov_artifacts
               name: workdir-volume
             - mountPath: /sriov_config/config
@@ -242,8 +242,8 @@ data:
       {{ end }}
           volumes:
           - hostPath:
-              path: /sys/bus/pci
-            name: sysbuspci
+              path: /sys
+            name: sys
           - emptyDir: {}
             name: workdir-volume
           - configMap:
