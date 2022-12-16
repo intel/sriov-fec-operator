@@ -281,48 +281,48 @@ The pod consumes one of the FEC VF resources. Once the pod is created, user can 
 
 ```shell
 [user@ bbdev-sample-app /root]# printenv | grep INTEL_FEC
-PCIDEVICE_INTEL_COM_INTEL_FEC_ACC100=0000:b0:00.0
+PCIDEVICE_INTEL_COM_INTEL_FEC_ACC100=0000:cb:00.0
 ```
 
 With the PCIe B:D.F of the FEC VF allocated to the pod established, user will run the 'test-bbdev' application to test the device (similar output indicating that the tests are passing is expected):
 
-```shell
-[user@ bbdev-sample-app /root]# ./test-bbdev.py --testapp-path ./dpdk-test-bbdev -e="-w ${PCIDEVICE_INTEL_COM_INTEL_FEC_ACC100}" -i -n 1 -b 1 -l 1 -c validation -v ldpc_dec_v7813.data
+Depending on PfDriver that you are using, you might have to add additional parameters to DPDK applications to make them work.
 
-Executing: ./dpdk-test-bbdev -w 0000:b0:00.0 -- -n 1 -l 1 -c validation -i -v ldpc_dec_v7813.data -b 1
-EAL: Detected 96 lcore(s)
-EAL: Detected 2 NUMA nodes
-Option -w, --pci-whitelist is deprecated, use -a, --allow option instead
+`pci-pf-stub` and `igb_uio` don't require additional parameters.
+```shell
+[root@pod-bbdev-sample-app ~]# ./test-bbdev.py --testapp-path ./dpdk-test-bbdev -e="-a 0000:cb:00.0" -n 1 -b 1 -l 1 -c validation
+```
+For `vfio-pci` uuid token is required (as described above), so `--vfio-vf-token` parameter is required.
+```shell
+[root@pod-bbdev-sample-app ~]# ./test-bbdev.py --testapp-path ./dpdk-test-bbdev -e="-a 0000:cb:00.0 --vfio-vf-token '02bddbbf-bbb0-4d79-886b-91bad3fbb510'" -n 1 -b 1 -l 1 -c validation
+ -v ldpc_dec_v7813.data
+Executing: ./dpdk-test-bbdev -a 0000:cb:00.0 --vfio-vf-token 02bddbbf-bbb0-4d79-886b-91bad3fbb510 -- -n 1 -l 1 -c validation -v ldpc_dec_v7813.data -b 1
+EAL: Detected CPU lcores: 128
+EAL: Detected NUMA nodes: 2
+EAL: Detected static linkage of DPDK
 EAL: Multi-process socket /var/run/dpdk/rte/mp_socket
 EAL: Selected IOVA mode 'VA'
-EAL: Probing VFIO support...
+EAL: 2048 hugepages of size 2097152 reserved, but no mounted hugetlbfs found for that size
 EAL: VFIO support initialized
-EAL:   using IOMMU type 1 (Type 1)
-EAL: Probe PCI driver: intel_acc100_vf (8086:d5d) device: 0000:b0:00.0 (socket 1)
-EAL: No legacy callbacks, legacy socket not created
-
- 
+EAL: Using IOMMU type 1 (Type 1)
+EAL: Probe PCI driver: intel_acc100_vf (8086:d5d) device: 0000:cb:00.0 (socket 1)
+TELEMETRY: No legacy callbacks, legacy socket not created
 
 ===========================================================
 Starting Test Suite : BBdev Validation Tests
 Test vector file = ldpc_dec_v7813.data
-Device 0 queue 16 setup failed
 Allocated all queues (id=16) at prio0 on dev0
-Device 0 queue 32 setup failed
 Allocated all queues (id=32) at prio1 on dev0
-Device 0 queue 48 setup failed
 Allocated all queues (id=48) at prio2 on dev0
-Device 0 queue 64 setup failed
 Allocated all queues (id=64) at prio3 on dev0
-Device 0 queue 64 setup failed
 All queues on dev 0 allocated: 64
 + ------------------------------------------------------- +
 == test: validation
-dev:0000:b0:00.0, burst size: 1, num ops: 1, op type: RTE_BBDEV_OP_LDPC_DEC
+dev:0000:cb:00.0, burst size: 1, num ops: 1, op type: RTE_BBDEV_OP_LDPC_DEC
 Operation latency:
-        avg: 23092 cycles, 10.0838 us
-        min: 23092 cycles, 10.0838 us
-        max: 23092 cycles, 10.0838 us
+        avg: 15358 cycles, 10.2387 us
+        min: 15358 cycles, 10.2387 us
+        max: 15358 cycles, 10.2387 us
 TestCase [ 0] : validation_tc passed
  + ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ +
  + Test Suite Summary : BBdev Validation Tests
@@ -330,7 +330,7 @@ TestCase [ 0] : validation_tc passed
  + Tests Skipped :      0
  + Tests Passed :       1
  + Tests Failed :       0
- + Tests Lasted :       177.67 ms
+ + Tests Lasted :       109.327 ms
  + ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ +
 ```
 

@@ -331,4 +331,5 @@ TODO
 # Package Versions
 Package:
 - Golang: 1.18
-- pf-bb-config-app: v22.07
+- pf-bb-config-app: v22.11
+- DPDK: 22.11
