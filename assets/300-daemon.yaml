@@ -199,21 +199,40 @@ data:
               readOnly: true    
             - mountPath: /host/lib64
               name: lib64
-              readOnly: true    
-            - mountPath: /host/proc
+              readOnly: true  
+            - mountPath: /host/proc/
               name: proc
-            - mountPath: /host/usr/bin
-              name: bin
-              readOnly: true    
-            - mountPath: /host/usr/sbin
-              name: sbin
-              readOnly: true    
-            - mountPath: /host/bin
-              name: bin
-              readOnly: true    
-            - mountPath: /host/sbin
-              name: sbin
-              readOnly: true    
+            - mountPath: /host/usr/bin/pkill
+              name: binpkill
+              readOnly: true
+              subpath: pkill
+            - mountPath: /host/usr/bin/pgrep
+              name: binpgrep
+              readOnly: true
+              subpath: pgrep    
+      {{ if eq (.SRIOV_FEC_GENERIC_K8S|ToLower) `false` }}
+            - mountPath: /host/usr/sbin/setpci
+              name: sbinsetpci
+              readOnly: true
+              subpath: setpci
+            - mountPath: /host/usr/sbin/lspci
+              name: sbinlspci
+              readOnly: true
+              subpath: lspci
+      {{ else }}
+            - mountPath: /host/usr/bin/setpci
+              name: binsetpci
+              readOnly: true
+              subpath: setpci
+            - mountPath: /host/usr/sbin/lspci
+              name: binlspci
+              readOnly: true
+              subpath: lspci
+      {{ end }}
+            - mountPath: /host/usr/sbin/modprobe
+              name: sbinmodprobe
+              readOnly: true 
+              subpath: modprobe
             - name: logs
               mountPath: /var/log
             - name: tmp
@@ -266,12 +285,27 @@ data:
           - name: lib64
             hostPath:
               path: /usr/lib64
-          - name: bin
+          - name: binpkill
             hostPath:
-              path: /usr/bin
-          - name: sbin
+              path: /usr/bin/pkill
+          - name: binpgrep
             hostPath:
-              path: /usr/sbin
+              path: /usr/bin/pgrep
+          - name: binsetpci
+            hostPath:
+              path: /usr/bin/setpci
+          - name: sbinsetpci
+            hostPath:
+              path: /usr/sbin/setpci
+          - name: binlspci
+            hostPath:
+              path: /usr/bin/lspci
+          - name: sbinlspci
+            hostPath:
+              path: /usr/sbin/lspci
+          - name: sbinmodprobe
+            hostPath:
+              path: /usr/sbin/modprobe
           - name: proc
             hostPath:
               path: /proc
