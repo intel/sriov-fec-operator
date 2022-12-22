@@ -337,8 +337,6 @@ func (r *NodeConfigReconciler) isCardUpdateRequired(nc *fec.SriovFecNodeConfig, 
 
 func pfBbConfigProcIsDead(log *logrus.Logger, pciAddr string) bool {
 	stdout, err := execCmd([]string{
-		"chroot",
-		"/host/",
 		"pgrep",
 		"--count",
 		"--full",

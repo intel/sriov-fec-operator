@@ -82,8 +82,6 @@ func (p *pfBBConfigController) runPFConfig(deviceName, cfgFilepath, pciAddress s
 
 func (p *pfBBConfigController) stopPfBBConfig(pciAddress string) error {
 	_, err := execAndSuppress([]string{
-		"chroot",
-		"/host/",
 		"pkill",
 		"-9",
 		"-f",

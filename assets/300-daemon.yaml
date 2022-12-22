@@ -158,7 +158,7 @@ data:
             effect: NoSchedule
           serviceAccount: sriov-fec-daemon
           serviceAccountName: sriov-fec-daemon
-          hostPID: true
+          hostPID: false
           hostNetwork: false
           dnsPolicy: Default
           containers:
@@ -200,35 +200,9 @@ data:
             - mountPath: /host/lib64
               name: lib64
               readOnly: true  
-            - mountPath: /host/proc/
-              name: proc
-            - mountPath: /host/usr/bin/pkill
-              name: binpkill
+            - mountPath: /host/proc/cmdline
+              name: proccmdline
               readOnly: true
-              subpath: pkill
-            - mountPath: /host/usr/bin/pgrep
-              name: binpgrep
-              readOnly: true
-              subpath: pgrep    
-      {{ if eq (.SRIOV_FEC_GENERIC_K8S|ToLower) `false` }}
-            - mountPath: /host/usr/sbin/setpci
-              name: sbinsetpci
-              readOnly: true
-              subpath: setpci
-            - mountPath: /host/usr/sbin/lspci
-              name: sbinlspci
-              readOnly: true
-              subpath: lspci
-      {{ else }}
-            - mountPath: /host/usr/bin/setpci
-              name: binsetpci
-              readOnly: true
-              subpath: setpci
-            - mountPath: /host/usr/sbin/lspci
-              name: binlspci
-              readOnly: true
-              subpath: lspci
-      {{ end }}
             - mountPath: /host/usr/sbin/modprobe
               name: sbinmodprobe
               readOnly: true 
@@ -285,30 +259,12 @@ data:
           - name: lib64
             hostPath:
               path: /usr/lib64
-          - name: binpkill
+          - name: proccmdline
             hostPath:
-              path: /usr/bin/pkill
-          - name: binpgrep
-            hostPath:
-              path: /usr/bin/pgrep
-          - name: binsetpci
-            hostPath:
-              path: /usr/bin/setpci
-          - name: sbinsetpci
-            hostPath:
-              path: /usr/sbin/setpci
-          - name: binlspci
-            hostPath:
-              path: /usr/bin/lspci
-          - name: sbinlspci
-            hostPath:
-              path: /usr/sbin/lspci
+              path: /proc/cmdline
           - name: sbinmodprobe
             hostPath:
               path: /usr/sbin/modprobe
-          - name: proc
-            hostPath:
-              path: /proc
           - name: devvfio
             hostPath:
               path: /dev/vfio
