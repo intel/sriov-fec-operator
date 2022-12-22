@@ -187,26 +187,11 @@ data:
             - name: vfiotoken
               mountPath: /sriov_config/
               readOnly: true    
-            - name: sys
-              mountPath: /sys
-            - mountPath: /sriov_artifacts
-              name: workdir-volume
+            - name: libmodules
+              mountPath: /lib/modules
             - mountPath: /sriov_config/config
               name: config-volume
               readOnly: true
-            - mountPath: /host/lib
-              name: lib
-              readOnly: true    
-            - mountPath: /host/lib64
-              name: lib64
-              readOnly: true  
-            - mountPath: /host/proc/cmdline
-              name: proccmdline
-              readOnly: true
-            - mountPath: /host/usr/sbin/modprobe
-              name: sbinmodprobe
-              readOnly: true 
-              subpath: modprobe
             - name: logs
               mountPath: /var/log
             - name: tmp
@@ -234,11 +219,6 @@ data:
                   - "ALL"
       {{ end }}
           volumes:
-          - hostPath:
-              path: /sys
-            name: sys
-          - emptyDir: {}
-            name: workdir-volume
           - configMap:
               defaultMode: 420
               items:
@@ -253,21 +233,12 @@ data:
               items:
                - key: VFIO_TOKEN
                  path: vfiotoken
-          - name: lib
-            hostPath:
-              path: /usr/lib
-          - name: lib64
-            hostPath:
-              path: /usr/lib64
-          - name: proccmdline
-            hostPath:
-              path: /proc/cmdline
-          - name: sbinmodprobe
-            hostPath:
-              path: /usr/sbin/modprobe
           - name: devvfio
             hostPath:
               path: /dev/vfio
+          - name: libmodules
+            hostPath:
+              path: /lib/modules
           - name: logs
             emptyDir: {}
           - name: tmp

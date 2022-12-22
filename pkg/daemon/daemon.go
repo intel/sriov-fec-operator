@@ -46,7 +46,7 @@ var (
 	configPath            = "/sriov_config/config/accelerators.json"
 	getSriovInventory     = GetSriovInventory
 	supportedAccelerators utils.AcceleratorDiscoveryConfig
-	procCmdlineFilePath   = "/host/proc/cmdline"
+	procCmdlineFilePath   = "/proc/cmdline"
 	kernelParams          = []string{"intel_iommu=on", "iommu=pt"}
 )
 

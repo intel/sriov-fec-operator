@@ -177,9 +177,9 @@ var _ = Describe("NodeConfigReconciler", func() {
 						osExecMock := new(runExecCmdMock).
 							onCall([]string{"pkill -9 -f pf_bb_config.*0000:14:00.1"}).
 							Return("", nil).
-							onCall([]string{"chroot", "/host/", "modprobe", utils.IGB_UIO}).
+							onCall([]string{"modprobe", utils.IGB_UIO}).
 							Return("", nil).
-							onCall([]string{"chroot", "/host/", "modprobe", "v"}).
+							onCall([]string{"modprobe", "v"}).
 							Return("", nil).
 							onCall([]string{"setpci", "-v", "-s", "0000:14:00.1", "COMMAND=06"}).
 							Return("", nil).

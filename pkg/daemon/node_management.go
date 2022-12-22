@@ -26,7 +26,7 @@ var (
 	runExecCmd       = execCmd
 	getVFconfigured  = utils.GetVFconfigured
 	getVFList        = utils.GetVFList
-	workdir          = "/sriov_artifacts"
+	workdir          = "/tmp"
 	sysBusPciDevices = "/sys/bus/pci/devices"
 	sysBusPciDrivers = "/sys/bus/pci/drivers"
 )
@@ -51,7 +51,7 @@ func (n *NodeConfigurator) loadModule(module string) error {
 	if module == "" {
 		return fmt.Errorf("module cannot be empty string")
 	}
-	_, err := runExecCmd(append([]string{"chroot", "/host/", "modprobe", module}, appendMandatoryArgs(module)...), n.Log)
+	_, err := runExecCmd(append([]string{"modprobe", module}, appendMandatoryArgs(module)...), n.Log)
 	return err
 }
 

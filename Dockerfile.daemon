@@ -52,7 +52,7 @@ RUN curl https://pci-ids.ucw.cz/v2.2/pci.ids.gz --output pci.ids.gz && \
     gzip -d pci.ids.gz && \
     rm -rfv ./pci.ids.gz
 
-RUN yum install -y procps-ng pciutils util-linux
+RUN yum install -y procps-ng pciutils util-linux kmod
 
 USER 1001
 
