@@ -682,7 +682,7 @@ status:
 To gather logs for filing bug report please run `gather_sriovfec_logs.sh` script downloaded from https://github.com/smart-edge-open/sriov-fec-operator/blob/main/gather_sriovfec_logs.sh
 
 ```
-Usage: ./gather_sriovfec_gather_sriovfec_logs.sh [K8S_BIN] [NAMESPACE]
+Usage: ./gather_sriovfec_logs.sh [K8S_BIN] [NAMESPACE]
 
 Positional arguments:
  K8S_BIN    Orchestrator binary (default: oc)
@@ -691,7 +691,7 @@ Positional arguments:
 
 Example
 ```shell
-[user@ctrl1 /home]# ./gather_sriovfec_gather_sriovfec_logs.sh
+[user@ctrl1 /home]# ./gather_sriovfec_logs.sh
 Getting information about nodes
 Getting information about pods in vran-acceleration-operators
 Getting information about ClusterConfigs in vran-acceleration-operators
