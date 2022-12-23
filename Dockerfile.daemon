@@ -33,7 +33,7 @@ COPY api api/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
 
-FROM registry.access.redhat.com/ubi9/ubi:9.1.0-1646.1669023907
+FROM registry.access.redhat.com/ubi9/ubi:9.1.0-1646.1669627755
 
 ARG VERSION
 ### Required OpenShift Labels
