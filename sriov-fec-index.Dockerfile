@@ -1,3 +1,6 @@
+## SPDX-License-Identifier: Apache-2.0
+## Copyright (c) 2020-2023 Intel Corporation
+
 # The base image is expected to contain
 # /bin/opm (with a serve subcommand) and /bin/grpc_health_probe
 FROM quay.io/operator-framework/opm:latest
