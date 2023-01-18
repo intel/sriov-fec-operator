@@ -12,7 +12,10 @@ COPY pkg/ pkg/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o node_labeler cmd/labeler/main.go
 
-FROM registry.access.redhat.com/ubi9/ubi:9.1.0-1646.1669627755
+
+RUN wget https://pci-ids.ucw.cz/v2.2/pci.ids.gz -O pci.ids.gz && gunzip pci.ids.gz
+
+FROM registry.access.redhat.com/ubi9/ubi-micro:9.1.0-6
 
 ARG VERSION
 ### Required OpenShift Labels
@@ -26,11 +29,7 @@ and remove the label for nodes that do not."
 
 RUN mkdir -p /usr/share/misc/
 
-WORKDIR /usr/share/misc/
-
-RUN curl https://pci-ids.ucw.cz/v2.2/pci.ids.gz --output pci.ids.gz && \
-    gzip -d pci.ids.gz && \
-    rm -rfv ./pci.ids.gz
+COPY --from=builder /workspace/pci.ids /usr/share/misc/pci.ids
 
 COPY TEMP_LICENSE_COPY /licenses/LICENSE
 USER 1001

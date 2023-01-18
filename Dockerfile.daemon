@@ -33,7 +33,23 @@ COPY api api/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
 
-FROM registry.access.redhat.com/ubi9/ubi:9.1.0-1646.1669627755
+FROM registry.access.redhat.com/ubi9/ubi:9.1.0-1646.1669627755 as package_installer
+
+RUN yum install -y ethtool iproute kmod procps-ng pciutils util-linux  tar gzip gcc make wget && yum clean all
+
+
+RUN wget -O zlib-1.2.13.tar.gz https://github.com/madler/zlib/releases/download/v1.2.13/zlib-1.2.13.tar.gz && \
+    tar xzvf zlib-1.2.13.tar.gz
+WORKDIR /zlib-1.2.13
+RUN ./configure && make test && make install
+
+WORKDIR /workspace
+
+RUN wget https://pci-ids.ucw.cz/v2.2/pci.ids.gz -O pci.ids.gz && \
+    gzip -d pci.ids.gz && \
+    rm -rfv ./pci.ids.gz
+
+FROM registry.access.redhat.com/ubi9/ubi-micro:9.1.0-6
 
 ARG VERSION
 ### Required OpenShift Labels
@@ -44,15 +60,51 @@ LABEL name="SR-IOV Operator for Wireless FEC Accelerators daemonset" \
     summary="Manages SR-IOV resources on Wireless FEC Accelerators" \
     description="The daemonset container is responsible for building the nodes inventory and configuring the SRIOV-FEC portion of the supported accelerators"
 
+
+
 RUN mkdir -p /usr/share/misc/
 
-WORKDIR /usr/share/misc/
+COPY --from=package_installer /workspace/pci.ids /usr/share/misc/pci.ids
 
-RUN curl https://pci-ids.ucw.cz/v2.2/pci.ids.gz --output pci.ids.gz && \
-    gzip -d pci.ids.gz && \
-    rm -rfv ./pci.ids.gz
+COPY --from=package_installer /lib64/libm.so.6 /lib64/libmnl.so.0 /lib64/libc.so.6 /lib64/ld-linux-x86-64.so.2 \
+    /lib64/libzstd.so.1 /lib64/liblzma.so.5 /lib64/libcrypto.so.3 /lib64/libgcc_s.so.1 \
+    /lib64/libpci.so.3 /lib64/libkmod.so.2 /lib64/libbpf.so.0 \
+    /lib64/libmnl.so.0 /lib64/libtinfo.so.6  /lib64/libsigsegv.so.2.0.6 /lib64/libsigsegv.so.2  \
+    /lib64/libreadline.so.8.1 /lib64/libreadline.so.8 /lib64/libmpfr.so.6.1.0 /lib64/libmpfr.so.6 \
+    /lib64/libgmp.so.10.4.0 /lib64/libgmp.so.10 /lib64/libprocps.so.8.0.3 /lib64/libsystemd.so.0.33.0 /lib64/liblz4.so.1.9.3 \
+    /lib64/libgpg-error.so.0.32.0 /lib64/libgcrypt.so.20.4.0 /lib64/libuuid.so.1.3.0 \
+    /lib64/libidn2.so.0.3.7 /lib64/libnettle.so.8.5 /lib64/libgnutls.so.30.33.1 /lib64/libpsl.so.5.3.3 \
+    /lib64/libunistring.so.2.1.0 /lib64/libp11-kit.so.0.3.0 /lib64/libtasn1.so.6.6.0 \
+    /lib64/libhogweed.so.6.5 /lib64/libffi.so.8.1.0 /lib64/
+RUN ln -sf /usr/lib64/libsigsegv.so.2.0.6 /usr/lib64/libsigsegv.so.2 && \
+    ln -sf /usr/lib64/libreadline.so.8.1  /usr/lib64/libreadline.so.8 && \
+    ln -sf /usr/lib64/libmpfr.so.6.1.0  /usr/lib64/libmpfr.so.6 && \
+    ln -sf /usr/lib64/libprocps.so.8.0.3 /usr/lib64/libprocps.so.8 && \
+    ln -sf /usr/lib64/libsystemd.so.0.33.0 /usr/lib64/libsystemd.so.0 && \
+    ln -sf /usr/lib64/liblz4.so.1.9.3 /usr/lib64/liblz4.so.1 && \
+    ln -sf /usr/lib64/libgcrypt.so.20.4.0 /usr/lib64/libgcrypt.so.20 && \
+    ln -sf /usr/lib64/libgpg-error.so.0.32.0 /usr/lib64/libgpg-error.so.0 && \
+    ln -sf /usr/lib64/libuuid.so.1.3.0 /usr/lib64/libuuid.so.1 && \
+    ln -sf /usr/lib64/libidn2.so.0.3.7 /usr/lib64/libidn2.so.0 && \
+    ln -sf /usr/lib64/libnettle.so.8.5 /usr/lib64/libnettle.so.8 && \
+    ln -sf /usr/lib64/libgnutls.so.30.33.1 /usr/lib64/libgnutls.so.30 && \
+    ln -sf /usr/lib64/libpsl.so.5.3.3 /usr/lib64/libpsl.so.5 && \
+    ln -sf /usr/lib64/libunistring.so.2.1.0 /usr/lib64/libunistring.so.2 && \
+    ln -sf /usr/lib64/libp11-kit.so.0.3.0 /usr/lib64/libp11-kit.so.0 && \
+    ln -sf /usr/lib64/libtasn1.so.6.6.0 /usr/lib64/libtasn1.so.6 && \
+    ln -sf /usr/lib64/libhogweed.so.6.5 /usr/lib64/libhogweed.so.6 && \
+    ln -sf /usr/lib64/libffi.so.8.1.0 /usr/lib64/libffi.so.8 && \
+    ln -sf /usr/lib64/libgmp.so.10.4.0  /usr/lib64/libgmp.so.10
+COPY --from=package_installer /usr/local/lib/libz.so.1.2.13 /lib64/libz.so.1
+COPY --from=package_installer /usr/sbin/ethtool /usr/sbin/lspci \
+    /usr/sbin/setpci /usr/sbin/update-pciids /usr/sbin/ip /usr/sbin/devlink /usr/sbin/modprobe /usr/sbin/
+COPY --from=package_installer /usr/bin/kmod /usr/bin/pkill /usr/bin/dmesg \
+    /usr/bin/pgrep /usr/bin/wget /usr/bin/
+COPY --from=package_installer /bin/awk /bin/sed /bin/
 
-RUN yum install -y procps-ng pciutils util-linux kmod
+
+RUN mkdir /usr/share/hwdata
+COPY --from=package_installer /usr/share/hwdata /usr/share/hwdata
 
 USER 1001
 
