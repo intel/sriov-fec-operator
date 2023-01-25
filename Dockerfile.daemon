@@ -33,7 +33,7 @@ COPY api api/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
 
-FROM registry.access.redhat.com/ubi9/ubi:9.1.0-1646.1669627755 as package_installer
+FROM registry.access.redhat.com/ubi9/ubi:9.1.0-1750 as package_installer
 
 RUN yum install -y ethtool iproute kmod procps-ng pciutils util-linux  tar gzip gcc make wget && yum clean all
 
@@ -49,7 +49,7 @@ RUN wget https://pci-ids.ucw.cz/v2.2/pci.ids.gz -O pci.ids.gz && \
     gzip -d pci.ids.gz && \
     rm -rfv ./pci.ids.gz
 
-FROM registry.access.redhat.com/ubi9/ubi-micro:9.1.0-6
+FROM registry.access.redhat.com/ubi9/ubi-micro:9.1.0-13
 
 ARG VERSION
 ### Required OpenShift Labels
