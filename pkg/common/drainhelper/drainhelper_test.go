@@ -38,7 +38,7 @@ var _ = Describe("DrainHelper Tests", func() {
 		})
 
 		var _ = It("Create simple DrainHelper", func() {
-			dh := NewDrainHelper(log, &clientSet, "node", "namespace")
+			dh := NewDrainHelper(log, &clientSet, "node", "namespace", false)
 			Expect(dh).ToNot(Equal(nil))
 		})
 
@@ -51,7 +51,7 @@ var _ = Describe("DrainHelper Tests", func() {
 			err = os.Setenv("DRAIN_TIMEOUT_SECONDS", timeoutValStr)
 			Expect(err).ToNot(HaveOccurred())
 
-			dh := NewDrainHelper(log, &clientSet, "node", "namespace")
+			dh := NewDrainHelper(log, &clientSet, "node", "namespace", false)
 			Expect(dh).ToNot(Equal(nil))
 			Expect(dh.drainer.Timeout).ToNot(Equal(time.Duration(timeoutVal) * time.Second))
 		})
@@ -65,7 +65,7 @@ var _ = Describe("DrainHelper Tests", func() {
 			err = os.Setenv("LEASE_DURATION_SECONDS", leaseValStr)
 			Expect(err).ToNot(HaveOccurred())
 
-			dh := NewDrainHelper(log, &clientSet, "node", "namespace")
+			dh := NewDrainHelper(log, &clientSet, "node", "namespace", false)
 			Expect(dh).ToNot(Equal(nil))
 			Expect(dh.leaderElectionConfig.LeaseDuration).ToNot(Equal(time.Duration(leaseVal) * time.Second))
 		})
@@ -77,7 +77,7 @@ var _ = Describe("DrainHelper Tests", func() {
 			cset, err := clientset.NewForConfig(clientConfig)
 			Expect(err).ToNot(HaveOccurred())
 
-			dh := NewDrainHelper(log, cset, "node", "namespace")
+			dh := NewDrainHelper(log, cset, "node", "namespace", false)
 			Expect(dh).ToNot(Equal(nil))
 
 			err = dh.Run(func(c context.Context) bool { return true }, true)
@@ -91,7 +91,7 @@ var _ = Describe("DrainHelper Tests", func() {
 			cset, err := clientset.NewForConfig(clientConfig)
 			Expect(err).ToNot(HaveOccurred())
 
-			dh := NewDrainHelper(log, cset, "node", "namespace")
+			dh := NewDrainHelper(log, cset, "node", "namespace", false)
 			Expect(dh).ToNot(Equal(nil))
 
 			err = dh.cordonAndDrain(context.Background())
@@ -105,7 +105,7 @@ var _ = Describe("DrainHelper Tests", func() {
 			cset, err := clientset.NewForConfig(clientConfig)
 			Expect(err).ToNot(HaveOccurred())
 
-			dh := NewDrainHelper(log, cset, "node", "namespace")
+			dh := NewDrainHelper(log, cset, "node", "namespace", false)
 			Expect(dh).ToNot(Equal(nil))
 
 			err = dh.uncordon(context.Background())
@@ -119,7 +119,7 @@ var _ = Describe("DrainHelper Tests", func() {
 			cset, err := clientset.NewForConfig(clientConfig)
 			Expect(err).ToNot(HaveOccurred())
 
-			dh := NewDrainHelper(log, cset, "node", "namespace")
+			dh := NewDrainHelper(log, cset, "node", "namespace", false)
 			Expect(dh).ToNot(Equal(nil))
 
 			outString := "Out test"
@@ -140,7 +140,7 @@ var _ = Describe("DrainHelper Tests", func() {
 			cset, err := clientset.NewForConfig(clientConfig)
 			Expect(err).ToNot(HaveOccurred())
 
-			dh := NewDrainHelper(log, cset, "node", "namespace")
+			dh := NewDrainHelper(log, cset, "node", "namespace", false)
 			Expect(dh).ToNot(Equal(nil))
 
 			pod := corev1.Pod{}
@@ -163,7 +163,7 @@ var _ = Describe("DrainHelper Tests", func() {
 			cset, err := clientset.NewForConfig(cfg)
 			Expect(err).ToNot(HaveOccurred())
 
-			dh := NewDrainHelper(log, cset, "dummy", "namespace")
+			dh := NewDrainHelper(log, cset, "dummy", "namespace", false)
 			Expect(dh).ToNot(Equal(nil))
 
 			err = dh.cordonAndDrain(context.Background())
@@ -190,7 +190,7 @@ var _ = Describe("DrainHelper Tests", func() {
 			cset, err := clientset.NewForConfig(cfg)
 			Expect(err).ToNot(HaveOccurred())
 
-			dh := NewDrainHelper(log, cset, "dummy", "namespace")
+			dh := NewDrainHelper(log, cset, "dummy", "namespace", false)
 			Expect(dh).ToNot(Equal(nil))
 
 			err = dh.cordonAndDrain(context.Background())
@@ -222,10 +222,10 @@ var _ = Describe("DrainHelper Tests", func() {
 			err = os.Setenv("DRAIN_TIMEOUT_SECONDS", "5")
 			Expect(err).ToNot(HaveOccurred())
 
-			err = os.Setenv("LEASE_DURATION_SECONDS", "16")
+			err = os.Setenv("LEASE_DURATION_SECONDS", "300")
 			Expect(err).ToNot(HaveOccurred())
 
-			dh := NewDrainHelper(log, cset, "dummy", "default")
+			dh := NewDrainHelper(log, cset, "dummy", "default", false)
 			Expect(dh).ToNot(Equal(nil))
 
 			err = dh.Run(func(c context.Context) bool { return true }, true)
@@ -254,10 +254,10 @@ var _ = Describe("DrainHelper Tests", func() {
 			err = os.Setenv("DRAIN_TIMEOUT_SECONDS", "5")
 			Expect(err).ToNot(HaveOccurred())
 
-			err = os.Setenv("LEASE_DURATION_SECONDS", "16")
+			err = os.Setenv("LEASE_DURATION_SECONDS", "300")
 			Expect(err).ToNot(HaveOccurred())
 
-			dh := NewDrainHelper(log, cset, "dummy", "default")
+			dh := NewDrainHelper(log, cset, "dummy", "default", false)
 			Expect(dh).ToNot(Equal(nil))
 
 			err = dh.Run(func(c context.Context) bool { return true }, false)

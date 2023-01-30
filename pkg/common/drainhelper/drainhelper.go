@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2022 Intel Corporation
+// Copyright (c) 2020-2023 Intel Corporation
 
 package drainhelper
 
@@ -25,7 +25,7 @@ const (
 	drainHelperTimeoutEnvVarName = "DRAIN_TIMEOUT_SECONDS"
 	drainHelperTimeoutDefault    = int64(90)
 	leaseDurationEnvVarName      = "LEASE_DURATION_SECONDS"
-	leaseDurationDefault         = int64(600)
+	leaseDurationDefault         = int64(137)
 )
 
 // logWriter is a wrapper around logrus log.Info() to allow drain.Helper logging
@@ -48,7 +48,7 @@ type DrainHelper struct {
 	leaderElectionConfig leaderelection.LeaderElectionConfig
 }
 
-func NewDrainHelper(log *logrus.Logger, cs *clientset.Clientset, nodeName, namespace string) *DrainHelper {
+func NewDrainHelper(log *logrus.Logger, cs *clientset.Clientset, nodeName, namespace string, isSingleNodeCluster bool) *DrainHelper {
 	drainTimeout := drainHelperTimeoutDefault
 	drainTimeoutStr := os.Getenv(drainHelperTimeoutEnvVarName)
 	if drainTimeoutStr != "" {
@@ -110,15 +110,27 @@ func NewDrainHelper(log *logrus.Logger, cs *clientset.Clientset, nodeName, names
 			ErrOut: logWriter{log},
 		},
 
-		leaseLock: lock,
-		leaderElectionConfig: leaderelection.LeaderElectionConfig{
-			Lock:            lock,
-			ReleaseOnCancel: true,
-			LeaseDuration:   time.Duration(leaseDur) * time.Second,
-			RenewDeadline:   15 * time.Second,
-			RetryPeriod:     5 * time.Second,
-		},
+		leaseLock:            lock,
+		leaderElectionConfig: customizedLeaderElectionConfig(lock, leaseDur, isSingleNodeCluster),
 	}
+}
+
+// More details about values are available here:
+// https://github.com/openshift/library-go/commit/2612981f3019479805ac8448b997266fc07a236a#diff-61dd95c7fd45fa18038e825205fbfab8a803f1970068157608b6b1e9e6c27248R127-R150
+func customizedLeaderElectionConfig(lock *resourcelock.LeaseLock, leaseDur int64, isSingleNodeCluster bool) leaderelection.LeaderElectionConfig {
+	lec := leaderelection.LeaderElectionConfig{
+		Lock:            lock,
+		ReleaseOnCancel: true,
+		LeaseDuration:   time.Duration(leaseDur) * time.Second,
+		RenewDeadline:   107 * time.Second,
+		RetryPeriod:     26 * time.Second,
+	}
+	if isSingleNodeCluster {
+		lec.LeaseDuration = 270 * time.Second
+		lec.RenewDeadline = 240 * time.Second
+		lec.RetryPeriod = 60 * time.Second
+	}
+	return lec
 }
 
 // Run joins leader election and drains(only if drain is set) the node if becomes a leader.

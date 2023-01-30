@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2022 Intel Corporation
+// Copyright (c) 2020-2023 Intel Corporation
 
 package daemon
 
@@ -45,7 +45,7 @@ func (p *pfBBConfigController) initializePfBBConfig(acc sriovv2.SriovAccelerator
 		deviceName := supportedAccelerators.Devices[acc.DeviceID]
 
 		var token *string
-		if strings.ToLower(pf.PFDriver) == strings.ToLower("vfio-pci") {
+		if strings.EqualFold(pf.PFDriver, utils.VFIO_PCI) {
 			token = &p.sharedVfioToken
 		}
 
@@ -81,8 +81,6 @@ func (p *pfBBConfigController) runPFConfig(deviceName, cfgFilepath, pciAddress s
 
 func (p *pfBBConfigController) stopPfBBConfig(pciAddress string) error {
 	_, err := execAndSuppress([]string{
-		"chroot",
-		"/host/",
 		"pkill",
 		"-9",
 		"-f",

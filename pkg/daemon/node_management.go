@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2022 Intel Corporation
+// Copyright (c) 2020-2023 Intel Corporation
 
 package daemon
 
 import (
 	"fmt"
 	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	sriovutils "github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
 	"k8s.io/apimachinery/pkg/types"
 	"os"
 	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -25,7 +26,7 @@ var (
 	runExecCmd       = execCmd
 	getVFconfigured  = utils.GetVFconfigured
 	getVFList        = utils.GetVFList
-	workdir          = "/sriov_artifacts"
+	workdir          = "/tmp"
 	sysBusPciDevices = "/sys/bus/pci/devices"
 	sysBusPciDrivers = "/sys/bus/pci/drivers"
 )
@@ -50,7 +51,7 @@ func (n *NodeConfigurator) loadModule(module string) error {
 	if module == "" {
 		return fmt.Errorf("module cannot be empty string")
 	}
-	_, err := runExecCmd([]string{"chroot", "/host/", "modprobe", module}, n.Log)
+	_, err := runExecCmd(append([]string{"modprobe", module}, appendMandatoryArgs(module)...), n.Log)
 	return err
 }
 
@@ -77,7 +78,7 @@ func (n *NodeConfigurator) unbindDeviceFromDriver(pciAddress string) error {
 	}
 	n.Log.WithField("pciAddress", pciAddress).WithField("driver", driverPath).Info("driver to unbound device from")
 	unbindPath := filepath.Join(driverPath, "unbind")
-	err = ioutil.WriteFile(unbindPath, []byte(pciAddress), os.ModeAppend)
+	err = writeFileWithTimeout(unbindPath, pciAddress)
 	if err != nil {
 		n.Log.WithError(err).WithField("pciAddress", pciAddress).WithField("unbindPath", unbindPath).Error("failed to unbind driver from device")
 	}
@@ -111,14 +112,14 @@ func (n *NodeConfigurator) bindDeviceToDriver(pciAddress, driver string) error {
 
 	driverOverridePath := filepath.Join(sysBusPciDevices, pciAddress, "driver_override")
 	n.Log.WithField("path", driverOverridePath).Info("device's driver_override path")
-	if err := ioutil.WriteFile(driverOverridePath, []byte(driver), os.ModeAppend); err != nil {
+	if err := writeFileWithTimeout(driverOverridePath, driver); err != nil {
 		n.Log.WithError(err).WithField("path", driverOverridePath).WithField("driver", driver).Error("failed to override driver")
 		return err
 	}
 
 	driverBindPath := filepath.Join(sysBusPciDrivers, driver, "bind")
 	n.Log.WithField("path", driverBindPath).Info("driver bind path")
-	err := ioutil.WriteFile(driverBindPath, []byte(pciAddress), os.ModeAppend)
+	err := writeFileWithTimeout(driverBindPath, pciAddress)
 	if err != nil {
 		n.Log.WithError(err).WithField("pciAddress", pciAddress).WithField("driverBindPath", driverBindPath).Error("failed to bind driver to device")
 	}
@@ -130,7 +131,7 @@ func (n *NodeConfigurator) configureCommandRegister(pciAddr string) error {
 	// Configures PCI COMMAND register that enables
 	// 0X02 bit - PCI_COMMAND_MEMORY which is required for MMIO in pf-bb-config
 	// 0X04 bit - PCI_COMMAND_MASTER which required for PF to correctly manage VFs
-	cmd := []string{"chroot", "/host/", "setpci", "-v", "-s", pciAddr, "COMMAND=06"}
+	cmd := []string{"setpci", "-v", "-s", pciAddr, "COMMAND=06"}
 	_, err := runExecCmd(cmd, n.Log)
 	if err != nil {
 		n.Log.WithError(err).Error("failed to configure PCI command bridge for card: " + pciAddr)
@@ -149,15 +150,15 @@ func (n *NodeConfigurator) changeAmountOfVFs(driver string, pfPCIAddress string,
 		unbindPath := filepath.Join(sysBusPciDevices, pfPCIAddress)
 
 		switch driver {
-		case "pci-pf-stub", "pci_pf_stub", "vfio-pci":
+		case sriovutils.PCI_PF_STUB_DASH, sriovutils.PCI_PF_STUB_UNDERSCORE, sriovutils.VFIO_PCI:
 			unbindPath = filepath.Join(unbindPath, vfNumFileDefault)
-		case "igb_uio":
+		case sriovutils.IGB_UIO:
 			unbindPath = filepath.Join(unbindPath, vfNumFileIgbUio)
 		default:
 			return fmt.Errorf("unknown driver %v", driver)
 		}
 
-		err := ioutil.WriteFile(unbindPath, []byte(strconv.Itoa(vfsAmount)), os.ModeAppend)
+		err := writeFileWithTimeout(unbindPath, strconv.Itoa(vfsAmount))
 		if err != nil {
 			n.Log.WithError(err).WithField("pf", pfPCIAddress).WithField("vfsAmount", vfsAmount).Error("failed to set new amount of VFs for PF")
 			return fmt.Errorf("failed to set new amount of VFs (%d) for PF (%s): %w", vfsAmount, pfPCIAddress, err)
@@ -182,7 +183,7 @@ func (n *NodeConfigurator) flrReset(pfPCIAddress string) error {
 	n.Log.Infof("executing FLR for %s", pfPCIAddress)
 
 	path := filepath.Join(sysBusPciDevices, pfPCIAddress, "reset")
-	if err := ioutil.WriteFile(path, []byte(strconv.Itoa(1)), os.ModeAppend); err != nil {
+	if err := writeFileWithTimeout(path, strconv.Itoa(1)); err != nil {
 		return fmt.Errorf("failed to execute Function Level Reset for PF (%s): %s", pfPCIAddress, err)
 	}
 
@@ -326,4 +327,11 @@ func getMatchingConfiguration(pciAddress string, configurations []sriovv2.Physic
 		}
 	}
 	return nil
+}
+
+func appendMandatoryArgs(driver string) []string {
+	if strings.EqualFold(driver, sriovutils.VFIO_PCI) {
+		return []string{"enable_sriov=1", "disable_idle_d3=1"}
+	}
+	return []string{}
 }

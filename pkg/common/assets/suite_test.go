@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2022 Intel Corporation
+// Copyright (c) 2020-2023 Intel Corporation
 
 package assets
 
 import (
+	"context"
 	"github.com/go-logr/logr"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"path/filepath"
@@ -23,14 +24,20 @@ import (
 	// +kubebuilder:scaffold:imports
 )
 
-var cfg *rest.Config
-var k8sClient client.Client
-var fakeOwner metav1.Object
+var (
+	cfg       *rest.Config
+	k8sClient client.Client
+	fakeOwner metav1.Object
 
-var testEnv *envtest.Environment
+	testEnv *envtest.Environment
 
-var fakeAssetFile string
-var fakeConfigMapName string
+	fakeConfigMapName string
+	fakeAssetFile     string
+
+	tolerationKey      = "key"
+	tolerationOperator = corev1.TolerationOperator("Exists")
+	tolerationEffect   = corev1.TaintEffect("NoSchedule")
+)
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -65,6 +72,44 @@ var _ = BeforeSuite(func(done Done) {
 	fakeOwner = &appsv1.Deployment{}
 	fakeOwner.SetUID("123")
 	fakeOwner.SetName("123")
+
+	name := "sriov-fec-controller-manager"
+	err = os.Setenv("NAME", name+"-123-234")
+	Expect(err).To(Succeed())
+
+	deploymentforTests := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "default"},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: pointer.Int32(0),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"test": "test"},
+			},
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Tolerations: []corev1.Toleration{{
+						Key:      tolerationKey,
+						Operator: tolerationOperator,
+						Effect:   tolerationEffect,
+					}},
+
+					Containers: []corev1.Container{{
+						Name:  "test-container",
+						Image: "test-container",
+					}},
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"test": "test"},
+				},
+			},
+			Strategy:                appsv1.DeploymentStrategy{},
+			MinReadySeconds:         0,
+			RevisionHistoryLimit:    nil,
+			Paused:                  false,
+			ProgressDeadlineSeconds: nil,
+		},
+	}
+	err = k8sClient.Create(context.TODO(), deploymentforTests)
+	Expect(err).To(Succeed())
 
 	close(done)
 }, 60)

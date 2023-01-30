@@ -11,6 +11,10 @@ spec:
     spec:
       containers:
       - name: manager
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          readOnlyRootFilesystem: true
         ports:
         - containerPort: 9443
           name: webhook-server

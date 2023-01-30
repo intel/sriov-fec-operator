@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2022 Intel Corporation
+// Copyright (c) 2020-2023 Intel Corporation
 
 package v2
 
@@ -61,7 +61,7 @@ var _ = Describe("Creation of SriovFecClusterConfig without n3000 bbdevconfig", 
 		cc := ccPrototype.DeepCopy()
 		cc.Spec = SriovFecClusterConfigSpec{
 			PhysicalFunction: PhysicalFunctionConfig{
-				PFDriver:    "pci-pf-stub",
+				PFDriver:    utils.PCI_PF_STUB_DASH,
 				BBDevConfig: BBDevConfig{},
 				VFAmount:    1,
 			},
@@ -81,7 +81,7 @@ var _ = Describe("Creation of SriovFecClusterConfig with bbdevconfig containing 
 			},
 			Spec: SriovFecClusterConfigSpec{
 				PhysicalFunction: PhysicalFunctionConfig{
-					PFDriver: "pci-pf-stub",
+					PFDriver: utils.PCI_PF_STUB_DASH,
 					VFAmount: 16,
 					BBDevConfig: BBDevConfig{
 						ACC100: &ACC100BBDevConfig{
@@ -131,7 +131,7 @@ var _ = Describe("Creation of SriovFecClusterConfig with n3000 bbdevconfig", fun
 		It("should be rejected", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
-				PFDriver: "pci-pf-stub",
+				PFDriver: utils.PCI_PF_STUB_DASH,
 				VFAmount: 1,
 				BBDevConfig: BBDevConfig{
 					N3000: &N3000BBDevConfig{
@@ -155,7 +155,7 @@ var _ = Describe("Creation of SriovFecClusterConfig with n3000 bbdevconfig", fun
 		It("should be rejected", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
-				PFDriver: "pci-pf-stub",
+				PFDriver: utils.PCI_PF_STUB_DASH,
 				VFAmount: 1,
 				BBDevConfig: BBDevConfig{
 					N3000: &N3000BBDevConfig{
@@ -180,7 +180,7 @@ var _ = Describe("Creation of SriovFecClusterConfig with n3000 bbdevconfig", fun
 		It("should pass", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
-				PFDriver: "pci-pf-stub",
+				PFDriver: utils.PCI_PF_STUB_DASH,
 				VFAmount: 1,
 				BBDevConfig: BBDevConfig{
 					N3000: &N3000BBDevConfig{
@@ -206,7 +206,7 @@ var _ = Describe("Creation of SriovFecClusterConfig with acc100 bbdevconfig", fu
 		It("invalid spec should be rejected", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
-				PFDriver: "pci-pf-stub",
+				PFDriver: utils.PCI_PF_STUB_DASH,
 				VFAmount: 16,
 				BBDevConfig: BBDevConfig{
 					ACC100: &ACC100BBDevConfig{
@@ -285,7 +285,7 @@ var _ = Describe("Creation of SriovFecClusterConfig with acc200 bbdevconfig", fu
 		It("invalid spec should be rejected", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
-				PFDriver: "pci-pf-stub",
+				PFDriver: utils.PCI_PF_STUB_DASH,
 				VFAmount: 16,
 				BBDevConfig: BBDevConfig{
 					ACC200: &ACC200BBDevConfig{

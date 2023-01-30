@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2022 Intel Corporation
+// Copyright (c) 2020-2023 Intel Corporation
 
 package daemon
 
@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -60,8 +61,8 @@ var _ = Describe("NodeConfigReconciler", func() {
 			sysBusPciDevices = testTmpFolder
 			sysBusPciDrivers = testTmpFolder
 			Expect(createFiles(filepath.Join(sysBusPciDevices, pciAddress), "driver_override", "reset", vfNumFileDefault, vfNumFileIgbUio)).To(Succeed())
-			Expect(createFiles(filepath.Join(sysBusPciDrivers, "igb_uio"), "bind")).To(Succeed())
-			Expect(createFiles(filepath.Join(sysBusPciDrivers, "pci-pf-stub"), "bind")).To(Succeed())
+			Expect(createFiles(filepath.Join(sysBusPciDrivers, utils.IGB_UIO), "bind")).To(Succeed())
+			Expect(createFiles(filepath.Join(sysBusPciDrivers, utils.PCI_PF_STUB_DASH), "bind")).To(Succeed())
 
 			getVFconfigured = func(string) int {
 				return 0
@@ -88,7 +89,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 				onGetErrorReturningClient := testClient{
 					Client: fake.NewClientBuilder().Build(),
-					get: func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+					get: func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 						return errors.NewNotFound(sriovv2.GroupVersion.WithResource("SriovFecNodeConfig").GroupResource(), "cannot get")
 					},
 					create: func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
@@ -151,7 +152,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 					Expect(err).ToNot(HaveOccurred())
 
-					k8sManager, err := CreateManager(config, _SUPPORTED_NAMESPACE, scheme.Scheme)
+					k8sManager, err := CreateManager(config, scheme.Scheme, _SUPPORTED_NAMESPACE, 0, 0, log)
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(reconciler.SetupWithManager(k8sManager)).ToNot(HaveOccurred())
@@ -161,13 +162,12 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 					//initialize empty SriovFecNodeConfig
 					Expect(reconciler.CreateEmptyNodeConfigIfNeeded(k8sClient)).To(Succeed())
-
 					go func() {
 						Expect(k8sManager.Start(context.TODO())).ToNot(HaveOccurred())
 					}()
 				})
 
-				AfterEach(func() {
+				JustAfterEach(func() {
 					By("tearing down the test environment")
 					_ = testEnv.Stop()
 				})
@@ -175,13 +175,13 @@ var _ = Describe("NodeConfigReconciler", func() {
 				Context("Requested spec/config is correct and refers to existing accelerators", func() {
 					It("spec/config should be applied", func() {
 						osExecMock := new(runExecCmdMock).
-							onCall([]string{"/usr/sbin/chroot", "/host/", "pkill -9 -f pf_bb_config.*0000:14:00.1"}).
+							onCall([]string{"pkill -9 -f pf_bb_config.*0000:14:00.1"}).
 							Return("", nil).
-							onCall([]string{"chroot", "/host/", "modprobe", "igb_uio"}).
+							onCall([]string{"modprobe", utils.IGB_UIO}).
 							Return("", nil).
-							onCall([]string{"chroot", "/host/", "modprobe", "v"}).
+							onCall([]string{"modprobe", "v"}).
 							Return("", nil).
-							onCall([]string{"chroot", "/host/", "setpci", "-v", "-s", "0000:14:00.1", "COMMAND=06"}).
+							onCall([]string{"setpci", "-v", "-s", "0000:14:00.1", "COMMAND=06"}).
 							Return("", nil).
 							onCall([]string{"/sriov_workdir/pf_bb_config", "FPGA_5GNR", "-c", fmt.Sprintf("%s.ini", filepath.Join(workdir, pciAddress)), "-p", pciAddress}).
 							Return("", nil)
@@ -283,7 +283,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 						},
 					}
 
-					k8sManager, err := CreateManager(config, _SUPPORTED_NAMESPACE, scheme.Scheme)
+					k8sManager, err := CreateManager(config, scheme.Scheme, _SUPPORTED_NAMESPACE, 0, 0, log)
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(reconciler.SetupWithManager(k8sManager)).ToNot(HaveOccurred())
@@ -454,11 +454,11 @@ func (n *nodeRecocnilerWrapper) Reconcile(ctx context.Context, req ctrl.Request)
 
 type testClient struct {
 	client.Client
-	get    func(ctx context.Context, key client.ObjectKey, obj client.Object) error
+	get    func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error
 	create func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error
 }
 
-func (e *testClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+func (e *testClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	return e.get(ctx, key, obj)
 }
 

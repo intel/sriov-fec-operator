@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020-2022 Intel Corporation
+# Copyright (c) 2020-2023 Intel Corporation
 
 apiVersion: v1
 kind: ConfigMap
@@ -24,10 +24,25 @@ data:
     - apiGroups:
       - sriovfec.intel.com
       resources:
-      - '*'
-      - sriov-fecnodes
+      - sriovfecclusterconfigs
+      - sriovfecnodeconfigs
       verbs:
-      - '*'
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    - apiGroups:
+      - sriovfec.intel.com
+      resources:
+      - sriovfecclusterconfigs/status
+      - sriovfecnodeconfigs/status
+      verbs:
+      - get
+      - update
+      - patch
     - apiGroups:
       - security.openshift.io
       resources:
@@ -41,7 +56,13 @@ data:
       resources:
       - leases
       verbs:
-      - '*'
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
   roleBinding: |
     apiVersion: rbac.authorization.k8s.io/v1
     kind: RoleBinding
@@ -71,7 +92,7 @@ data:
     rules:
     - apiGroups: [""]
       resources: ["pods"]
-      verbs: ["*"]
+      verbs: ["get","list","watch","create","update", "patch", "delete"]
     - apiGroups: [""]
       resources: ["nodes"]
       verbs: ["get", "list", "watch", "patch", "update"]
@@ -137,13 +158,28 @@ data:
             effect: NoSchedule
           serviceAccount: sriov-fec-daemon
           serviceAccountName: sriov-fec-daemon
-          hostPID: true
-          hostNetwork: true
-          dnsPolicy: ClusterFirstWithHostNet
+          hostPID: false
+          hostNetwork: false
+          dnsPolicy: Default
           containers:
           - name: sriov-fec-daemon
             image: {{ .SRIOV_FEC_DAEMON_IMAGE }}
             imagePullPolicy: IfNotPresent
+            livenessProbe:
+              httpGet:
+                path: /healthz
+                port: 8081
+              initialDelaySeconds: 15
+              periodSeconds: 20
+            readinessProbe:
+              httpGet:
+                path: /readyz
+                port: 8081
+              initialDelaySeconds: 5
+              periodSeconds: 10
+            ports:
+            - containerPort: 8080
+              name: bbdevconfig
             volumeMounts:
             - name: devvfio
               mountPath: /dev/vfio      
@@ -151,33 +187,11 @@ data:
             - name: vfiotoken
               mountPath: /sriov_config/
               readOnly: true    
-            - name: sysbuspci
-              mountPath: /sys/bus/pci
-            - mountPath: /sriov_artifacts
-              name: workdir-volume
+            - name: libmodules
+              mountPath: /lib/modules
             - mountPath: /sriov_config/config
               name: config-volume
               readOnly: true
-            - mountPath: /host/lib
-              name: lib
-              readOnly: true    
-            - mountPath: /host/lib64
-              name: lib64
-              readOnly: true    
-            - mountPath: /host/proc
-              name: proc
-            - mountPath: /host/usr/bin
-              name: bin
-              readOnly: true    
-            - mountPath: /host/usr/sbin
-              name: sbin
-              readOnly: true    
-            - mountPath: /host/bin
-              name: bin
-              readOnly: true    
-            - mountPath: /host/sbin
-              name: sbin
-              readOnly: true    
             - name: logs
               mountPath: /var/log
             - name: tmp
@@ -205,11 +219,6 @@ data:
                   - "ALL"
       {{ end }}
           volumes:
-          - hostPath:
-              path: /sys/bus/pci
-            name: sysbuspci
-          - emptyDir: {}
-            name: workdir-volume
           - configMap:
               defaultMode: 420
               items:
@@ -224,24 +233,12 @@ data:
               items:
                - key: VFIO_TOKEN
                  path: vfiotoken
-          - name: lib
-            hostPath:
-              path: /usr/lib
-          - name: lib64
-            hostPath:
-              path: /usr/lib64
-          - name: bin
-            hostPath:
-              path: /usr/bin
-          - name: sbin
-            hostPath:
-              path: /usr/sbin
-          - name: proc
-            hostPath:
-              path: /proc
           - name: devvfio
             hostPath:
               path: /dev/vfio
+          - name: libmodules
+            hostPath:
+              path: /lib/modules
           - name: logs
             emptyDir: {}
           - name: tmp

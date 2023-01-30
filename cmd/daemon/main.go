@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2022 Intel Corporation
+// Copyright (c) 2020-2023 Intel Corporation
 
 package main
 
@@ -55,12 +55,13 @@ func main() {
 		setupLog.WithError(err).Error("failed to create clientset")
 		os.Exit(1)
 	}
-
-	mgr, err := daemon.CreateManager(config, ns, scheme)
+	mgr, err := daemon.CreateManager(config, scheme, ns, 8080, 8081, setupLog)
 	if err != nil {
 		setupLog.WithError(err).Error("unable to start manager")
 		os.Exit(1)
 	}
+
+	daemon.StartTelemetryDaemon(mgr, nodeName, ns, directClient, setupLog)
 
 	vfioTokenBytes, err := ioutil.ReadFile("/sriov_config/vfiotoken")
 	if err != nil {
@@ -71,16 +72,22 @@ func main() {
 	vfioToken, err := uuid.ParseBytes(vfioTokenBytes)
 	if err != nil {
 		setupLog.Errorf("provided vfioToken(%s) is not in UUID format: %s", vfioTokenBytes, err)
+		os.Exit(1)
+	}
+
+	isSingleNodeCluster, err := utils.IsSingleNodeCluster(directClient)
+	if err != nil {
+		setupLog.WithError(err).Errorf("failed to determine cluster type")
+		os.Exit(1)
 	}
 
 	nodeNameRef := types.NamespacedName{Namespace: ns, Name: nodeName}
-	drainHelper := drainhelper.NewDrainHelper(utils.NewLogger(), cset, nodeName, ns)
+	drainHelper := drainhelper.NewDrainHelper(utils.NewLogger(), cset, nodeName, ns, isSingleNodeCluster)
 	pfBBConfigController := daemon.NewPfBBConfigController(utils.NewLogger(), vfioToken.String())
 	nodeConfigurer := daemon.NewNodeConfigurator(utils.NewLogger(), pfBBConfigController, mgr.GetClient(), nodeNameRef)
 	devicePluginController := daemon.NewDevicePluginController(mgr.GetClient(), utils.NewLogger(), nodeNameRef)
 
 	reconciler, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), drainHelper.Run, nodeNameRef, nodeConfigurer, devicePluginController.RestartDevicePlugin)
-
 	if err != nil {
 		setupLog.WithError(err).Error("unable to create reconciler")
 		os.Exit(1)

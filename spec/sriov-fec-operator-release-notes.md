@@ -1,10 +1,10 @@
 ```text
 SPDX-License-Identifier: Apache-2.0
-Copyright (c) 2020-2022 Intel Corporation
+Copyright (c) 2020-2023 Intel Corporation
 ```
 <!-- omit in toc -->
 # Release Notes
-This document provides high-level system features, issues, and limitations information for SEO SR-IOV Operator for Wireless FEC Accelerators.
+This document provides high-level system features, issues, and limitations information for SRIOV-FEC Operator for Wireless FEC Accelerators.
 - [Release history](#release-history)
 - [SRIOV-FEC Operator](#sriov-fec-operator)
 - [Features for Release](#features-for-release)
@@ -25,27 +25,34 @@ This document provides high-level system features, issues, and limitations infor
 
 ### SRIOV-FEC Operator
 
-| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP            |
-|---------|----------------|------------------------------|----------------------------|
-| 1.0.0   | January 2021   | 4.6                          | 4.6.4                      |
-| 1.1.0   | March 2021     | 4.6                          | 4.6.16                     |
-| 1.2.0   | June 2021      | 4.7                          | 4.7.8                      |
-| 1.2.1   | June 2021      | 4.7                          | 4.7.8                      |
-| 1.3.0   | August 2021    | 4.8                          | 4.8.2                      |
-| 2.0.0   | September 2021 | 4.8                          | 4.8.5                      |
-| 2.0.1   | October 2021   | 4.8                          | 4.8.13                     |
-| 2.0.2   | November 2021  | 4.8                          | 4.8.12                     |
-| 2.1.0   | November 2021  | 4.9                          | 4.9.7                      |
-| 2.1.1   | January 2022   | 4.9                          | 4.9.7                      |
-| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5     | 
-| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5     |
-| 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17    |
-| 2.3.1   | July 2022      | 4.8, 4.9, 4.10               | 4.8.46, 4.9.41, 4.10.21    |
-| 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.41, 4.10.21, 4.11.2    |
-| 2.5.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.48, 4.10.34, 4.11.5    |
-| 2.6.0   | December 2022  | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12-rc2 |
+| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP               |
+|---------|----------------|------------------------------|-------------------------------|
+| 1.0.0   | January 2021   | 4.6                          | 4.6.4                         |
+| 1.1.0   | March 2021     | 4.6                          | 4.6.16                        |
+| 1.2.0   | June 2021      | 4.7                          | 4.7.8                         |
+| 1.2.1   | June 2021      | 4.7                          | 4.7.8                         |
+| 1.3.0   | August 2021    | 4.8                          | 4.8.2                         |
+| 2.0.0   | September 2021 | 4.8                          | 4.8.5                         |
+| 2.0.1   | October 2021   | 4.8                          | 4.8.13                        |
+| 2.0.2   | November 2021  | 4.8                          | 4.8.12                        |
+| 2.1.0   | November 2021  | 4.9                          | 4.9.7                         |
+| 2.1.1   | January 2022   | 4.9                          | 4.9.7                         |
+| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5        | 
+| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5        |
+| 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17       |
+| 2.3.1   | July 2022      | 4.8, 4.9, 4.10               | 4.8.46, 4.9.41, 4.10.21       |
+| 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.41, 4.10.21, 4.11.2       |
+| 2.5.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.48, 4.10.34, 4.11.5       |
+| 2.6.0   | December 2022  | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12-rc2    |
+| 2.6.1   | January 2022   | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12.0-rc.4 |                     |
 
 # Features for Release
+***v2.6.1***
+- pf-bb-config updated (22.07 -> 22.11)
+- Added support for pf-bb-config telemetry
+- Added support for ACC200 cards (SPR-EE)
+- Operator now propagates `Tolerations` from Subscription to managed Daemonsets
+
 ***v2.6.0***
 - Support for OCP4.12.x
 
@@ -110,6 +117,14 @@ This document provides high-level system features, issues, and limitations infor
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
 
 # Changes to Existing Features
+***v2.6.1***
+- Improved timeouts for LeaderElection functionality
+- Manager deployment always starts with 1 replica and scales to 2 for multi-node clusters
+- Base images are updated to ubi9.1 instead of ubi8.6
+- Reduced RBAC permissions required by operator
+- Daemon now has readiness and liveliness probes
+- Removed mentions of Smart Edge Open from documentation. Operator is now standalone project.
+
 ***v2.4.0***
 - SriovFecClusterConfig.spec.physicalFunction.bbDevConfig field is now marked as 'required'
 
@@ -194,10 +209,16 @@ This document provides high-level system features, issues, and limitations infor
 - n/a - this is the first release.
 
 # Release Content
-- SEO SR-IOV Operator for Wireless FEC Accelerators
+- SRIOV-FEC Operator for Wireless FEC Accelerators
 - Documentation
 
 # Supported Operating Systems
+***v2.6.1***
+- OpenShift: 4.12.0-rc.4
+- OS: Red Hat Enterprise Linux CoreOS 412.86.202212081411-0
+- Kubernetes: v1.25.4+86bd4ff
+- RT Kernel: 4.18.0-372.36.1.rt7.193.el8_6.x86_64
+
 ***v2.6.0***
 - OpenShift: 4.12.0-rc.2
 - OS: Red Hat Enterprise Linux CoreOS 412.86.202211142021-0
@@ -313,4 +334,5 @@ This document provides high-level system features, issues, and limitations infor
 # Package Versions
 Package:
 - Golang: 1.18
-- pf-bb-config-app: v22.07
+- pf-bb-config-app: v22.11
+- DPDK: 22.11

@@ -1,20 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2022 Intel Corporation
+// Copyright (c) 2020-2023 Intel Corporation
 
 package daemon
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
+	"io/fs"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	"os"
 	"os/exec"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,9 +46,8 @@ var (
 	configPath            = "/sriov_config/config/accelerators.json"
 	getSriovInventory     = GetSriovInventory
 	supportedAccelerators utils.AcceleratorDiscoveryConfig
-	procCmdlineFilePath   = "/host/proc/cmdline"
+	procCmdlineFilePath   = "/proc/cmdline"
 	kernelParams          = []string{"intel_iommu=on", "iommu=pt"}
-	kernelParamsVfio      = []string{"vfio_pci.enable_sriov=1", "vfio_pci.disable_idle_d3=1"}
 )
 
 type NodeConfigReconciler struct {
@@ -316,7 +319,39 @@ func (r *NodeConfigReconciler) isCardUpdateRequired(nc *fec.SriovFecNodeConfig, 
 		return false
 	}
 
-	return isGenerationChanged() || exposedInventoryOutdated()
+	bbDevConfigDaemonIsDead := func() bool {
+		for _, acc := range nc.Spec.PhysicalFunctions {
+			if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
+				if pfBbConfigProcIsDead(r.log, acc.PCIAddress) {
+					r.log.WithField("pciAddress", acc.PCIAddress).
+						Info("pf-bb-config process for card is not running")
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	return isGenerationChanged() || exposedInventoryOutdated() || bbDevConfigDaemonIsDead()
+}
+
+func pfBbConfigProcIsDead(log *logrus.Logger, pciAddr string) bool {
+	stdout, err := execCmd([]string{
+		"pgrep",
+		"--count",
+		"--full",
+		fmt.Sprintf("pf_bb_config.*%s", pciAddr),
+	}, log)
+	if err != nil {
+		log.WithError(err).Error("failed to determine status of pf-bb-config daemon")
+		return true
+	}
+	matchingProcCount, err := strconv.Atoi(stdout[0:1]) //stdout contains characters like '\n', so we are removing them
+	if err != nil {
+		log.WithError(err).Error("failed to convert 'pgrep' output to int")
+		return true
+	}
+	return matchingProcCount == 0
 }
 
 func isReady(p corev1.Pod) bool {
@@ -342,7 +377,7 @@ func findOrCreateConfigurationStatusCondition(nc *fec.SriovFecNodeConfig) metav1
 	return *configurationStatusCondition
 }
 
-//returns error if requested configuration refers to not existing inventory/accelerator
+// returns error if requested configuration refers to not existing inventory/accelerator
 func isConfigurationOfNonExistingInventoryRequested(requestedConfiguration []fec.PhysicalFunctionConfigExt, existingInventory *fec.NodeInventory) bool {
 OUTER:
 	for _, pf := range requestedConfiguration {
@@ -357,17 +392,31 @@ OUTER:
 	return false
 }
 
-func CreateManager(config *rest.Config, namespace string, scheme *runtime.Scheme) (manager.Manager, error) {
-	return ctrl.NewManager(config, ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: "0",
-		LeaderElection:     false,
-		Namespace:          namespace,
+func CreateManager(config *rest.Config, scheme *runtime.Scheme, namespace string, metricsPort int, HealthProbePort int, log *logrus.Logger) (manager.Manager, error) {
+	mgr, err := ctrl.NewManager(config, ctrl.Options{
+		Scheme:                 scheme,
+		MetricsBindAddress:     ":" + strconv.Itoa(metricsPort),
+		LeaderElection:         false,
+		Namespace:              namespace,
+		HealthProbeBindAddress: ":" + strconv.Itoa(HealthProbePort),
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
+		log.WithError(err).Error("unable to set up health check")
+		return nil, err
+	}
+	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
+		log.WithError(err).Error("unable to set up ready check")
+		return nil, err
+	}
+	return mgr, nil
 }
 
 func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {
-	cmdlineBytes, err := ioutil.ReadFile(procCmdlineFilePath)
+	cmdlineBytes, err := os.ReadFile(procCmdlineFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to read file contents: path: %v, error - %v", procCmdlineFilePath, err)
 	}
@@ -379,7 +428,7 @@ func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {
 
 	for _, physFunc := range nodeConfig.PhysicalFunctions {
 		switch physFunc.PFDriver {
-		case "pci-pf-stub", "pci_pf_stub", "igb_uio":
+		case utils.PCI_PF_STUB_DASH, utils.PCI_PF_STUB_UNDERSCORE, utils.IGB_UIO:
 			dmesgBytes, err := exec.Command("dmesg").Output()
 			if err != nil {
 				return fmt.Errorf("failed to run 'dmesg' - %v", err.Error())
@@ -388,8 +437,13 @@ func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {
 			if strings.Contains(dmesgOut, "Secure boot enabled") {
 				return fmt.Errorf("'%s' driver doesn't supports SecureBoot. It is supported only by 'vfio-pci'", physFunc.PFDriver)
 			}
-		case "vfio-pci":
-			if err := validateVfioKernelParams(cmdline); err != nil {
+		case utils.VFIO_PCI:
+			err := moduleParameterIsEnabled(utils.VFIO_PCI_UNDERSCORE, "enable_sriov")
+			if err != nil {
+				return err
+			}
+			err = moduleParameterIsEnabled(utils.VFIO_PCI_UNDERSCORE, "disable_idle_d3")
+			if err != nil {
 				return err
 			}
 		default:
@@ -399,11 +453,19 @@ func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {
 	return nil
 }
 
-func validateVfioKernelParams(cmdline string) error {
-	for _, param := range kernelParamsVfio {
-		if !strings.Contains(cmdline, param) {
-			return fmt.Errorf("missing kernel param for vfio-pci(%s)", param)
+func moduleParameterIsEnabled(moduleName, parameter string) error {
+	value, err := os.ReadFile("/sys/module/" + moduleName + "/parameters/" + parameter)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			// module is not loaded - we will automatically append required parameter during modprobe
+			return nil
+		} else {
+			return fmt.Errorf("failed to check parameter %v for %v module - %v", parameter, moduleName, err)
 		}
+	}
+
+	if strings.Contains(strings.ToLower(string(value)), "n") {
+		return fmt.Errorf(moduleName + " is loaded and doesn't has " + parameter + " set")
 	}
 	return nil
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2022 Intel Corporation
+// Copyright (c) 2020-2023 Intel Corporation
 
 package assets
 
@@ -175,7 +175,8 @@ func (a *Asset) createOrUpdateObject(ctx context.Context, c client.Client, toBeC
 
 	a.log.WithField("asset", a.Path).WithField("kind", toBeCreated.GetObjectKind()).Info("create or update")
 
-	if err := a.setOwner(owner, toBeCreated, s); err != nil {
+	err := a.setOwner(owner, toBeCreated, s)
+	if err != nil {
 		return err
 	}
 
@@ -183,6 +184,13 @@ func (a *Asset) createOrUpdateObject(ctx context.Context, c client.Client, toBeC
 	old := &unstructured.Unstructured{}
 	old.SetGroupVersionKind(gvk)
 	key := client.ObjectKeyFromObject(toBeCreated)
+
+	if strings.EqualFold(gvk.Kind, "daemonset") {
+		toBeCreated, err = propagateTolerations(c, a.log, toBeCreated)
+		if err != nil {
+			return err
+		}
+	}
 
 	if err := c.Get(ctx, key, old); err != nil {
 		if !apierr.IsNotFound(err) {
@@ -197,7 +205,7 @@ func (a *Asset) createOrUpdateObject(ctx context.Context, c client.Client, toBeC
 		}
 		a.log.WithField("key", key).WithField("GroupVersionKind", gvk).Info("Object created")
 	} else {
-		if strings.ToLower(old.GetObjectKind().GroupVersionKind().Kind) == "configmap" {
+		if strings.EqualFold(old.GetObjectKind().GroupVersionKind().Kind, "configmap") {
 			isImmutable, ok := old.Object["immutable"].(bool)
 			if !ok {
 				a.log.WithField("key", key).WithField("GroupVersionKind", gvk).
@@ -221,6 +229,23 @@ func (a *Asset) createOrUpdateObject(ctx context.Context, c client.Client, toBeC
 	}
 
 	return nil
+}
+
+func propagateTolerations(c client.Client, log *logrus.Logger, toBeCreated client.Object) (client.Object, error) {
+	managerDeployment := FetchOperatorDeployment(c, log)
+	log.WithField("name", toBeCreated.GetName()).WithField("tolerations", managerDeployment.Spec.Template.Spec.Tolerations).
+		Info("propagating tolerations to daemonset")
+	uns, err := runtime.DefaultUnstructuredConverter.ToUnstructured(toBeCreated)
+	if err != nil {
+		return nil, err
+	}
+	ds := &appsv1.DaemonSet{}
+	err = runtime.DefaultUnstructuredConverter.FromUnstructured(uns, ds)
+	if err != nil {
+		return nil, err
+	}
+	ds.Spec.Template.Spec.Tolerations = managerDeployment.Spec.Template.Spec.Tolerations
+	return ds, nil
 }
 
 func (a *Asset) waitUntilReady(ctx context.Context, apiReader client.Reader) error {

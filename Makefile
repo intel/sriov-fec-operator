@@ -1,13 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020-2022 Intel Corporation
+# Copyright (c) 2020-2023 Intel Corporation
 
 # Default k8s command-line tool exec
 export CLI_EXEC?=oc
 # Container format for podman. Required to build containers with "ManifestType": "application/vnd.oci.image.manifest.v2+json",
 export BUILDAH_FORMAT=docker
 # Current Operator version
-VERSION ?= 2.6.0
-
+VERSION ?= 2.6.1
 # Supported channels
 CHANNELS ?= stable
 # Default channel
@@ -26,7 +25,7 @@ endif
 # tls verify flag for pushing images
 TLS_VERIFY ?= false
 
-REQUIRED_OPERATOR_SDK_VERSION ?= v1.22.2
+REQUIRED_OPERATOR_SDK_VERSION ?= v1.25.2
 
 IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)sriov-fec
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
@@ -51,12 +50,25 @@ export SRIOV_FEC_DAEMON_IMAGE ?= $(IMAGE_REGISTRY)sriov-fec-daemon:$(IMG_VERSION
 export SRIOV_FEC_LABELER_IMAGE ?= $(IMAGE_REGISTRY)n3000-labeler:$(IMG_VERSION)
 
 ifeq ($(CONTAINER_TOOL),podman)
- export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.10 #TBD
- export KUBE_RBAC_PROXY_IMAGE ?= registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:b5786bbbef725badf3dfcc2c2c7a86ead5ebb584c978c47aae8b9a62e241b80d
+ export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.11
+ export KUBE_RBAC_PROXY_IMAGE ?= registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:e3dad360d0351237a16593ca0862652809c41a2127c2f98b9e0a559568efbd10
 else
- export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= quay.io/openshift/origin-sriov-network-device-plugin:4.11
- export KUBE_RBAC_PROXY_IMAGE ?= gcr.io/kubebuilder/kube-rbac-proxy:v0.11.0
+ export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= quay.io/openshift/origin-sriov-network-device-plugin:4.12
+ export KUBE_RBAC_PROXY_IMAGE ?= gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
 endif
+
+CONTROLLER_TOOLS_VERSION ?= v0.9.2
+ENVTEST_K8S_VERSION ?= 1.24
+KUSTOMIZE_VERSION ?= 4.5.7
+OPM_VERSION ?= 1.26.2
+KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
+
+LOCALBIN ?= $(shell pwd)/bin$(REQUIRED_OPERATOR_SDK_VERSION)
+## Tool Binaries
+OPM ?= $(LOCALBIN)/opm
+KUSTOMIZE ?= $(LOCALBIN)/kustomize
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -74,18 +86,33 @@ SHELL = /usr/bin/env bash -o pipefail
 .PHONY: all
 all: manager daemon labeler
 
-# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.24
-ENVTEST = $(shell pwd)/bin/setup-envtest
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+.PHONY: kustomize
+kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
+$(KUSTOMIZE): $(LOCALBIN)
+	test -s $(LOCALBIN)/kustomize || { curl -s $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); }
+
+
+.PHONY: opm
+opm: $(OPM) ## Download opm locally if necessary.
+$(OPM): $(LOCALBIN)
+	test -s $(LOCALBIN)/opm || curl https://github.com/operator-framework/operator-registry/releases/download/v$(OPM_VERSION)/linux-amd64-opm -Lo $(LOCALBIN)/opm && chmod +x $(LOCALBIN)/opm
+
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+$(CONTROLLER_GEN): $(LOCALBIN)
+	test -s $(LOCALBIN)/controller-gen || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+
 .PHONY: envtest
-envtest: ## Download envtest-setup locally if necessary.
-	rm -f $(ENVTEST)
-	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
+envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+$(ENVTEST): $(LOCALBIN)
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" SRIOV_FEC_NAMESPACE=default go test ./... -coverprofile cover.out
-
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" SRIOV_FEC_NAMESPACE=default go test ./... -coverprofile cover.out
 
 TEST_PACKAGES := $(shell find . -name "*_test.go")
 
@@ -94,7 +121,7 @@ fuzz:
 	@for pkg in ${TEST_PACKAGES} ; do            \
 		for target in `grep -oh -EI 'Fuzz([A-Z][a-z]*)+' $$pkg` ; do     \
 			echo "Executing $$pkg#$$target";     \
-			KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" SRIOV_FEC_NAMESPACE=default go test -fuzz=$$target $$pkg/.. -fuzztime=${FUZZ_TIME} || true; \
+			KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" SRIOV_FEC_NAMESPACE=default go test -fuzz=$$target $$pkg/.. -fuzztime=${FUZZ_TIME} || true; \
 		done                              \
 	done
 
@@ -161,35 +188,6 @@ vet:
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-# go-get-tool will 'go install' any package $2 and install it to $1.
-PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-
-define go-get-tool
-@[ -f $(1) ] || { \
-set -e ;\
-TMP_DIR=$$(mktemp -d) ;\
-cd $$TMP_DIR ;\
-go mod init tmp ;\
-echo "Installing $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
-rm -rf $$TMP_DIR ;\
-}
-endef
-
-# find or download controller-gen
-# download controller-gen if necessary
-CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
-.PHONY: controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	rm -f $(CONTROLLER_GEN)
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.9.2)
-
-KUSTOMIZE = $(shell pwd)/bin/kustomize
-.PHONY: kustomize
-kustomize: ## Download kustomize locally if necessary.
-	rm -f $(KUSTOMIZE)
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.5)
-
 # Build/Push daemon image
 .PHONY: image-sriov-fec-daemon
 image-sriov-fec-daemon:
@@ -252,15 +250,14 @@ bundle: check-operator-sdk-version manifests kustomize
 	operator-sdk bundle validate ./bundle
 	FOLDER=. COPYRIGHT_FILE=COPYRIGHT ./copyright.sh
 	cat COPYRIGHT bundle.Dockerfile >bundle.tmp
-
 	printf "\nLABEL com.redhat.openshift.versions=\"=v4.10-v4.12\"\n" >> bundle.tmp
-
 	printf "\nCOPY TEMP_LICENSE_COPY /licenses/LICENSE\n" >> bundle.tmp
 	mv bundle.tmp bundle.Dockerfile
 
 # Build/Push the bundle image.
 .PHONY: image-bundle
 image-bundle: bundle
+	cp LICENSE TEMP_LICENSE_COPY
 	$(CONTAINER_TOOL) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 	$(CONTAINER_TOOL) tag $(BUNDLE_IMG) ghcr.io/smart-edge-open/sriov-fec-bundle:$(VERSION)
 
@@ -342,9 +339,19 @@ build_all: build
 	$(MAKE) VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) build_index
 
 .PHONY: build_index
-build_index:
-	opm index add --bundles $(BUNDLE_IMG) --tag localhost/sriov-fec-index:$(VERSION) $(if ifeq $(TLS_VERIFY) false, --skip-tls) -c $(CONTAINER_TOOL) --mode=semver
-	$(MAKE) VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) $(CONTAINER_TOOL)_push_index	
+build_index: opm
+	rm -fr sriov-fec-index
+	mkdir sriov-fec-index
+	$(OPM) init sriov-fec --default-channel=stable --output yaml > sriov-fec-index/index.yaml
+ifeq ($(TLS_VERIFY), false)
+	$(OPM) render $(BUNDLE_IMG) --output=yaml --skip-tls-verify >> sriov-fec-index/index.yaml
+else
+	$(OPM) render $(BUNDLE_IMG) --output=yaml >> sriov-fec-index/index.yaml
+endif
+	echo -e "---\nschema: olm.channel\npackage: sriov-fec\nname: stable\nentries:\n- name: sriov-fec.v$(VERSION)" >> sriov-fec-index/index.yaml
+	$(OPM) validate sriov-fec-index
+	$(CONTAINER_TOOL) build . -f sriov-fec-index.Dockerfile -t localhost/sriov-fec-index:$(VERSION)
+	$(MAKE) VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) $(CONTAINER_TOOL)_push_index
 
 .PHONY: podman_push_index
 podman_push_index:

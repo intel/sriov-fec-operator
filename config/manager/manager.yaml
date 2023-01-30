@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020-2022 Intel Corporation
+# Copyright (c) 2020-2023 Intel Corporation
 
 apiVersion: v1
 kind: Namespace
@@ -19,7 +19,7 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
-  replicas: 2
+  replicas: 1
   template:
     metadata:
       annotations:
@@ -43,6 +43,8 @@ spec:
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
         livenessProbe:
           httpGet:
             path: /healthz

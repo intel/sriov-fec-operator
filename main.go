@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2022 Intel Corporation
+// Copyright (c) 2020-2023 Intel Corporation
 
 /*
 
@@ -25,7 +25,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -51,9 +50,8 @@ import (
 )
 
 var (
-	scheme                 = runtime.NewScheme()
-	setupLog               = utils.NewLogger()
-	operatorDeploymentName string
+	scheme   = runtime.NewScheme()
+	setupLog = utils.NewLogger()
 )
 
 func init() {
@@ -62,8 +60,6 @@ func init() {
 	utilruntime.Must(secv1.AddToScheme(scheme))
 	utilruntime.Must(sriovfecv2.AddToScheme(scheme))
 
-	n := os.Getenv("NAME")
-	operatorDeploymentName = n[:strings.LastIndex(n[:strings.LastIndex(n, "-")], "-")]
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -88,11 +84,25 @@ func main() {
 
 	c := createClient(config)
 
-	operatorDeployment := fetchOperatorDeployment(c)
+	operatorDeployment := assets.FetchOperatorDeployment(c, setupLog)
 
 	determineClusterType(config)
 
 	deployOperatorAssets(c, operatorDeployment)
+
+	isSingleNode, err := utils.IsSingleNodeCluster(c)
+	if err != nil {
+		setupLog.WithError(err).Error("failed to get Nodes information")
+		os.Exit(1)
+	}
+
+	if !isSingleNode {
+		*operatorDeployment.Spec.Replicas = 2
+		err := c.Update(context.TODO(), operatorDeployment)
+		if err != nil {
+			setupLog.WithError(err).Error("failed to scale down number of replicas. Ignoring error.")
+		}
+	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
@@ -107,7 +117,7 @@ func deployOperatorAssets(c client.Client, operatorDeployment *appsv1.Deployment
 		Client:    c,
 		Namespace: controllers.NAMESPACE,
 		Log:       logger,
-		EnvPrefix: utils.SriovPrefix,
+		EnvPrefix: utils.SRIOV_PREFIX,
 		Scheme:    scheme,
 		Owner:     operatorDeployment,
 		Assets: []assets.Asset{
@@ -143,20 +153,6 @@ func determineClusterType(config *rest.Config) {
 		setupLog.Error(err, "unable to determine cluster type")
 		os.Exit(1)
 	}
-}
-
-func fetchOperatorDeployment(c client.Client) *appsv1.Deployment {
-	namespace := os.Getenv("SRIOV_FEC_NAMESPACE")
-	owner := &appsv1.Deployment{}
-	err := c.Get(context.Background(), client.ObjectKey{
-		Namespace: namespace,
-		Name:      operatorDeploymentName,
-	}, owner)
-	if err != nil {
-		setupLog.WithError(err).Error("Unable to get operator deployment")
-		os.Exit(1)
-	}
-	return owner
 }
 
 func createClient(config *rest.Config) client.Client {
@@ -238,7 +234,7 @@ func getClusterType(restConfig *rest.Config) error {
 	for _, v := range apiList.Groups {
 		if v.Name == "route.openshift.io" {
 			setupLog.Info("found 'route.openshift.io' API - operator is running on OpenShift")
-			err = utils.SetOsEnvIfNotSet(utils.SriovPrefix+"GENERIC_K8S", "false", logr.New(utils.NewLogWrapper()))
+			err = utils.SetOsEnvIfNotSet(utils.SRIOV_PREFIX+"GENERIC_K8S", "false", logr.New(utils.NewLogWrapper()))
 			if err != nil {
 				return fmt.Errorf("failed to set SRIOV_FEC_GENERIC_K8S env variable - %v", err)
 			}
@@ -247,7 +243,7 @@ func getClusterType(restConfig *rest.Config) error {
 	}
 
 	setupLog.Info("couldn't find 'route.openshift.io' API - operator is running on Kubernetes")
-	err = utils.SetOsEnvIfNotSet(utils.SriovPrefix+"GENERIC_K8S", "true", logr.New(utils.NewLogWrapper()))
+	err = utils.SetOsEnvIfNotSet(utils.SRIOV_PREFIX+"GENERIC_K8S", "true", logr.New(utils.NewLogWrapper()))
 
 	if err != nil {
 		setupLog.Error(err, "unable to determine cluster type")

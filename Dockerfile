@@ -1,5 +1,5 @@
 ## SPDX-License-Identifier: Apache-2.0
-## Copyright (c) 2020-2022 Intel Corporation
+## Copyright (c) 2020-2023 Intel Corporation
 
 # Build the manager binary
 FROM golang:1.18.3 as builder
@@ -22,16 +22,16 @@ COPY controllers/ controllers/
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.6-941
+FROM registry.access.redhat.com/ubi9/ubi-micro:9.1.0-13
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="SEO SR-IOV Operator for Wireless FEC Accelerators" \
+LABEL name="SR-IOV Operator for Wireless FEC Accelerators" \
     vendor="Intel Corporation" \
     version=$VERSION \
     release="1" \
-    summary="SEO SR-IOV Operator for Wireless FEC Accelerators for 5G Cloudnative/vRAN deployment" \
-    description="SEO SR-IOV Operator for Wireless FEC Accelerators ACC100 for 5G Cloudnative/vRAN deployment"
+    summary="SR-IOV Operator for Wireless FEC Accelerators for 5G Cloudnative/vRAN deployment" \
+    description="SR-IOV Operator for Wireless FEC Accelerators ACC100 and ACC200 for 5G Cloudnative/vRAN deployment"
 
 COPY TEMP_LICENSE_COPY /licenses/LICENSE
 
@@ -39,6 +39,6 @@ WORKDIR /
 COPY --from=builder /workspace/manager .
 COPY assets assets/
 
-USER nobody
+USER 1001
 
 ENTRYPOINT ["/manager"]
