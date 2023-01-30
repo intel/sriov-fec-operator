@@ -5,7 +5,7 @@ package daemon
 
 import (
 	"github.com/go-logr/logr"
-	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"

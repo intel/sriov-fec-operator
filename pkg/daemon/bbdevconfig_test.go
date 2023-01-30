@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/sriov-fec/api/v2"
-	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

@@ -1,4 +1,4 @@
-module github.com/smart-edge-open/sriov-fec-operator/sriov-fec
+module github.com/smart-edge-open/sriov-fec-operator
 
 go 1.18
 

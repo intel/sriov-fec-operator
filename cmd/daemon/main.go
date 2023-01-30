@@ -6,16 +6,16 @@ package main
 import (
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
-	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/drainhelper"
-	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/drainhelper"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"io/ioutil"
 	"os"
 	"syscall"
 
 	"k8s.io/apimachinery/pkg/types"
 
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/sriov-fec/api/v2"
-	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/daemon"
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/daemon"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"

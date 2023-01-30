@@ -5,7 +5,7 @@ package assets
 
 import (
 	"context"
-	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"

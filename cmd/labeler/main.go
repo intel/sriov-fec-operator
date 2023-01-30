@@ -10,7 +10,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"github.com/jaypipes/ghw"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"

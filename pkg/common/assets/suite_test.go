@@ -6,10 +6,7 @@ package assets
 import (
 	"context"
 	"github.com/go-logr/logr"
-	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
-	"os"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"path/filepath"
 	"testing"
 
