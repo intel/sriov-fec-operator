@@ -63,6 +63,11 @@ Big contributions, ideas or controversial features should be discussed with the 
 ## How to report an issue/bug/enhancement
 It is encouraged to use the [GitHub Issues](https://github.com/smart-edge-open/sriov-fec-operator/issues) tool to report any bug, issue, enhancement or to seek help.
 
+## Resources
+Below are some useful resources for getting started with SEO:
+* [SEO release notes](https://smart-edge-open.github.io/release-notes/)
+* [SEO getting started guide](https://smart-edge-open.github.io/ido-specs/doc/getting-started/smartedge-open-cluster-setup/)
+
 ## Style Guide / Coding conventions
 All contributions must follow the [Development Guide](DEVELOPING.md).
 
