@@ -1,8 +1,0 @@
-{
-    "RootDir": ".",
-    "IngredientPath": ".",
-    "Protex":{
-        "Server":"gerprotex012.devtools.intel.com",
-        "ProjectID":"c_sriov-fec-operator_31305"
-    }
-}
