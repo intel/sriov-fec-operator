@@ -5,8 +5,8 @@ package daemon
 
 import (
 	"fmt"
-	sriovv2 "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/api/v2"
-	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"

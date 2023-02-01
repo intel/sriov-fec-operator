@@ -1,4 +1,4 @@
-module github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator
+module github.com/smart-edge-open/sriov-fec-operator
 
 go 1.18
 

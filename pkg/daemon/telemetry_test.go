@@ -2,8 +2,8 @@ package daemon
 
 import (
 	"fmt"
-	v2 "github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/api/v2"
-	"github.com/intel-collab/applications.orchestration.operators.sriov-fec-operator/pkg/common/utils"
+	v2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus/testutil"
