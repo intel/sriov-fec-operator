@@ -44,7 +44,7 @@ This document provides high-level system features, issues, and limitations infor
 | 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.41, 4.10.21, 4.11.2       |
 | 2.5.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.48, 4.10.34, 4.11.5       |
 | 2.6.0   | December 2022  | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12-rc2    |
-| 2.6.1   | January 2022   | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12.0-rc.4 |                     |
+| 2.6.1   | January 2023   | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12.0-rc.4 |                     |
 
 # Features for Release
 ***v2.6.1***
