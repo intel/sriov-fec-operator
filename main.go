@@ -36,9 +36,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	secv1 "github.com/openshift/api/security/v1"
 	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
 	"github.com/smart-edge-open/sriov-fec-operator/controllers"
-	secv1 "github.com/openshift/api/security/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -100,7 +100,7 @@ func main() {
 		*operatorDeployment.Spec.Replicas = 2
 		err := c.Update(context.TODO(), operatorDeployment)
 		if err != nil {
-			setupLog.WithError(err).Error("failed to scale down number of replicas. Ignoring error.")
+			setupLog.WithError(err).Error("failed to scale up number of replicas. Ignoring error.")
 		}
 	}
 
