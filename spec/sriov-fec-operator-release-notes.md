@@ -44,9 +44,14 @@ This document provides high-level system features, issues, and limitations infor
 | 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.41, 4.10.21, 4.11.2       |
 | 2.5.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.48, 4.10.34, 4.11.5       |
 | 2.6.0   | December 2022  | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12-rc2    |
-| 2.6.1   | January 2022   | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12.0-rc.4 |                     |
+| 2.6.1   | January 2023   | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12.0-rc.4 |                     |
+| 2.7.0   | May 2023       | 4.10, 4.11, 4.12, 4.13       | 4.11.43, 4.12.18, 4.13.0.rc18 |
 
 # Features for Release
+***v2.7.0***
+- Support for OCP 4.13.x
+- Bug fixes
+
 ***v2.6.1***
 - pf-bb-config updated (22.07 -> 22.11)
 - Added support for pf-bb-config telemetry
@@ -117,6 +122,10 @@ This document provides high-level system features, issues, and limitations infor
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
 
 # Changes to Existing Features
+***v2.7.0***
+- VFIO token handling enhancements
+- sriov-network-device-plugin version update to v4.14
+
 ***v2.6.1***
 - Improved timeouts for LeaderElection functionality
 - Manager deployment always starts with 1 replica and scales to 2 for multi-node clusters
@@ -181,6 +190,9 @@ This document provides high-level system features, issues, and limitations infor
 - There are no unsupported or discontinued features relevant to this release.
 
 # Fixed Issues
+***2.7.0***
+- Enhanced error handling while processing telemetry data to fix Daemon crash addressing issue: https://github.com/smart-edge-open/sriov-fec-operator/issues/48
+- Leader lease renewal frequency configuration in case of Single Node Cluster addressing issue: https://github.com/smart-edge-open/sriov-fec-operator/issues/36
 
 ***2.3.1***
 - fix for pf_bb_config throwing "MMIO is not accessible causing UR error over PCIe"
@@ -213,6 +225,17 @@ This document provides high-level system features, issues, and limitations infor
 - Documentation
 
 # Supported Operating Systems
+***v2.7.0***
+- OpenShift: 4.13.0
+- OS: Red Hat Enterprise Linux CoreOS 413.92.202305191644-0
+- Kubernetes: v1.26.3+b404935
+- RT Kernel: 5.14.0-284.13.1.el9_2.x86_64
+
+***v2.7.0***
+- Kubernetes 1.26.2
+- OS: Ubuntu 22.04 LTS (Jammy Jellyfish)
+- Kernel: 5.15.0-72-generic, 5.15.0-1030-realtime
+
 ***v2.6.1***
 - OpenShift: 4.12.0-rc.4
 - OS: Red Hat Enterprise Linux CoreOS 412.86.202212081411-0

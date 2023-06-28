@@ -6,7 +6,7 @@ export CLI_EXEC?=oc
 # Container format for podman. Required to build containers with "ManifestType": "application/vnd.oci.image.manifest.v2+json",
 export BUILDAH_FORMAT=docker
 # Current Operator version
-VERSION ?= 2.6.1
+VERSION ?= 2.7.0
 # Supported channels
 CHANNELS ?= stable
 # Default channel
@@ -50,10 +50,10 @@ export SRIOV_FEC_DAEMON_IMAGE ?= $(IMAGE_REGISTRY)sriov-fec-daemon:$(IMG_VERSION
 export SRIOV_FEC_LABELER_IMAGE ?= $(IMAGE_REGISTRY)n3000-labeler:$(IMG_VERSION)
 
 ifeq ($(CONTAINER_TOOL),podman)
- export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.11
- export KUBE_RBAC_PROXY_IMAGE ?= registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:e3dad360d0351237a16593ca0862652809c41a2127c2f98b9e0a559568efbd10
+ export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.13
+ export KUBE_RBAC_PROXY_IMAGE ?= registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.13
 else
- export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= quay.io/openshift/origin-sriov-network-device-plugin:4.12
+ export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= quay.io/openshift/origin-sriov-network-device-plugin:4.14
  export KUBE_RBAC_PROXY_IMAGE ?= gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
 endif
 
@@ -192,7 +192,7 @@ generate: controller-gen
 .PHONY: image-sriov-fec-daemon
 image-sriov-fec-daemon:
 	cp LICENSE TEMP_LICENSE_COPY
-	$(CONTAINER_TOOL) build . -f Dockerfile.daemon -t $(SRIOV_FEC_DAEMON_IMAGE) --build-arg=VERSION=$(IMG_VERSION)
+	$(CONTAINER_TOOL) build . -f Dockerfile.daemon -t $(SRIOV_FEC_DAEMON_IMAGE) --build-arg=VERSION=$(IMG_VERSION) --no-cache
 	$(CONTAINER_TOOL) tag $(SRIOV_FEC_DAEMON_IMAGE) ghcr.io/smart-edge-open/sriov-fec-daemon:$(VERSION)
 	
 .PHONY: push-sriov-fec-daemon
@@ -207,7 +207,7 @@ docker-push-sriov-fec-daemon:
 .PHONY: image-sriov-fec-labeler
 image-sriov-fec-labeler:
 	cp LICENSE TEMP_LICENSE_COPY
-	$(CONTAINER_TOOL) build . -f Dockerfile.labeler -t ${SRIOV_FEC_LABELER_IMAGE} --build-arg=VERSION=$(IMG_VERSION)
+	$(CONTAINER_TOOL) build . -f Dockerfile.labeler -t ${SRIOV_FEC_LABELER_IMAGE} --build-arg=VERSION=$(IMG_VERSION) --no-cache
 	$(CONTAINER_TOOL) tag $(SRIOV_FEC_LABELER_IMAGE) ghcr.io/smart-edge-open/sriov-fec-labeler:$(VERSION)
 
 .PHONY: push-sriov-fec-labeler
@@ -222,7 +222,7 @@ docker-push-sriov-fec-labeler:
 .PHONY: image-sriov-fec-operator
 image-sriov-fec-operator:
 	cp LICENSE TEMP_LICENSE_COPY
-	$(CONTAINER_TOOL) build . -t $(SRIOV_FEC_OPERATOR_IMAGE) --build-arg=VERSION=$(IMG_VERSION)
+	$(CONTAINER_TOOL) build . -t $(SRIOV_FEC_OPERATOR_IMAGE) --build-arg=VERSION=$(IMG_VERSION) --no-cache
 	$(CONTAINER_TOOL) tag $(SRIOV_FEC_OPERATOR_IMAGE) ghcr.io/smart-edge-open/sriov-fec-operator:$(VERSION)
 
 .PHONY: podman-push-sriov-fec-operator
@@ -250,7 +250,7 @@ bundle: check-operator-sdk-version manifests kustomize
 	operator-sdk bundle validate ./bundle
 	FOLDER=. COPYRIGHT_FILE=COPYRIGHT ./copyright.sh
 	cat COPYRIGHT bundle.Dockerfile >bundle.tmp
-	printf "\nLABEL com.redhat.openshift.versions=\"=v4.10-v4.12\"\n" >> bundle.tmp
+	printf "\nLABEL com.redhat.openshift.versions=\"v4.10\"\n" >> bundle.tmp
 	printf "\nCOPY TEMP_LICENSE_COPY /licenses/LICENSE\n" >> bundle.tmp
 	mv bundle.tmp bundle.Dockerfile
 
@@ -268,7 +268,7 @@ podman-push-bundle:
 # push images into github container registry in smart-edge-open
 .PHONY: push-sriov-fec-daemon-ghcr
 push-sriov-fec-daemon-ghcr:
-	$(CONTAINER_TOOL) push ghcr.io/smart-edge-open/sriov-fec-daemon:$(VERSION)  
+	$(CONTAINER_TOOL) push ghcr.io/smart-edge-open/sriov-fec-daemon:$(VERSION)
 
 .PHONY: push-sriov-fec-operator-ghcr
 push-sriov-fec-operator-ghcr:
@@ -288,7 +288,7 @@ push-all-ghcr: push-sriov-fec-daemon-ghcr push-sriov-fec-operator-ghcr push-srio
 # pull images from github container registry
 .PHONY: pull-sriov-fec-daemon-ghcr
 pull-sriov-fec-daemon-ghcr:
-	docker pull ghcr.io/smart-edge-open/sriov-fec-daemon:$(VERSION)  
+	docker pull ghcr.io/smart-edge-open/sriov-fec-daemon:$(VERSION)
 
 .PHONY: pull-sriov-fec-operator-ghcr
 pull-sriov-fec-operator-ghcr:
@@ -350,7 +350,7 @@ else
 endif
 	echo -e "---\nschema: olm.channel\npackage: sriov-fec\nname: stable\nentries:\n- name: sriov-fec.v$(VERSION)" >> sriov-fec-index/index.yaml
 	$(OPM) validate sriov-fec-index
-	$(CONTAINER_TOOL) build . -f sriov-fec-index.Dockerfile -t localhost/sriov-fec-index:$(VERSION)
+	$(CONTAINER_TOOL) build . -f sriov-fec-index.Dockerfile -t localhost/sriov-fec-index:$(VERSION) --no-cache
 	$(MAKE) VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) $(CONTAINER_TOOL)_push_index
 
 .PHONY: podman_push_index
