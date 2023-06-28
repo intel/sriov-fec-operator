@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	fec "github.com/smart-edge-open/sriov-fec-operator/api/v2"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
+	fec "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"net"
 	"os"
@@ -193,7 +193,7 @@ func getTelemetry(pciAddr string, vfs []fec.VF, telemetryGatherer *telemetryGath
 
 func parseTelemetry(file []byte, vfs []fec.VF, pciAddr string, telemetryGatherer *telemetryGatherer, logger *logrus.Logger) {
 	lines := strings.Split(string(file), "\n")
-	for i, _ := range lines {
+	for i := range lines {
 		//Fri Sep 13 10:49:25 2022:INFO:FFT counters: Per Engine
 		//Tue Sep 13 10:49:25 2022:INFO:0 0
 		if strings.Contains(lines[i], "counters") {
@@ -221,6 +221,18 @@ func parseDeviceStatus(lines []string, pfPciAddr string, vfs []fec.VF, telemetry
 	}
 	telemetryGatherer.updateVfCount(pfPciAddr, string(fec.SucceededSync), vfCount)
 
+	if int(vfCount) != len(vfs) {
+		log.WithError(err).WithField("value", strings.TrimSuffix(deviceStatus[1], " VFs")).
+			Error("No. of VFs from in metrics log is wrong. Skipping metric.")
+		return
+	}
+
+	if len(lines) < ((int(vfCount) + 1) * 2) {
+		log.WithError(err).WithField("value", strings.TrimSuffix(deviceStatus[1], " VFs")).
+			Error("failed to parse VF status. Skipping metric.")
+		return
+	}
+
 	for vfIdx := 0; vfIdx < int(vfCount); vfIdx++ {
 		vfStatus := strings.Split(lines[(vfIdx+1)*2], fmt.Sprintf("VF %v ", vfIdx))
 		isReady := float64(0)
@@ -232,6 +244,13 @@ func parseDeviceStatus(lines []string, pfPciAddr string, vfs []fec.VF, telemetry
 }
 
 func parseCounters(fieldLine, valueLine string, vfs []fec.VF, pfPciAddr string, telemetryGatherer *telemetryGatherer, log *logrus.Logger) {
+
+	if len(fieldLine) <= 0 || len(valueLine) <= 0 {
+		log.WithField("metrics", len(valueLine)).WithField("pciAddr", pfPciAddr).
+			Errorf("Metrics values are null, skip it.")
+		return
+	}
+
 	fieldName := strings.Split(fieldLine, "INFO:")[1]
 	value := strings.Split(valueLine, "INFO:")[1]
 

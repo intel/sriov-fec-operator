@@ -29,6 +29,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/assets"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/drainhelper"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
@@ -194,6 +195,22 @@ func createAndConfigureManager(config *rest.Config, metricsAddr string, healthPr
 		},
 	}
 
+	directClient, err := client.New(config, client.Options{Scheme: scheme})
+	if err != nil {
+		setupLog.WithError(err).Error("failed to create direct client")
+		os.Exit(1)
+	}
+
+	isSingleNodeCluster, err := utils.IsSingleNodeCluster(directClient)
+	if err != nil {
+		setupLog.WithError(err).Errorf("failed to determine cluster type")
+		os.Exit(1)
+	}
+
+	LeaderElectionConfig := drainhelper.CustomizedLeaderElectionConfig(nil,
+		drainhelper.LeaseDurationDefault,
+		isSingleNodeCluster)
+
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
@@ -201,6 +218,9 @@ func createAndConfigureManager(config *rest.Config, metricsAddr string, healthPr
 		Port:                   9443,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "98e78623.intel.com",
+		LeaseDuration:          &LeaderElectionConfig.LeaseDuration,
+		RenewDeadline:          &LeaderElectionConfig.RenewDeadline,
+		RetryPeriod:            &LeaderElectionConfig.RetryPeriod,
 		Namespace:              controllers.NAMESPACE,
 		WebhookServer:          &ws,
 	})

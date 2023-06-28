@@ -24,8 +24,8 @@ import (
 const (
 	drainHelperTimeoutEnvVarName = "DRAIN_TIMEOUT_SECONDS"
 	drainHelperTimeoutDefault    = int64(90)
-	leaseDurationEnvVarName      = "LEASE_DURATION_SECONDS"
-	leaseDurationDefault         = int64(137)
+	LeaseDurationEnvVarName      = "LEASE_DURATION_SECONDS"
+	LeaseDurationDefault         = int64(137)
 )
 
 // logWriter is a wrapper around logrus log.Info() to allow drain.Helper logging
@@ -62,12 +62,12 @@ func NewDrainHelper(log *logrus.Logger, cs *clientset.Clientset, nodeName, names
 	}
 	log.WithField("timeout seconds", drainTimeout).Info("drain settings")
 
-	leaseDur := leaseDurationDefault
-	leaseDurStr := os.Getenv(leaseDurationEnvVarName)
+	leaseDur := LeaseDurationDefault
+	leaseDurStr := os.Getenv(LeaseDurationEnvVarName)
 	if leaseDurStr != "" {
 		val, err := strconv.ParseInt(leaseDurStr, 10, 64)
 		if err != nil {
-			log.WithError(err).WithField("variable", leaseDurationEnvVarName).Error("failed to parse env variable to int64 - using default value")
+			log.WithError(err).WithField("variable", LeaseDurationEnvVarName).Error("failed to parse env variable to int64 - using default value")
 		} else {
 			leaseDur = val
 		}
@@ -111,13 +111,13 @@ func NewDrainHelper(log *logrus.Logger, cs *clientset.Clientset, nodeName, names
 		},
 
 		leaseLock:            lock,
-		leaderElectionConfig: customizedLeaderElectionConfig(lock, leaseDur, isSingleNodeCluster),
+		leaderElectionConfig: CustomizedLeaderElectionConfig(lock, leaseDur, isSingleNodeCluster),
 	}
 }
 
 // More details about values are available here:
 // https://github.com/openshift/library-go/commit/2612981f3019479805ac8448b997266fc07a236a#diff-61dd95c7fd45fa18038e825205fbfab8a803f1970068157608b6b1e9e6c27248R127-R150
-func customizedLeaderElectionConfig(lock *resourcelock.LeaseLock, leaseDur int64, isSingleNodeCluster bool) leaderelection.LeaderElectionConfig {
+func CustomizedLeaderElectionConfig(lock *resourcelock.LeaseLock, leaseDur int64, isSingleNodeCluster bool) leaderelection.LeaderElectionConfig {
 	lec := leaderelection.LeaderElectionConfig{
 		Lock:            lock,
 		ReleaseOnCancel: true,

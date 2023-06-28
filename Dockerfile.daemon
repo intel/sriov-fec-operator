@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020-2023 Intel Corporation
 
-FROM golang:1.18.3 as builder
+FROM golang:1.20.4 as builder
 
 WORKDIR /workspace-pf
 
@@ -33,9 +33,9 @@ COPY api api/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
 
-FROM registry.access.redhat.com/ubi9/ubi:9.1.0-1750 as package_installer
+FROM registry.access.redhat.com/ubi9/ubi:9.2-489 as package_installer
 
-RUN yum install -y ethtool iproute kmod procps-ng pciutils util-linux  tar gzip gcc make wget && yum clean all
+RUN yum install -y ethtool iproute kmod procps-ng pciutils util-linux tar gzip gcc make wget && yum clean all
 
 
 RUN wget -O zlib-1.2.13.tar.gz https://github.com/madler/zlib/releases/download/v1.2.13/zlib-1.2.13.tar.gz && \
@@ -51,7 +51,7 @@ RUN wget https://pci-ids.ucw.cz/v2.2/pci.ids.gz -O pci.ids.gz && \
 
 RUN yum remove -y wget
 
-FROM registry.access.redhat.com/ubi9/ubi-micro:9.1.0-13
+FROM registry.access.redhat.com/ubi9/ubi-micro:9.2-5
 
 ARG VERSION
 ### Required OpenShift Labels
@@ -68,12 +68,13 @@ RUN mkdir -p /usr/share/misc/
 
 COPY --from=package_installer /workspace/pci.ids /usr/share/misc/pci.ids
 
-COPY --from=package_installer /lib64/libm.so.6 /lib64/libmnl.so.0 /lib64/libc.so.6 /lib64/ld-linux-x86-64.so.2 \
-    /lib64/libzstd.so.1 /lib64/liblzma.so.5 /lib64/libcrypto.so.3 /lib64/libgcc_s.so.1 \
-    /lib64/libpci.so.3 /lib64/libkmod.so.2 /lib64/libbpf.so.0 \
-    /lib64/libmnl.so.0 /lib64/libtinfo.so.6  /lib64/libsigsegv.so.2.0.6 /lib64/libsigsegv.so.2  \
+
+COPY --from=package_installer /lib64/libmnl.so.0 \
+    /lib64/libzstd.so.1 /lib64/liblzma.so.5 /lib64/libcrypto.so.3 \
+    /lib64/libpci.so.3 /lib64/libkmod.so.2 /lib64/libbpf.so.1 \
+    /lib64/libmnl.so.0 /lib64/libsigsegv.so.2.0.6 /lib64/libsigsegv.so.2  \
     /lib64/libreadline.so.8.1 /lib64/libreadline.so.8 /lib64/libmpfr.so.6.1.0 /lib64/libmpfr.so.6 \
-    /lib64/libgmp.so.10.4.0 /lib64/libgmp.so.10 /lib64/libprocps.so.8.0.3 /lib64/libsystemd.so.0.33.0 /lib64/liblz4.so.1.9.3 \
+    /lib64/libgmp.so.10.4.0 /lib64/libgmp.so.10 /lib64/libprocps.so.8.0.3 /lib64/libsystemd.so.0.35.0 /lib64/liblz4.so.1.9.3 \
     /lib64/libgpg-error.so.0.32.0 /lib64/libgcrypt.so.20.4.0 /lib64/libuuid.so.1.3.0 \
     /lib64/libidn2.so.0.3.7 /lib64/libnettle.so.8.5 /lib64/libgnutls.so.30.33.1 \
     /lib64/libunistring.so.2.1.0 /lib64/libp11-kit.so.0.3.0 /lib64/libtasn1.so.6.6.0 \
@@ -82,7 +83,7 @@ RUN ln -sf /usr/lib64/libsigsegv.so.2.0.6 /usr/lib64/libsigsegv.so.2 && \
     ln -sf /usr/lib64/libreadline.so.8.1  /usr/lib64/libreadline.so.8 && \
     ln -sf /usr/lib64/libmpfr.so.6.1.0  /usr/lib64/libmpfr.so.6 && \
     ln -sf /usr/lib64/libprocps.so.8.0.3 /usr/lib64/libprocps.so.8 && \
-    ln -sf /usr/lib64/libsystemd.so.0.33.0 /usr/lib64/libsystemd.so.0 && \
+    ln -sf /usr/lib64/libsystemd.so.0.35.0 /usr/lib64/libsystemd.so.0 && \
     ln -sf /usr/lib64/liblz4.so.1.9.3 /usr/lib64/liblz4.so.1 && \
     ln -sf /usr/lib64/libgcrypt.so.20.4.0 /usr/lib64/libgcrypt.so.20 && \
     ln -sf /usr/lib64/libgpg-error.so.0.32.0 /usr/lib64/libgpg-error.so.0 && \

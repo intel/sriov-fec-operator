@@ -2,12 +2,12 @@ package daemon
 
 import (
 	"fmt"
-	v2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/sirupsen/logrus"
+	v2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"net"
 	"os"
 	"strings"
@@ -142,7 +142,8 @@ var _ = Describe("readFileWithTelemetry", func() {
 		fileHandler, err := os.Create(fmt.Sprintf("/var/log/pf_bb_cfg_%v.log", pciAddr))
 		Expect(err).To(BeNil())
 		defer fileHandler.Close()
-		fileHandler.Write([]byte(fileLog))
+		_, err = fileHandler.Write([]byte(fileLog))
+		Expect(err).To(BeNil())
 
 		file, err := readFileWithTelemetry(pciAddr, utils.NewLogger())
 
@@ -155,6 +156,63 @@ var _ = Describe("parseCounters", func() {
 	tg := newTelemetryGatherer()
 	BeforeEach(func() {
 		tg.resetMetrics()
+	})
+
+	It("value Line null", func() {
+		fieldLine := "Fri Sep 13 10:49:25 2022:INFO:FFT counters: Per Engine"
+		valueLine := ""
+
+		logger := utils.NewLogger()
+		hook := &testHook{
+			expectedError: "Metrics values are null, skip it.",
+		}
+		logger.AddHook(hook)
+
+		parseCounters(fieldLine, valueLine, []v2.VF{
+			{PCIAddress: "9999:99:99.9"},
+		}, "9999:99:99.0", tg, logger)
+		tg.updateMetrics()
+
+		Expect(testutil.CollectAndCount(tg.engineGauge)).To(Equal(0))
+		Expect(hook.expectedErrorOccured).To(BeTrue())
+	})
+
+	It("field Line null", func() {
+		fieldLine := ""
+		valueLine := ""
+
+		logger := utils.NewLogger()
+		hook := &testHook{
+			expectedError: "Metrics values are null, skip it.",
+		}
+		logger.AddHook(hook)
+
+		parseCounters(fieldLine, valueLine, []v2.VF{
+			{PCIAddress: "9999:99:99.9"},
+		}, "9999:99:99.0", tg, logger)
+		tg.updateMetrics()
+
+		Expect(testutil.CollectAndCount(tg.engineGauge)).To(Equal(0))
+		Expect(hook.expectedErrorOccured).To(BeTrue())
+	})
+
+	It("Incomplete Value Line data", func() {
+		fieldLine := "Fri Sep 13 10:49:25 2022:INFO:FFT counters: Per Engine"
+		valueLine := "Tue Sep 13 10:49:25 2022:INFO:"
+
+		logger := utils.NewLogger()
+		hook := &testHook{
+			expectedError: "failed to parse string into float64. Skipping metric.",
+		}
+		logger.AddHook(hook)
+
+		parseCounters(fieldLine, valueLine, []v2.VF{
+			{PCIAddress: "9999:99:99.9"},
+		}, "9999:99:99.0", tg, logger)
+		tg.updateMetrics()
+
+		Expect(testutil.CollectAndCount(tg.engineGauge)).To(Equal(0))
+		Expect(hook.expectedErrorOccured).To(BeTrue())
 	})
 
 	It("one FFT engine value is exposed", func() {
@@ -176,6 +234,28 @@ var _ = Describe("parseCounters", func() {
 		gauge, err := tg.engineGauge.GetMetricWith(map[string]string{engineIdLabel: "0", queueTypeLabel: "FFT", pciAddressLabel: pfPciAddr})
 		Expect(err).To(Succeed())
 		Expect(testutil.ToFloat64(gauge)).To(Equal(float64(999)))
+	})
+
+	It("3 5GUL values are exposed with no values", func() {
+		pfPciAddr := "9999:00:00.0"
+		fieldLine := "Fri Sep 13 10:49:25 2022:INFO:5GUL counters: Data (Bytes)"
+		valueLine := "Tue Sep 13 10:49:25 2022:INFO:"
+
+		logger := utils.NewLogger()
+		hook := &testHook{
+			expectedError: "number of metrics doesn't equals to number of VFs",
+		}
+		logger.AddHook(hook)
+
+		parseCounters(fieldLine, valueLine, []v2.VF{
+			{PCIAddress: "9999:01:00.0"},
+			{PCIAddress: "9999:01:00.1"},
+			{PCIAddress: "9999:01:00.2"},
+		}, pfPciAddr, tg, logger)
+		tg.updateMetrics()
+
+		Expect(testutil.CollectAndCount(tg.engineGauge)).To(Equal(0))
+		Expect(hook.expectedErrorOccured).To(BeTrue())
 	})
 
 	It("3 5GUL values are exposed", func() {
@@ -294,7 +374,8 @@ Fri Sep 16 10:42:33 2022:INFO:-  VF 1 RTE_BBDEV_DEV_ACTIVE
 
 Fri Sep 16 10:42:33 2022:INFO:-  VF 2 RTE_BBDEV_DEV_RESTART_REQ
 
-Fri Sep 16 10:42:33 2022:INFO:-  VF 3 RTE_BBDEV_DEV_RECONFIG_REQ`
+Fri Sep 16 10:42:33 2022:INFO:-  VF 3 RTE_BBDEV_DEV_RECONFIG_REQ
+`
 
 		parseDeviceStatus(strings.Split(fileLog, "\n"), "1111:00:00.0", []v2.VF{
 			{PCIAddress: "1111:01:00.0"},
@@ -341,6 +422,68 @@ Fri Sep 16 10:42:33 2022:INFO:-  VF 3 RTE_BBDEV_DEV_RECONFIG_REQ`
 
 		Expect(testutil.CollectAndCount(tg.vfStatusGauge)).To(Equal(0))
 		Expect(testutil.CollectAndCount(tg.vfCountGauge)).To(Equal(0))
+		Expect(hook.expectedErrorOccured).To(BeTrue())
+	})
+
+	It("Should skip metrics for insufficient data", func() {
+		logger := utils.NewLogger()
+		hook := &testHook{
+			expectedError: "failed to parse VF status. Skipping metric.",
+		}
+		logger.AddHook(hook)
+		fileLog := `Fri Sep 16 10:42:33 2022:INFO:Device Status:: 1 VFs`
+		parseDeviceStatus(strings.Split(fileLog, "\n"), "1111:00:00.0", []v2.VF{
+			{PCIAddress: "1111:01:00.0"},
+		}, tg, logger)
+		tg.updateMetrics()
+
+		Expect(testutil.CollectAndCount(tg.vfCountGauge)).To(Equal(1))
+		Expect(hook.expectedErrorOccured).To(BeTrue())
+	})
+
+	It("Should skip metrics for when VF count is less than expected", func() {
+		logger := utils.NewLogger()
+		hook := &testHook{
+			expectedError: "No. of VFs from in metrics log is wrong. Skipping metric.",
+		}
+		logger.AddHook(hook)
+		fileLog := `Fri Sep 16 10:42:33 2022:INFO:Device Status:: 1 VFs
+
+Fri Sep 16 10:42:33 2022:INFO:-  VF 0 RTE_BBDEV_DEV_CONFIGURED
+
+`
+		parseDeviceStatus(strings.Split(fileLog, "\n"), "1111:00:00.0", []v2.VF{
+			{PCIAddress: "1111:01:00.0"},
+			{PCIAddress: "1111:01:00.1"},
+			{PCIAddress: "1111:01:00.2"},
+		}, tg, logger)
+		tg.updateMetrics()
+
+		Expect(testutil.CollectAndCount(tg.vfCountGauge)).To(Equal(1))
+		Expect(hook.expectedErrorOccured).To(BeTrue())
+	})
+
+	It("Should skip metrics for when VF count is more than expected", func() {
+		logger := utils.NewLogger()
+		hook := &testHook{
+			expectedError: "No. of VFs from in metrics log is wrong. Skipping metric.",
+		}
+		logger.AddHook(hook)
+		fileLog := `Fri Sep 16 10:42:33 2022:INFO:Device Status:: 3 VFs
+
+Fri Sep 16 10:42:33 2022:INFO:-  VF 0 RTE_BBDEV_DEV_CONFIGURED
+
+Fri Sep 16 10:42:33 2022:INFO:-  VF 1 RTE_BBDEV_DEV_CONFIGURED
+
+Fri Sep 16 10:42:33 2022:INFO:-  VF 3 RTE_BBDEV_DEV_CONFIGURED
+
+`
+		parseDeviceStatus(strings.Split(fileLog, "\n"), "1111:00:00.0", []v2.VF{
+			{PCIAddress: "1111:01:00.1"},
+		}, tg, logger)
+		tg.updateMetrics()
+
+		Expect(testutil.CollectAndCount(tg.vfCountGauge)).To(Equal(1))
 		Expect(hook.expectedErrorOccured).To(BeTrue())
 	})
 })

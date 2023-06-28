@@ -393,7 +393,7 @@ var _ = Describe("Asset Tests", func() {
 			Expect(err).To(Succeed())
 			newDs := &appsv1.DaemonSet{}
 			err = runtime.DefaultUnstructuredConverter.FromUnstructured(uns, newDs)
-
+			Expect(err).To(Succeed())
 			Expect(newDs.Spec.Template.Spec.Tolerations).ToNot(BeEmpty())
 
 			toleration := newDs.Spec.Template.Spec.Tolerations[0]

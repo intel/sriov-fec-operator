@@ -22,7 +22,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/smart-edge-open/sriov-fec-operator/sriov-fec/pkg/common/utils"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"io"
 	"io/ioutil"
 	"os"

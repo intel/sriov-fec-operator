@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020-2023 Intel Corporation
 
-FROM golang:1.18.3 as builder
+FROM golang:1.20.4 as builder
 
 WORKDIR /workspace
 COPY go.mod go.sum ./
@@ -15,7 +15,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o node_lab
 
 RUN wget https://pci-ids.ucw.cz/v2.2/pci.ids.gz -O pci.ids.gz && gunzip pci.ids.gz
 
-FROM registry.access.redhat.com/ubi9/ubi-micro:9.1.0-13
+FROM registry.access.redhat.com/ubi9/ubi-micro:9.2-5
 
 ARG VERSION
 ### Required OpenShift Labels

@@ -61,7 +61,12 @@ data:
                         "vendors": ["1172"],
                         "devices": ["5050"],
                         "drivers": ["pci-pf-stub", "vfio-pci"]
-                    }
+                    },
+                    "additionalInfo": {
+                      "*": {
+                          "VFIO_TOKEN": "{{ .SRIOV_FEC_VFIO_TOKEN }}"
+                      }
+                     }
                 },
                 {
                     "resourceName": "intel_fec_5g",
@@ -70,7 +75,12 @@ data:
                         "vendors": ["8086"],
                         "devices": ["0d90"],
                         "drivers": ["pci-pf-stub", "vfio-pci"]
-                    }
+                    },
+                    "additionalInfo": {
+                      "*": {
+                          "VFIO_TOKEN": "{{ .SRIOV_FEC_VFIO_TOKEN }}"
+                      }
+                     }
                 },
                 {
                     "resourceName": "intel_fec_acc100",
@@ -79,7 +89,12 @@ data:
                         "vendors": ["8086"],
                         "devices": ["0d5d"],
                         "drivers": ["pci-pf-stub", "vfio-pci"]
-                    }
+                    },
+                    "additionalInfo": {
+                      "*": {
+                          "VFIO_TOKEN": "{{ .SRIOV_FEC_VFIO_TOKEN }}"
+                      }
+                     }
                 },
                 {
                 "resourceName": "intel_fec_acc200",
@@ -88,7 +103,12 @@ data:
                     "vendors": ["8086"],
                     "devices": ["57c1"],
                     "drivers": ["pci-pf-stub", "vfio-pci"]
-                }
+                },
+                "additionalInfo": {
+                    "*": {
+                          "VFIO_TOKEN": "{{ .SRIOV_FEC_VFIO_TOKEN }}"
+                      }
+                     }
             }
             ]
         }

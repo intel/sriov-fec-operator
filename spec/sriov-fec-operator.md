@@ -11,7 +11,7 @@ Copyright (c) 2020-2023 Intel Corporation
     - [FEC Configuration](#fec-configuration)
     - [SRIOV Device Plugin](#sriov-device-plugin)
 - [Managing NIC Devices](#managing-nic-devices)
-- [Secure boot](#secure-boot)
+- [VFIO_PCI Driver](#vfio_pci-driver)
 - [Deploying the Operator](#deploying-the-operator)
   - [Install dependencies](#install-dependencies)
   - [Install the Bundle](#install-the-bundle)
@@ -338,7 +338,9 @@ TestCase [ 0] : validation_tc passed
 
 The management of the NIC SRIOV devices/resources in the OpenShift cluster is out of scope of this operator. The user is expected to deploy an operator/[SRIOV Network Device plugin](https://github.com/openshift/sriov-network-device-plugin) which will handle the orchestration of SRIOV NIC VFs between pods.
 
-## Secure Boot
+## VFIO_PCI Driver
+
+### Secure Boot
 
 Until SRIOV-FEC operator 2.3.0, `pf-bb-config` application which comes as part of SRIOV-FEC operator distribution, 
 relied on MMIO access to the PF of the ACC100 (access through mmap of the PF PCIe BAR config space using igb_uio and/or pf_pci_stub drivers).
@@ -363,6 +365,8 @@ It means operator would work correctly on a platforms where secure boot is enabl
 
 Previously supported drivers `pci-pf-stub` and `igb_uio` are still supported by an operator, but they cannot be used together with secure boot feature.
 
+### Vfio Token
+
 Please be aware that usage of `vfio-pci` driver requires following arguments added to the kernel:
  - vfio_pci.enable_sriov=1
  - vfio_pci.disable_idle_d3=1
@@ -370,6 +374,21 @@ Please be aware that usage of `vfio-pci` driver requires following arguments add
 If `vfio-pci` PF driver is used, then access to VF requires `UUID` token. Token is identical for all nodes in cluster, has default value of `02bddbbf-bbb0-4d79-886b-91bad3fbb510` and could be changed by
     setting `SRIOV_FEC_VFIO_TOKEN` in `subscription.spec.config.env` field. Applications that are using VFs should provide token via EAL parameters - e.g
     `./test-bbdev.py -e="--vfio-vf-token=02bddbbf-bbb0-4d79-886b-91bad3fbb510 -a0000:f7:00.1"`
+
+The `VFIO_TOKEN` can be fetched by "secret" using following commands, but this will be deprecated in future release due to security concern.
+
+```shell
+kubectl get secret vfio-token -o jsonpath='{.data.VFIO_TOKEN}' | base64 --decode
+```
+
+Sriov-network-device-plugin v4.14 has the capability to inject the VFIO token as an environment variable to the application pod. FEC Operator pointing to v4.14, leverages this feature to pass the VFIO token in more secured method to the application pods. You can use following commands to get the `VFIO_TOKEN` in application pods.
+
+```shell
+#Premise you have successfully configured fec-operator settings and enter an application pod
+[root@pod:/home]# env | grep VFIO_TOKEN
+PCIDEVICE_INTEL_COM_INTEL_FEC_ACC100_INFO={"0000:8b:01.5":{"extra":{"VFIO_TOKEN":"02bddbbf-bbb0-4d79-886b-91bad3fbb510"},"generic":{"deviceID":"0000:8b:01.5"},"vfio":{"dev-mount":"/dev/vfio/178","mount":"/dev/vfio/vfio"}},"0000:8b:01.7":{"extra":{"VFIO_TOKEN":"02bddbbf-bbb0-4d79-886b-91bad3fbb510"},"generic":{"deviceID":"0000:8b:01.7"},"vfio":{"dev-mount":"/dev/vfio/180","mount":"/dev/vfio/vfio"}}}
+[root@pod:/home]# export VFIO_TOKEN=02bddbbf-bbb0-4d79-886b-91bad3fbb510
+```
 
 ## Deploying the Operator
 

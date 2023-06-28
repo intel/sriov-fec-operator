@@ -92,9 +92,9 @@ require (
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
 	golang.org/x/net v0.2.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
-	golang.org/x/sys v0.3.0 // indirect
-	golang.org/x/term v0.3.0 // indirect
-	golang.org/x/text v0.5.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/term v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
@@ -116,5 +116,5 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-// https://nvd.nist.gov/vuln/detail/CVE-2022-41717
-replace golang.org/x/net v0.2.0 => golang.org/x/net v0.4.0
+// https://www.cve.org/CVERecord?id=CVE-2022-41723
+replace golang.org/x/net v0.2.0 => golang.org/x/net v0.7.0
