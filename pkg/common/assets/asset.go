@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -84,7 +83,7 @@ func (a *Asset) loadFromFile() error {
 		return errors.New("not supported yet")
 	}
 
-	content, err := ioutil.ReadFile(cleanPath)
+	content, err := os.ReadFile(cleanPath)
 	if err != nil {
 		return err
 	}

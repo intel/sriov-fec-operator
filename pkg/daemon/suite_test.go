@@ -7,7 +7,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -37,7 +36,7 @@ func TestAPIs(t *testing.T) {
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logr.New(utils.NewLogWrapper()))
 	var err error
-	testTmpFolder, err = ioutil.TempDir("/tmp", "bbdevconfig_test")
+	testTmpFolder, err = os.MkdirTemp("/tmp", "bbdevconfig_test")
 	Expect(err).ShouldNot(HaveOccurred())
 }, 60)
 

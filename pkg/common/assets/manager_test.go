@@ -19,7 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-//  runtime.Object implementation
+// runtime.Object implementation
 type InvalidRuntimeType struct {
 }
 

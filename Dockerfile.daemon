@@ -1,25 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020-2023 Intel Corporation
 
-FROM golang:1.20.4 as builder
+FROM golang:1.20.6 as builder
 
 WORKDIR /workspace-pf
 
-RUN git clone --depth 1 --branch r44 https://github.com/benhoyt/inih
-
-WORKDIR /workspace-pf/inih/extra
-
-RUN make -f Makefile.static && \
-    cp libinih.a ../
-
-RUN git clone --depth 1 --branch v22.11 https://github.com/intel/pf-bb-config /workspace-pf/pf-bb-config
+RUN git clone --depth 1 --branch v23.03 https://github.com/intel/pf-bb-config /workspace-pf/pf-bb-config
 
 WORKDIR /workspace-pf/pf-bb-config
 
-RUN VERSION_STRING=$(git describe --tags --long) && \
-    sed -i "s/#VERSION_STRING#/${VERSION_STRING}/g" config_app.c && \
-    make
-
+RUN ./build.sh
 
 WORKDIR /workspace-go
 
@@ -33,7 +23,7 @@ COPY api api/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
 
-FROM registry.access.redhat.com/ubi9/ubi:9.2-489 as package_installer
+FROM registry.access.redhat.com/ubi9/ubi:9.2-696 as package_installer
 
 RUN yum install -y ethtool iproute kmod procps-ng pciutils util-linux tar gzip gcc make wget && yum clean all
 
@@ -51,7 +41,7 @@ RUN wget https://pci-ids.ucw.cz/v2.2/pci.ids.gz -O pci.ids.gz && \
 
 RUN yum remove -y wget
 
-FROM registry.access.redhat.com/ubi9/ubi-micro:9.2-5
+FROM registry.access.redhat.com/ubi9/ubi-micro:9.2-9
 
 ARG VERSION
 ### Required OpenShift Labels
@@ -108,11 +98,15 @@ COPY --from=package_installer /bin/awk /bin/sed /bin/
 RUN mkdir /usr/share/hwdata
 COPY --from=package_installer /usr/share/hwdata /usr/share/hwdata
 
+RUN mkdir /sriov_workdir
+RUN mkdir -p /sriov_workdir/vrb1
+
 USER 1001
 
 COPY TEMP_LICENSE_COPY /licenses/LICENSE
 WORKDIR /sriov_workdir
 COPY --from=builder /workspace-go/sriov_fec_daemon .
 COPY --from=builder /workspace-pf/pf-bb-config/pf_bb_config .
+COPY --from=builder /workspace-pf/pf-bb-config/vrb1/srs_fft_windows_coefficient.bin vrb1/
 
 ENTRYPOINT ["/sriov_workdir/sriov_fec_daemon"]

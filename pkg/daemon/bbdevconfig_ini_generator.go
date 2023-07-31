@@ -7,9 +7,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
+
 	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
 	"gopkg.in/ini.v1"
-	"io"
 )
 
 func generateBBDevConfigFile(bbDevConfig sriovv2.BBDevConfig, file string) (err error) {

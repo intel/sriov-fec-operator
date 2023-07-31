@@ -22,6 +22,11 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
+	"sort"
+	"time"
+
+	"github.com/elliotchance/orderedmap/v2"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -31,11 +36,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"time"
 
 	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
 )
@@ -136,7 +139,9 @@ func (r *SriovFecClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConf
 
 	newNodeConfig := copyWithEmptySpec(ncc.SriovFecNodeConfig)
 
-	for pciAddress, cc := range acceleratorConfigContext {
+	// Use orederedmap for iteration
+	for _, pciAddress := range acceleratorConfigContext.Keys() {
+		cc, _ := acceleratorConfigContext.Get(pciAddress)
 		pf := sriovfecv2.PhysicalFunctionConfigExt{
 			PCIAddress:  pciAddress,
 			PFDriver:    cc.Spec.PhysicalFunction.PFDriver,
@@ -149,11 +154,12 @@ func (r *SriovFecClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConf
 	}
 
 	// copy latest known drainSkip from NodeConfig for cleanup
-	if len(acceleratorConfigContext) == 0 {
+	if acceleratorConfigContext.Len() == 0 {
 		newNodeConfig.Spec.DrainSkip = ncc.Spec.DrainSkip
 	}
 
 	if !equality.Semantic.DeepEqual(newNodeConfig.Spec, currentNodeConfig.Spec) {
+		r.Log.Info("Node Config Changed")
 		return r.Update(context.TODO(), newNodeConfig)
 	}
 	return nil
@@ -191,10 +197,9 @@ func (r *SriovFecClusterConfigReconciler) SetupWithManager(mgr ctrl.Manager) err
 }
 
 // key: accelerator pciAddress
-type AcceleratorConfigContext map[string]sriovfecv2.SriovFecClusterConfig
 type NodeConfigurationCtx struct {
 	sriovfecv2.SriovFecNodeConfig
-	AcceleratorConfigContext
+	AcceleratorConfigContext *orderedmap.OrderedMap[string, sriovfecv2.SriovFecClusterConfig]
 }
 
 func createClusterConfigMatcher(ncp nodeConfigProvider, l *logrus.Logger) *clusterConfigMatcher {
@@ -220,24 +225,28 @@ func (pm *clusterConfigMatcher) match(node corev1.Node, allConfigs []sriovfecv2.
 	}
 
 	acceleratorConfigContext := pm.prepareAcceleratorConfigContext(nodeConfig, matchingClusterConfigs)
+	if acceleratorConfigContext == nil {
+		return nil, fmt.Errorf("error occurred when preparing acceleratorConfig: %s", err.Error())
+	}
 	return &NodeConfigurationCtx{*nodeConfig, acceleratorConfigContext}, nil
 }
 
-func (pm *clusterConfigMatcher) prepareAcceleratorConfigContext(nodeConfig *sriovfecv2.SriovFecNodeConfig, configs []sriovfecv2.SriovFecClusterConfig) AcceleratorConfigContext {
-	acceleratorConfigContext := make(AcceleratorConfigContext)
+// Use orderedmap to save SriovFecCluster configurations
+func (pm *clusterConfigMatcher) prepareAcceleratorConfigContext(nodeConfig *sriovfecv2.SriovFecNodeConfig, configs []sriovfecv2.SriovFecClusterConfig) *orderedmap.OrderedMap[string, sriovfecv2.SriovFecClusterConfig] {
+	acceleratorConfigContext := orderedmap.NewOrderedMap[string, sriovfecv2.SriovFecClusterConfig]()
 	for _, current := range configs {
 		for _, accelerator := range nodeConfig.Status.Inventory.SriovAccelerators {
 			if current.Spec.AcceleratorSelector.Matches(accelerator) {
 
-				if _, ok := acceleratorConfigContext[accelerator.PCIAddress]; !ok {
-					acceleratorConfigContext[accelerator.PCIAddress] = current
+				if _, ok := acceleratorConfigContext.Get(accelerator.PCIAddress); !ok {
+					acceleratorConfigContext.Set(accelerator.PCIAddress, current)
 					continue
 				}
 
-				previous := acceleratorConfigContext[accelerator.PCIAddress]
+				previous, _ := acceleratorConfigContext.Get(accelerator.PCIAddress)
 				switch {
 				case current.Spec.Priority > previous.Spec.Priority: //override with higher prioritized config
-					acceleratorConfigContext[accelerator.PCIAddress] = current
+					acceleratorConfigContext.Set(accelerator.PCIAddress, current)
 				case current.Spec.Priority == previous.Spec.Priority: //multiple configs with same priority; drop older one
 					//TODO: Update Timestamp would be better than CreationTime
 					if current.CreationTimestamp.After(previous.CreationTimestamp.Time) {
@@ -248,7 +257,7 @@ func (pm *clusterConfigMatcher) prepareAcceleratorConfigContext(nodeConfig *srio
 							"CreationTimestamp":     previous.CreationTimestamp.String(),
 						}).Info("Dropping older ClusterConfig")
 
-						acceleratorConfigContext[accelerator.PCIAddress] = current
+						acceleratorConfigContext.Set(accelerator.PCIAddress, current)
 					}
 
 				case current.Spec.Priority < previous.Spec.Priority: //drop current with lower priority
@@ -272,6 +281,12 @@ func matchConfigsForNode(node *corev1.Node, allConfigs []sriovfecv2.SriovFecClus
 			nodeConfigs = append(nodeConfigs, config)
 		}
 	}
+
+	// Sort existing SriovFecCluster configurations based on CreationTimestamp to keep the order
+	sort.Slice(nodeConfigs, func(i, j int) bool {
+		return allConfigs[i].CreationTimestamp.Before(&allConfigs[j].CreationTimestamp)
+	})
+
 	return
 }
 

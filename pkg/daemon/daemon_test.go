@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -487,7 +486,7 @@ func createFiles(folderPath string, filesToBeCreated ...string) error {
 }
 
 func readAndUnmarshall(filepath string, target interface{}) error {
-	bytes, err := ioutil.ReadFile(filepath)
+	bytes, err := os.ReadFile(filepath)
 	if err != nil {
 		return err
 	}

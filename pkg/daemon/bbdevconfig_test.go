@@ -6,7 +6,7 @@ package daemon
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -17,11 +17,11 @@ import (
 )
 
 func compareFiles(firstFilepath, secondFilepath string) error {
-	first, err := ioutil.ReadFile(firstFilepath)
+	first, err := os.ReadFile(firstFilepath)
 	if err != nil {
 		return fmt.Errorf("Unable to open file: %s", firstFilepath)
 	}
-	second, err2 := ioutil.ReadFile(secondFilepath)
+	second, err2 := os.ReadFile(secondFilepath)
 	if err2 != nil {
 		return fmt.Errorf("Unable to open file: %s", secondFilepath)
 	}
