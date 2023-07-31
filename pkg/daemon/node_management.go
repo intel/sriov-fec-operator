@@ -5,16 +5,17 @@ package daemon
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+
 	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
 	sriovutils "github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
-	"os"
-	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strconv"
-	"strings"
 )
 
 const (

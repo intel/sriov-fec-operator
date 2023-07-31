@@ -41,7 +41,7 @@ The role of the SRIOV-FEC Operator for Intel Wireless FEC Accelerator is to orch
 The operator design of the SRIOV-FEC Operator for Intel Wireless FEC Accelerator supports the following vRAN FEC accelerators:
 
 * [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/smart-edge-open/sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100)
-* [Intel® vRAN Dedicated Accelerator ACC200](https://github.com/smart-edge-open/sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc200)
+* [Intel® vRAN Dedicated Accelerator VRB1](https://github.com/smart-edge-open/sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-vrb1)
 
 ### Wireless FEC Acceleration management
 

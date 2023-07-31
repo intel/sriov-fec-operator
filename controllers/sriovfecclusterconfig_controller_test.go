@@ -22,13 +22,13 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"time"
+
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	"github.com/onsi/gomega/gstruct"
 	"github.com/sirupsen/logrus"
@@ -385,7 +385,7 @@ var _ = Describe("SriovControllerTest", func() {
 			})
 		})
 
-		When("two ccs does match to two accelerators on single node", func() {
+		When("two ccs does match to two different accelerators on single node", func() {
 			It("both ss.specs should be propagated to matching nc", func() {
 				node := createNode("foobar")
 
@@ -430,6 +430,59 @@ var _ = Describe("SriovControllerTest", func() {
 				Expect(len(nodeConfigs.Items)).To(Equal(1))
 				Expect(nodeConfigs.Items[0].Name).To(Equal(node.Name))
 				Expect(nodeConfigs.Items[0].Spec.PhysicalFunctions).To(HaveLen(2))
+			})
+		})
+
+		When("two ccs does match to two same accelerators on single node", func() {
+			It("both ss.specs should be propagated to matching nc", func() {
+				node := createNode("n1")
+
+				createNodeInventory(node.Name, []sriovv2.SriovAccelerator{
+					{
+						PCIAddress: "0000:14:00.1",
+						DeviceID:   "id1",
+						VFs:        []sriovv2.VF{},
+						MaxVFs:     0,
+					},
+					{
+						PCIAddress: "0000:15:00.1",
+						DeviceID:   "id1",
+						VFs:        []sriovv2.VF{},
+						MaxVFs:     0,
+					}},
+				)
+
+				cc1 := createAcceleratorConfig("cc1", func(cc *sriovv2.SriovFecClusterConfig) {
+					cc.Spec.AcceleratorSelector = sriovv2.AcceleratorSelector{PCIAddress: "0000:14:00.1"}
+					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
+						PFDriver: utils.PCI_PF_STUB_DASH,
+						VFAmount: 1,
+					}
+				})
+				cc2 := createAcceleratorConfig("cc2", func(cc *sriovv2.SriovFecClusterConfig) {
+					cc.Spec.AcceleratorSelector = sriovv2.AcceleratorSelector{PCIAddress: "0000:15:00.1"}
+					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
+						PFDriver: utils.IGB_UIO,
+						VFAmount: 1,
+					}
+				})
+
+				reconciler := SriovFecClusterConfigReconciler{k8sClient, log}
+				ccs := []string{"cc1", "cc2"}
+				for i := 0; i < 100; i++ {
+					cc := ccs[i%len(ccs)]
+					_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest(cc))
+					Expect(err).ToNot(HaveOccurred())
+
+					//Check if node config was created out of cluster config
+					nodeConfigs := new(sriovv2.SriovFecNodeConfigList)
+					Expect(k8sClient.List(context.TODO(), nodeConfigs)).ToNot(HaveOccurred())
+					Expect(len(nodeConfigs.Items)).To(Equal(1))
+					Expect(nodeConfigs.Items[0].Name).To(Equal(node.Name))
+					Expect(nodeConfigs.Items[0].Spec.PhysicalFunctions).To(HaveLen(2))
+					Expect(nodeConfigs.Items[0].Spec.PhysicalFunctions[0].PCIAddress).Should(Equal(cc1.Spec.AcceleratorSelector.PCIAddress))
+					Expect(nodeConfigs.Items[0].Spec.PhysicalFunctions[1].PCIAddress).Should(Equal(cc2.Spec.AcceleratorSelector.PCIAddress))
+				}
 			})
 		})
 
@@ -815,7 +868,7 @@ var _ = Describe("SriovControllerTest", func() {
 		}
 
 		read := func(r io.Reader) string {
-			s, e := ioutil.ReadAll(r)
+			s, e := io.ReadAll(r)
 			Expect(e).ToNot(HaveOccurred())
 			return string(s)
 		}

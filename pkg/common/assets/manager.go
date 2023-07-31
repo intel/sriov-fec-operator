@@ -60,6 +60,29 @@ func (m *Manager) buildTemplateVars(ctx context.Context, setKernelVar bool) (map
 		return tp, fmt.Errorf("provided VFIO token '%v' is not a valid UUID", tp[vfioTokenName])
 	}
 
+	//default resource name for FPGA_LTE,FPGA_5G,ACC100 and ACC200.
+	resourceNameLte := m.EnvPrefix + "LTE_RESOURCE_NAME"
+	resourceName5g := m.EnvPrefix + "5G_RESOURCE_NAME"
+	resourceNameAcc100 := m.EnvPrefix + "ACC100_RESOURCE_NAME"
+	resourceNameAcc200 := m.EnvPrefix + "ACC200_RESOURCE_NAME"
+
+	if tp[resourceNameLte] == "" {
+		tp[resourceNameLte] = "intel_fec_lte"
+	}
+
+	if tp[resourceName5g] == "" {
+		tp[resourceName5g] = "intel_fec_5g"
+	}
+
+	if tp[resourceNameAcc200] == "" {
+		tp[resourceNameAcc200] = "intel_fec_acc200"
+	}
+
+	if tp[resourceNameAcc100] == "" {
+		tp[resourceNameAcc100] = "intel_fec_acc100"
+	}
+
+
 	if !setKernelVar {
 		return tp, nil
 	}

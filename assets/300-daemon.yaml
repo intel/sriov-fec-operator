@@ -196,6 +196,9 @@ data:
               mountPath: /var/log
             - name: tmp
               mountPath: /tmp    
+            - name: lockdown
+              mountPath: /sys/kernel/security
+              readOnly: true
             env:
               - name: SRIOV_FEC_NAMESPACE
                 valueFrom:
@@ -243,3 +246,7 @@ data:
             emptyDir: {}
           - name: tmp
             emptyDir: {}    
+          - name: lockdown
+            hostPath:
+              path: /sys/kernel/security
+

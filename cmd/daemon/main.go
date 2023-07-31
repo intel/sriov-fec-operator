@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/drainhelper"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
-	"io/ioutil"
 	"os"
 	"syscall"
 
@@ -63,7 +62,7 @@ func main() {
 
 	daemon.StartTelemetryDaemon(mgr, nodeName, ns, directClient, setupLog)
 
-	vfioTokenBytes, err := ioutil.ReadFile("/sriov_config/vfiotoken")
+	vfioTokenBytes, err := os.ReadFile("/sriov_config/vfiotoken")
 	if err != nil {
 		setupLog.Error(err)
 		os.Exit(1)

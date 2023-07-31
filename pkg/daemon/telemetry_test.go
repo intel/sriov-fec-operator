@@ -2,12 +2,12 @@ package daemon
 
 import (
 	"fmt"
+	v2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/sirupsen/logrus"
-	v2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"net"
 	"os"
 	"strings"

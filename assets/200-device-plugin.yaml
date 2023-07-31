@@ -55,12 +55,12 @@ data:
         {
             "resourceList": [
                 {
-                    "resourceName": "intel_fec_lte",
+                    "resourceName": "{{ .SRIOV_FEC_LTE_RESOURCE_NAME}}",
                     "deviceType": "accelerator",
                     "selectors": {
                         "vendors": ["1172"],
                         "devices": ["5050"],
-                        "drivers": ["pci-pf-stub", "vfio-pci"]
+                        "drivers": ["pci-pf-stub", "vfio-pci", "igb_uio"]
                     },
                     "additionalInfo": {
                       "*": {
@@ -69,12 +69,12 @@ data:
                      }
                 },
                 {
-                    "resourceName": "intel_fec_5g",
+                    "resourceName": "{{ .SRIOV_FEC_5G_RESOURCE_NAME}}",
                     "deviceType": "accelerator",
                     "selectors": {
                         "vendors": ["8086"],
                         "devices": ["0d90"],
-                        "drivers": ["pci-pf-stub", "vfio-pci"]
+                        "drivers": ["pci-pf-stub", "vfio-pci", "igb_uio"]
                     },
                     "additionalInfo": {
                       "*": {
@@ -83,12 +83,12 @@ data:
                      }
                 },
                 {
-                    "resourceName": "intel_fec_acc100",
+                    "resourceName": "{{ .SRIOV_FEC_ACC100_RESOURCE_NAME}}",
                     "deviceType": "accelerator",
                     "selectors": {
                         "vendors": ["8086"],
                         "devices": ["0d5d"],
-                        "drivers": ["pci-pf-stub", "vfio-pci"]
+                        "drivers": ["pci-pf-stub", "vfio-pci", "igb_uio"]
                     },
                     "additionalInfo": {
                       "*": {
@@ -97,12 +97,12 @@ data:
                      }
                 },
                 {
-                "resourceName": "intel_fec_acc200",
+                "resourceName": "{{ .SRIOV_FEC_ACC200_RESOURCE_NAME}}",
                 "deviceType": "accelerator",
                 "selectors": {
                     "vendors": ["8086"],
                     "devices": ["57c1"],
-                    "drivers": ["pci-pf-stub", "vfio-pci"]
+                    "drivers": ["pci-pf-stub", "vfio-pci", "igb_uio"]
                 },
                 "additionalInfo": {
                     "*": {

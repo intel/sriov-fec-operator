@@ -5,13 +5,14 @@ package daemon
 
 import (
 	"fmt"
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
-	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -72,11 +73,21 @@ func (p *pfBBConfigController) runPFConfig(deviceName, cfgFilepath, pciAddress s
 		return fmt.Errorf("incorrect deviceName for pf config: %s", deviceName)
 	}
 	if token == nil {
-		_, err := runExecCmd([]string{pfConfigAppFilepath, deviceName, "-c", cfgFilepath, "-p", pciAddress}, p.log)
-		return err
+		if deviceName == "ACC200" {
+			_, err := runExecCmd([]string{pfConfigAppFilepath, "VRB1", "-c", cfgFilepath, "-p", pciAddress}, p.log)
+			return err
+		} else {
+			_, err := runExecCmd([]string{pfConfigAppFilepath, deviceName, "-c", cfgFilepath, "-p", pciAddress}, p.log)
+			return err
+		}
 	} else {
-		_, err := runExecCmd([]string{pfConfigAppFilepath, deviceName, "-c", cfgFilepath, "-v", *token, "-p", pciAddress}, p.log)
-		return err
+		if deviceName == "ACC200" {
+			_, err := runExecCmd([]string{pfConfigAppFilepath, "VRB1", "-c", cfgFilepath, "-v", *token, "-p", pciAddress}, p.log)
+			return err
+		} else {
+			_, err := runExecCmd([]string{pfConfigAppFilepath, deviceName, "-c", cfgFilepath, "-v", *token, "-p", pciAddress}, p.log)
+			return err
+		}
 	}
 }
 

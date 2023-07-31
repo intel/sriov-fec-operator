@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"os"
-	"os/exec"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"strconv"
@@ -47,6 +46,7 @@ var (
 	getSriovInventory     = GetSriovInventory
 	supportedAccelerators utils.AcceleratorDiscoveryConfig
 	procCmdlineFilePath   = "/proc/cmdline"
+	sysLockdownFilePath   = "/sys/kernel/security/lockdown"
 	kernelParams          = []string{"intel_iommu=on", "iommu=pt"}
 )
 
@@ -429,14 +429,15 @@ func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {
 	for _, physFunc := range nodeConfig.PhysicalFunctions {
 		switch physFunc.PFDriver {
 		case utils.PCI_PF_STUB_DASH, utils.PCI_PF_STUB_UNDERSCORE, utils.IGB_UIO:
-			dmesgBytes, err := exec.Command("dmesg").Output()
+			cmdlineBytes, err = os.ReadFile(sysLockdownFilePath)
 			if err != nil {
-				return fmt.Errorf("failed to run 'dmesg' - %v", err.Error())
+				return fmt.Errorf("failed to read file contents: path: %v, error - %v", sysLockdownFilePath, err)
 			}
-			dmesgOut := string(dmesgBytes)
-			if strings.Contains(dmesgOut, "Secure boot enabled") {
-				return fmt.Errorf("'%s' driver doesn't supports SecureBoot. It is supported only by 'vfio-pci'", physFunc.PFDriver)
+			cmdline = string(cmdlineBytes)
+			if !strings.Contains(cmdline, "[none]") {
+				return fmt.Errorf("Kernel lockdown is enabled, '%s' driver doesn't supports, use 'vfio-pci'", physFunc.PFDriver)
 			}
+
 		case utils.VFIO_PCI:
 			err := moduleParameterIsEnabled(utils.VFIO_PCI_UNDERSCORE, "enable_sriov")
 			if err != nil {
