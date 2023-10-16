@@ -44,11 +44,16 @@ This document provides high-level system features, issues, and limitations infor
 | 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.41, 4.10.21, 4.11.2       |
 | 2.5.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.48, 4.10.34, 4.11.5       |
 | 2.6.0   | December 2022  | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12-rc2    |
-| 2.6.1   | January 2023   | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12.0-rc.4 |                     |
+| 2.6.1   | January 2023   | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12.0-rc.4 |
 | 2.7.0   | May 2023       | 4.10, 4.11, 4.12, 4.13       | 4.11.43, 4.12.18, 4.13.0.rc18 |
 | 2.7.1   | July 2023      | 4.10, 4.11, 4.12, 4.13       | 4.11.43, 4.12.18, 4.13.7      |
+| 2.7.2   | October 2023   | 4.10, 4.11, 4.12, 4.13       | 4.10.67, 4.11.50, 4.12.37, 4.13.15 |
 
 # Features for Release
+
+***v2.7.2***
+- Bug fixes
+
 ***v2.7.1***
 - pf-bb-config updated (22.11 -> 23.03)
 - Bug fixes
@@ -127,6 +132,10 @@ This document provides high-level system features, issues, and limitations infor
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
 
 # Changes to Existing Features
+
+***v2.7.2***
+- None
+
 ***v2.7.1***
 - FEC resource names can be controlled through manager environment variables
 - igb-uio driver is added to list of support drivers for VF interface
@@ -200,6 +209,10 @@ This document provides high-level system features, issues, and limitations infor
 - There are no unsupported or discontinued features relevant to this release.
 
 # Fixed Issues
+
+***2.7.2***
+- Fix for failure in enabling VFs when kernel is overloaded
+
 ***2.7.1***
 - Fix for supporting multiple FEC devices on same node
 - Fix for checking secure boot enabled mode
@@ -239,6 +252,13 @@ This document provides high-level system features, issues, and limitations infor
 - Documentation
 
 # Supported Operating Systems
+
+***v2.7.2***
+- OpenShift: 4.13.0
+- OS: Red Hat Enterprise Linux CoreOS 413.92.202305191644-0
+- Kubernetes: v1.26.3+b404935
+- RT Kernel: 5.14.0-284.13.1.el9_2.x86_64
+
 ***v2.7.1***
 - OpenShift: 4.13.0
 - OS: Red Hat Enterprise Linux CoreOS 413.92.202305191644-0
@@ -381,6 +401,5 @@ This document provides high-level system features, issues, and limitations infor
 
 # Package Versions
 Package:
-- Golang: 1.18
-- pf-bb-config-app: v22.11
-- DPDK: 22.11
+- Golang: 1.20
+- pf-bb-config-app: v23.03
