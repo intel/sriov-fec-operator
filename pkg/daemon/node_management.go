@@ -159,11 +159,13 @@ func (n *NodeConfigurator) changeAmountOfVFs(driver string, pfPCIAddress string,
 			return fmt.Errorf("unknown driver %v", driver)
 		}
 
+		n.Log.WithField("op", "VF Enable").Info("Start")
 		err := writeFileWithTimeout(unbindPath, strconv.Itoa(vfsAmount))
 		if err != nil {
 			n.Log.WithError(err).WithField("pf", pfPCIAddress).WithField("vfsAmount", vfsAmount).Error("failed to set new amount of VFs for PF")
 			return fmt.Errorf("failed to set new amount of VFs (%d) for PF (%s): %w", vfsAmount, pfPCIAddress, err)
 		}
+		n.Log.WithField("op", "VF Enable").Info("Complete")
 		return nil
 	}
 

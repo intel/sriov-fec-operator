@@ -5,12 +5,13 @@ package daemon
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"os"
+	"time"
+
+	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"time"
 )
 
 type resourceNamePredicate struct {
@@ -66,7 +67,7 @@ func writeFileWithTimeout(filename, data string) error {
 	select {
 	case <-done:
 		return err
-	case <-time.After(5 * time.Second):
+	case <-time.After(60 * time.Second):
 		return fmt.Errorf("failed to write to sysfs file. Usually it means that device is in use by other process")
 	}
 
