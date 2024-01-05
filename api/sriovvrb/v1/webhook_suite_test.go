@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2020-2023 Intel Corporation
 
-package v2
+package v1
 
 import (
 	"context"
@@ -37,12 +37,12 @@ var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
 
-var ccPrototype = SriovFecClusterConfig{
+var ccPrototype = SriovVrbClusterConfig{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "cc-cr-to-be-rejected",
 		Namespace: "default",
 	},
-	Spec: SriovFecClusterConfigSpec{},
+	Spec: SriovVrbClusterConfigSpec{},
 }
 
 func TestAPIs(t *testing.T) {
@@ -53,14 +53,14 @@ func TestAPIs(t *testing.T) {
 		[]Reporter{printer.NewlineReporter{}})
 }
 
-var _ = Describe("Creation of SriovFecClusterConfig without n3000 bbdevconfig", func() {
+var _ = Describe("Creation of SriovVrbClusterConfig without vrb1 bbdevconfig", func() {
 	AfterEach(func() {
 		_ = k8sClient.Delete(context.TODO(), &ccPrototype)
 	})
 
 	It("should be rejected", func() {
 		cc := ccPrototype.DeepCopy()
-		cc.Spec = SriovFecClusterConfigSpec{
+		cc.Spec = SriovVrbClusterConfigSpec{
 			PhysicalFunction: PhysicalFunctionConfig{
 				PFDriver:    utils.PCI_PF_STUB_DASH,
 				BBDevConfig: BBDevConfig{},
@@ -73,44 +73,84 @@ var _ = Describe("Creation of SriovFecClusterConfig without n3000 bbdevconfig", 
 	})
 })
 
-var _ = Describe("Creation of SriovFecClusterConfig with bbdevconfig containing acc100 and n3000", func() {
+var _ = Describe("Creation of SriovVrbClusterConfig with bbdevconfig containing vrb1 and vrb2", func() {
 	It("should be rejected", func() {
-		cc := SriovFecClusterConfig{
+		cc := SriovVrbClusterConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cc-cr-to-be-created",
 				Namespace: "default",
 			},
-			Spec: SriovFecClusterConfigSpec{
+			Spec: SriovVrbClusterConfigSpec{
 				PhysicalFunction: PhysicalFunctionConfig{
 					PFDriver: utils.PCI_PF_STUB_DASH,
 					VFAmount: 16,
 					BBDevConfig: BBDevConfig{
-						ACC100: &ACC100BBDevConfig{
-							NumVfBundles: 16,
-							MaxQueueSize: 1024,
-							Uplink4G: QueueGroupConfig{
-								NumQueueGroups:  0,
-								NumAqsPerGroups: 16,
-								AqDepthLog2:     4,
+						VRB1: &VRB1BBDevConfig{
+							ACC100BBDevConfig: ACC100BBDevConfig{
+								NumVfBundles: 16,
+								MaxQueueSize: 1024,
+								Uplink4G: QueueGroupConfig{
+									NumQueueGroups:  8,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Uplink5G: QueueGroupConfig{
+									NumQueueGroups:  0,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Downlink4G: QueueGroupConfig{
+									NumQueueGroups:  0,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
+								Downlink5G: QueueGroupConfig{
+									NumQueueGroups:  1,
+									NumAqsPerGroups: 16,
+									AqDepthLog2:     4,
+								},
 							},
-							Uplink5G: QueueGroupConfig{
-								NumQueueGroups:  0,
-								NumAqsPerGroups: 16,
-								AqDepthLog2:     4,
-							},
-							Downlink4G: QueueGroupConfig{
-								NumQueueGroups:  0,
-								NumAqsPerGroups: 16,
-								AqDepthLog2:     4,
-							},
-							Downlink5G: QueueGroupConfig{
-								NumQueueGroups:  0,
+							QFFT: QueueGroupConfig{
+								NumQueueGroups:  8,
 								NumAqsPerGroups: 16,
 								AqDepthLog2:     4,
 							},
 						},
-						N3000: &N3000BBDevConfig{
-							NetworkType: "FPGA_5GNR",
+						VRB2: &VRB2BBDevConfig{
+							ACC100BBDevConfig: ACC100BBDevConfig{
+								NumVfBundles: 16,
+								MaxQueueSize: 1024,
+								Uplink4G: QueueGroupConfig{
+									NumQueueGroups:  8,
+									NumAqsPerGroups: 64,
+									AqDepthLog2:     4,
+								},
+								Uplink5G: QueueGroupConfig{
+									NumQueueGroups:  0,
+									NumAqsPerGroups: 64,
+									AqDepthLog2:     4,
+								},
+								Downlink4G: QueueGroupConfig{
+									NumQueueGroups:  0,
+									NumAqsPerGroups: 64,
+									AqDepthLog2:     4,
+								},
+								Downlink5G: QueueGroupConfig{
+									NumQueueGroups:  1,
+									NumAqsPerGroups: 64,
+									AqDepthLog2:     4,
+								},
+							},
+							QFFT: QueueGroupConfig{
+								NumQueueGroups:  8,
+								NumAqsPerGroups: 64,
+								AqDepthLog2:     4,
+							},
+							QMLD: QueueGroupConfig{
+								NumQueueGroups:  8,
+								NumAqsPerGroups: 64,
+								AqDepthLog2:     4,
+							},
 						},
 					},
 				},
@@ -122,166 +162,8 @@ var _ = Describe("Creation of SriovFecClusterConfig with bbdevconfig containing 
 				ContainSubstring("Forbidden: specified bbDevConfig cannot contain multiple configurations")))
 	})
 })
-var _ = Describe("Creation of SriovFecClusterConfig with n3000 bbdevconfig", func() {
 
-	AfterEach(func() {
-		_ = k8sClient.Delete(context.TODO(), &ccPrototype)
-	})
-
-	When("With total number of downlink queues exceeds allowed 32", func() {
-		It("should be rejected", func() {
-			cc := ccPrototype.DeepCopy()
-			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
-				PFDriver: utils.PCI_PF_STUB_DASH,
-				VFAmount: 1,
-				BBDevConfig: BBDevConfig{
-					N3000: &N3000BBDevConfig{
-						NetworkType: "FPGA_LTE",
-						Downlink: UplinkDownlink{
-							Queues: UplinkDownlinkQueues{
-								VF0: 32,
-								VF7: 1,
-							},
-						},
-					},
-				},
-			}
-			err := k8sClient.Create(context.TODO(), cc)
-			Expect(err).ToNot(Succeed())
-			Expect(err.Error()).To(ContainSubstring("sum of all specified queues must be no more than 32"))
-		})
-	})
-
-	When("With total number of uplink queues exceeds allowed 32", func() {
-		It("should be rejected", func() {
-			cc := ccPrototype.DeepCopy()
-			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
-				PFDriver: utils.PCI_PF_STUB_DASH,
-				VFAmount: 1,
-				BBDevConfig: BBDevConfig{
-					N3000: &N3000BBDevConfig{
-						NetworkType: "FPGA_LTE",
-						Uplink: UplinkDownlink{
-							Queues: UplinkDownlinkQueues{
-								VF0: 20,
-								VF7: 10,
-								VF6: 10,
-							},
-						},
-					},
-				},
-			}
-			err := k8sClient.Create(context.TODO(), cc)
-			Expect(err).ToNot(Succeed())
-			Expect(err.Error()).To(ContainSubstring("sum of all specified queues must be no more than 32"))
-		})
-	})
-
-	When("With total number of uplink queues is less than allowed 32", func() {
-		It("should pass", func() {
-			cc := ccPrototype.DeepCopy()
-			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
-				PFDriver: utils.PCI_PF_STUB_DASH,
-				VFAmount: 1,
-				BBDevConfig: BBDevConfig{
-					N3000: &N3000BBDevConfig{
-						NetworkType: "FPGA_LTE",
-						Uplink: UplinkDownlink{
-							Queues: UplinkDownlinkQueues{
-								VF0: 2,
-								VF7: 10,
-								VF6: 10,
-							},
-						},
-					},
-				},
-			}
-			Expect(k8sClient.Create(context.TODO(), cc)).To(Succeed())
-		})
-	})
-
-})
-
-var _ = Describe("Creation of SriovFecClusterConfig with acc100 bbdevconfig", func() {
-	When("With total number of all specified numQueueGroups is greater than 8", func() {
-		It("invalid spec should be rejected", func() {
-			cc := ccPrototype.DeepCopy()
-			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
-				PFDriver: utils.PCI_PF_STUB_DASH,
-				VFAmount: 16,
-				BBDevConfig: BBDevConfig{
-					ACC100: &ACC100BBDevConfig{
-						NumVfBundles: 16,
-						MaxQueueSize: 1024,
-						Uplink4G: QueueGroupConfig{
-							NumQueueGroups:  8,
-							NumAqsPerGroups: 16,
-							AqDepthLog2:     4,
-						},
-						Uplink5G: QueueGroupConfig{
-							NumQueueGroups:  1,
-							NumAqsPerGroups: 16,
-							AqDepthLog2:     4,
-						},
-						Downlink4G: QueueGroupConfig{
-							NumQueueGroups:  0,
-							NumAqsPerGroups: 16,
-							AqDepthLog2:     4,
-						},
-						Downlink5G: QueueGroupConfig{
-							NumQueueGroups:  0,
-							NumAqsPerGroups: 16,
-							AqDepthLog2:     4,
-						},
-					},
-				},
-			}
-			Expect(k8sClient.Create(context.TODO(), cc)).To(MatchError(ContainSubstring("sum of all numQueueGroups should not be greater than 8")))
-			Expect(k8sClient.Create(context.TODO(), cc)).ToNot(Succeed())
-		})
-	})
-
-	When("fvAmount != bbDevConfig.acc100.numVfBundles", func() {
-		It("invalid spec should be rejected", func() {
-			cc := ccPrototype.DeepCopy()
-			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
-				PFDriver: "vfio-pci",
-				VFAmount: 2,
-				BBDevConfig: BBDevConfig{
-					ACC100: &ACC100BBDevConfig{
-						NumVfBundles: 16,
-						MaxQueueSize: 1024,
-						Uplink4G: QueueGroupConfig{
-							NumQueueGroups:  2,
-							NumAqsPerGroups: 16,
-							AqDepthLog2:     4,
-						},
-						Uplink5G: QueueGroupConfig{
-							NumQueueGroups:  2,
-							NumAqsPerGroups: 16,
-							AqDepthLog2:     4,
-						},
-						Downlink4G: QueueGroupConfig{
-							NumQueueGroups:  2,
-							NumAqsPerGroups: 16,
-							AqDepthLog2:     4,
-						},
-						Downlink5G: QueueGroupConfig{
-							NumQueueGroups:  2,
-							NumAqsPerGroups: 16,
-							AqDepthLog2:     4,
-						},
-					},
-				},
-			}
-
-			Expect(k8sClient.Create(context.TODO(), cc)).
-				To(MatchError(ContainSubstring("value should be the same as physicalFunction.vfAmount")))
-		})
-	})
-})
-
-var _ = Describe("Creation of SriovFecClusterConfig with acc200 bbdevconfig", func() {
+var _ = Describe("Creation of SriovVrbClusterConfig with vrb1 bbdevconfig", func() {
 	When("With total number of all specified numQueueGroups is greater than 16", func() {
 		It("invalid spec should be rejected", func() {
 			cc := ccPrototype.DeepCopy()
@@ -289,7 +171,7 @@ var _ = Describe("Creation of SriovFecClusterConfig with acc200 bbdevconfig", fu
 				PFDriver: utils.PCI_PF_STUB_DASH,
 				VFAmount: 16,
 				BBDevConfig: BBDevConfig{
-					ACC200: &ACC200BBDevConfig{
+					VRB1: &VRB1BBDevConfig{
 						ACC100BBDevConfig: ACC100BBDevConfig{
 							NumVfBundles: 16,
 							MaxQueueSize: 1024,
@@ -327,14 +209,14 @@ var _ = Describe("Creation of SriovFecClusterConfig with acc200 bbdevconfig", fu
 		})
 	})
 
-	When("fvAmount != bbDevConfig.acc200.numVfBundles", func() {
+	When("vfAmount != bbDevConfig.vrb1.numVfBundles", func() {
 		It("invalid spec should be rejected", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
 				PFDriver: "vfio-pci",
 				VFAmount: 2,
 				BBDevConfig: BBDevConfig{
-					ACC200: &ACC200BBDevConfig{
+					VRB1: &VRB1BBDevConfig{
 						ACC100BBDevConfig: ACC100BBDevConfig{
 							NumVfBundles: 16,
 							MaxQueueSize: 1024,
@@ -374,6 +256,109 @@ var _ = Describe("Creation of SriovFecClusterConfig with acc200 bbdevconfig", fu
 	})
 })
 
+var _ = Describe("Creation of SriovVrbClusterConfig with vrb2 bbdevconfig", func() {
+	When("With total number of all specified numQueueGroups is greater than 32", func() {
+		It("invalid spec should be rejected", func() {
+			cc := ccPrototype.DeepCopy()
+			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
+				PFDriver: utils.PCI_PF_STUB_DASH,
+				VFAmount: 64,
+				BBDevConfig: BBDevConfig{
+					VRB2: &VRB2BBDevConfig{
+						ACC100BBDevConfig: ACC100BBDevConfig{
+							NumVfBundles: 64,
+							MaxQueueSize: 1024,
+							Uplink4G: QueueGroupConfig{
+								NumQueueGroups:  0,
+								NumAqsPerGroups: 64,
+								AqDepthLog2:     4,
+							},
+							Uplink5G: QueueGroupConfig{
+								NumQueueGroups:  0,
+								NumAqsPerGroups: 64,
+								AqDepthLog2:     4,
+							},
+							Downlink4G: QueueGroupConfig{
+								NumQueueGroups:  0,
+								NumAqsPerGroups: 64,
+								AqDepthLog2:     4,
+							},
+							Downlink5G: QueueGroupConfig{
+								NumQueueGroups:  1,
+								NumAqsPerGroups: 64,
+								AqDepthLog2:     4,
+							},
+						},
+						QFFT: QueueGroupConfig{
+							NumQueueGroups:  32,
+							NumAqsPerGroups: 64,
+							AqDepthLog2:     4,
+						},
+						QMLD: QueueGroupConfig{
+							NumQueueGroups:  32,
+							NumAqsPerGroups: 64,
+							AqDepthLog2:     4,
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), cc)).To(MatchError(ContainSubstring("sum of all numQueueGroups should not be greater than 32")))
+			Expect(k8sClient.Create(context.TODO(), cc)).ToNot(Succeed())
+		})
+	})
+
+	When("vfAmount != bbDevConfig.vrb2.numVfBundles", func() {
+		It("invalid spec should be rejected", func() {
+			cc := ccPrototype.DeepCopy()
+			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
+				PFDriver: "vfio-pci",
+				VFAmount: 2,
+				BBDevConfig: BBDevConfig{
+					VRB2: &VRB2BBDevConfig{
+						ACC100BBDevConfig: ACC100BBDevConfig{
+							NumVfBundles: 16,
+							MaxQueueSize: 1024,
+							Uplink4G: QueueGroupConfig{
+								NumQueueGroups:  2,
+								NumAqsPerGroups: 16,
+								AqDepthLog2:     4,
+							},
+							Uplink5G: QueueGroupConfig{
+								NumQueueGroups:  2,
+								NumAqsPerGroups: 16,
+								AqDepthLog2:     4,
+							},
+							Downlink4G: QueueGroupConfig{
+								NumQueueGroups:  2,
+								NumAqsPerGroups: 16,
+								AqDepthLog2:     4,
+							},
+							Downlink5G: QueueGroupConfig{
+								NumQueueGroups:  2,
+								NumAqsPerGroups: 16,
+								AqDepthLog2:     4,
+							},
+						},
+						QFFT: QueueGroupConfig{
+							NumQueueGroups:  0,
+							NumAqsPerGroups: 16,
+							AqDepthLog2:     4,
+						},
+						QMLD: QueueGroupConfig{
+							NumQueueGroups:  0,
+							NumAqsPerGroups: 16,
+							AqDepthLog2:     4,
+						},
+					},
+				},
+			}
+
+			Expect(k8sClient.Create(context.TODO(), cc)).
+				To(MatchError(ContainSubstring("value should be the same as physicalFunction.vfAmount")))
+		})
+	})
+})
+
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logr.New(utils.NewLogWrapper()))
 
@@ -381,13 +366,14 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: false,
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "config", "webhook")},
+			Paths: []string{filepath.Join("..", "..", "..", "config", "webhook")},
 		},
 	}
 
+	// cfg is defined in this file globally.
 	cfg, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
@@ -416,7 +402,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&SriovFecClusterConfig{}).SetupWebhookWithManager(mgr)
+	err = (&SriovVrbClusterConfig{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:webhook
@@ -424,9 +410,7 @@ var _ = BeforeSuite(func() {
 	go func() {
 		defer GinkgoRecover()
 		err = mgr.Start(ctx)
-		if err != nil {
-			Expect(err).NotTo(HaveOccurred())
-		}
+		Expect(err).NotTo(HaveOccurred())
 	}()
 
 	// wait for the webhook server to get ready
@@ -452,32 +436,32 @@ var _ = AfterSuite(func() {
 
 func FuzzValidateUpdate(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
-		sfcc := new(SriovFecClusterConfig)
-		fuzz.NewFromGoFuzz(data).Fuzz(sfcc)
+		vrbcc := new(SriovVrbClusterConfig)
+		fuzz.NewFromGoFuzz(data).Fuzz(vrbcc)
 
 		defer func() {
 			if r := recover(); r != nil {
-				t.Errorf("fuzzing resulted in panic. sfcc:\n %+v\n", sfcc)
+				t.Errorf("fuzzing resulted in panic. vrbcc:\n %+v\n", vrbcc)
 			}
 		}()
 
-		_ = sfcc.ValidateUpdate(nil)
+		_ = vrbcc.ValidateUpdate(nil)
 
 	})
 }
 
 func FuzzValidateCreate(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
-		sfcc := new(SriovFecClusterConfig)
-		fuzz.NewFromGoFuzz(data).Fuzz(sfcc)
+		vrbcc := new(SriovVrbClusterConfig)
+		fuzz.NewFromGoFuzz(data).Fuzz(vrbcc)
 
 		defer func() {
 			if r := recover(); r != nil {
-				t.Errorf("fuzzing resulted in panic. sfcc:\n %+v\n", sfcc)
+				t.Errorf("fuzzing resulted in panic. vrbcc:\n %+v\n", vrbcc)
 			}
 		}()
 
-		_ = sfcc.ValidateCreate()
+		_ = vrbcc.ValidateCreate()
 
 	})
 }

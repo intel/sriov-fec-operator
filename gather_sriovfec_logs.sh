@@ -62,9 +62,9 @@ pods=$("${K8S_BIN}" -n "${NAMESPACE}" get pods -o custom-columns=NAME:.metadata.
 # shellcheck disable=SC2068
 for pod in ${pods[@]}; do
    nodeName=$("${K8S_BIN}" -n "${NAMESPACE}" get pod "${pod}" -o custom-columns=NODE:.spec.nodeName --no-headers=true)
-   "${K8S_BIN}" -n "${NAMESPACE}" exec -it "${pod}" -- bash -c "chroot /host dmesg" > systemLogs/dmesg-"${nodeName}".log
-   "${K8S_BIN}" -n "${NAMESPACE}" exec -it "${pod}" -- bash -c "chroot /host lspci -vvv" > systemLogs/lspci-"${nodeName}".log
-   telemetryFiles=$("${K8S_BIN}" -n "${NAMESPACE}" exec -it "${pod}" -- bash -c "ls -f -A1 /var/log/|grep pf_bb_cfg| tr -d '\n'")
+   "${K8S_BIN}" -n "${NAMESPACE}" exec -it "${pod}" -- bash -c "chroot / dmesg" > systemLogs/dmesg-"${nodeName}".log
+   "${K8S_BIN}" -n "${NAMESPACE}" exec -it "${pod}" -- bash -c "chroot / lspci -vvv" > systemLogs/lspci-"${nodeName}".log
+   telemetryFiles=$("${K8S_BIN}" -n "${NAMESPACE}" exec -it "${pod}" -- bash -c "ls -f -A1 /var/log/"|grep pf_bb_cfg| tr -d '\r')
    for telemetryFiles in ${telemetryFiles[@]}; do
       "${K8S_BIN}" -n "${NAMESPACE}" exec -it "${pod}" -- bash -c "cat /var/log/${telemetryFiles}" > systemLogs/"${nodeName}"-"${telemetryFiles}"
    done

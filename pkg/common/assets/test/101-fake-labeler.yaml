@@ -63,6 +63,18 @@ data:
           },
           "NodeLabel": "fpga.intel.com/intel-accelerator-present"
         }
+      accelerators_vrb.json: |
+      {
+        "VendorID": {
+          "8086": "Intel Corporation"
+        },
+        "Class": "12",
+        "SubClass": "00",
+        "Devices": {
+          "57c0": "VRB1"
+        },
+        "NodeLabel": "fpga.intel.com/intel-accelerator-present"
+      }
   daemonSet: |
     apiVersion: apps/v1
     kind: DaemonSet
@@ -105,3 +117,5 @@ data:
                 items:
                 - key: accelerators.json
                   path: accelerators.json
+                - key: accelerators_vrb.json
+                  path: accelerators_vrb.json

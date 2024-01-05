@@ -7,14 +7,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"os"
 	"path/filepath"
 	"reflect"
+	"testing"
 	"time"
 
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	fuzz "github.com/google/gofuzz"
+	"github.com/google/uuid"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
+	vrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
@@ -42,6 +46,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 	BeforeEach(func() {
 		Expect(sriovv2.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
+		Expect(vrbv1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
 	})
 
 	Describe("NodeConfigReconciler.Reconcile(...)", func() {
@@ -54,6 +59,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 			//configure kernel controller
 			procCmdlineFilePath = "testdata/cmdline_test"
 			configPath = "testdata/accelerators.json"
+			VrbconfigPath = "testdata/accelerators_vrb.json"
 
 			//configure node configurator
 			workdir = testTmpFolder
@@ -101,7 +107,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 				drainer := func(operation func(ctx context.Context) bool, drain bool) error { return nil }
 
 				var err error
-				reconciler, err = NewNodeConfigReconciler(&onGetErrorReturningClient, drainer, nodeNameRef, nil, nil)
+				reconciler, err = NewNodeConfigReconciler(&onGetErrorReturningClient, drainer, nodeNameRef, nil, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(reconciler).ToNot(BeNil())
 			})
@@ -144,6 +150,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 							return nil
 						},
 						nodeNameRef,
+						configurer,
 						configurer,
 						func() error {
 							return nil
@@ -226,7 +233,8 @@ var _ = Describe("NodeConfigReconciler", func() {
 					}
 
 					fakeClient := fake.NewClientBuilder().WithObjects(&data.SriovFecNodeConfig).Build()
-					reconciler := NodeConfigReconciler{Client: fakeClient, log: log}
+					nodeNameRef := types.NamespacedName{Namespace: _SUPPORTED_NAMESPACE, Name: _THIS_NODE_NAME}
+					reconciler := NodeConfigReconciler{Client: fakeClient, log: log, nodeNameRef: nodeNameRef}
 
 					_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{
 						Name:      _THIS_NODE_NAME,
@@ -271,7 +279,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 					nodeNameRef := types.NamespacedName{Namespace: _SUPPORTED_NAMESPACE, Name: _THIS_NODE_NAME}
 
-					nodeReconciler, err := NewNodeConfigReconciler(k8sClient, drainer, nodeNameRef, nil, nil)
+					nodeReconciler, err := NewNodeConfigReconciler(k8sClient, drainer, nodeNameRef, nil, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 
 					reconciler := nodeRecocnilerWrapper{
@@ -340,7 +348,8 @@ var _ = Describe("NodeConfigReconciler", func() {
 			When("NodeConfigReconciler cannot read inventory", func() {
 				It("SriovFecNodeConfig.Status.Condition should expose appropriate info", func() {
 					fakeClient := fake.NewClientBuilder().WithObjects(&data.SriovFecNodeConfig).Build()
-					reconciler := NodeConfigReconciler{Client: fakeClient, log: log}
+					nodeNameRef := types.NamespacedName{Namespace: _SUPPORTED_NAMESPACE, Name: _THIS_NODE_NAME}
+					reconciler := NodeConfigReconciler{Client: fakeClient, log: log, nodeNameRef: nodeNameRef}
 					getSriovInventory = func(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
 						return nil, fmt.Errorf("cannot read inventory")
 					}
@@ -580,4 +589,96 @@ type resultCatcher struct {
 func (r *resultCatcher) Return(toBeReturned ...interface{}) *runExecCmdMock {
 	*r.toBeReturned = toBeReturned
 	return r.mock
+}
+
+func FuzzIsCardUpdateRequired(f *testing.F) {
+	icur := NodeConfigReconciler{
+		Client:      nil,
+		log:         &logrus.Logger{},
+		nodeNameRef: types.NamespacedName{},
+		drainerAndExecute: func(configurer func(ctx context.Context) bool, drain bool) error {
+			return nil
+		},
+		sriovfecconfigurer: nil,
+		vrbconfigurer:      nil,
+		restartDevicePlugin: func() error {
+			return nil
+		},
+	}
+	f.Fuzz(func(t *testing.T, data []byte) {
+		sfnc := sriovv2.SriovFecNodeConfig{
+			TypeMeta:   metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{},
+			Spec:       sriovv2.SriovFecNodeConfigSpec{},
+			Status:     sriovv2.SriovFecNodeConfigStatus{},
+		}
+
+		detectedInventory := sriovv2.NodeInventory{
+			SriovAccelerators: []sriovv2.SriovAccelerator{},
+		}
+
+		fuzz.NewFromGoFuzz(data).Fuzz(&sfnc)
+		fuzz.NewFromGoFuzz(data).Fuzz(&detectedInventory)
+
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Error: %v", icur)
+			}
+		}()
+		_ = icur.isCardUpdateRequired(&sfnc, &detectedInventory)
+	})
+}
+
+func FuzzVrbIsCardUpdateRequired(f *testing.F) {
+	vicur := NodeConfigReconciler{
+		Client:      nil,
+		log:         &logrus.Logger{},
+		nodeNameRef: types.NamespacedName{},
+		drainerAndExecute: func(configurer func(ctx context.Context) bool, drain bool) error {
+			return nil
+		},
+		sriovfecconfigurer: nil,
+		vrbconfigurer:      nil,
+		restartDevicePlugin: func() error {
+			return nil
+		},
+	}
+	f.Fuzz(func(t *testing.T, data []byte) {
+		svnc := vrbv1.SriovVrbNodeConfig{
+			TypeMeta:   metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{},
+			Spec:       vrbv1.SriovVrbNodeConfigSpec{},
+			Status:     vrbv1.SriovVrbNodeConfigStatus{},
+		}
+
+		detectedInventory := vrbv1.NodeInventory{
+			SriovAccelerators: []vrbv1.SriovAccelerator{},
+		}
+
+		fuzz.NewFromGoFuzz(data).Fuzz(&svnc)
+		fuzz.NewFromGoFuzz(data).Fuzz(&detectedInventory)
+
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Error: %v", vicur)
+			}
+		}()
+		_ = vicur.VrbisCardUpdateRequired(&svnc, &detectedInventory)
+	})
+}
+
+func FuzzValidateNodeConfig(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		nc := sriovv2.SriovFecNodeConfigSpec{
+			PhysicalFunctions: []sriovv2.PhysicalFunctionConfigExt{},
+			DrainSkip:         false,
+		}
+		fuzz.NewFromGoFuzz(data).Fuzz(&nc)
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Error: %v", nc)
+			}
+		}()
+		_ = validateNodeConfig(nc)
+	})
 }

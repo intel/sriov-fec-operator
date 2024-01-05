@@ -9,7 +9,8 @@ import (
 	"fmt"
 	"io"
 
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
+	vrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
 	"gopkg.in/ini.v1"
 )
 
@@ -49,8 +50,40 @@ func generateBBDevConfigFile(bbDevConfig sriovv2.BBDevConfig, file string) (err 
 	return nil
 }
 
+func generateVrbBBDevConfigFile(bbDevConfig vrbv1.BBDevConfig, file string) (err error) {
+
+	if err = bbDevConfig.Validate(); err != nil {
+		return err
+	}
+
+	var iniFile *ini.File
+
+	switch {
+	case bbDevConfig.VRB1 != nil:
+		if iniFile, err = createIniFileContent(vrb1BBDevConfigToIniStruct, bbDevConfig.VRB1); err != nil {
+			return fmt.Errorf("creation of pf_bb_config config file for VRB1 failed, %s", err)
+		}
+	case bbDevConfig.VRB2 != nil:
+		if iniFile, err = createIniFileContent(vrb2BBDevConfigToIniStruct, bbDevConfig.VRB2); err != nil {
+			return fmt.Errorf("creation of pf_bb_config config file for VRB2 failed, %s", err)
+		}
+	default:
+		return fmt.Errorf("received BBDevConfig is empty")
+	}
+
+	if err := logIniFile(iniFile); err != nil {
+		return err
+	}
+
+	if err := iniFile.SaveTo(file); err != nil {
+		return fmt.Errorf("unable to write config to file: %s", file)
+	}
+
+	return nil
+}
+
 type bbDeviceConfig interface {
-	*sriovv2.ACC100BBDevConfig | *sriovv2.ACC200BBDevConfig | *sriovv2.N3000BBDevConfig
+	*sriovv2.ACC100BBDevConfig | *sriovv2.ACC200BBDevConfig | *sriovv2.N3000BBDevConfig | *vrbv1.ACC100BBDevConfig | *vrbv1.VRB1BBDevConfig | *vrbv1.VRB2BBDevConfig
 }
 
 func createIniFileContent[BB bbDeviceConfig, C func(BB) interface{}](convertToIniStruct C, bbDevConfig BB) (*ini.File, error) {
@@ -60,7 +93,7 @@ func createIniFileContent[BB bbDeviceConfig, C func(BB) interface{}](convertToIn
 
 	iniFile := ini.Empty()
 	if err := iniFile.ReflectFrom(convertToIniStruct(bbDevConfig)); err != nil {
-		return nil, fmt.Errorf("creation of pf_bb_config config file for ACC200 failed, %s", err)
+		return nil, fmt.Errorf("creation of pf_bb_config config file for ACC200/VRB1 failed, %s", err)
 	}
 
 	return iniFile, nil
@@ -84,6 +117,14 @@ type queueGroupConfigIniWrapper struct {
 }
 
 func queueGroupConfigToIniStruct(in sriovv2.QueueGroupConfig) queueGroupConfigIniWrapper {
+	return queueGroupConfigIniWrapper{
+		NumQueueGroups:  in.NumQueueGroups,
+		NumAqsPerGroups: in.NumAqsPerGroups,
+		AqDepthLog2:     in.AqDepthLog2,
+	}
+}
+
+func VrbqueueGroupConfigToIniStruct(in vrbv1.QueueGroupConfig) queueGroupConfigIniWrapper {
 	return queueGroupConfigIniWrapper{
 		NumQueueGroups:  in.NumQueueGroups,
 		NumAqsPerGroups: in.NumAqsPerGroups,
@@ -134,9 +175,44 @@ func acc100BBDevConfigToIniStruct(in *sriovv2.ACC100BBDevConfig) interface{} {
 	}
 }
 
+func Vrbacc100BBDevConfigToIniStruct(in *vrbv1.ACC100BBDevConfig) interface{} {
+	return &acc100BBDevConfigIniWrapper{
+		PFMode: struct {
+			PFMode string `ini:"pf_mode_en"`
+		}{
+			boolToIntStringMapping[in.PFMode],
+		},
+		NumVfBundles: struct {
+			NumVfBundles int `ini:"num_vf_bundles"`
+		}{
+			in.NumVfBundles,
+		},
+		MaxQueueSize: struct {
+			MaxQueueSize int `ini:"max_queue_size"`
+		}{
+			in.MaxQueueSize,
+		},
+		Uplink5G:   VrbqueueGroupConfigToIniStruct(in.Uplink5G),
+		Uplink4G:   VrbqueueGroupConfigToIniStruct(in.Uplink4G),
+		Downlink5G: VrbqueueGroupConfigToIniStruct(in.Downlink5G),
+		Downlink4G: VrbqueueGroupConfigToIniStruct(in.Downlink4G),
+	}
+}
+
 type acc200BBDevConfigIniWrapper struct {
 	Wrapper acc100BBDevConfigIniWrapper `ini:"DEFAULT"`
 	QFFT    queueGroupConfigIniWrapper  `ini:"QFFT"`
+}
+
+type vrb1BBDevConfigIniWrapper struct {
+	Wrapper acc100BBDevConfigIniWrapper `ini:"DEFAULT"`
+	QFFT    queueGroupConfigIniWrapper  `ini:"QFFT"`
+}
+
+type vrb2BBDevConfigIniWrapper struct {
+	Wrapper acc100BBDevConfigIniWrapper `ini:"DEFAULT"`
+	QFFT    queueGroupConfigIniWrapper  `ini:"QFFT"`
+	QMLD    queueGroupConfigIniWrapper  `ini:"QMLD"`
 }
 
 func acc200BBDevConfigToIniStruct(in *sriovv2.ACC200BBDevConfig) interface{} {
@@ -144,6 +220,23 @@ func acc200BBDevConfigToIniStruct(in *sriovv2.ACC200BBDevConfig) interface{} {
 	return &acc200BBDevConfigIniWrapper{
 		Wrapper: *delegate,
 		QFFT:    queueGroupConfigToIniStruct(in.QFFT),
+	}
+}
+
+func vrb1BBDevConfigToIniStruct(in *vrbv1.VRB1BBDevConfig) interface{} {
+	delegate := Vrbacc100BBDevConfigToIniStruct(&in.ACC100BBDevConfig).(*acc100BBDevConfigIniWrapper)
+	return &vrb1BBDevConfigIniWrapper{
+		Wrapper: *delegate,
+		QFFT:    VrbqueueGroupConfigToIniStruct(in.QFFT),
+	}
+}
+
+func vrb2BBDevConfigToIniStruct(in *vrbv1.VRB2BBDevConfig) interface{} {
+	delegate := Vrbacc100BBDevConfigToIniStruct(&in.ACC100BBDevConfig).(*acc100BBDevConfigIniWrapper)
+	return &vrb2BBDevConfigIniWrapper{
+		Wrapper: *delegate,
+		QFFT:    VrbqueueGroupConfigToIniStruct(in.QFFT),
+		QMLD:    VrbqueueGroupConfigToIniStruct(in.QMLD),
 	}
 }
 

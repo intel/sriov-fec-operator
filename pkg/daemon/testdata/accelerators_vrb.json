@@ -1,0 +1,11 @@
+{
+    "VendorID": {
+      "8086": "Intel Corporation"
+    },
+    "Class": "12",
+    "SubClass": "00",
+    "Devices": {
+      "57c0": "VRB1"
+    },
+    "NodeLabel": "fpga.intel.com/intel-accelerator-present"
+  }

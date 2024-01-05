@@ -28,8 +28,21 @@ data:
             "0d8f": "FPGA_5GNR",
             "5052": "FPGA_LTE",
             "0d5c": "ACC100",
-            "57c0": "ACC200", 
+            "57c0": "ACC200",
             "0b32": ""
+          },
+          "NodeLabel": "fpga.intel.com/intel-accelerator-present"
+        }
+      accelerators_vrb.json: |
+        {
+          "VendorID": {
+            "8086": "Intel Corporation"
+          },
+          "Class": "12",
+          "SubClass": "00",
+          "Devices": {
+            "57c0": "VRB1",
+            "57c2": "VRB2"
           },
           "NodeLabel": "fpga.intel.com/intel-accelerator-present"
         }
@@ -111,3 +124,5 @@ data:
                 items:
                 - key: accelerators.json
                   path: accelerators.json
+                - key: accelerators_vrb.json
+                  path: accelerators_vrb.json

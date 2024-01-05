@@ -1,0 +1,42 @@
+apiVersion: sriovvrb.intel.com/v1
+kind: SriovVrbnodeconfig
+metadata:
+  name: vrb1-worker
+  namespace: vran-acceleration-operators
+spec:
+  drainSkip: true
+  physicalFunctions:
+  - bbDevConfig:
+      vrb1:
+        downlink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        downlink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        fftLut:
+          fftChecksum: relatedChecksum
+          fftUrl: somefftUrl
+        maxQueueSize: 1024
+        numVfBundles: 4
+        pfbbConf:
+          pfbbChecksum: relatedChecksum
+          pfbbUrl: somepfbbUrl
+        qfft:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        uplink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        uplink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+    pciAddress: somePciAddress
+    pfDriver: vfio-pci
+    vfAmount: 4
+    vfDriver: vfio-pci    

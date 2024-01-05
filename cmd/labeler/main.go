@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	configPath = "/labeler-workspace/config/accelerators.json"
+	configPath    = "/labeler-workspace/config/accelerators.json"
+	vrbconfigPath = "/labeler-workspace/config/accelerators_vrb.json"
 )
 
 var getInclusterConfigFunc = rest.InClusterConfig
@@ -90,24 +91,30 @@ func setNodeLabel(nodeName, label string, removeLabel bool) error {
 	return nil
 }
 
-func acceleratorDiscovery(cfgPath string) error {
+func acceleratorDiscovery(cfgPath string, vrbcfgPath string) error {
 	cfg, err := utils.LoadDiscoveryConfig(cfgPath)
 	if err != nil {
 		return fmt.Errorf("Failed to load config: %v", err)
 	}
-	accFound, err := findAccelerator(&cfg)
+	vrbcfg, err := utils.LoadDiscoveryConfig(vrbcfgPath)
 	if err != nil {
-		return fmt.Errorf("Failed to find accelerator: %v", err)
+		return fmt.Errorf("Failed to load Vrbconfig: %v", err)
+	}
+	accFound, err1 := findAccelerator(&cfg)
+	vrbaccFound, err2 := findAccelerator(&vrbcfg)
+
+	if err1 != nil && err2 != nil {
+		return fmt.Errorf("Failed to find accelerator: %v \n%v\n", err1, err2)
 	}
 	nodeName := os.Getenv("NODENAME")
 	if nodeName == "" {
 		return fmt.Errorf("NODENAME environment variable is empty")
 	}
-	return setNodeLabel(nodeName, cfg.NodeLabel, !accFound)
+	return setNodeLabel(nodeName, cfg.NodeLabel, !(accFound || vrbaccFound))
 }
 
 func main() {
-	if err := acceleratorDiscovery(configPath); err != nil {
+	if err := acceleratorDiscovery(configPath, vrbconfigPath); err != nil {
 		fmt.Printf("Accelerator discovery failed: %v\n", err)
 		os.Exit(1)
 	}
