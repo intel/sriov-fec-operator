@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020-2023 Intel Corporation
 
-FROM golang:1.20.6 as builder
+FROM golang:1.21.5 as builder
 
 WORKDIR /workspace-pf
 
-RUN git clone --depth 1 --branch v23.03 https://github.com/intel/pf-bb-config /workspace-pf/pf-bb-config
+RUN git clone --depth 1 --branch v23.11 https://github.com/intel/pf-bb-config /workspace-pf/pf-bb-config
 
 WORKDIR /workspace-pf/pf-bb-config
 
@@ -23,25 +23,29 @@ COPY api api/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
 
-FROM registry.access.redhat.com/ubi9/ubi:9.2-696 as package_installer
+FROM registry.access.redhat.com/ubi9/ubi:9.3 as package_installer
 
-RUN yum install -y ethtool iproute kmod procps-ng pciutils util-linux tar gzip gcc make wget && yum clean all
-
-
-RUN wget -O zlib-1.2.13.tar.gz https://github.com/madler/zlib/releases/download/v1.2.13/zlib-1.2.13.tar.gz && \
+RUN yum install -y \
+    ethtool-6.2-1.el9 \
+    gcc-11.4.1-2.1.el9 \
+    kmod-28-9.el9 \
+    pciutils-3.7.0-5.el9 \
+    procps-ng-3.3.17-13.el9 \
+    make-4.3-7.el9 \
+    wget-1.21.1-7.el9 && yum clean all &&\
+    wget --progress=dot:giga -O zlib-1.2.13.tar.gz https://github.com/madler/zlib/releases/download/v1.2.13/zlib-1.2.13.tar.gz && \
     tar xzvf zlib-1.2.13.tar.gz
 WORKDIR /zlib-1.2.13
 RUN ./configure && make test && make install
 
 WORKDIR /workspace
 
-RUN wget https://pci-ids.ucw.cz/v2.2/pci.ids.gz -O pci.ids.gz && \
+RUN wget --progress=dot:giga  https://pci-ids.ucw.cz/v2.2/pci.ids.gz -O pci.ids.gz && \
     gzip -d pci.ids.gz && \
-    rm -rfv ./pci.ids.gz
+    rm -rfv ./pci.ids.gz && \
+	yum remove -y wget
 
-RUN yum remove -y wget
-
-FROM registry.access.redhat.com/ubi9/ubi-micro:9.2-9
+FROM registry.access.redhat.com/ubi9/ubi-micro:9.3-6
 
 ARG VERSION
 ### Required OpenShift Labels
@@ -52,12 +56,9 @@ LABEL name="SR-IOV Operator for Wireless FEC Accelerators daemonset" \
     summary="Manages SR-IOV resources on Wireless FEC Accelerators" \
     description="The daemonset container is responsible for building the nodes inventory and configuring the SRIOV-FEC portion of the supported accelerators"
 
-
-
 RUN mkdir -p /usr/share/misc/
 
 COPY --from=package_installer /workspace/pci.ids /usr/share/misc/pci.ids
-
 
 COPY --from=package_installer /lib64/libmnl.so.0 \
     /lib64/libzstd.so.1 /lib64/liblzma.so.5 /lib64/libcrypto.so.3 \
@@ -98,8 +99,9 @@ COPY --from=package_installer /bin/awk /bin/sed /bin/
 RUN mkdir /usr/share/hwdata
 COPY --from=package_installer /usr/share/hwdata /usr/share/hwdata
 
-RUN mkdir /sriov_workdir
-RUN mkdir -p /sriov_workdir/vrb1
+RUN mkdir /sriov_workdir &&\
+    mkdir -p /sriov_workdir/vrb1 &&\
+    mkdir -p /sriov_workdir/vrb2
 
 USER 1001
 
@@ -108,5 +110,6 @@ WORKDIR /sriov_workdir
 COPY --from=builder /workspace-go/sriov_fec_daemon .
 COPY --from=builder /workspace-pf/pf-bb-config/pf_bb_config .
 COPY --from=builder /workspace-pf/pf-bb-config/vrb1/srs_fft_windows_coefficient.bin vrb1/
+COPY --from=builder /workspace-pf/pf-bb-config/vrb2/srs_fft_windows_coefficient.bin vrb2/
 
 ENTRYPOINT ["/sriov_workdir/sriov_fec_daemon"]

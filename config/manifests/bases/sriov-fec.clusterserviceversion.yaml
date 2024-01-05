@@ -170,5 +170,5 @@ spec:
   provider:
     name: Intel Corporation
     url: https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf
-  replaces: sriov-fec.v2.7.1
+  replaces: sriov-fec.v2.7.2
   version: 0.0.0

@@ -4,16 +4,19 @@
 package main
 
 import (
+	"flag"
+	"os"
+	"syscall"
+
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/drainhelper"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
-	"os"
-	"syscall"
 
 	"k8s.io/apimachinery/pkg/types"
 
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
+	vrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/daemon"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,6 +35,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(sriovv2.AddToScheme(scheme))
+	utilruntime.Must(vrbv1.AddToScheme(scheme))
 }
 
 func main() {
@@ -47,6 +51,18 @@ func main() {
 	if err != nil {
 		setupLog.WithError(err).Error("failed to create direct client")
 		os.Exit(1)
+	}
+
+	pfBbConfigCliCmd := flag.String("C", "", "CLI command string")
+	flag.Usage = func() {
+		daemon.ShowHelp()
+	}
+	flag.Parse()
+	if *pfBbConfigCliCmd != "" {
+		// Get the additional arguments after CLI command
+		args := flag.Args()
+		daemon.StartPfBbConfigCli(nodeName, ns, directClient, *pfBbConfigCliCmd, args, setupLog)
+		return
 	}
 
 	cset, err := clientset.NewForConfig(config)
@@ -86,14 +102,19 @@ func main() {
 	nodeConfigurer := daemon.NewNodeConfigurator(utils.NewLogger(), pfBBConfigController, mgr.GetClient(), nodeNameRef)
 	devicePluginController := daemon.NewDevicePluginController(mgr.GetClient(), utils.NewLogger(), nodeNameRef)
 
-	reconciler, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), drainHelper.Run, nodeNameRef, nodeConfigurer, devicePluginController.RestartDevicePlugin)
+	reconciler, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), drainHelper.Run, nodeNameRef, nodeConfigurer, nodeConfigurer, devicePluginController.RestartDevicePlugin)
 	if err != nil {
 		setupLog.WithError(err).Error("unable to create reconciler")
 		os.Exit(1)
 	}
 
 	if err := reconciler.SetupWithManager(mgr); err != nil {
-		setupLog.WithError(err).Error("unable to create controller", "controller", "NodeConfig")
+		setupLog.WithError(err).Error("unable to create controller for SrionvFecNodeConfig")
+		os.Exit(1)
+	}
+
+	if err := reconciler.VrbSetupWithManager(mgr); err != nil {
+		setupLog.WithError(err).Error("unable to create controller for SriovVrbNodeConfig")
 		os.Exit(1)
 	}
 

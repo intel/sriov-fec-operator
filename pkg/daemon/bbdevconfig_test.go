@@ -10,10 +10,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	fuzz "github.com/google/gofuzz"
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 )
 
 func compareFiles(firstFilepath, secondFilepath string) error {
@@ -218,4 +220,42 @@ func Test(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+}
+func FuzzInitializePfBBConfig(f *testing.F) {
+	pfbb := pfBBConfigController{
+		log:               &logrus.Logger{},
+		sharedVfioToken:   "",
+		fftUpdater:        &fftUpdater{},
+	}
+	f.Fuzz(func(t *testing.T, data []byte) {
+		accData := sriovv2.SriovAccelerator{
+			VendorID:   "",
+			DeviceID:   "",
+			PCIAddress: "",
+			PFDriver:   "",
+			MaxVFs:     0,
+			VFs:        []sriovv2.VF{},
+		}
+		pfData := sriovv2.PhysicalFunctionConfigExt{
+			PCIAddress: "",
+			PFDriver:   "",
+			VFDriver:   "",
+			VFAmount:   0,
+			BBDevConfig: sriovv2.BBDevConfig{
+				N3000:  &sriovv2.N3000BBDevConfig{},
+				ACC100: &sriovv2.ACC100BBDevConfig{},
+				ACC200: &sriovv2.ACC200BBDevConfig{},
+			},
+		}
+
+		fuzz.NewFromGoFuzz(data).Fuzz(&accData)
+		fuzz.NewFromGoFuzz(data).Fuzz(&pfData)
+
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Error: %v", pfbb)
+			}
+		}()
+		_ = pfbb.initializePfBBConfig(accData, &pfData)
+	})
 }

@@ -10,7 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
+	vrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
 	sriovutils "github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
 	"github.com/sirupsen/logrus"
@@ -159,13 +160,11 @@ func (n *NodeConfigurator) changeAmountOfVFs(driver string, pfPCIAddress string,
 			return fmt.Errorf("unknown driver %v", driver)
 		}
 
-		n.Log.WithField("op", "VF Enable").Info("Start")
 		err := writeFileWithTimeout(unbindPath, strconv.Itoa(vfsAmount))
 		if err != nil {
 			n.Log.WithError(err).WithField("pf", pfPCIAddress).WithField("vfsAmount", vfsAmount).Error("failed to set new amount of VFs for PF")
 			return fmt.Errorf("failed to set new amount of VFs (%d) for PF (%s): %w", vfsAmount, pfPCIAddress, err)
 		}
-		n.Log.WithField("op", "VF Enable").Info("Complete")
 		return nil
 	}
 
@@ -196,6 +195,10 @@ func (n *NodeConfigurator) flrReset(pfPCIAddress string) error {
 func (n *NodeConfigurator) cleanAcceleratorConfig(acc sriovv2.SriovAccelerator) error {
 	n.Log.Infof("cleaning configuration on %s", acc.PCIAddress)
 
+	if err := n.pfBBConfigController.stopPfBBConfig(acc.PCIAddress); err != nil {
+		return err
+	}
+
 	if err := unbindVFs(n, acc); err != nil {
 		return err
 	}
@@ -208,9 +211,28 @@ func (n *NodeConfigurator) cleanAcceleratorConfig(acc sriovv2.SriovAccelerator) 
 		return err
 	}
 
+	return nil
+}
+
+func (n *NodeConfigurator) VrbcleanAcceleratorConfig(acc vrbv1.SriovAccelerator) error {
+	n.Log.Infof("cleaning configuration on %s", acc.PCIAddress)
+
 	if err := n.pfBBConfigController.stopPfBBConfig(acc.PCIAddress); err != nil {
 		return err
 	}
+
+	if err := VrbunbindVFs(n, acc); err != nil {
+		return err
+	}
+
+	if err := VrbremoveVFs(n, acc); err != nil {
+		return err
+	}
+
+	if err := n.flrReset(acc.PCIAddress); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -223,7 +245,31 @@ func removeVFs(nc *NodeConfigurator, acc sriovv2.SriovAccelerator) error {
 	return nil
 }
 
+func VrbremoveVFs(nc *NodeConfigurator, acc vrbv1.SriovAccelerator) error {
+	if len(acc.VFs) > 0 {
+		if err := nc.changeAmountOfVFs(acc.PFDriver, acc.PCIAddress, 0); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func unbindVFs(nc *NodeConfigurator, acc sriovv2.SriovAccelerator) error {
+	existingVfs, err := getVFList(acc.PCIAddress)
+	if err != nil {
+		nc.Log.WithError(err).Error("failed to get list of newly created VFs")
+		return err
+	}
+
+	for _, vf := range existingVfs {
+		if err := nc.unbindIfBound(vf); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func VrbunbindVFs(nc *NodeConfigurator, acc vrbv1.SriovAccelerator) error {
 	existingVfs, err := getVFList(acc.PCIAddress)
 	if err != nil {
 		nc.Log.WithError(err).Error("failed to get list of newly created VFs")
@@ -280,6 +326,35 @@ func (n *NodeConfigurator) ApplySpec(nodeConfig sriovv2.SriovFecNodeConfigSpec) 
 	return nil
 }
 
+func (n *NodeConfigurator) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpec) error {
+	inv, err := VrbgetSriovInventory(n.Log)
+	if err != nil {
+		n.Log.WithError(err).Error("failed to obtain current sriov inventory")
+		return err
+	}
+
+	n.Log.WithField("inventory", inv).Info("current node status")
+
+	for _, acc := range inv.SriovAccelerators {
+		requestedConfig := VrbgetMatchingConfiguration(acc.PCIAddress, nodeConfig.PhysicalFunctions)
+		if requestedConfig == nil {
+			if len(acc.VFs) > 0 {
+				n.Log.WithField("pci", acc.PCIAddress).WithField("driverName", acc.PFDriver).Info("zeroing VFs")
+				if err := n.VrbcleanAcceleratorConfig(acc); err != nil {
+					return err
+				}
+			}
+
+			continue
+		}
+		if err := n.VrbconfigureAccelerator(acc, requestedConfig); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (n *NodeConfigurator) configureAccelerator(acc sriovv2.SriovAccelerator, requestedConfig *sriovv2.PhysicalFunctionConfigExt) error {
 	n.Log.WithField("requestedConfig", requestedConfig).Info("configuring PF")
 
@@ -323,7 +398,59 @@ func (n *NodeConfigurator) configureAccelerator(acc sriovv2.SriovAccelerator, re
 
 }
 
+func (n *NodeConfigurator) VrbconfigureAccelerator(acc vrbv1.SriovAccelerator, requestedConfig *vrbv1.PhysicalFunctionConfigExt) error {
+	n.Log.WithField("requestedConfig", requestedConfig).Info("configuring PF")
+
+	if err := n.VrbcleanAcceleratorConfig(acc); err != nil {
+		return err
+	}
+
+	if err := loadDrivers(n, requestedConfig.PFDriver, requestedConfig.VFDriver); err != nil {
+		return err
+	}
+
+	if err := n.bindDeviceToDriver(requestedConfig.PCIAddress, requestedConfig.PFDriver); err != nil {
+		return err
+	}
+
+	if err := n.configureCommandRegister(requestedConfig.PCIAddress); err != nil {
+		return err
+	}
+
+	if err := n.pfBBConfigController.VrbinitializePfBBConfig(acc, requestedConfig); err != nil {
+		return err
+	}
+
+	if err := n.changeAmountOfVFs(requestedConfig.PFDriver, requestedConfig.PCIAddress, requestedConfig.VFAmount); err != nil {
+		return err
+	}
+
+	createdVfs, err := getVFList(acc.PCIAddress)
+	if err != nil {
+		n.Log.WithError(err).Error("failed to get list of newly created VFs")
+		return err
+	}
+
+	for _, vf := range createdVfs {
+		if err := n.bindDeviceToDriver(vf, requestedConfig.VFDriver); err != nil {
+			return err
+		}
+	}
+
+	return nil
+
+}
+
 func getMatchingConfiguration(pciAddress string, configurations []sriovv2.PhysicalFunctionConfigExt) *sriovv2.PhysicalFunctionConfigExt {
+	for _, configuration := range configurations {
+		if configuration.PCIAddress == pciAddress {
+			return &configuration
+		}
+	}
+	return nil
+}
+
+func VrbgetMatchingConfiguration(pciAddress string, configurations []vrbv1.PhysicalFunctionConfigExt) *vrbv1.PhysicalFunctionConfigExt {
 	for _, configuration := range configurations {
 		if configuration.PCIAddress == pciAddress {
 			return &configuration

@@ -7,12 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
-	"os"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,6 +66,7 @@ func (m *Manager) buildTemplateVars(ctx context.Context, setKernelVar bool) (map
 	resourceName5g := m.EnvPrefix + "5G_RESOURCE_NAME"
 	resourceNameAcc100 := m.EnvPrefix + "ACC100_RESOURCE_NAME"
 	resourceNameAcc200 := m.EnvPrefix + "ACC200_RESOURCE_NAME"
+	resourceNameVRB2 := "SRIOV_VRB_VRB2_RESOURCE_NAME"
 
 	if tp[resourceNameLte] == "" {
 		tp[resourceNameLte] = "intel_fec_lte"
@@ -82,6 +84,9 @@ func (m *Manager) buildTemplateVars(ctx context.Context, setKernelVar bool) (map
 		tp[resourceNameAcc100] = "intel_fec_acc100"
 	}
 
+	if tp[resourceNameVRB2] == "" {
+		tp[resourceNameVRB2] = "intel_vrb_vrb2"
+	}
 
 	if !setKernelVar {
 		return tp, nil

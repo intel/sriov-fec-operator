@@ -1,23 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2020-2023 Intel Corporation
 
-/*
-
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package controllers
+package sriovvrb
 
 import (
 	"context"
@@ -40,21 +24,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	vrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
 )
 
 var NAMESPACE = os.Getenv("SRIOV_FEC_NAMESPACE")
 
-// SriovFecClusterConfigReconciler reconciles a SriovFecClusterConfig object
-type SriovFecClusterConfigReconciler struct {
+// VrbclusterconfigReconciler reconciles a Vrbclusterconfig object
+type SriovVrbClusterConfigReconciler struct {
 	client.Client
 	Log *logrus.Logger
 }
 
-// +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecclusterconfigs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecclusterconfigs/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecnodeconfigs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=sriovfec.intel.com,resources=sriovfecnodeconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=sriovvrb.intel.com,resources=sriovvrbclusterconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=sriovvrb.intel.com,resources=sriovvrbclusterconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=sriovvrb.intel.com,resources=sriovvrbnodeconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=sriovvrb.intel.com,resources=sriovvrbnodeconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=list;get;watch;update;patch
 // +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;secrets;configmaps,verbs=get;list;create;update
 // +kubebuilder:rbac:groups=apps,resources=daemonsets;deployments;deployments/finalizers,verbs=get;list;create;update
@@ -63,12 +47,16 @@ type SriovFecClusterConfigReconciler struct {
 // +kubebuilder:rbac:groups="",resources=pods/eviction,verbs=create
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch;delete
 
-func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+// For more details, check Reconcile and its Result here:
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.4/pkg/reconcile
+func (r *SriovVrbClusterConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.Log.Infof("Reconcile(...) triggered by %s", req.NamespacedName.String())
 
-	clusterConfigList := new(sriovfecv2.SriovFecClusterConfigList)
+	clusterConfigList := new(vrbv1.SriovVrbClusterConfigList)
 	if err := r.List(context.TODO(), clusterConfigList, client.InNamespace(NAMESPACE)); err != nil {
-		r.Log.WithError(err).Error("cannot obtain list of SriovFecClusterConfig, rescheduling rescheduling reconcile call")
+		r.Log.WithError(err).Error("cannot obtain list of SriovVrbClusterConfig, rescheduling rescheduling reconcile call")
 		return ctrl.Result{}, err
 	}
 
@@ -78,32 +66,32 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.
 		return reconcile.Result{}, err
 	}
 
-	clusterConfigurationMatcher := createClusterConfigMatcher(r.getOrInitializeSriovFecNodeConfig, r.Log)
+	clusterConfigurationMatcher := createClusterConfigMatcher(r.getOrInitializeSriovVrbNodeConfig, r.Log)
 	for _, node := range nodes {
 		configurationContextProvider, err := clusterConfigurationMatcher.match(node, clusterConfigList.Items)
 		if err != nil {
-			r.Log.WithField("node", node.Name).WithField("error", err).Info("Error when matching SriovFecClusterConfigs")
+			r.Log.WithField("node", node.Name).WithField("error", err).Info("Error when matching SriovVrbClusterConfigs")
 			continue
 		}
 
 		if err := r.synchronizeNodeConfigSpec(*configurationContextProvider); err != nil {
-			r.Log.WithField("name", node.Name).WithField("error", err).Info("failed to propagate configuration into SriovFecNodeConfig")
+			r.Log.WithField("name", node.Name).WithField("error", err).Info("failed to propagate configuration into SriovVrbNodeConfig")
 
 			err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				snc := new(sriovfecv2.SriovFecNodeConfig)
+				snc := new(vrbv1.SriovVrbNodeConfig)
 				if err := r.Get(context.TODO(), types.NamespacedName{Namespace: NAMESPACE, Name: node.Name}, snc); err != nil {
 					return err
 				}
 
 				setConfigurationPropagationConditionFailed(&snc.Status.Conditions, snc.GetGeneration(), err.Error())
 				r.Log.
-					WithField("sfnc", snc).
+					WithField("vrbnc", snc).
 					Info("updating svnc status")
 				return r.Status().Update(context.TODO(), snc)
 			})
 
 			if err != nil {
-				r.Log.WithError(err).WithField("name", node.Name).Error("failed to set ConfigurationPropagationCondition for SriovFecNodeConfig")
+				r.Log.WithError(err).WithField("name", node.Name).Error("failed to set ConfigurationPropagationCondition for SriovVrbNodeConfig")
 			}
 			continue
 		}
@@ -112,9 +100,9 @@ func (r *SriovFecClusterConfigReconciler) Reconcile(_ context.Context, req ctrl.
 	return r.requeueIfClusterConfigExists(req.NamespacedName)
 }
 
-func (r *SriovFecClusterConfigReconciler) requeueIfClusterConfigExists(cc types.NamespacedName) (ctrl.Result, error) {
-	sfcc := &sriovfecv2.SriovFecClusterConfig{}
-	err := r.Get(context.TODO(), cc, sfcc)
+func (r *SriovVrbClusterConfigReconciler) requeueIfClusterConfigExists(cc types.NamespacedName) (ctrl.Result, error) {
+	vrbcc := &vrbv1.SriovVrbClusterConfig{}
+	err := r.Get(context.TODO(), cc, vrbcc)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -125,24 +113,24 @@ func (r *SriovFecClusterConfigReconciler) requeueIfClusterConfigExists(cc types.
 	return ctrl.Result{RequeueAfter: time.Minute}, nil
 }
 
-func (r *SriovFecClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConfigurationCtx) error {
-	copyWithEmptySpec := func(nc sriovfecv2.SriovFecNodeConfig) *sriovfecv2.SriovFecNodeConfig {
+func (r *SriovVrbClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConfigurationCtx) error {
+	copyWithEmptySpec := func(nc vrbv1.SriovVrbNodeConfig) *vrbv1.SriovVrbNodeConfig {
 		newNC := nc.DeepCopy()
-		newNC.Spec = sriovfecv2.SriovFecNodeConfigSpec{
-			PhysicalFunctions: []sriovfecv2.PhysicalFunctionConfigExt{},
+		newNC.Spec = vrbv1.SriovVrbNodeConfigSpec{
+			PhysicalFunctions: []vrbv1.PhysicalFunctionConfigExt{},
 		}
 		return newNC
 	}
 
-	currentNodeConfig := ncc.SriovFecNodeConfig
+	currentNodeConfig := ncc.SriovVrbNodeConfig
 	acceleratorConfigContext := ncc.AcceleratorConfigContext
 
-	newNodeConfig := copyWithEmptySpec(ncc.SriovFecNodeConfig)
+	newNodeConfig := copyWithEmptySpec(ncc.SriovVrbNodeConfig)
 
 	// Use orederedmap for iteration
 	for _, pciAddress := range acceleratorConfigContext.Keys() {
 		cc, _ := acceleratorConfigContext.Get(pciAddress)
-		pf := sriovfecv2.PhysicalFunctionConfigExt{
+		pf := vrbv1.PhysicalFunctionConfigExt{
 			PCIAddress:  pciAddress,
 			PFDriver:    cc.Spec.PhysicalFunction.PFDriver,
 			VFDriver:    cc.Spec.PhysicalFunction.VFDriver,
@@ -165,7 +153,7 @@ func (r *SriovFecClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConf
 	return nil
 }
 
-func (r *SriovFecClusterConfigReconciler) getAcceleratedNodes() ([]corev1.Node, error) {
+func (r *SriovVrbClusterConfigReconciler) getAcceleratedNodes() ([]corev1.Node, error) {
 	nl := new(corev1.NodeList)
 	labelsToMatch := &client.MatchingLabels{
 		"fpga.intel.com/intel-accelerator-present": "",
@@ -176,30 +164,30 @@ func (r *SriovFecClusterConfigReconciler) getAcceleratedNodes() ([]corev1.Node, 
 	return nl.Items, nil
 }
 
-func (r *SriovFecClusterConfigReconciler) getOrInitializeSriovFecNodeConfig(name string) (*sriovfecv2.SriovFecNodeConfig, error) {
-	nc := new(sriovfecv2.SriovFecNodeConfig)
+func (r *SriovVrbClusterConfigReconciler) getOrInitializeSriovVrbNodeConfig(name string) (*vrbv1.SriovVrbNodeConfig, error) {
+	nc := new(vrbv1.SriovVrbNodeConfig)
 	if err := r.Get(context.TODO(), client.ObjectKey{Name: name, Namespace: NAMESPACE}, nc); err != nil {
 		if !errors.IsNotFound(err) {
 			return nil, err
 		}
 		nc.Name = name
 		nc.Namespace = NAMESPACE
-		nc.Spec.PhysicalFunctions = []sriovfecv2.PhysicalFunctionConfigExt{}
+		nc.Spec.PhysicalFunctions = []vrbv1.PhysicalFunctionConfigExt{}
 	}
 	return nc, nil
 }
 
-func (r *SriovFecClusterConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// Add NodeConfigs & DaemonSet
+// SetupWithManager sets up the controller with the Manager.
+func (r *SriovVrbClusterConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&sriovfecv2.SriovFecClusterConfig{}).
+		For(&vrbv1.SriovVrbClusterConfig{}).
 		Complete(r)
 }
 
 // key: accelerator pciAddress
 type NodeConfigurationCtx struct {
-	sriovfecv2.SriovFecNodeConfig
-	AcceleratorConfigContext *orderedmap.OrderedMap[string, sriovfecv2.SriovFecClusterConfig]
+	vrbv1.SriovVrbNodeConfig
+	AcceleratorConfigContext *orderedmap.OrderedMap[string, vrbv1.SriovVrbClusterConfig]
 }
 
 func createClusterConfigMatcher(ncp nodeConfigProvider, l *logrus.Logger) *clusterConfigMatcher {
@@ -209,19 +197,19 @@ func createClusterConfigMatcher(ncp nodeConfigProvider, l *logrus.Logger) *clust
 	}
 }
 
-type nodeConfigProvider func(nodeName string) (*sriovfecv2.SriovFecNodeConfig, error)
+type nodeConfigProvider func(nodeName string) (*vrbv1.SriovVrbNodeConfig, error)
 
 type clusterConfigMatcher struct {
 	getNodeConfig nodeConfigProvider
 	log           *logrus.Logger
 }
 
-func (pm *clusterConfigMatcher) match(node corev1.Node, allConfigs []sriovfecv2.SriovFecClusterConfig) (*NodeConfigurationCtx, error) {
+func (pm *clusterConfigMatcher) match(node corev1.Node, allConfigs []vrbv1.SriovVrbClusterConfig) (*NodeConfigurationCtx, error) {
 
 	matchingClusterConfigs := matchConfigsForNode(&node, allConfigs)
 	nodeConfig, err := pm.getNodeConfig(node.Name)
 	if err != nil {
-		return nil, fmt.Errorf("error occurred when reading SriovFecNodeConfig: %s", err.Error())
+		return nil, fmt.Errorf("error occurred when reading SriovVrbNodeConfig: %s", err.Error())
 	}
 
 	acceleratorConfigContext := pm.prepareAcceleratorConfigContext(nodeConfig, matchingClusterConfigs)
@@ -232,8 +220,8 @@ func (pm *clusterConfigMatcher) match(node corev1.Node, allConfigs []sriovfecv2.
 }
 
 // Use orderedmap to save SriovFecCluster configurations
-func (pm *clusterConfigMatcher) prepareAcceleratorConfigContext(nodeConfig *sriovfecv2.SriovFecNodeConfig, configs []sriovfecv2.SriovFecClusterConfig) *orderedmap.OrderedMap[string, sriovfecv2.SriovFecClusterConfig] {
-	acceleratorConfigContext := orderedmap.NewOrderedMap[string, sriovfecv2.SriovFecClusterConfig]()
+func (pm *clusterConfigMatcher) prepareAcceleratorConfigContext(nodeConfig *vrbv1.SriovVrbNodeConfig, configs []vrbv1.SriovVrbClusterConfig) *orderedmap.OrderedMap[string, vrbv1.SriovVrbClusterConfig] {
+	acceleratorConfigContext := orderedmap.NewOrderedMap[string, vrbv1.SriovVrbClusterConfig]()
 	for _, current := range configs {
 		for _, accelerator := range nodeConfig.Status.Inventory.SriovAccelerators {
 			if current.Spec.AcceleratorSelector.Matches(accelerator) {
@@ -252,7 +240,7 @@ func (pm *clusterConfigMatcher) prepareAcceleratorConfigContext(nodeConfig *srio
 					if current.CreationTimestamp.After(previous.CreationTimestamp.Time) {
 						pm.log.WithFields(logrus.Fields{
 							"Node":                  nodeConfig.Name,
-							"SriovFecClusterConfig": previous.Name,
+							"SriovVrbClusterConfig": previous.Name,
 							"Priority":              previous.Spec.Priority,
 							"CreationTimestamp":     previous.CreationTimestamp.String(),
 						}).Info("Dropping older ClusterConfig")
@@ -263,7 +251,7 @@ func (pm *clusterConfigMatcher) prepareAcceleratorConfigContext(nodeConfig *srio
 				case current.Spec.Priority < previous.Spec.Priority: //drop current with lower priority
 					pm.log.WithFields(logrus.Fields{
 						"node":                  nodeConfig.Name,
-						"SriovFecClusterConfig": current.Name,
+						"SriovVrbClusterConfig": current.Name,
 						"priority":              current.Spec.Priority,
 					}).Info("Dropping low prioritized ClusterConfig")
 				}
@@ -273,7 +261,7 @@ func (pm *clusterConfigMatcher) prepareAcceleratorConfigContext(nodeConfig *srio
 	return acceleratorConfigContext
 }
 
-func matchConfigsForNode(node *corev1.Node, allConfigs []sriovfecv2.SriovFecClusterConfig) (nodeConfigs []sriovfecv2.SriovFecClusterConfig) {
+func matchConfigsForNode(node *corev1.Node, allConfigs []vrbv1.SriovVrbClusterConfig) (nodeConfigs []vrbv1.SriovVrbClusterConfig) {
 	nodeLabels := labels.Set(node.Labels)
 	for _, config := range allConfigs {
 		nodeSelector := labels.Set(config.Spec.NodeSelector)

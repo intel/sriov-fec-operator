@@ -44,6 +44,28 @@ data:
       - update
       - patch
     - apiGroups:
+      - sriovvrb.intel.com
+      resources:
+      - sriovvrbclusterconfigs
+      - sriovvrbnodeconfigs
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    - apiGroups:
+      - sriovvrb.intel.com
+      resources:
+      - sriovvrbclusterconfigs/status
+      - sriovvrbnodeconfigs/status
+      verbs:
+      - get
+      - update
+      - patch
+    - apiGroups:
       - security.openshift.io
       resources:
       - securitycontextconstraints
@@ -181,6 +203,9 @@ data:
             - containerPort: 8080
               name: bbdevconfig
             volumeMounts:
+            - name: tlscert
+              mountPath: "/etc/certificate"
+              readOnly: true
             - name: devvfio
               mountPath: /dev/vfio      
               readOnly: true        
@@ -189,6 +214,7 @@ data:
               readOnly: true    
             - name: libmodules
               mountPath: /lib/modules
+              readOnly: true
             - mountPath: /sriov_config/config
               name: config-volume
               readOnly: true
@@ -222,11 +248,17 @@ data:
                   - "ALL"
       {{ end }}
           volumes:
+          - name: tlscert
+            secret:
+              secretName: tls-cert
+              optional: true
           - configMap:
               defaultMode: 420
               items:
               - key: accelerators.json
                 path: accelerators.json
+              - key: accelerators_vrb.json
+                path: accelerators_vrb.json
               name: supported-accelerators
             name: config-volume
           - name: vfiotoken

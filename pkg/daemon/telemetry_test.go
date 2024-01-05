@@ -1,39 +1,30 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2022 Intel Corporation
+
 package daemon
 
 import (
 	"fmt"
-	v2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	"net"
+	"os"
+	"strings"
+
+	v2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/sirupsen/logrus"
-	"net"
-	"os"
-	"strings"
 )
 
 const fileLog = `
-Fri Sep 16 10:42:33 2022:DEBUG:event_processor(): poll() unblocked, check events
-Fri Sep 16 10:42:33 2022:DEBUG:unix_channel_srv_rx(): data received on cli channel
-Fri Sep 16 10:42:33 2022:DEBUG:unix_channel_srv_rx(): client connected fd: 48
-Fri Sep 16 10:42:33 2022:DEBUG:unix_channel_srv_rx(): Req id: 0009, len: 8
-Fri Sep 16 10:42:33 2022:DEBUG:get_cmd_by_id(): found command: device_data, id: 9
-Fri Sep 16 10:42:33 2022:INFO:device_data command received
 Fri Sep 16 10:42:33 2022:INFO:Device Status:: 6 VFs
-
 Fri Sep 16 10:42:33 2022:INFO:-  VF 0 RTE_BBDEV_DEV_CONFIGURED
-
 Fri Sep 16 10:42:33 2022:INFO:-  VF 1 RTE_BBDEV_DEV_CONFIGURED
-
 Fri Sep 16 10:42:33 2022:INFO:-  VF 2 RTE_BBDEV_DEV_CONFIGURED
-
 Fri Sep 16 10:42:33 2022:INFO:-  VF 3 RTE_BBDEV_DEV_CONFIGURED
-
 Fri Sep 16 10:42:33 2022:INFO:-  VF 4 RTE_BBDEV_DEV_CONFIGURED
-
 Fri Sep 16 10:42:33 2022:INFO:-  VF 5 RTE_BBDEV_DEV_CONFIGURED
-
 Fri Sep 16 10:42:33 2022:INFO:5GUL counters: Code Blocks
 Fri Sep 16 10:42:33 2022:INFO:0 0 0 0 0 0 
 Fri Sep 16 10:42:33 2022:INFO:5GUL counters: Data (Bytes)
@@ -54,6 +45,7 @@ Fri Sep 16 10:42:33 2022:INFO:FFT counters: Per Engine
 Fri Sep 16 10:42:33 2022:INFO:0 
 Fri Sep 16 10:42:33 2022:DEBUG:event_processor(): Waiting on poll...
 Mon Sep 19 07:45:28 2022:DEBUG:sig_fun(): Signal Received with sigNum = 15
+-- End of Response --
 `
 
 var _ = Describe("clearLog", func() {
@@ -65,7 +57,7 @@ var _ = Describe("clearLog", func() {
 
 	It("file exists and is not empty", func() {
 		testPciAddr := "1111:11:11.1"
-		file, err := os.Create(fmt.Sprintf("/var/log/pf_bb_cfg_%v.log", testPciAddr))
+		file, err := os.Create(fmt.Sprintf("/var/log/pf_bb_cfg_%v_response.log", testPciAddr))
 		Expect(err).To(BeNil())
 
 		_, err = file.Write([]byte("abcdefg"))
@@ -106,7 +98,7 @@ var _ = Describe("readFileWithTelemetry", func() {
 	It("file doesn't exists", func() {
 		logger := utils.NewLogger()
 		th := &testHook{
-			expectedError: "open /var/log/pf_bb_cfg_2222:22:22.2.log: no such file or directory",
+			expectedError: "open /var/log/pf_bb_cfg_2222:22:22.2_response.log: no such file or directory",
 		}
 
 		logger.AddHook(th)
@@ -120,15 +112,30 @@ var _ = Describe("readFileWithTelemetry", func() {
 
 	It("file exists but it is empty", func() {
 		pciAddr := "4321:11:23.1"
+		fileHandler, err := os.Create(fmt.Sprintf("/var/log/pf_bb_cfg_%v_response.log", pciAddr))
+		Expect(err).To(BeNil())
+		defer fileHandler.Close()
+
+		file, err := readFileWithTelemetry(pciAddr, utils.NewLogger())
+
+		Expect(file).To(BeNil())
+		Expect(err).To(MatchError("timed out waiting for the condition"))
+	})
+
+	It("file exists, is not empty but end tag is missing", func() {
+		pciAddr := "4444:11:23.1"
 		logger := utils.NewLogger()
 		th := &testHook{
-			expectedError: "file with telemetry has 0 bytes",
+			expectedError: "timed out waiting for the condition",
 		}
 
 		logger.AddHook(th)
-		fileHandler, err := os.Create(fmt.Sprintf("/var/log/pf_bb_cfg_%v.log", pciAddr))
+		fileHandler, err := os.Create(fmt.Sprintf("/var/log/pf_bb_cfg_%v_response.log", pciAddr))
 		Expect(err).To(BeNil())
 		defer fileHandler.Close()
+		fileLogWithoutEndTag := strings.Replace(fileLog, "-- End of Response --", "", -1)
+		_, err = fileHandler.Write([]byte(fileLogWithoutEndTag))
+		Expect(err).To(BeNil())
 
 		file, err := readFileWithTelemetry(pciAddr, logger)
 
@@ -139,7 +146,7 @@ var _ = Describe("readFileWithTelemetry", func() {
 
 	It("file exists and is not empty", func() {
 		pciAddr := "4444:11:23.1"
-		fileHandler, err := os.Create(fmt.Sprintf("/var/log/pf_bb_cfg_%v.log", pciAddr))
+		fileHandler, err := os.Create(fmt.Sprintf("/var/log/pf_bb_cfg_%v_response.log", pciAddr))
 		Expect(err).To(BeNil())
 		defer fileHandler.Close()
 		_, err = fileHandler.Write([]byte(fileLog))
@@ -365,7 +372,47 @@ var _ = Describe("parseDeviceStatus", func() {
 		tg.resetMetrics()
 	})
 
-	It("Should correctly handle proper data", func() {
+	It("Should correctly handle proper data without blank lines", func() {
+		fileLog := `Fri Sep 16 10:42:33 2022:INFO:Device Status:: 4 VFs
+Fri Sep 16 10:42:33 2022:INFO:-  VF 0 RTE_BBDEV_DEV_CONFIGURED
+Fri Sep 16 10:42:33 2022:INFO:-  VF 1 RTE_BBDEV_DEV_ACTIVE
+Fri Sep 16 10:42:33 2022:INFO:-  VF 2 RTE_BBDEV_DEV_RESTART_REQ
+Fri Sep 16 10:42:33 2022:INFO:-  VF 3 RTE_BBDEV_DEV_RECONFIG_REQ
+`
+
+		parseDeviceStatus(strings.Split(fileLog, "\n"), "1111:00:00.0", []v2.VF{
+			{PCIAddress: "1111:01:00.0"},
+			{PCIAddress: "1111:01:00.1"},
+			{PCIAddress: "1111:01:00.2"},
+			{PCIAddress: "1111:01:00.3"},
+		}, tg, utils.NewLogger())
+		tg.updateMetrics()
+
+		Expect(testutil.ToFloat64(tg.vfCountGauge)).To(Equal(float64(4)))
+		Expect(testutil.CollectAndCount(tg.vfStatusGauge)).To(Equal(4))
+
+		vf0Gauge, err := tg.vfStatusGauge.GetMetricWith(map[string]string{pciAddressLabel: "1111:01:00.0", statusLabel: "RTE_BBDEV_DEV_CONFIGURED"})
+		Expect(err).To(Succeed())
+		Expect(testutil.CollectAndCount(vf0Gauge)).To(Equal(1))
+		Expect(testutil.ToFloat64(vf0Gauge)).To(Equal(float64(1)))
+
+		vf1Gauge, err := tg.vfStatusGauge.GetMetricWith(map[string]string{pciAddressLabel: "1111:01:00.1", statusLabel: "RTE_BBDEV_DEV_ACTIVE"})
+		Expect(err).To(Succeed())
+		Expect(testutil.CollectAndCount(vf1Gauge)).To(Equal(1))
+		Expect(testutil.ToFloat64(vf1Gauge)).To(Equal(float64(1)))
+
+		vf2Gauge, err := tg.vfStatusGauge.GetMetricWith(map[string]string{pciAddressLabel: "1111:01:00.2", statusLabel: "RTE_BBDEV_DEV_FATAL_ERR"})
+		Expect(err).To(Succeed())
+		Expect(testutil.CollectAndCount(vf2Gauge)).To(Equal(1))
+		Expect(testutil.ToFloat64(vf2Gauge)).To(Equal(float64(0)))
+
+		vf3Gauge, err := tg.vfStatusGauge.GetMetricWith(map[string]string{pciAddressLabel: "1111:01:00.3", statusLabel: "RTE_BBDEV_DEV_RESTART_REQ"})
+		Expect(err).To(Succeed())
+		Expect(testutil.CollectAndCount(vf3Gauge)).To(Equal(1))
+		Expect(testutil.ToFloat64(vf3Gauge)).To(Equal(float64(0)))
+	})
+
+	It("Should correctly handle proper data with blank lines", func() {
 		fileLog := `Fri Sep 16 10:42:33 2022:INFO:Device Status:: 4 VFs
 
 Fri Sep 16 10:42:33 2022:INFO:-  VF 0 RTE_BBDEV_DEV_CONFIGURED
@@ -375,6 +422,7 @@ Fri Sep 16 10:42:33 2022:INFO:-  VF 1 RTE_BBDEV_DEV_ACTIVE
 Fri Sep 16 10:42:33 2022:INFO:-  VF 2 RTE_BBDEV_DEV_RESTART_REQ
 
 Fri Sep 16 10:42:33 2022:INFO:-  VF 3 RTE_BBDEV_DEV_RECONFIG_REQ
+
 `
 
 		parseDeviceStatus(strings.Split(fileLog, "\n"), "1111:00:00.0", []v2.VF{
@@ -448,7 +496,6 @@ Fri Sep 16 10:42:33 2022:INFO:-  VF 3 RTE_BBDEV_DEV_RECONFIG_REQ
 		}
 		logger.AddHook(hook)
 		fileLog := `Fri Sep 16 10:42:33 2022:INFO:Device Status:: 1 VFs
-
 Fri Sep 16 10:42:33 2022:INFO:-  VF 0 RTE_BBDEV_DEV_CONFIGURED
 
 `
@@ -463,7 +510,27 @@ Fri Sep 16 10:42:33 2022:INFO:-  VF 0 RTE_BBDEV_DEV_CONFIGURED
 		Expect(hook.expectedErrorOccured).To(BeTrue())
 	})
 
-	It("Should skip metrics for when VF count is more than expected", func() {
+	It("Should skip metrics for when VF count is more than expected without blank lines", func() {
+		logger := utils.NewLogger()
+		hook := &testHook{
+			expectedError: "No. of VFs from in metrics log is wrong. Skipping metric.",
+		}
+		logger.AddHook(hook)
+		fileLog := `Fri Sep 16 10:42:33 2022:INFO:Device Status:: 3 VFs
+Fri Sep 16 10:42:33 2022:INFO:-  VF 0 RTE_BBDEV_DEV_CONFIGURED
+Fri Sep 16 10:42:33 2022:INFO:-  VF 1 RTE_BBDEV_DEV_CONFIGURED
+Fri Sep 16 10:42:33 2022:INFO:-  VF 3 RTE_BBDEV_DEV_CONFIGURED
+`
+		parseDeviceStatus(strings.Split(fileLog, "\n"), "1111:00:00.0", []v2.VF{
+			{PCIAddress: "1111:01:00.1"},
+		}, tg, logger)
+		tg.updateMetrics()
+
+		Expect(testutil.CollectAndCount(tg.vfCountGauge)).To(Equal(1))
+		Expect(hook.expectedErrorOccured).To(BeTrue())
+	})
+
+	It("Should skip metrics for when VF count is more than expected with blank lines", func() {
 		logger := utils.NewLogger()
 		hook := &testHook{
 			expectedError: "No. of VFs from in metrics log is wrong. Skipping metric.",

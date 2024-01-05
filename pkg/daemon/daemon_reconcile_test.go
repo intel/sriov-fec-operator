@@ -6,7 +6,9 @@ package daemon
 import (
 	"context"
 	"fmt"
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+
+	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
+	vrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
 	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,6 +26,7 @@ var _ = Describe("NodeConfigReconciler.Reconcile", func() {
 	BeforeEach(func() {
 		scheme = runtime.NewScheme()
 		Expect(sriovv2.AddToScheme(scheme)).ToNot(HaveOccurred())
+		Expect(vrbv1.AddToScheme(scheme)).ToNot(HaveOccurred())
 	})
 
 	_ = Describe("", func() {
@@ -75,10 +78,11 @@ var _ = Describe("NodeConfigReconciler.Reconcile", func() {
 			}
 
 			reconciler = NodeConfigReconciler{
-				Client:      fakeClient,
-				log:         utils.NewLogger(),
-				nodeNameRef: nodeNameRef,
-				configurer:  configurer,
+				Client:             fakeClient,
+				log:                utils.NewLogger(),
+				nodeNameRef:        nodeNameRef,
+				sriovfecconfigurer: configurer,
+				vrbconfigurer:      nil,
 				drainerAndExecute: func(configurer func(ctx context.Context) bool, drain bool) error {
 					_ = configurer(context.TODO())
 					return nil

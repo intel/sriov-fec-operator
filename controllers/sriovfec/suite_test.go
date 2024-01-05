@@ -16,15 +16,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package sriovfec
 
 import (
-	"github.com/go-logr/logr"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"path/filepath"
 	"testing"
 
-	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
+	"github.com/go-logr/logr"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+
+	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -53,7 +54,7 @@ var _ = BeforeSuite(func(done Done) {
 	logf.SetLogger(logr.New(utils.NewLogWrapper()))
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths: []string{filepath.Join("..", "config", "crd", "bases")},
+		CRDDirectoryPaths: []string{filepath.Join("..", "..", "config", "crd", "bases")},
 	}
 
 	cfg, err := testEnv.Start()
