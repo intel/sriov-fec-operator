@@ -6,7 +6,7 @@ Copyright (c) 2020-2023 Intel Corporation
 # Release Notes
 This document provides high-level system features, issues, and limitations information for SRIOV-FEC Operator for Wireless FEC Accelerators.
 - [Release history](#release-history)
-- [SRIOV-FEC Operator](#sriov-fec-operator)
+    - [SRIOV-FEC Operator](#sriov-fec-operator)
 - [Features for Release](#features-for-release)
 - [Changes to Existing Features](#changes-to-existing-features)
 - [Fixed Issues](#fixed-issues)
@@ -50,6 +50,10 @@ This document provides high-level system features, issues, and limitations infor
 | 2.7.2   | October 2023   | 4.10, 4.11, 4.12, 4.13       | 4.10.67, 4.11.50, 4.12.37, 4.13.15 |
 
 # Features for Release
+***v2.8.0***
+- Added support to configure and manage VRB2 Accelerator device.
+- Updated pf-bb-conf version to 23.11
+- Ability to update srs_fft_windows_coefficient.bin file on worker node for VRB1 and VRB2.
 
 ***v2.7.2***
 - Bug fixes
@@ -132,6 +136,15 @@ This document provides high-level system features, issues, and limitations infor
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
 
 # Changes to Existing Features
+***v2.8.0***
+- UBI base docker image version updated to 9.3-6.
+- sriov-network-device-plugin version updated to 4.14
+- Telemetry request/response flow between daemon and pf-bb-conf is updated.
+- xnet and go-logr package version updated.
+- Restricted hostPath mount to read-only for /lib/modules.
+- Restricted hostPath mount specific to device-plugin for sriov-network-device-plugin.
+- Resource cleanup in proper order during the CR deletion.
+- Restrict the vfio-pci driver parameter disable_idle_d3 set to ACC100 only.
 
 ***v2.7.2***
 - None
@@ -209,6 +222,10 @@ This document provides high-level system features, issues, and limitations infor
 - There are no unsupported or discontinued features relevant to this release.
 
 # Fixed Issues
+***2.8.0***
+- Fix for leader election resource cleanup after removal of Operator.
+- Fix for logs collecting script.
+- Fix for validation of maxNumQGroup parameter in CR.
 
 ***2.7.2***
 - Fix for failure in enabling VFs when kernel is overloaded
@@ -252,7 +269,6 @@ This document provides high-level system features, issues, and limitations infor
 - Documentation
 
 # Supported Operating Systems
-
 ***v2.7.2***
 - OpenShift: 4.13.0
 - OS: Red Hat Enterprise Linux CoreOS 413.92.202305191644-0
@@ -401,5 +417,5 @@ This document provides high-level system features, issues, and limitations infor
 
 # Package Versions
 Package:
-- Golang: 1.20
-- pf-bb-config-app: v23.03
+- Golang: 1.21.5
+- pf-bb-config-app: v23.11

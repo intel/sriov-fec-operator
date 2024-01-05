@@ -7,4 +7,6 @@ resources:
 - sriovfec_v2_sriovfecclusterconfig_acc100.yaml
 - sriovfec_v2_sriovfecnodeconfig_n3000.yaml
 - sriovfec_v2_sriovfecnodeconfig_acc100.yaml
+- sriovvrb_v1_sriovvrbclusterconfig.yaml
+- sriovvrb_v1_sriovvrbnodeconfig.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

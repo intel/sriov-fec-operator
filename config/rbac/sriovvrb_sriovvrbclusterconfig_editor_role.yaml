@@ -1,0 +1,24 @@
+# permissions for end users to edit sriovvrbclusterconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sriovvrbclusterconfig-editor-role
+rules:
+- apiGroups:
+  - sriovvrb.intel.com
+  resources:
+  - sriovvrbclusterconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sriovvrb.intel.com
+  resources:
+  - sriovvrbclusterconfigs/status
+  verbs:
+  - get

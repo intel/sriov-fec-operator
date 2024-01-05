@@ -97,19 +97,33 @@ data:
                      }
                 },
                 {
-                "resourceName": "{{ .SRIOV_FEC_ACC200_RESOURCE_NAME}}",
-                "deviceType": "accelerator",
-                "selectors": {
-                    "vendors": ["8086"],
-                    "devices": ["57c1"],
-                    "drivers": ["pci-pf-stub", "vfio-pci", "igb_uio"]
+                    "resourceName": "{{ .SRIOV_FEC_ACC200_RESOURCE_NAME}}",
+                    "deviceType": "accelerator",
+                    "selectors": {
+                        "vendors": ["8086"],
+                        "devices": ["57c1"],
+                        "drivers": ["pci-pf-stub", "vfio-pci", "igb_uio"]
+                    },
+                    "additionalInfo": {
+                        "*": {
+                              "VFIO_TOKEN": "{{ .SRIOV_FEC_VFIO_TOKEN }}"
+                          }
+                        }
                 },
-                "additionalInfo": {
-                    "*": {
-                          "VFIO_TOKEN": "{{ .SRIOV_FEC_VFIO_TOKEN }}"
-                      }
-                     }
-            }
+                {
+                    "resourceName": "{{ .SRIOV_VRB_VRB2_RESOURCE_NAME}}",
+                    "deviceType": "accelerator",
+                    "selectors": {
+                        "vendors": ["8086"],
+                        "devices": ["57c3"],
+                        "drivers": ["pci-pf-stub", "vfio-pci", "igb_uio"]
+                    },
+                    "additionalInfo": {
+                        "*": {
+                              "VFIO_TOKEN": "{{ .SRIOV_FEC_VFIO_TOKEN }}"
+                          }
+                        }
+                }
             ]
         }
   daemonSet: |
@@ -145,7 +159,7 @@ data:
             - --log-level=10
             volumeMounts:
             - name: devicesock
-              mountPath: /var/lib/kubelet/
+              mountPath: /var/lib/kubelet/device-plugins
               readOnly: false
             - name: config-volume
               mountPath: /etc/pcidp/
@@ -153,10 +167,7 @@ data:
           volumes:
             - name: devicesock
               hostPath:
-                path: /var/lib/kubelet/
-            - name: net
-              hostPath:
-                path: /sys/class/net
+                path: /var/lib/kubelet/device-plugins
             - name: config-volume
               configMap:
                 name: sriovdp-config

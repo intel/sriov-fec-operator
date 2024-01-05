@@ -9,7 +9,7 @@ Copyright (c) 2020-2023 Intel Corporation
 - [Intel® vRAN Dedicated Accelerator ACC100](#intel-vran-dedicated-accelerator-acc100)
   - [Intel® vRAN Dedicated Accelerator ACC100 FlexRAN Host Interface Overview](#intel-vran-dedicated-accelerator-acc100-flexran-host-interface-overview)
   - [SRIOV-FEC Operator for Intel® vRAN Dedicated Accelerator ACC100](#sriov-fec-operator-for-intel-vran-dedicated-accelerator-acc100)
-- [Intel® ACC200 vRAN Dedicated Accelerator](#intel-vran-dedicated-accelerator-acc200)
+- [Intel® vRAN Dedicated Accelerator VRB1](#intel-vran-dedicated-accelerator-vrb1)
 
 ## Overview
 
@@ -65,7 +65,7 @@ The operator design for Intel® vRAN Dedicated Accelerator ACC100 consist of:
 
 * [SRIOV-FEC Operator for Wireless FEC Accelerators](https://github.com/smart-edge-open/sriov-fec-operator/blob/master/spec/sriov-fec-operator.md)
 
-# Intel® ACC200 vRAN Dedicated Accelerator
+# Intel® vRAN Dedicated Accelerator VRB1
 
 The Intel® vRAN Dedicated Accelerator ACC200 peripheral enables cost-effective 4G and 5G next-generation virtualized Radio Access Network (vRAN) solutions integrated on Sapphire Rapids Edge Enhanced Processor (SPR-EE) Intel® 7 based Xeon® multi-core server processor.
 

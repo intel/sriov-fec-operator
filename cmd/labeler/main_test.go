@@ -195,24 +195,24 @@ var _ = Describe("Labeler", func() {
 			getInclusterConfigFunc = fakeGetInclusterConfig
 		})
 		var _ = It("will fail if load config fails", func() {
-			err := acceleratorDiscovery("")
+			err := acceleratorDiscovery("", "")
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will fail if findAccelerator fails", func() {
 			getPCIDevices = func() ([]*ghw.PCIDevice, error) { return nil, fmt.Errorf("ErrorStub") }
-			err := acceleratorDiscovery("testdata/valid.json")
+			err := acceleratorDiscovery("testdata/valid.json", "testdata/valid.json")
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will fail if there is no NODENAME env", func() {
 			getPCIDevices = func() ([]*ghw.PCIDevice, error) { return []*ghw.PCIDevice{}, nil }
-			err := acceleratorDiscovery("testdata/valid.json")
+			err := acceleratorDiscovery("testdata/valid.json", "testdata/valid.json")
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will fail if there is no k8s cluster", func() {
 			fakeGetInclusterConfigReturn = fmt.Errorf("error")
 			getPCIDevices = func() ([]*ghw.PCIDevice, error) { return []*ghw.PCIDevice{}, nil }
 			os.Setenv("NODENAME", "test")
-			err := acceleratorDiscovery("testdata/valid.json")
+			err := acceleratorDiscovery("testdata/valid.json", "testdata/valid.json")
 			os.Unsetenv("NODENAME")
 			Expect(err).To(HaveOccurred())
 		})

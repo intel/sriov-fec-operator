@@ -1,0 +1,20 @@
+# permissions for end users to view sriovvrbclusterconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sriovvrbclusterconfig-viewer-role
+rules:
+- apiGroups:
+  - sriovvrb.intel.com
+  resources:
+  - sriovvrbclusterconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - sriovvrb.intel.com
+  resources:
+  - sriovvrbclusterconfigs/status
+  verbs:
+  - get

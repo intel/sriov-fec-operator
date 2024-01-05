@@ -28,17 +28,16 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/assets"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/drainhelper"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/api/v2"
-	"github.com/smart-edge-open/sriov-fec-operator/controllers"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/assets"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/drainhelper"
+	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+
 	secv1 "github.com/openshift/api/security/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -47,6 +46,11 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
+	sriovvrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
+	controllers "github.com/smart-edge-open/sriov-fec-operator/controllers/sriovfec"
+	vrbcontrollers "github.com/smart-edge-open/sriov-fec-operator/controllers/sriovvrb"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -61,6 +65,7 @@ func init() {
 	utilruntime.Must(secv1.AddToScheme(scheme))
 	utilruntime.Must(sriovfecv2.AddToScheme(scheme))
 
+	utilruntime.Must(sriovvrbv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -81,6 +86,7 @@ func main() {
 	mgr := createAndConfigureManager(config, metricsAddr, healthProbeAddr, enableLeaderElection)
 
 	initializeSriovFecClusterConfigReconciler(mgr)
+	initializeVrbClusterConfigReconciler(mgr)
 	// +kubebuilder:scaffold:builder
 
 	c := createClient(config)
@@ -180,6 +186,21 @@ func initializeSriovFecClusterConfigReconciler(mgr manager.Manager) {
 	}
 }
 
+func initializeVrbClusterConfigReconciler(mgr manager.Manager) {
+	log := utils.NewLogger()
+	if err := (&vrbcontrollers.SriovVrbClusterConfigReconciler{
+		Client: mgr.GetClient(),
+		Log:    log,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.WithField("controller", "SriovVrbClusterConfig").WithError(err).Error("unable to create controller")
+		os.Exit(1)
+	}
+	if err := (&sriovvrbv1.SriovVrbClusterConfig{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.WithError(err).WithField("webhook", "SriovVrbClusterConfig").Error("unable to create webhook")
+		os.Exit(1)
+	}
+}
+
 func createAndConfigureManager(config *rest.Config, metricsAddr string, healthProbeAddr string, enableLeaderElection bool) manager.Manager {
 	ws := webhook.Server{
 		TLSMinVersion: "1.2",
@@ -212,17 +233,18 @@ func createAndConfigureManager(config *rest.Config, metricsAddr string, healthPr
 		isSingleNodeCluster)
 
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		HealthProbeBindAddress: healthProbeAddr,
-		Port:                   9443,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "98e78623.intel.com",
-		LeaseDuration:          &LeaderElectionConfig.LeaseDuration,
-		RenewDeadline:          &LeaderElectionConfig.RenewDeadline,
-		RetryPeriod:            &LeaderElectionConfig.RetryPeriod,
-		Namespace:              controllers.NAMESPACE,
-		WebhookServer:          &ws,
+		Scheme:                        scheme,
+		MetricsBindAddress:            metricsAddr,
+		HealthProbeBindAddress:        healthProbeAddr,
+		Port:                          9443,
+		LeaderElection:                enableLeaderElection,
+		LeaderElectionID:              "98e78623.intel.com",
+		LeaseDuration:                 &LeaderElectionConfig.LeaseDuration,
+		RenewDeadline:                 &LeaderElectionConfig.RenewDeadline,
+		RetryPeriod:                   &LeaderElectionConfig.RetryPeriod,
+		Namespace:                     controllers.NAMESPACE,
+		WebhookServer:                 &ws,
+		LeaderElectionReleaseOnCancel: true,
 	})
 	if err != nil {
 		setupLog.WithError(err).Error("unable to start manager")

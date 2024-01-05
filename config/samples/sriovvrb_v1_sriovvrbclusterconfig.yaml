@@ -1,0 +1,48 @@
+apiVersion: sriovvrb.intel.com/v1
+kind: SriovVrbclusterconfig
+metadata:
+  name: vrb1SampleConfig
+  namespace: vran-acceleration-operators
+spec:
+  acceleratorSelector:
+    pciAddress: somePciAddress
+  nodeSelector:
+    kubernetes.io/hostname: nodename
+  physicalFunction:
+    bbDevConfig:
+      vrb1:
+        downlink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        downlink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        maxQueueSize: 1024
+        numVfBundles: 4
+        pfMode: false
+        qfft:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        uplink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        uplink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        pfbbConf:
+          pfbbUrl: "somepfbbUrl"
+          pfbbChecksum: "relatedChecksum"
+        fftLut:
+          fftUrl: somefftUrl
+          fftChecksum: "relatedChecksum"
+    pfDriver: vfio-pci
+    vfAmount: 4
+    vfDriver: vfio-pci
+  priority: 1
+  drainSkip: true
+

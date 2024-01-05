@@ -6,7 +6,7 @@ export CLI_EXEC?=oc
 # Container format for podman. Required to build containers with "ManifestType": "application/vnd.oci.image.manifest.v2+json",
 export BUILDAH_FORMAT=docker
 # Current Operator version
-VERSION ?= 2.7.2
+VERSION ?= 2.8.0
 # Supported channels
 CHANNELS ?= stable
 # Default channel
@@ -14,6 +14,7 @@ DEFAULT_CHANNEL ?= stable
 
 # Operator image registry
 IMAGE_REGISTRY ?= registry.connect.redhat.com/intel
+BUILD_REGISTRY ?= localhost
 CONTAINER_TOOL ?= podman
 
 FUZZ_TIME?=10m
@@ -50,11 +51,11 @@ export SRIOV_FEC_DAEMON_IMAGE ?= $(IMAGE_REGISTRY)sriov-fec-daemon:$(IMG_VERSION
 export SRIOV_FEC_LABELER_IMAGE ?= $(IMAGE_REGISTRY)n3000-labeler:$(IMG_VERSION)
 
 ifeq ($(CONTAINER_TOOL),podman)
- export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.13
- export KUBE_RBAC_PROXY_IMAGE ?= registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.13
+ export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.14
+ export KUBE_RBAC_PROXY_IMAGE ?= registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.14
 else
- export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= quay.io/openshift/origin-sriov-network-device-plugin:4.14
- export KUBE_RBAC_PROXY_IMAGE ?= gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
+ export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= quay.io/openshift/origin-sriov-network-device-plugin:4.15
+ export KUBE_RBAC_PROXY_IMAGE ?= gcr.io/kubebuilder/kube-rbac-proxy:v0.15.0
 endif
 
 CONTROLLER_TOOLS_VERSION ?= v0.9.2
@@ -237,6 +238,16 @@ docker-push-sriov-fec-operator:
 .PHONY: image
 image: image-sriov-fec-daemon image-sriov-fec-labeler image-sriov-fec-operator image-bundle
 
+
+# Retag all the images
+.PHONY: retag
+retag:
+	$(CONTAINER_TOOL) tag $(BUILD_REGISTRY)/sriov-fec-daemon:$(IMG_VERSION) $(IMAGE_REGISTRY)sriov-fec-daemon:$(IMG_VERSION)
+	$(CONTAINER_TOOL) tag $(BUILD_REGISTRY)/sriov-fec-labeler:$(IMG_VERSION) $(IMAGE_REGISTRY)sriov-fec-labeler:$(IMG_VERSION)
+	$(CONTAINER_TOOL) tag $(BUILD_REGISTRY)/sriov-fec-operator:$(IMG_VERSION) $(IMAGE_REGISTRY)sriov-fec-operator:$(IMG_VERSION)
+	$(CONTAINER_TOOL) tag $(BUILD_REGISTRY)/sriov-fec-bundle:$(IMG_VERSION) $(IMAGE_REGISTRY)sriov-fec-bundle:$(IMG_VERSION)
+	$(CONTAINER_TOOL) tag $(BUILD_REGISTRY)/sriov-fec-index:$(VERSION) $(IMAGE_REGISTRY)sriov-fec-index:$(VERSION)
+
 # Push all the images
 .PHONY: push
 push: $(CONTAINER_TOOL)-push-sriov-fec-daemon $(CONTAINER_TOOL)-push-sriov-fec-labeler $(CONTAINER_TOOL)-push-sriov-fec-operator $(CONTAINER_TOOL)-push-bundle
@@ -268,7 +279,7 @@ podman-push-bundle:
 # push images into github container registry in smart-edge-open
 .PHONY: push-sriov-fec-daemon-ghcr
 push-sriov-fec-daemon-ghcr:
-	$(CONTAINER_TOOL) push ghcr.io/smart-edge-open/sriov-fec-daemon:$(VERSION)
+	$(CONTAINER_TOOL) push ghcr.io/smart-edge-open/sriov-fec-daemon:$(VERSION)  
 
 .PHONY: push-sriov-fec-operator-ghcr
 push-sriov-fec-operator-ghcr:
