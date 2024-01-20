@@ -1,6 +1,6 @@
 ```text
 SPDX-License-Identifier: Apache-2.0
-Copyright (c) 2020-2023 Intel Corporation
+Copyright (c) 2020-2024 Intel Corporation
 ```
 <!-- omit in toc -->
 # Release Notes
@@ -48,6 +48,7 @@ This document provides high-level system features, issues, and limitations infor
 | 2.7.0   | May 2023       | 4.10, 4.11, 4.12, 4.13       | 4.11.43, 4.12.18, 4.13.0.rc18 |
 | 2.7.1   | July 2023      | 4.10, 4.11, 4.12, 4.13       | 4.11.43, 4.12.18, 4.13.7      |
 | 2.7.2   | October 2023   | 4.10, 4.11, 4.12, 4.13       | 4.10.67, 4.11.50, 4.12.37, 4.13.15 |
+| 2.8.0   | Dec 2023       | 4.11, 4.12, 4.13, 4.14       | 4.11.54, 4.12.45, 4.13.27, 4.14.7  |
 
 # Features for Release
 ***v2.8.0***
@@ -274,11 +275,22 @@ This document provides high-level system features, issues, and limitations infor
 - Kernel: 5.15.0-72-generic, 5.15.0-1030-realtime
 - Kubernetes 1.26.2
 
+***v2.8.0***
+- OpenShift: 4.14.7
+- OS: Red Hat Enterprise Linux CoreOS 414.92.202312132152-0
+- Kubernetes: v1.27.8+4fab27b
+- RT Kernel: 5.14.0-284.45.1.rt14.330.el9_2.x86_64
+
 ***v2.7.2***
 - OpenShift: 4.13.0
 - OS: Red Hat Enterprise Linux CoreOS 413.92.202305191644-0
 - Kubernetes: v1.26.3+b404935
 - RT Kernel: 5.14.0-284.13.1.el9_2.x86_64
+
+***v2.7.2***
+- OS: Ubuntu 22.04 LTS (Jammy Jellyfish)
+- Kernel: 5.15.0-72-generic, 5.15.0-1030-realtime
+- Kubernetes 1.26.2
 
 ***v2.7.1***
 - OpenShift: 4.13.0
