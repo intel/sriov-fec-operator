@@ -10,6 +10,7 @@ This document provides high-level system features, issues, and limitations infor
 - [Features for Release](#features-for-release)
 - [Changes to Existing Features](#changes-to-existing-features)
 - [Fixed Issues](#fixed-issues)
+- [Known issues](#known-issues)
 - [Release Content](#release-content)
 - [Supported Operating Systems](#supported-operating-systems)
 - [Package Versions](#package-versions)
@@ -264,6 +265,11 @@ This document provides high-level system features, issues, and limitations infor
 
 ***v1.0.0***
 - n/a - this is the first release.
+
+# Known issues
+
+***v2.8.0***
+- Applying SriovFecClusterConfig fails in some cases, a random failure. When it happens it is recommend to reboot the Node to recover from failure state. For stable version of FEC Operator deployment use v2.7.2.
 
 # Release Content
 - SRIOV-FEC Operator for Wireless FEC Accelerators
