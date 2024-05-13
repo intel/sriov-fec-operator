@@ -6,12 +6,12 @@ package daemon
 import (
 	"errors"
 
-	commonUtils "github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	commonUtils "github.com/intel/sriov-fec-operator/pkg/common/utils"
 	"github.com/jaypipes/ghw/pkg/pci"
 	"github.com/sirupsen/logrus"
 
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
-	vrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
+	sriovv2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
+	vrbv1 "github.com/intel/sriov-fec-operator/api/sriovvrb/v1"
 	"github.com/jaypipes/ghw"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
 )

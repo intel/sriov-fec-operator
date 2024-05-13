@@ -10,14 +10,14 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/drainhelper"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	"github.com/intel/sriov-fec-operator/pkg/common/drainhelper"
+	"github.com/intel/sriov-fec-operator/pkg/common/utils"
 
 	"k8s.io/apimachinery/pkg/types"
 
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
-	vrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/daemon"
+	sriovv2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
+	vrbv1 "github.com/intel/sriov-fec-operator/api/sriovvrb/v1"
+	"github.com/intel/sriov-fec-operator/pkg/daemon"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"

@@ -23,9 +23,9 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	"github.com/intel/sriov-fec-operator/pkg/common/utils"
 
-	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
+	sriovfecv2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"

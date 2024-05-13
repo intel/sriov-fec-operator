@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
-	vrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	sriovv2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
+	vrbv1 "github.com/intel/sriov-fec-operator/api/sriovvrb/v1"
+	"github.com/intel/sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
 )
 

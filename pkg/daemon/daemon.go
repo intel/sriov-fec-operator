@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	"github.com/intel/sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,8 +22,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	fec "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
-	vrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
+	fec "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
+	vrbv1 "github.com/intel/sriov-fec-operator/api/sriovvrb/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

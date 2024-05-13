@@ -40,7 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
+	sriovfecv2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
 )
 
 var NAMESPACE = os.Getenv("SRIOV_FEC_NAMESPACE")

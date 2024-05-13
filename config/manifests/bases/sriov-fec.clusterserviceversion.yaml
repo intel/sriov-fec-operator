@@ -10,7 +10,7 @@ metadata:
     containerImage: registry.connect.redhat.com/intel/sriov-fec-operator@sha256:c2c989aa3e9f03558bf207df4524b756c89bc9234194d4f82c2ce77f6dd0b255 #TODO update before release
     createdAt: 2021-11-30 #TODO update before release
     description: An operator for Intel Wireless FEC Accelerator to orchestrate and manage the resources/devices exposed by a range of Intel's vRAN FEC acceleration devices/hardware within the OpenShift cluster.
-    repository: https://github.com/smart-edge-open/sriov-fec-operator
+    repository: https://github.com/intel/sriov-fec-operator
     support: Intel Corporation
   name: sriov-fec.v0.0.0
   namespace: placeholder
@@ -165,7 +165,7 @@ spec:
   - ORAN
   links:
   - name: SRIOV-FEC source code
-    url: https://github.com/smart-edge-open/sriov-fec-operator
+    url: https://github.com/intel/sriov-fec-operator
   maturity: alpha
   provider:
     name: Intel Corporation

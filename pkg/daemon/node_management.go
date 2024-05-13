@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
-	vrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
-	sriovutils "github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	sriovv2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
+	vrbv1 "github.com/intel/sriov-fec-operator/api/sriovvrb/v1"
+	sriovutils "github.com/intel/sriov-fec-operator/pkg/common/utils"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"

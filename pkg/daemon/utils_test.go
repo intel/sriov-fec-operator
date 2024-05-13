@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	"github.com/intel/sriov-fec-operator/pkg/common/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

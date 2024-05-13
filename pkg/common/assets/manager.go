@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	"github.com/intel/sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 

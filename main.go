@@ -34,9 +34,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/assets"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/drainhelper"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	"github.com/intel/sriov-fec-operator/pkg/common/assets"
+	"github.com/intel/sriov-fec-operator/pkg/common/drainhelper"
+	"github.com/intel/sriov-fec-operator/pkg/common/utils"
 
 	secv1 "github.com/openshift/api/security/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -47,10 +47,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	sriovfecv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
-	sriovvrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
-	controllers "github.com/smart-edge-open/sriov-fec-operator/controllers/sriovfec"
-	vrbcontrollers "github.com/smart-edge-open/sriov-fec-operator/controllers/sriovvrb"
+	sriovfecv2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
+	sriovvrbv1 "github.com/intel/sriov-fec-operator/api/sriovvrb/v1"
+	controllers "github.com/intel/sriov-fec-operator/controllers/sriovfec"
+	vrbcontrollers "github.com/intel/sriov-fec-operator/controllers/sriovvrb"
 	// +kubebuilder:scaffold:imports
 )
 

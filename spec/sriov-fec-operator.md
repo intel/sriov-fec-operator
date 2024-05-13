@@ -48,9 +48,9 @@ This document provides the instructions for using the SRIOV-FEC Operator for Wir
 The role of the SRIOV-FEC Operator for Intel® vRAN Boost Accelerator is to orchestrate and manage the resources/devices exposed by a range of Intel® vRAN Boost acceleration devices/hardware within a Kubernetes cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
 The operator design of the SRIOV-FEC Operator supports the following Intel® vRAN Boost accelerators:
 
-* [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/smart-edge-open/sriov-fec-operator/blob/main/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100)
-* [Intel® vRAN Boost v1.0 (VRB1) Accelerator](https://github.com/smart-edge-open/sriov-fec-operator/blob/main/spec/vran-accelerators-supported-by-operator.md#intel-vran-boost-v10-vrb1-accelerator)
-* [Intel® vRAN Boost v2.0 (VRB2) Accelerator](https://github.com/smart-edge-open/sriov-fec-operator/blob/main/spec/vran-accelerators-supported-by-operator.md#intel-vran-boost-v20-vrb2-accelerator)
+* [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/intel/sriov-fec-operator/blob/main/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100)
+* [Intel® vRAN Boost v1.0 (VRB1) Accelerator](https://github.com/intel/sriov-fec-operator/blob/main/spec/vran-accelerators-supported-by-operator.md#intel-vran-boost-v10-vrb1-accelerator)
+* [Intel® vRAN Boost v2.0 (VRB2) Accelerator](https://github.com/intel/sriov-fec-operator/blob/main/spec/vran-accelerators-supported-by-operator.md#intel-vran-boost-v20-vrb2-accelerator)
 
 
 ### Wireless FEC Acceleration management
@@ -74,7 +74,7 @@ The workflow of the SRIOV FEC operator is shown in the following diagram:
 
 The Intel's vRAN FEC acceleration devices/hardware expose the FEC PF device which is to be bound to PCI-PF-STUB, IGB_UIO or VFIO-PCI in order to enable creation of the FEC VF devices. Once the FEC PF is bound to the correct driver, the user can create a number of devices to be used in Cloud Native deployment of vRAN to accelerate FEC. Once these VF devices are created they need to be bound to a user-space driver such as VFIO-PCI in order for them to work and be consumed in vRAN application pods. Before the device can be used by the application, the device needs to be configured - notably the mapping of queues exposed to the VFs - this is done via pf-bb-config application with the input from the CR used as a configuration.
 
-> NOTE: For [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/smart-edge-open/sriov-fec-operator/blob/main/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100) it is advised to create all 16 VFs. The card is configured to provide up to 8 queue groups with up to 16 queues per group. The queue groups can be divided between groups allocated to 5G/4G and Uplink/Downlink, it can be configured for 4G or 5G only, or both 4G and 5G at the same time. Each configured VF has access to all the queues. Each of the queue groups has a distinct priority level. The request for given queue group is made from application level (ie. vRAN application leveraging the FEC device).
+> NOTE: For [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/intel/sriov-fec-operator/blob/main/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100) it is advised to create all 16 VFs. The card is configured to provide up to 8 queue groups with up to 16 queues per group. The queue groups can be divided between groups allocated to 5G/4G and Uplink/Downlink, it can be configured for 4G or 5G only, or both 4G and 5G at the same time. Each configured VF has access to all the queues. Each of the queue groups has a distinct priority level. The request for given queue group is made from application level (ie. vRAN application leveraging the FEC device).
 
 - To get all the nodes containing one of the supported vRAN FEC accelerator devices run the following command (all the commands are run in the `vran-acceleration-operators` namespace, if operator is used on Kubernetes then use `oc` instead of `kubectl`):
 
@@ -235,7 +235,7 @@ As part of the SRIOV FEC operator the K8s SRIOV Network Device plugin is being d
 }
 ```
 
-Once the SRIOV operator takes care of setting up and configuring the device, user can test the device using a sample 'test-bbdev' application from the [DPDK project (DPDK 20.11)](https://github.com/DPDK/dpdk/tree/v20.11/app/test-bbdev). An example of a prepared sample application's docker image can be found in [Intel® SEO project github EdgeApps repo](https://github.com/smart-edge-open/edgeapps/tree/master/applications/fpga-sample-app). SEO is an edge computing software toolkit that enables highly optimized and performant edge platforms to on-board and manage applications and network functions with cloud-like agility across any type of network. For more information, go to [www.smart-edge-open.github.io](https://smart-edge-open.github.io/).
+Once the SRIOV operator takes care of setting up and configuring the device, user can test the device using a sample 'test-bbdev' application from the [DPDK project (DPDK 20.11)](https://github.com/DPDK/dpdk/tree/v20.11/app/test-bbdev). An example of a prepared sample application's docker image can be found in [Intel® SEO project github EdgeApps repo](https://github.com/intel/edgeapps/tree/master/applications/fpga-sample-app). SEO is an edge computing software toolkit that enables highly optimized and performant edge platforms to on-board and manage applications and network functions with cloud-like agility across any type of network. For more information, go to [www.intel.github.io](https://intel.github.io/).
 
 With a sample image of the DPDK application, the following pod can be created similar to the following file as an example (`intel.com/intel_fec_acc100` needs to be replaced as needed when different accelerator is used):
 
@@ -963,7 +963,7 @@ spec:
 ```
 
 ## Appendix 4 - Gathering logs for bug report
-To gather logs for filing bug report please run `gather_sriovfec_logs.sh` script downloaded from https://github.com/smart-edge-open/sriov-fec-operator/blob/main/gather_sriovfec_logs.sh
+To gather logs for filing bug report please run `gather_sriovfec_logs.sh` script downloaded from https://github.com/intel/sriov-fec-operator/blob/main/gather_sriovfec_logs.sh
 
 ```
 Usage: ./gather_sriovfec_logs.sh [K8S_BIN] [NAMESPACE]

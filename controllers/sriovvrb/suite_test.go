@@ -17,7 +17,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	vrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
+	vrbv1 "github.com/intel/sriov-fec-operator/api/sriovvrb/v1"
 	//+kubebuilder:scaffold:imports
 )
 

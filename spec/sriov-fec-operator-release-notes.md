@@ -237,14 +237,14 @@ This document provides high-level system features, issues, and limitations infor
 - Fix for checking secure boot enabled mode
 
 ***2.7.0***
-- Enhanced error handling while processing telemetry data to fix Daemon crash addressing issue: https://github.com/smart-edge-open/sriov-fec-operator/issues/48
-- Leader lease renewal frequency configuration in case of Single Node Cluster addressing issue: https://github.com/smart-edge-open/sriov-fec-operator/issues/36
+- Enhanced error handling while processing telemetry data to fix Daemon crash addressing issue: https://github.com/intel/sriov-fec-operator/issues/48
+- Leader lease renewal frequency configuration in case of Single Node Cluster addressing issue: https://github.com/intel/sriov-fec-operator/issues/36
 
 ***2.3.1***
 - fix for pf_bb_config throwing "MMIO is not accessible causing UR error over PCIe"
 
 ***2.2.1***
-- Adjusting CSV by adding relatedImages tag - addressing https://github.com/smart-edge-open/sriov-fec-operator/issues/19
+- Adjusting CSV by adding relatedImages tag - addressing https://github.com/intel/sriov-fec-operator/issues/19
 
 ***2.1.0***
 - SriovFecClusterConfig.spec.drainSkip was not rewritten into SriovFecNodeConfig.spec.drainSkip so SNO worker
@@ -254,7 +254,7 @@ This document provides high-level system features, issues, and limitations infor
 - SriovFecNodeConfig stucks in InProgress state(issue observed in case of multiple reboots)
 
 ***v1.2.1***
-- [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/smart-edge-open/sriov-fec-operator/issues/270)
+- [4.7.9 sriov-fec-v1.1.0 install does not succeed initially #270](https://github.com/intel/sriov-fec-operator/issues/270)
 
 ***v1.1.0***
 - SEO SR-IOV Operator for Wireless FEC Accelerators

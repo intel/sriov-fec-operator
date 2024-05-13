@@ -27,7 +27,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	"github.com/intel/sriov-fec-operator/pkg/common/utils"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	"github.com/onsi/gomega/gstruct"
@@ -35,7 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
+	sriovv2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"

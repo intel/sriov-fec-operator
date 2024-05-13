@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	vrbv1 "github.com/smart-edge-open/sriov-fec-operator/api/sriovvrb/v1"
+	vrbv1 "github.com/intel/sriov-fec-operator/api/sriovvrb/v1"
 )
 
 var NAMESPACE = os.Getenv("SRIOV_FEC_NAMESPACE")

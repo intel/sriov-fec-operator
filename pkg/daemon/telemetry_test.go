@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	v2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	v2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
+	"github.com/intel/sriov-fec-operator/pkg/common/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus/testutil"

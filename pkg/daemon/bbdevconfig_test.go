@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	sriovv2 "github.com/smart-edge-open/sriov-fec-operator/api/sriovfec/v2"
-	"github.com/smart-edge-open/sriov-fec-operator/pkg/common/utils"
+	sriovv2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
+	"github.com/intel/sriov-fec-operator/pkg/common/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
