@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2023 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package assets
 
@@ -51,49 +51,16 @@ func (m *Manager) buildTemplateVars(ctx context.Context, setKernelVar bool) (map
 		}
 	}
 
-	//default value for VFIO_TOKEN
-	vfioTokenName := m.EnvPrefix + "VFIO_TOKEN"
-	if tp[vfioTokenName] == "" {
-		tp[vfioTokenName] = "02bddbbf-bbb0-4d79-886b-91bad3fbb510"
+	m.setDefaultValues(&tp)
+	if err := m.validateUUID(tp); err != nil {
+		return tp, err
 	}
-	_, err := uuid.Parse(tp[vfioTokenName])
-	if err != nil {
-		return tp, fmt.Errorf("provided VFIO token '%v' is not a valid UUID", tp[vfioTokenName])
-	}
-
-	//default resource name for FPGA_LTE,FPGA_5G,ACC100 and ACC200.
-	resourceNameLte := m.EnvPrefix + "LTE_RESOURCE_NAME"
-	resourceName5g := m.EnvPrefix + "5G_RESOURCE_NAME"
-	resourceNameAcc100 := m.EnvPrefix + "ACC100_RESOURCE_NAME"
-	resourceNameAcc200 := m.EnvPrefix + "ACC200_RESOURCE_NAME"
-	resourceNameVRB2 := "SRIOV_VRB_VRB2_RESOURCE_NAME"
-
-	if tp[resourceNameLte] == "" {
-		tp[resourceNameLte] = "intel_fec_lte"
-	}
-
-	if tp[resourceName5g] == "" {
-		tp[resourceName5g] = "intel_fec_5g"
-	}
-
-	if tp[resourceNameAcc200] == "" {
-		tp[resourceNameAcc200] = "intel_fec_acc200"
-	}
-
-	if tp[resourceNameAcc100] == "" {
-		tp[resourceNameAcc100] = "intel_fec_acc100"
-	}
-
-	if tp[resourceNameVRB2] == "" {
-		tp[resourceNameVRB2] = "intel_vrb_vrb2"
-	}
-
 	if !setKernelVar {
 		return tp, nil
 	}
 
 	nodes := &corev1.NodeList{}
-	err = m.Client.List(ctx, nodes, &client.MatchingLabels{"fpga.intel.com/intel-accelerator-present": ""})
+	err := m.Client.List(ctx, nodes, &client.MatchingLabels{"fpga.intel.com/intel-accelerator-present": ""})
 	if err != nil {
 		return nil, err
 	}
@@ -106,6 +73,32 @@ func (m *Manager) buildTemplateVars(ctx context.Context, setKernelVar bool) (map
 	tp["kernel"] = nodes.Items[0].Status.NodeInfo.KernelVersion
 
 	return tp, nil
+}
+
+func (m *Manager) validateUUID(tp map[string]string) error {
+	vfioTokenName := m.EnvPrefix + "VFIO_TOKEN"
+	_, err := uuid.Parse(tp[vfioTokenName])
+	if err != nil {
+		return fmt.Errorf("provided VFIO token '%v' is not a valid UUID", tp[vfioTokenName])
+	}
+	return nil
+}
+
+func (m *Manager) setDefaultValues(tp *map[string]string) {
+	defaults := map[string]string{
+		m.EnvPrefix + "VFIO_TOKEN":           "02bddbbf-bbb0-4d79-886b-91bad3fbb510",
+		m.EnvPrefix + "LTE_RESOURCE_NAME":    "intel_fec_lte",
+		m.EnvPrefix + "5G_RESOURCE_NAME":     "intel_fec_5g",
+		m.EnvPrefix + "ACC100_RESOURCE_NAME": "intel_fec_acc100",
+		m.EnvPrefix + "ACC200_RESOURCE_NAME": "intel_fec_acc200",
+		"SRIOV_VRB_VRB2_RESOURCE_NAME":       "intel_vrb_vrb2",
+	}
+
+	for key, value := range defaults {
+		if (*tp)[key] == "" {
+			(*tp)[key] = value
+		}
+	}
 }
 
 // DeployConfigMaps issues an asset load from the path and then deployment

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2023 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package v2
 
@@ -66,7 +66,6 @@ type UplinkDownlink struct {
 	LoadBalance int                  `json:"loadBalance"`
 	Queues      UplinkDownlinkQueues `json:"queues"`
 }
-
 
 // N3000BBDevConfig specifies variables to configure N3000 with
 type N3000BBDevConfig struct {
@@ -230,7 +229,7 @@ type SriovFecClusterConfigSpec struct {
 
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// Skips drain process when true; default false. Should be true if operator is running on SNO
-	DrainSkip bool `json:"drainSkip,omitempty"`
+	DrainSkip *bool `json:"drainSkip,omitempty"`
 }
 
 type AcceleratorSelector struct {

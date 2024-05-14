@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2023 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package daemon
 
@@ -38,7 +38,7 @@ var (
 	pciAddress = "0000:14:00.1"
 )
 
-var _ = Describe("NodeConfigReconciler", func() {
+var _ = Describe("FecNodeConfigReconciler", func() {
 	const (
 		_THIS_NODE_NAME      = "worker"
 		_SUPPORTED_NAMESPACE = "default"
@@ -49,7 +49,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 		Expect(vrbv1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
 	})
 
-	Describe("NodeConfigReconciler.Reconcile(...)", func() {
+	Describe("FecNodeConfigReconciler.Reconcile(...)", func() {
 		var (
 			data    *TestData
 			testEnv *envtest.Environment
@@ -58,8 +58,8 @@ var _ = Describe("NodeConfigReconciler", func() {
 		BeforeEach(func() {
 			//configure kernel controller
 			procCmdlineFilePath = "testdata/cmdline_test"
-			configPath = "testdata/accelerators.json"
-			VrbconfigPath = "testdata/accelerators_vrb.json"
+			FecConfigPath = "testdata/accelerators.json"
+			VrbConfigPath = "testdata/accelerators_vrb.json"
 
 			//configure node configurator
 			workdir = testTmpFolder
@@ -87,7 +87,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 		When("Required SriovFecNodeConfig does not exist and cannot be created", func() {
 
-			var reconciler *NodeConfigReconciler
+			var reconciler *FecNodeConfigReconciler
 
 			BeforeEach(func() {
 				By("bootstrapping test environment")
@@ -107,7 +107,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 				drainer := func(operation func(ctx context.Context) bool, drain bool) error { return nil }
 
 				var err error
-				reconciler, err = NewNodeConfigReconciler(&onGetErrorReturningClient, drainer, nodeNameRef, nil, nil, nil)
+				reconciler, err = FecNewNodeConfigReconciler(&onGetErrorReturningClient, drainer, nodeNameRef, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(reconciler).ToNot(BeNil())
 			})
@@ -143,14 +143,13 @@ var _ = Describe("NodeConfigReconciler", func() {
 					pfBBConfigController := NewPfBBConfigController(log, uuid.New().String())
 					configurer := NewNodeConfigurator(logrus.New(), pfBBConfigController, k8sClient, nodeNameRef)
 
-					reconciler, err := NewNodeConfigReconciler(
+					reconciler, err := FecNewNodeConfigReconciler(
 						k8sClient,
 						func(configure func(ctx context.Context) bool, drain bool) error {
 							configure(context.TODO())
 							return nil
 						},
 						nodeNameRef,
-						configurer,
 						configurer,
 						func() error {
 							return nil
@@ -234,7 +233,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 					fakeClient := fake.NewClientBuilder().WithObjects(&data.SriovFecNodeConfig).Build()
 					nodeNameRef := types.NamespacedName{Namespace: _SUPPORTED_NAMESPACE, Name: _THIS_NODE_NAME}
-					reconciler := NodeConfigReconciler{Client: fakeClient, log: log, nodeNameRef: nodeNameRef}
+					reconciler := FecNodeConfigReconciler{Client: fakeClient, log: log, nodeNameRef: nodeNameRef}
 
 					_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{
 						Name:      _THIS_NODE_NAME,
@@ -252,7 +251,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 				})
 			})
 
-			Context("Modification of SriovFecNodeConfig not related with this NodeConfigReconciler instance", func() {
+			Context("Modification of SriovFecNodeConfig not related with this FecNodeConfigReconciler instance", func() {
 				var k8sClient client.Client
 
 				BeforeEach(func() {
@@ -279,11 +278,11 @@ var _ = Describe("NodeConfigReconciler", func() {
 
 					nodeNameRef := types.NamespacedName{Namespace: _SUPPORTED_NAMESPACE, Name: _THIS_NODE_NAME}
 
-					nodeReconciler, err := NewNodeConfigReconciler(k8sClient, drainer, nodeNameRef, nil, nil, nil)
+					nodeReconciler, err := FecNewNodeConfigReconciler(k8sClient, drainer, nodeNameRef, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 
 					reconciler := nodeRecocnilerWrapper{
-						NodeConfigReconciler: nodeReconciler,
+						FecNodeConfigReconciler: nodeReconciler,
 						reconcilingFunc: func(context.Context, reconcile.Request) (reconcile.Result, error) {
 							Fail("reconcile function should not be called")
 							return reconcile.Result{}, nil
@@ -345,11 +344,11 @@ var _ = Describe("NodeConfigReconciler", func() {
 				})
 			})
 
-			When("NodeConfigReconciler cannot read inventory", func() {
+			When("FecNodeConfigReconciler cannot read inventory", func() {
 				It("SriovFecNodeConfig.Status.Condition should expose appropriate info", func() {
 					fakeClient := fake.NewClientBuilder().WithObjects(&data.SriovFecNodeConfig).Build()
 					nodeNameRef := types.NamespacedName{Namespace: _SUPPORTED_NAMESPACE, Name: _THIS_NODE_NAME}
-					reconciler := NodeConfigReconciler{Client: fakeClient, log: log, nodeNameRef: nodeNameRef}
+					reconciler := FecNodeConfigReconciler{Client: fakeClient, log: log, nodeNameRef: nodeNameRef}
 					getSriovInventory = func(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
 						return nil, fmt.Errorf("cannot read inventory")
 					}
@@ -377,7 +376,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithObjects(&nodeConfig).Build()
-		reconciler := NodeConfigReconciler{Client: fakeClient, log: log}
+		reconciler := FecNodeConfigReconciler{Client: fakeClient, log: log}
 
 		Expect(nodeConfig.Status.Conditions).To(BeEmpty())
 
@@ -452,7 +451,7 @@ var _ = Describe("NodeConfigReconciler", func() {
 })
 
 type nodeRecocnilerWrapper struct {
-	*NodeConfigReconciler
+	*FecNodeConfigReconciler
 	reconcilingFunc func(ctx context.Context, req ctrl.Request) (ctrl.Result, error)
 }
 
@@ -592,7 +591,7 @@ func (r *resultCatcher) Return(toBeReturned ...interface{}) *runExecCmdMock {
 }
 
 func FuzzIsCardUpdateRequired(f *testing.F) {
-	icur := NodeConfigReconciler{
+	icur := FecNodeConfigReconciler{
 		Client:      nil,
 		log:         &logrus.Logger{},
 		nodeNameRef: types.NamespacedName{},
@@ -600,7 +599,6 @@ func FuzzIsCardUpdateRequired(f *testing.F) {
 			return nil
 		},
 		sriovfecconfigurer: nil,
-		vrbconfigurer:      nil,
 		restartDevicePlugin: func() error {
 			return nil
 		},
@@ -630,15 +628,14 @@ func FuzzIsCardUpdateRequired(f *testing.F) {
 }
 
 func FuzzVrbIsCardUpdateRequired(f *testing.F) {
-	vicur := NodeConfigReconciler{
+	vicur := VrbNodeConfigReconciler{
 		Client:      nil,
 		log:         &logrus.Logger{},
 		nodeNameRef: types.NamespacedName{},
 		drainerAndExecute: func(configurer func(ctx context.Context) bool, drain bool) error {
 			return nil
 		},
-		sriovfecconfigurer: nil,
-		vrbconfigurer:      nil,
+		vrbconfigurer: nil,
 		restartDevicePlugin: func() error {
 			return nil
 		},
@@ -663,7 +660,7 @@ func FuzzVrbIsCardUpdateRequired(f *testing.F) {
 				t.Errorf("Error: %v", vicur)
 			}
 		}()
-		_ = vicur.VrbisCardUpdateRequired(&svnc, &detectedInventory)
+		_ = vicur.isCardUpdateRequired(&svnc, &detectedInventory)
 	})
 }
 
@@ -680,5 +677,21 @@ func FuzzValidateNodeConfig(f *testing.F) {
 			}
 		}()
 		_ = validateNodeConfig(nc)
+	})
+}
+
+func FuzzVrbValidateNodeConfig(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		nc := vrbv1.SriovVrbNodeConfigSpec{
+			PhysicalFunctions: []vrbv1.PhysicalFunctionConfigExt{},
+			DrainSkip:         false,
+		}
+		fuzz.NewFromGoFuzz(data).Fuzz(&nc)
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Error: %v", nc)
+			}
+		}()
+		_ = validateVrbNodeConfig(nc)
 	})
 }

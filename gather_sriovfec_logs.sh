@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020-2024 Intel Corporation
+
 K8S_BIN="${1:-oc}"
 NAMESPACE="${2:-vran-acceleration-operators}"
 CLUSTER_CONFIG="sfcc"
@@ -62,7 +65,6 @@ pods=$("${K8S_BIN}" -n "${NAMESPACE}" get pods -o custom-columns=NAME:.metadata.
 # shellcheck disable=SC2068
 for pod in ${pods[@]}; do
    nodeName=$("${K8S_BIN}" -n "${NAMESPACE}" get pod "${pod}" -o custom-columns=NODE:.spec.nodeName --no-headers=true)
-   "${K8S_BIN}" -n "${NAMESPACE}" exec -it "${pod}" -- bash -c "chroot / dmesg" > systemLogs/dmesg-"${nodeName}".log
    "${K8S_BIN}" -n "${NAMESPACE}" exec -it "${pod}" -- bash -c "chroot / lspci -vvv" > systemLogs/lspci-"${nodeName}".log
    telemetryFiles=$("${K8S_BIN}" -n "${NAMESPACE}" exec -it "${pod}" -- bash -c "ls -f -A1 /var/log/"|grep pf_bb_cfg| tr -d '\r')
    for telemetryFiles in ${telemetryFiles[@]}; do

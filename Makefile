@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020-2023 Intel Corporation
+# Copyright (c) 2020-2024 Intel Corporation
 
 # Default k8s command-line tool exec
 export CLI_EXEC?=oc
 # Container format for podman. Required to build containers with "ManifestType": "application/vnd.oci.image.manifest.v2+json",
 export BUILDAH_FORMAT=docker
 # Current Operator version
-VERSION ?= 2.8.0
+VERSION ?= 2.9.0
 # Supported channels
 CHANNELS ?= stable
 # Default channel
@@ -58,7 +58,7 @@ else
  export KUBE_RBAC_PROXY_IMAGE ?= gcr.io/kubebuilder/kube-rbac-proxy:v0.15.0
 endif
 
-CONTROLLER_TOOLS_VERSION ?= v0.9.2
+CONTROLLER_TOOLS_VERSION ?= v0.14.0
 ENVTEST_K8S_VERSION ?= 1.24
 KUSTOMIZE_VERSION ?= 4.5.7
 OPM_VERSION ?= 1.26.2
@@ -194,9 +194,8 @@ generate: controller-gen
 image-sriov-fec-daemon:
 	cp LICENSE TEMP_LICENSE_COPY
 	$(CONTAINER_TOOL) build . -f Dockerfile.daemon -t $(SRIOV_FEC_DAEMON_IMAGE) --build-arg=VERSION=$(IMG_VERSION) --no-cache
-	$(CONTAINER_TOOL) tag $(SRIOV_FEC_DAEMON_IMAGE) ghcr.io/intel/sriov-fec-daemon:$(VERSION)
 	
-.PHONY: push-sriov-fec-daemon
+.PHONY: podman-push-sriov-fec-daemon
 podman-push-sriov-fec-daemon:
 	podman push $(SRIOV_FEC_DAEMON_IMAGE) --tls-verify=$(TLS_VERIFY)
 
@@ -209,9 +208,8 @@ docker-push-sriov-fec-daemon:
 image-sriov-fec-labeler:
 	cp LICENSE TEMP_LICENSE_COPY
 	$(CONTAINER_TOOL) build . -f Dockerfile.labeler -t ${SRIOV_FEC_LABELER_IMAGE} --build-arg=VERSION=$(IMG_VERSION) --no-cache
-	$(CONTAINER_TOOL) tag $(SRIOV_FEC_LABELER_IMAGE) ghcr.io/intel/sriov-fec-labeler:$(VERSION)
 
-.PHONY: push-sriov-fec-labeler
+.PHONY: podman-push-sriov-fec-labeler
 podman-push-sriov-fec-labeler:
 	podman push ${SRIOV_FEC_LABELER_IMAGE} --tls-verify=$(TLS_VERIFY)
 
@@ -224,7 +222,6 @@ docker-push-sriov-fec-labeler:
 image-sriov-fec-operator:
 	cp LICENSE TEMP_LICENSE_COPY
 	$(CONTAINER_TOOL) build . -t $(SRIOV_FEC_OPERATOR_IMAGE) --build-arg=VERSION=$(IMG_VERSION) --no-cache
-	$(CONTAINER_TOOL) tag $(SRIOV_FEC_OPERATOR_IMAGE) ghcr.io/intel/sriov-fec-operator:$(VERSION)
 
 .PHONY: podman-push-sriov-fec-operator
 podman-push-sriov-fec-operator:
@@ -270,75 +267,11 @@ bundle: check-operator-sdk-version manifests kustomize
 image-bundle: bundle
 	cp LICENSE TEMP_LICENSE_COPY
 	$(CONTAINER_TOOL) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
-	$(CONTAINER_TOOL) tag $(BUNDLE_IMG) ghcr.io/intel/sriov-fec-bundle:$(VERSION)
 
 .PHONY: podman-push-bundle
 podman-push-bundle:
 	podman push $(BUNDLE_IMG) --tls-verify=$(TLS_VERIFY)
 	
-# push images into github container registry in intel
-.PHONY: push-sriov-fec-daemon-ghcr
-push-sriov-fec-daemon-ghcr:
-	$(CONTAINER_TOOL) push ghcr.io/intel/sriov-fec-daemon:$(VERSION)  
-
-.PHONY: push-sriov-fec-operator-ghcr
-push-sriov-fec-operator-ghcr:
-	$(CONTAINER_TOOL) push ghcr.io/intel/sriov-fec-operator:$(VERSION)
-
-.PHONY: push-sriov-fec-bundle-ghcr
-push-sriov-fec-bundle-ghcr:
-	$(CONTAINER_TOOL) push ghcr.io/intel/sriov-fec-bundle:$(VERSION)
-
-.PHONY: push-sriov-fec-labeler-ghcr
-push-sriov-fec-labeler-ghcr:
-	$(CONTAINER_TOOL) push ghcr.io/intel/sriov-fec-labeler:$(VERSION)
-
-.PHONY: push-all-ghcr
-push-all-ghcr: push-sriov-fec-daemon-ghcr push-sriov-fec-operator-ghcr push-sriov-fec-bundle-ghcr push-sriov-fec-labeler-ghcr
-
-# pull images from github container registry
-.PHONY: pull-sriov-fec-daemon-ghcr
-pull-sriov-fec-daemon-ghcr:
-	docker pull ghcr.io/intel/sriov-fec-daemon:$(VERSION)
-
-.PHONY: pull-sriov-fec-operator-ghcr
-pull-sriov-fec-operator-ghcr:
-	docker pull ghcr.io/intel/sriov-fec-operator:$(VERSION)
-
-.PHONY: pull-bundle-ghcr	
-pull-bundle-ghcr:
-	docker pull ghcr.io/intel/sriov-fec-bundle:$(VERSION)
-
-.PHONY: pull-labeler-ghcr
-pull-labeler-ghcr:
-	docker pull ghcr.io/intel/sriov-fec-labeler:$(VERSION)
-
-.PHONY: pull-all-ghcr     
-pull-all-ghcr: pull-sriov-fec-daemon-ghcr pull-sriov-fec-operator-ghcr pull-bundle-ghcr pull-labeler-ghcr
-
-.PHONY: scan-sriov-fec-daemon-image
-scan-sriov-fec-daemon-image:
-	snyk container test ghcr.io/intel/sriov-fec-daemon:$(VERSION) || true
-	snyk container monitor --exclude-base-image-vulns ghcr.io/intel/sriov-fec-daemon:$(VERSION)
-
-.PHONY: scan-sriov-fec-operator-image
-scan-sriov-fec-operator-image:i
-	snyk container test ghcr.io/intel/sriov-fec-operator:$(VERSION) || true
-	snyk container monitor --exclude-base-image-vulns ghcr.io/intel/sriov-fec-operator:$(VERSION)
-
-.PHONY: scan-sriov-fec-bundle-image
-scan-sriov-fec-bundle-image:
-	snyk container test ghcr.io/intel/sriov-fec-bundle:$(VERSION) || true
-	snyk container monitor --exclude-base-image-vulns ghcr.io/intel/sriov-fec-bundle:$(VERSION)
-
-.PHONY: scan-sriov-fec-labeler-image
-scan-sriov-fec-labeler-image:
-	snyk container test ghcr.io/intel/sriov-fec-labeler:$(VERSION) || true
-	snyk container monitor --exclude-base-image-vulns ghcr.io/intel/sriov-fec-labeler:$(VERSION)
-
-.PHONY: scan_all
-scan_all: scan-sriov-fec-daemon-image scan-sriov-fec-operator-image scan-sriov-fec-bundle-image scan-sriov-fec-labeler-image
-
 .PHONY: docker-push-bundle
 docker-push-bundle:
 	docker push $(BUNDLE_IMG)
@@ -361,7 +294,7 @@ else
 endif
 	echo -e "---\nschema: olm.channel\npackage: sriov-fec\nname: stable\nentries:\n- name: sriov-fec.v$(VERSION)" >> sriov-fec-index/index.yaml
 	$(OPM) validate sriov-fec-index
-	$(CONTAINER_TOOL) build . -f sriov-fec-index.Dockerfile -t localhost/sriov-fec-index:$(VERSION) --no-cache
+	$(CONTAINER_TOOL) build . -f Dockerfile.sriov-fec-index -t localhost/sriov-fec-index:$(VERSION) --no-cache
 	$(MAKE) VERSION=$(VERSION) IMAGE_REGISTRY=$(IMAGE_REGISTRY) TLS_VERIFY=$(TLS_VERIFY) $(CONTAINER_TOOL)_push_index
 
 .PHONY: podman_push_index

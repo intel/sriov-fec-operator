@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2021 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package utils
 
@@ -7,10 +7,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"os"
 	"path/filepath"
+
+	"github.com/go-logr/logr"
+	"github.com/jaypipes/ghw"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -83,4 +85,45 @@ func IsSingleNodeCluster(c client.Client) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+var GetPCIDevices = func() ([]*ghw.PCIDevice, error) {
+	pci, err := ghw.PCI()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get PCI info: %v", err)
+	}
+
+	devices := pci.ListDevices()
+	if len(devices) == 0 {
+		return nil, fmt.Errorf("Got 0 devices")
+	}
+	return devices, nil
+}
+
+func FindAccelerator(cfgPath string) (bool, string, error) {
+
+	cfg, err := LoadDiscoveryConfig(cfgPath)
+	if err != nil {
+		return false, "", fmt.Errorf("Failed to load config: %v", err)
+	}
+
+	devices, err := GetPCIDevices()
+	if err != nil {
+		return false, "", fmt.Errorf("Failed to get PCI devices: %v", err)
+	}
+
+	for _, device := range devices {
+		_, exist := cfg.VendorID[device.Vendor.ID]
+		if !(exist &&
+			device.Class.ID == cfg.Class &&
+			device.Subclass.ID == cfg.SubClass) {
+			continue
+		}
+
+		if _, ok := cfg.Devices[device.Product.ID]; ok {
+			fmt.Printf("[%s]Accelerator found %v\n", cfgPath, device)
+			return true, cfg.NodeLabel, nil
+		}
+	}
+	return false, "", nil
 }

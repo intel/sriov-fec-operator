@@ -1,35 +1,36 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2022 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package daemon
 
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
-func NewDevicePluginController(c client.Client, log *logrus.Logger, nnr types.NamespacedName) *devicePluginController {
-	return &devicePluginController{
+func NewDevicePluginController(c client.Client, log *logrus.Logger, nnr types.NamespacedName) *DevicePluginController {
+	return &DevicePluginController{
 		Client:      c,
 		log:         log,
 		nodeNameRef: nnr,
 	}
 }
 
-type devicePluginController struct {
+type DevicePluginController struct {
 	client.Client
 	log         *logrus.Logger
 	nodeNameRef types.NamespacedName
 }
 
-func (d *devicePluginController) RestartDevicePlugin() error {
+func (d *DevicePluginController) RestartDevicePlugin() error {
 	pods := &corev1.PodList{}
 	err := d.List(context.TODO(), pods,
 		client.InNamespace(d.nodeNameRef.Namespace),
@@ -60,7 +61,7 @@ func (d *devicePluginController) RestartDevicePlugin() error {
 	return nil
 }
 
-func (d *devicePluginController) waitForDevicePluginRestart(oldPodName string) func() (bool, error) {
+func (d *DevicePluginController) waitForDevicePluginRestart(oldPodName string) func() (bool, error) {
 	return func() (bool, error) {
 		pods := &corev1.PodList{}
 

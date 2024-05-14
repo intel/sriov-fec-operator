@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2023 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package main
 
@@ -25,6 +25,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var (
@@ -36,6 +37,62 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(sriovv2.AddToScheme(scheme))
 	utilruntime.Must(vrbv1.AddToScheme(scheme))
+}
+
+func initFecReconciler(mgr manager.Manager, drainHelper *drainhelper.DrainHelper, nodeNameRef types.NamespacedName,
+	nodeConfigurer *daemon.NodeConfigurator, devicePluginController *daemon.DevicePluginController, directClient client.Client) error {
+
+	isFecDevice, _, err := utils.FindAccelerator(daemon.FecConfigPath)
+	if err != nil {
+		return err
+	}
+	if !isFecDevice {
+		setupLog.WithField("Reconciler", "FEC").Info("Not started, no device found")
+		return nil
+	}
+
+	reconciler, err := daemon.FecNewNodeConfigReconciler(mgr.GetClient(), drainHelper.Run, nodeNameRef, nodeConfigurer, devicePluginController.RestartDevicePlugin)
+	if err != nil {
+		return err
+	}
+
+	if err := reconciler.SetupWithManager(mgr); err != nil {
+		return err
+	}
+
+	if err := reconciler.CreateEmptyNodeConfigIfNeeded(directClient); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func initVrbReconciler(mgr manager.Manager, drainHelper *drainhelper.DrainHelper, nodeNameRef types.NamespacedName,
+	nodeConfigurer *daemon.NodeConfigurator, devicePluginController *daemon.DevicePluginController, directClient client.Client) error {
+
+	isVrbDevice, _, err := utils.FindAccelerator(daemon.VrbConfigPath)
+	if err != nil {
+		return err
+	}
+	if !isVrbDevice {
+		setupLog.WithField("Reconciler", "VRB").Info("Not started, no device found")
+		return nil
+	}
+
+	reconciler, err := daemon.VrbNewNodeConfigReconciler(mgr.GetClient(), drainHelper.Run, nodeNameRef, nodeConfigurer, devicePluginController.RestartDevicePlugin)
+	if err != nil {
+		return err
+	}
+
+	if err := reconciler.SetupWithManager(mgr); err != nil {
+		return err
+	}
+
+	if err := reconciler.CreateEmptyNodeConfigIfNeeded(directClient); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func main() {
@@ -102,24 +159,13 @@ func main() {
 	nodeConfigurer := daemon.NewNodeConfigurator(utils.NewLogger(), pfBBConfigController, mgr.GetClient(), nodeNameRef)
 	devicePluginController := daemon.NewDevicePluginController(mgr.GetClient(), utils.NewLogger(), nodeNameRef)
 
-	reconciler, err := daemon.NewNodeConfigReconciler(mgr.GetClient(), drainHelper.Run, nodeNameRef, nodeConfigurer, nodeConfigurer, devicePluginController.RestartDevicePlugin)
-	if err != nil {
-		setupLog.WithError(err).Error("unable to create reconciler")
+	if err := initFecReconciler(mgr, drainHelper, nodeNameRef, nodeConfigurer, devicePluginController, directClient); err != nil {
+		setupLog.WithError(err).Error("Fail to start FEC Reconciler")
 		os.Exit(1)
 	}
 
-	if err := reconciler.SetupWithManager(mgr); err != nil {
-		setupLog.WithError(err).Error("unable to create controller for SrionvFecNodeConfig")
-		os.Exit(1)
-	}
-
-	if err := reconciler.VrbSetupWithManager(mgr); err != nil {
-		setupLog.WithError(err).Error("unable to create controller for SriovVrbNodeConfig")
-		os.Exit(1)
-	}
-
-	if err := reconciler.CreateEmptyNodeConfigIfNeeded(directClient); err != nil {
-		setupLog.WithError(err).Error("failed to create initial NodeConfig CR")
+	if err := initVrbReconciler(mgr, drainHelper, nodeNameRef, nodeConfigurer, devicePluginController, directClient); err != nil {
+		setupLog.WithError(err).Error("Fail to start VRB Reconciler")
 		os.Exit(1)
 	}
 

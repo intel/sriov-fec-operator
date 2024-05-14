@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2023 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 // Package v1 contains API Schema definitions for the vrb v1 API group
 // +kubebuilder:object:generate=true

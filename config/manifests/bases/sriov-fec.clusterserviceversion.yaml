@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020-2023 Intel Corporation
+# Copyright (c) 2020-2024 Intel Corporation
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
@@ -10,7 +10,7 @@ metadata:
     containerImage: registry.connect.redhat.com/intel/sriov-fec-operator@sha256:c2c989aa3e9f03558bf207df4524b756c89bc9234194d4f82c2ce77f6dd0b255 #TODO update before release
     createdAt: 2021-11-30 #TODO update before release
     description: An operator for Intel Wireless FEC Accelerator to orchestrate and manage the resources/devices exposed by a range of Intel's vRAN FEC acceleration devices/hardware within the OpenShift cluster.
-    repository: https://github.com/intel/sriov-fec-operator
+    repository: https://github.com/smart-edge-open/sriov-fec-operator
     support: Intel Corporation
   name: sriov-fec.v0.0.0
   namespace: placeholder
@@ -115,6 +115,61 @@ spec:
         displayName: Inventory
         path: inventory
       version: v2
+    - description: SriovVrbClusterConfig is the Schema for the sriovvrbclusterconfigs
+        API
+      displayName: SriovVrbClusterConfig
+      kind: SriovVrbClusterConfig
+      name: sriovvrbclusterconfigs.sriovvrb.intel.com
+      resources:
+      - kind: SriovVrbNodeConfig
+        name: node
+        version: v1
+      specDescriptors:
+      - description: Selector describes target accelerator for this spec
+        displayName: Accelerator Selector
+        path: acceleratorSelector
+      - description: Skips drain process when true; default false. Should be true
+          if operator is running on SNO
+        displayName: Drain Skip
+        path: drainSkip
+      - description: Selector describes target node for this spec
+        displayName: Node Selector
+        path: nodeSelector
+      - description: List of physical functions (cards) configs
+        displayName: Physical Functions
+        path: nodes[0].physicalFunctions
+      - description: Physical function (card) config
+        displayName: Physical Function
+        path: physicalFunction
+      - description: Higher priority policies can override lower ones.
+        displayName: Priority
+        path: priority
+      statusDescriptors:
+      - description: Indicates the synchronization status of the CR
+        displayName: Sync Status
+        path: syncStatus
+      version: v1
+    - description: SriovVrbNodeConfig is the Schema for the sriovvrbnodeconfigs API
+      displayName: SriovVrbNodeConfig
+      kind: SriovVrbNodeConfig
+      name: sriovvrbnodeconfigs.sriovvrb.intel.com
+      resources:
+      - kind: SriovVrbNodeConfig
+        name: node
+        version: v1
+      specDescriptors:
+      - description: Skips drain process when true; default false. Should be true
+          if operator is running on SNO
+        displayName: Drain Skip
+        path: drainSkip
+      - description: List of PhysicalFunctions configs
+        displayName: Physical Functions
+        path: physicalFunctions
+      statusDescriptors:
+      - description: Provides information about FPGA inventory on the node
+        displayName: Inventory
+        path: inventory
+      version: v1
   description: "The vRAN Dedicated Accelerator ACC100, based on Intel eASIC technology is designed 
     to offload and accelerate the computing-intensive process of forward error correction (FEC) for 
     4G/LTE and 5G technology, freeing up processing power. Intel eASIC devices are structured ASICs,
@@ -165,10 +220,15 @@ spec:
   - ORAN
   links:
   - name: SRIOV-FEC source code
-    url: https://github.com/intel/sriov-fec-operator
+    url: https://github.com/smart-edge-open/sriov-fec-operator
   maturity: alpha
   provider:
     name: Intel Corporation
     url: https://builders.intel.com/docs/networkbuilders/intel-vran-dedicated-accelerator-acc100-product-brief.pdf
-  replaces: sriov-fec.v2.7.2
-  version: 0.0.0
+  skips:
+  - sriov-fec.v2.6.0
+  - sriov-fec.v2.6.1
+  - sriov-fec.v2.7.0
+  - sriov-fec.v2.7.1
+  - sriov-fec.v2.7.2
+  version: 2.8.0

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2022 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package daemon
 
@@ -132,6 +132,48 @@ func StartTelemetryDaemon(mgr manager.Manager, nodeName string, ns string, direc
 	go getMetrics(nodeName, ns, directClient, log, telemetryGatherer)
 }
 
+func getFecMetrics(log *logrus.Logger, telemetryGatherer *telemetryGatherer, fecNodeConfig *fec.SriovFecNodeConfig) {
+
+	if len(fecNodeConfig.Status.Conditions) > 0 && fecNodeConfig.Status.Conditions[0].Reason == string(fec.SucceededSync) {
+		for _, acc := range fecNodeConfig.Status.Inventory.SriovAccelerators {
+			if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
+				getTelemetry(acc.PCIAddress, acc.VFs, telemetryGatherer, log)
+			}
+		}
+	} else {
+		for _, acc := range fecNodeConfig.Status.Inventory.SriovAccelerators {
+			if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
+				if len(fecNodeConfig.Status.Conditions) != 0 {
+					telemetryGatherer.updateVfCount(acc.PCIAddress, fecNodeConfig.Status.Conditions[0].Reason, 0)
+				} else {
+					telemetryGatherer.updateVfCount(acc.PCIAddress, "", 0)
+				}
+			}
+		}
+	}
+}
+
+func getVrbMetrics(log *logrus.Logger, telemetryGatherer *telemetryGatherer, vrbNodeConfig *vrbv1.SriovVrbNodeConfig) {
+
+	if len(vrbNodeConfig.Status.Conditions) > 0 && vrbNodeConfig.Status.Conditions[0].Reason == string(vrbv1.SucceededSync) {
+		for _, acc := range vrbNodeConfig.Status.Inventory.SriovAccelerators {
+			if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
+				VrbgetTelemetry(acc.PCIAddress, acc.VFs, telemetryGatherer, log)
+			}
+		}
+	} else {
+		for _, acc := range vrbNodeConfig.Status.Inventory.SriovAccelerators {
+			if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
+				if len(vrbNodeConfig.Status.Conditions) != 0 {
+					telemetryGatherer.updateVfCount(acc.PCIAddress, vrbNodeConfig.Status.Conditions[0].Reason, 0)
+				} else {
+					telemetryGatherer.updateVfCount(acc.PCIAddress, "", 0)
+				}
+			}
+		}
+	}
+}
+
 func getMetrics(nodeName, namespace string, c client.Client, log *logrus.Logger, telemetryGatherer *telemetryGatherer) {
 	sleepDuration := 15 * time.Second
 	sleepEnv := os.Getenv(utils.SRIOV_PREFIX + "METRIC_GATHER_INTERVAL")
@@ -146,54 +188,24 @@ func getMetrics(nodeName, namespace string, c client.Client, log *logrus.Logger,
 
 	utils.NewLogger().Info("metrics update loop will run every ", sleepDuration)
 	wait.Forever(func() {
-		nodeConfig := &fec.SriovFecNodeConfig{}
-		err := c.Get(context.Background(), client.ObjectKey{Name: nodeName, Namespace: namespace}, nodeConfig)
-		if err != nil {
-			log.WithError(err).WithField("nodeName", nodeName).WithField("namespace", namespace).Error("failed to get SriovFecNodeConfig to fetch telemetry")
+		fecNodeConfig := &fec.SriovFecNodeConfig{}
+		vrbNodeConfig := &vrbv1.SriovVrbNodeConfig{}
+
+		fecNodeConfigErr := c.Get(context.Background(), client.ObjectKey{Name: nodeName, Namespace: namespace}, fecNodeConfig)
+		vrbNodeConfigErr := c.Get(context.Background(), client.ObjectKey{Name: nodeName, Namespace: namespace}, vrbNodeConfig)
+
+		if fecNodeConfigErr != nil && vrbNodeConfigErr != nil {
+			log.WithError(fecNodeConfigErr).WithField("nodeName", nodeName).WithField("namespace", namespace).Error("failed to get SriovFecNodeConfig to fetch telemetry")
+			log.WithError(vrbNodeConfigErr).WithField("nodeName", nodeName).WithField("namespace", namespace).Error("failed to get SriovVrbNodeConfig to fetch telemetry")
 			return
 		}
 
-		if len(nodeConfig.Status.Conditions) > 0 && nodeConfig.Status.Conditions[0].Reason == string(fec.SucceededSync) {
-			for _, acc := range nodeConfig.Status.Inventory.SriovAccelerators {
-				if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
-					getTelemetry(acc.PCIAddress, acc.VFs, telemetryGatherer, log)
-				}
-			}
-		} else {
-			for _, acc := range nodeConfig.Status.Inventory.SriovAccelerators {
-				if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
-					if len(nodeConfig.Status.Conditions) != 0 {
-						telemetryGatherer.updateVfCount(acc.PCIAddress, nodeConfig.Status.Conditions[0].Reason, 0)
-					} else {
-						telemetryGatherer.updateVfCount(acc.PCIAddress, "", 0)
-					}
-				}
-			}
+		if fecNodeConfigErr == nil && len(fecNodeConfig.Spec.PhysicalFunctions) != 0 {
+			getFecMetrics(log, telemetryGatherer, fecNodeConfig)
 		}
 
-		VrbnodeConfig := &vrbv1.SriovVrbNodeConfig{}
-		err = c.Get(context.Background(), client.ObjectKey{Name: nodeName, Namespace: namespace}, VrbnodeConfig)
-		if err != nil {
-			log.WithError(err).WithField("nodeName", nodeName).WithField("namespace", namespace).Error("failed to get SriovVrbNodeConfig to fetch telemetry")
-			return
-		}
-
-		if len(VrbnodeConfig.Status.Conditions) > 0 && VrbnodeConfig.Status.Conditions[0].Reason == string(vrbv1.SucceededSync) {
-			for _, acc := range VrbnodeConfig.Status.Inventory.SriovAccelerators {
-				if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
-					VrbgetTelemetry(acc.PCIAddress, acc.VFs, telemetryGatherer, log)
-				}
-			}
-		} else {
-			for _, acc := range VrbnodeConfig.Status.Inventory.SriovAccelerators {
-				if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
-					if len(VrbnodeConfig.Status.Conditions) != 0 {
-						telemetryGatherer.updateVfCount(acc.PCIAddress, nodeConfig.Status.Conditions[0].Reason, 0)
-					} else {
-						telemetryGatherer.updateVfCount(acc.PCIAddress, "", 0)
-					}
-				}
-			}
+		if vrbNodeConfigErr == nil && len(vrbNodeConfig.Spec.PhysicalFunctions) != 0 {
+			getVrbMetrics(log, telemetryGatherer, vrbNodeConfig)
 		}
 
 		telemetryGatherer.updateMetrics()

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2023 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 /*
 
@@ -310,7 +310,7 @@ var _ = Describe("SriovControllerTest", func() {
 						VFAmount:    pfc.VFAmount,
 						BBDevConfig: pfc.BBDevConfig,
 					}))
-				Expect(nc.Spec.DrainSkip).To(BeFalse())
+				Expect(nc.Spec.DrainSkip).To(BeTrue())
 
 				nc2 := new(sriovv2.SriovFecNodeConfig)
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKey{Name: n2.Name, Namespace: NAMESPACE}, nc2)).ToNot(HaveOccurred())
@@ -817,7 +817,8 @@ var _ = Describe("SriovControllerTest", func() {
 					cc.Spec.AcceleratorSelector = sriovv2.AcceleratorSelector{
 						PCIAddress: "0000:15:00.1",
 					}
-					cc.Spec.DrainSkip = true
+					val := true
+					cc.Spec.DrainSkip = &val
 				})
 
 				reconciler := SriovFecClusterConfigReconciler{k8sClient, log}

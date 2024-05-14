@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2023 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package daemon
 
@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-var _ = Describe("NodeConfigReconciler.Reconcile", func() {
+var _ = Describe("FecNodeConfigReconciler.Reconcile", func() {
 	var scheme *runtime.Scheme
 
 	BeforeEach(func() {
@@ -33,7 +33,7 @@ var _ = Describe("NodeConfigReconciler.Reconcile", func() {
 		var (
 			fakeClient         client.Client
 			nodeNameRef        types.NamespacedName
-			reconciler         NodeConfigReconciler
+			reconciler         FecNodeConfigReconciler
 			reconcileRequestes ctrl.Request
 			nodeInventory      *sriovv2.NodeInventory
 		)
@@ -77,12 +77,11 @@ var _ = Describe("NodeConfigReconciler.Reconcile", func() {
 				return nodeInventory, nil
 			}
 
-			reconciler = NodeConfigReconciler{
+			reconciler = FecNodeConfigReconciler{
 				Client:             fakeClient,
 				log:                utils.NewLogger(),
 				nodeNameRef:        nodeNameRef,
 				sriovfecconfigurer: configurer,
-				vrbconfigurer:      nil,
 				drainerAndExecute: func(configurer func(ctx context.Context) bool, drain bool) error {
 					_ = configurer(context.TODO())
 					return nil

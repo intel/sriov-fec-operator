@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020-2024 Intel Corporation
+
+apiVersion: sriovvrb.intel.com/v1
+kind: SriovVrbClusterConfig
+metadata:
+  name: config
+spec:
+  drainSkip: ture
+  nodeSelector:
+    foo: bar
+  acceleratorSelector:
+    deviceID: anyDevice
+  physicalFunction:
+    pfDriver: pci-pf-stub
+    vfDriver: vfDriver
+    vfAmount: 2
+    bbDevConfig:
+      vrb1:
+        pfMode: false
+        maxQueueSize: 1024
+        numVfBundles: 2
+        uplink4G:
+          numQueueGroups: 1
+          numAqsPerGroups: 1
+          aqDepthLog2: 1
+        downlink4G:
+          numQueueGroups: 1
+          numAqsPerGroups: 1
+          aqDepthLog2: 1
+        uplink5G:
+          numQueueGroups: 1
+          numAqsPerGroups: 1
+          aqDepthLog2: 1
+        downlink5G:
+          numQueueGroups: 1
+          numAqsPerGroups: 1
+          aqDepthLog2: 1
+        qfft:
+          numQueueGroups: 1
+          numAqsPerGroups: 1
+          aqDepthLog2: 1

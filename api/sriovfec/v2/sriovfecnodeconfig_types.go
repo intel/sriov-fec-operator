@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2023 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package v2
 
@@ -39,6 +39,7 @@ type SriovFecNodeConfigSpec struct {
 
 // SriovFecNodeConfigStatus defines the observed state of SriovFecNodeConfig
 type SriovFecNodeConfigStatus struct {
+	PfBbConfVersion string `json:"pfBbConfVersion,omitempty"`
 	// Provides information about device update status
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Provides information about FPGA inventory on the node

@@ -26,32 +26,39 @@ This document provides high-level system features, issues, and limitations infor
 
 ### SRIOV-FEC Operator
 
-| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP               |
-|---------|----------------|------------------------------|-------------------------------|
-| 1.0.0   | January 2021   | 4.6                          | 4.6.4                         |
-| 1.1.0   | March 2021     | 4.6                          | 4.6.16                        |
-| 1.2.0   | June 2021      | 4.7                          | 4.7.8                         |
-| 1.2.1   | June 2021      | 4.7                          | 4.7.8                         |
-| 1.3.0   | August 2021    | 4.8                          | 4.8.2                         |
-| 2.0.0   | September 2021 | 4.8                          | 4.8.5                         |
-| 2.0.1   | October 2021   | 4.8                          | 4.8.13                        |
-| 2.0.2   | November 2021  | 4.8                          | 4.8.12                        |
-| 2.1.0   | November 2021  | 4.9                          | 4.9.7                         |
-| 2.1.1   | January 2022   | 4.9                          | 4.9.7                         |
-| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5        | 
-| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5        |
-| 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17       |
-| 2.3.1   | July 2022      | 4.8, 4.9, 4.10               | 4.8.46, 4.9.41, 4.10.21       |
-| 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.41, 4.10.21, 4.11.2       |
-| 2.5.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.48, 4.10.34, 4.11.5       |
-| 2.6.0   | December 2022  | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12-rc2    |
-| 2.6.1   | January 2023   | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12.0-rc.4 |
-| 2.7.0   | May 2023       | 4.10, 4.11, 4.12, 4.13       | 4.11.43, 4.12.18, 4.13.0.rc18 |
-| 2.7.1   | July 2023      | 4.10, 4.11, 4.12, 4.13       | 4.11.43, 4.12.18, 4.13.7      |
-| 2.7.2   | October 2023   | 4.10, 4.11, 4.12, 4.13       | 4.10.67, 4.11.50, 4.12.37, 4.13.15 |
-| 2.8.0   | Dec 2023       | 4.11, 4.12, 4.13, 4.14       | 4.11.54, 4.12.45, 4.13.27, 4.14.7  |
+| Version | Release Date   | OCP Version(s) compatibility | Verified on OCP                              |
+|---------|----------------|------------------------------|----------------------------------------------|
+| 1.0.0   | January 2021   | 4.6                          | 4.6.4                                        |
+| 1.1.0   | March 2021     | 4.6                          | 4.6.16                                       |
+| 1.2.0   | June 2021      | 4.7                          | 4.7.8                                        |
+| 1.2.1   | June 2021      | 4.7                          | 4.7.8                                        |
+| 1.3.0   | August 2021    | 4.8                          | 4.8.2                                        |
+| 2.0.0   | September 2021 | 4.8                          | 4.8.5                                        |
+| 2.0.1   | October 2021   | 4.8                          | 4.8.13                                       |
+| 2.0.2   | November 2021  | 4.8                          | 4.8.12                                       |
+| 2.1.0   | November 2021  | 4.9                          | 4.9.7                                        |
+| 2.1.1   | January 2022   | 4.9                          | 4.9.7                                        |
+| 2.2.0   | March 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5                       |
+| 2.2.1   | April 2022     | 4.8, 4.9, 4.10               | 4.8.35, 4.9.23, 4.10.5                       |
+| 2.3.0   | May 2022       | 4.8, 4.9, 4.10               | 4.8.42, 4.9.36, 4.10.17                      |
+| 2.3.1   | July 2022      | 4.8, 4.9, 4.10               | 4.8.46, 4.9.41, 4.10.21                      |
+| 2.4.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.41, 4.10.21, 4.11.2                      |
+| 2.5.0   | September 2022 | 4.9, 4.10, 4.11              | 4.9.48, 4.10.34, 4.11.5                      |
+| 2.6.0   | December 2022  | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12-rc2                   |
+| 2.6.1   | January 2023   | 4.10, 4.11, 4.12             | 4.10.43, 4.11.18, 4.12.0-rc.4                |
+| 2.7.0   | May 2023       | 4.10, 4.11, 4.12, 4.13       | 4.11.43, 4.12.18, 4.13.0.rc18                |
+| 2.7.1   | July 2023      | 4.10, 4.11, 4.12, 4.13       | 4.11.43, 4.12.18, 4.13.7                     |
+| 2.7.2   | October 2023   | 4.10, 4.11, 4.12, 4.13       | 4.10.67, 4.11.50, 4.12.37, 4.13.15           |
+| 2.8.0   | Dec 2023       | 4.11, 4.12, 4.13, 4.14       | 4.11.54, 4.12.45, 4.13.27, 4.14.7            |
+| 2.9.0   | May 2024       | 4.11, 4.12, 4.13, 4.14, 4.15 | 4.11.54, 4.12.57, 4.13.27, 4.14.25, 4.15.13  |
 
 # Features for Release
+***v2.9.0***
+- Updated pf-bb-conf version to 24.03
+- drainSkip paramter default value set to true
+- Log the PCI link status of accelerator in Daemon pod logs
+- Add pf-bb-config tool version added to SFNC/SVNC output
+
 ***v2.8.0***
 - Added support to configure and manage VRB2 Accelerator device.
 - Updated pf-bb-conf version to 23.11
@@ -138,6 +145,15 @@ This document provides high-level system features, issues, and limitations infor
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
 
 # Changes to Existing Features
+***v2.9.0***
+- refactoring daemon/reconciler for SFCC and SVCC APIs
+- Bump controller tool version to fix nil pointer
+- UBI base docker image version update to 9.4-947
+- Daemon base docker image set to ubi-minimal v9.4-949
+- UBI micro base docker image version set to 9.4-6
+- xnet and protobuf pkg versions updated
+- improvements to unit test coverage
+
 ***v2.8.0***
 - UBI base docker image version updated to 9.3-6.
 - sriov-network-device-plugin version updated to 4.14
@@ -224,6 +240,11 @@ This document provides high-level system features, issues, and limitations infor
 - There are no unsupported or discontinued features relevant to this release.
 
 # Fixed Issues
+***2.9.0***
+- Applying SriovFecClusterConfig fails in some cases issue fixed
+- Daemon loger issue fixed
+- SPR-EE telemetry vfcount issue on bbdevconf end point is fixed
+
 ***2.8.0***
 - Fix for leader election resource cleanup after removal of Operator.
 - Fix for logs collecting script.
@@ -267,6 +288,8 @@ This document provides high-level system features, issues, and limitations infor
 - n/a - this is the first release.
 
 # Known issues
+***v2.9.0***
+- N3000 8VF(max) SFCC configuration apply fail
 
 ***v2.8.0***
 - Applying SriovFecClusterConfig fails in some cases, a random failure. When it happens it is recommend to reboot the Node to recover from failure state. For stable version of FEC Operator deployment use v2.7.2.
@@ -276,6 +299,12 @@ This document provides high-level system features, issues, and limitations infor
 - Documentation
 
 # Supported Operating Systems
+***v2.9.0***
+- OS: Ubuntu 22.04 LTS (Jammy Jellyfish)
+	- Kubernetes 1.26.2
+- OpenShift: 4.15.13
+	- Kubernetes: v1.27.8+4fab27b
+
 ***v2.8.0***
 - OS: Ubuntu 22.04 LTS (Jammy Jellyfish)
 - Kernel: 5.15.0-72-generic, 5.15.0-1030-realtime
@@ -441,4 +470,4 @@ This document provides high-level system features, issues, and limitations infor
 # Package Versions
 Package:
 - Golang: 1.21.5
-- pf-bb-config-app: v23.11
+- pf-bb-config-app: v24.03

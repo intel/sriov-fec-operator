@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2023 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package v1
 
@@ -185,7 +185,7 @@ type SriovVrbClusterConfigSpec struct {
 
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// Skips drain process when true; default false. Should be true if operator is running on SNO
-	DrainSkip bool `json:"drainSkip,omitempty"`
+	DrainSkip *bool `json:"drainSkip,omitempty"`
 }
 
 type AcceleratorSelector struct {
@@ -210,7 +210,7 @@ type SriovVrbClusterConfigStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
-// +kubebuilder:resource:shortName=vrbcc
+// +kubebuilder:resource:shortName=svcc
 
 // SriovVrbClusterConfig is the Schema for the SriovVrbClusterConfigs API
 type SriovVrbClusterConfig struct {

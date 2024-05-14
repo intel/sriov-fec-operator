@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package daemon
 
@@ -26,7 +26,10 @@ func execAndSuppress(args []string, log *logrus.Logger, suppressError func(e err
 		cmd = exec.Command(args[0], args[1:]...)
 	}
 
-	log.WithField("cmd", cmd).Info("executing command")
+	log.WithFields(logrus.Fields{
+		"cmd": cmd.Path,
+		"args": cmd.Args,
+	}).Info("executing command")
 
 	out, err := cmd.Output()
 	if err != nil {

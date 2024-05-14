@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2023 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package v1
 
@@ -42,6 +42,7 @@ type SriovVrbNodeConfigSpec struct {
 
 // SriovVrbNodeConfigStatus defines the observed state of SriovVrbNodeConfig
 type SriovVrbNodeConfigStatus struct {
+	PfBbConfVersion string `json:"pfBbConfVersion,omitempty"`
 	// Provides information about device update status
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Provides information about FPGA inventory on the node
@@ -53,7 +54,7 @@ type SriovVrbNodeConfigStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Configured",type=string,JSONPath=`.status.conditions[?(@.type=="Configured")].reason`
 // +kubebuilder:storageversion
-// +kubebuilder:resource:shortName=vrbnc
+// +kubebuilder:resource:shortName=svnc
 
 // SriovVrbNodeConfig is the Schema for the SriovVrbNodeConfigs API
 type SriovVrbNodeConfig struct {

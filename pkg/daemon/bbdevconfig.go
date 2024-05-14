@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2023 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package daemon
 
@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	sriovv2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
@@ -57,9 +58,9 @@ func NewPfBBConfigController(log *logrus.Logger, sharedVfioToken string) *pfBBCo
 }
 
 type pfBBConfigController struct {
-	log               *logrus.Logger
-	sharedVfioToken   string
-	fftUpdater        *fftUpdater
+	log             *logrus.Logger
+	sharedVfioToken string
+	fftUpdater      *fftUpdater
 }
 
 func getTlsCert(log *logrus.Logger) *x509.Certificate {
@@ -85,29 +86,7 @@ func (p *pfBBConfigController) initializePfBBConfig(acc sriovv2.SriovAccelerator
 			return err
 		}
 
-		deviceName := supportedAccelerators.Devices[acc.DeviceID]
-		var err error
-		if deviceName == "ACC200" {
-			srsFftWindowsCoefficientFilepath, err = p.fftUpdater.getFftFilePath(p, &pf.BBDevConfig.ACC200.FFTLut)
-			if err != nil {
-				p.log.WithError(err)
-				return err
-			}
-			if srsFftWindowsCoefficientFilepath == "" {
-				srsFftWindowsCoefficientFilepath = "/sriov_workdir/vrb1/srs_fft_windows_coefficient.bin"
-			}
-			p.log.Infof("SRS FFT file path is : %s", srsFftWindowsCoefficientFilepath)
-		}
-		if pfConfigAppFilepath == "" {
-			pfConfigAppFilepath = "/sriov_workdir/pf_bb_config"
-		}
-		p.log.Infof("pf-bb-config file path is : %s", pfConfigAppFilepath)
-		var token *string
-		if strings.EqualFold(pf.PFDriver, utils.VFIO_PCI) {
-			token = &p.sharedVfioToken
-		}
-
-		if err := p.runPFConfig(deviceName, bbdevConfigFilepath, pf.PCIAddress, token); err != nil {
+		if err := p.configureDevice(acc, pf, bbdevConfigFilepath); err != nil {
 			p.log.WithError(err).WithField("pci", pf.PCIAddress).Error("failed to configure device's queues")
 			return err
 		}
@@ -118,6 +97,33 @@ func (p *pfBBConfigController) initializePfBBConfig(acc sriovv2.SriovAccelerator
 	return nil
 }
 
+func (p *pfBBConfigController) configureDevice(acc sriovv2.SriovAccelerator, pf *sriovv2.PhysicalFunctionConfigExt, bbdevConfigFilepath string) error {
+	deviceName := supportedAccelerators.Devices[acc.DeviceID]
+	var err error
+	if deviceName == "ACC200" {
+		srsFftWindowsCoefficientFilepath, err = p.fftUpdater.getFftFilePath(p, &pf.BBDevConfig.ACC200.FFTLut)
+		if err != nil {
+			p.log.WithError(err)
+			return err
+		}
+		if srsFftWindowsCoefficientFilepath == "" {
+			srsFftWindowsCoefficientFilepath = "/sriov_workdir/vrb1/srs_fft_windows_coefficient.bin"
+		}
+		p.log.Infof("SRS FFT file path is : %s", srsFftWindowsCoefficientFilepath)
+	}
+	if pfConfigAppFilepath == "" {
+		pfConfigAppFilepath = "/sriov_workdir/pf_bb_config"
+	}
+	p.log.Infof("pf-bb-config file path is : %s", pfConfigAppFilepath)
+	logLinkStatus(pf.PCIAddress, p.log)
+	var token *string
+	if strings.EqualFold(pf.PFDriver, utils.VFIO_PCI) {
+		token = &p.sharedVfioToken
+	}
+
+	return p.runPFConfig(deviceName, bbdevConfigFilepath, pf.PCIAddress, token)
+}
+
 func (p *pfBBConfigController) VrbinitializePfBBConfig(acc vrbv1.SriovAccelerator, pf *vrbv1.PhysicalFunctionConfigExt) error {
 	if pf.BBDevConfig.VRB1 != nil || pf.BBDevConfig.VRB2 != nil {
 		bbdevConfigFilepath := filepath.Join(workdir, fmt.Sprintf("%s.ini", pf.PCIAddress))
@@ -126,48 +132,64 @@ func (p *pfBBConfigController) VrbinitializePfBBConfig(acc vrbv1.SriovAccelerato
 			return err
 		}
 
-		deviceName := VrbsupportedAccelerators.Devices[acc.DeviceID]
-		var err error
-		if deviceName == "VRB1" {
-			srsFftWindowsCoefficientFilepath, err = p.fftUpdater.VrbgetFftFilePath(p, &pf.BBDevConfig.VRB1.FFTLut)
-			if err != nil {
-				p.log.WithError(err)
-				return err
-			}
-			if srsFftWindowsCoefficientFilepath == "" {
-				srsFftWindowsCoefficientFilepath = "/sriov_workdir/vrb1/srs_fft_windows_coefficient.bin"
-			}
-			p.log.Infof("SRS FFT file path is : %s", srsFftWindowsCoefficientFilepath)
-		}
-		if deviceName == "VRB2" {
-			srsFftWindowsCoefficientFilepath, err = p.fftUpdater.VrbgetFftFilePath(p, &pf.BBDevConfig.VRB2.FFTLut)
-			if err != nil {
-				p.log.WithError(err)
-				return err
-			}
-			if srsFftWindowsCoefficientFilepath == "" {
-				srsFftWindowsCoefficientFilepath = "/sriov_workdir/vrb2/srs_fft_windows_coefficient.bin"
-			}
-			p.log.Infof("SRS FFT file path is : %s", srsFftWindowsCoefficientFilepath)
-		}
-
-		if pfConfigAppFilepath == "" {
-			pfConfigAppFilepath = "/sriov_workdir/pf_bb_config"
-		}
-
-		var token *string
-		if strings.EqualFold(pf.PFDriver, utils.VFIO_PCI) {
-			token = &p.sharedVfioToken
-		}
-
-		if err := p.runPFConfig(deviceName, bbdevConfigFilepath, pf.PCIAddress, token); err != nil {
+		if err := p.configureVrbDevice(acc, pf, bbdevConfigFilepath); err != nil {
 			p.log.WithError(err).WithField("pci", pf.PCIAddress).Error("failed to configure device's queues")
 			return err
 		}
+
 	} else {
 		p.log.Info("All sections of 'BBDevConfig' are nil - queues will not be (re)configured")
 	}
 
+	return nil
+}
+
+func (p *pfBBConfigController) configureVrbDevice(acc vrbv1.SriovAccelerator, pf *vrbv1.PhysicalFunctionConfigExt, bbdevConfigFilepath string) error {
+	deviceName := VrbsupportedAccelerators.Devices[acc.DeviceID]
+
+	switch deviceName {
+	case "VRB1":
+		err := p.updateFftWindowsCoefficientFilepath("VRB1", &pf.BBDevConfig.VRB1.FFTLut, "/sriov_workdir/vrb1/srs_fft_windows_coefficient.bin")
+		if err != nil {
+			return err
+		}
+
+	case "VRB2":
+		err := p.updateFftWindowsCoefficientFilepath("VRB2", &pf.BBDevConfig.VRB2.FFTLut, "/sriov_workdir/vrb2/srs_fft_windows_coefficient.bin")
+		if err != nil {
+			return err
+		}
+
+	default:
+		// Handle the case where deviceName is neither "VRB1" nor "VRB2"
+		p.log.Warnf("Unsupported device name: %s", deviceName)
+		return fmt.Errorf("unsupported device name: %s", deviceName)
+	}
+
+	if pfConfigAppFilepath == "" {
+		pfConfigAppFilepath = "/sriov_workdir/pf_bb_config"
+	}
+
+	logLinkStatus(pf.PCIAddress, p.log)
+	var token *string
+	if strings.EqualFold(pf.PFDriver, utils.VFIO_PCI) {
+		token = &p.sharedVfioToken
+	}
+
+	return p.runPFConfig(deviceName, bbdevConfigFilepath, pf.PCIAddress, token)
+}
+
+func (p *pfBBConfigController) updateFftWindowsCoefficientFilepath(deviceName string, fftLutConfig *vrbv1.FFTLutParam, defaultFilePath string) error {
+	var err error
+	srsFftWindowsCoefficientFilepath, err = p.fftUpdater.VrbgetFftFilePath(p, fftLutConfig)
+	if err != nil {
+		p.log.WithError(err)
+		return err
+	}
+	if srsFftWindowsCoefficientFilepath == "" {
+		srsFftWindowsCoefficientFilepath = defaultFilePath
+	}
+	p.log.Infof("SRS FFT file path is : %s", srsFftWindowsCoefficientFilepath)
 	return nil
 }
 
@@ -319,4 +341,34 @@ func (f *fftUpdater) VrbupdateFftFile(fft *vrbv1.FFTLutParam) (string, error) {
 		return "", err
 	}
 	return newFftFile, nil
+}
+
+func logLinkStatus(pciAddr string, log *logrus.Logger) {
+	// Execute the lspci command
+	cmd := exec.Command("lspci", "-vvs", pciAddr)
+	output, err := cmd.Output()
+	if err != nil {
+		log.WithError(err).WithField("pciAddr", pciAddr).Warning("Error running lspci")
+		return
+	}
+
+	// Convert output to string
+	outputStr := strings.ToLower(string(output))
+
+	// Regular expression pattern for LnkSta case insensitive
+	re := regexp.MustCompile(`(?i)LnkSta:.+?(\n|$)`)
+	match := re.FindString(outputStr)
+
+	// Trim leading and trailing whitespace
+	match = strings.TrimSpace(match)
+	match = strings.Replace(match, "\t", " ", -1)
+
+	if match != "" {
+		// Report warning only if link is downgraded
+		if strings.Contains(match, "downgraded") {
+			log.WithField("pciAddr", pciAddr).Warning(string(match))
+		} else {
+			log.WithField("pciAddr", pciAddr).Debug(string(match))
+		}
+	}
 }

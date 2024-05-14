@@ -1,6 +1,6 @@
 ```text
 SPDX-License-Identifier: Apache-2.0
-Copyright (c) 2020 Intel Corporation
+Copyright (c) 2020-2024 Intel Corporation
 ```
 <!-- omit in toc -->
 # Contribution Guide

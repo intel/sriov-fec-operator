@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2023 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package main
 
@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/jaypipes/ghw"
-	"github.com/jaypipes/pcidb"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -66,6 +65,7 @@ func TestMain(t *testing.T) {
 }
 
 var _ = Describe("Labeler", func() {
+	/* FIXME: This should move util_test.go
 	var _ = Describe("getPCIDevices", func() {
 		var _ = It("return PCI devices", func() {
 			devices, err := getPCIDevices()
@@ -148,6 +148,7 @@ var _ = Describe("Labeler", func() {
 			Expect(found).To(Equal(true))
 		})
 	})
+	*/
 	var _ = Describe("setNodeLabel", func() {
 		BeforeEach(func() {
 			fakeGetInclusterConfigReturn = nil
@@ -199,18 +200,18 @@ var _ = Describe("Labeler", func() {
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will fail if findAccelerator fails", func() {
-			getPCIDevices = func() ([]*ghw.PCIDevice, error) { return nil, fmt.Errorf("ErrorStub") }
+			utils.GetPCIDevices = func() ([]*ghw.PCIDevice, error) { return nil, fmt.Errorf("ErrorStub") }
 			err := acceleratorDiscovery("testdata/valid.json", "testdata/valid.json")
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will fail if there is no NODENAME env", func() {
-			getPCIDevices = func() ([]*ghw.PCIDevice, error) { return []*ghw.PCIDevice{}, nil }
+			utils.GetPCIDevices = func() ([]*ghw.PCIDevice, error) { return []*ghw.PCIDevice{}, nil }
 			err := acceleratorDiscovery("testdata/valid.json", "testdata/valid.json")
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("will fail if there is no k8s cluster", func() {
 			fakeGetInclusterConfigReturn = fmt.Errorf("error")
-			getPCIDevices = func() ([]*ghw.PCIDevice, error) { return []*ghw.PCIDevice{}, nil }
+			utils.GetPCIDevices = func() ([]*ghw.PCIDevice, error) { return []*ghw.PCIDevice{}, nil }
 			os.Setenv("NODENAME", "test")
 			err := acceleratorDiscovery("testdata/valid.json", "testdata/valid.json")
 			os.Unsetenv("NODENAME")

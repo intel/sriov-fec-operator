@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2023 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package sriovvrb
 
@@ -137,7 +137,11 @@ func (r *SriovVrbClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConf
 			VFAmount:    cc.Spec.PhysicalFunction.VFAmount,
 			BBDevConfig: cc.Spec.PhysicalFunction.BBDevConfig,
 		}
-		newNodeConfig.Spec.DrainSkip = newNodeConfig.Spec.DrainSkip || cc.Spec.DrainSkip
+		if cc.Spec.DrainSkip == nil {
+			newNodeConfig.Spec.DrainSkip = true
+		} else if cc.Spec.DrainSkip != nil {
+			newNodeConfig.Spec.DrainSkip = newNodeConfig.Spec.DrainSkip || *cc.Spec.DrainSkip
+		}
 		newNodeConfig.Spec.PhysicalFunctions = append(newNodeConfig.Spec.PhysicalFunctions, pf)
 	}
 

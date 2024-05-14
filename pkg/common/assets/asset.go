@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2023 Intel Corporation
+// Copyright (c) 2020-2024 Intel Corporation
 
 package assets
 
@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -196,13 +197,7 @@ func (a *Asset) createOrUpdateObject(ctx context.Context, c client.Client, toBeC
 			a.log.WithError(err).WithField("key", key).WithField("GroupVersionKind", gvk).Error("Failed to get an object")
 			return err
 		}
-
-		// Object does not exist
-		if err := c.Create(ctx, toBeCreated); err != nil {
-			a.log.WithError(err).WithField("key", key).WithField("GroupVersionKind", gvk).Error("Create failed")
-			return err
-		}
-		a.log.WithField("key", key).WithField("GroupVersionKind", gvk).Info("Object created")
+		return a.createObject(ctx, c, toBeCreated, key, gvk)
 	} else {
 		if strings.EqualFold(old.GetObjectKind().GroupVersionKind().Kind, "configmap") {
 			isImmutable, ok := old.Object["immutable"].(bool)
@@ -214,19 +209,30 @@ func (a *Asset) createOrUpdateObject(ctx context.Context, c client.Client, toBeC
 				return nil
 			}
 		}
-
-		if !equality.Semantic.DeepDerivative(toBeCreated, old) {
-			toBeCreated.SetResourceVersion(old.GetResourceVersion())
-			if err := c.Update(ctx, toBeCreated); err != nil {
-				a.log.WithError(err).WithField("key", key).WithField("GroupVersionKind", gvk).Error("Update failed")
-				return err
-			}
-			a.log.WithField("key", key).WithField("GroupVersionKind", gvk).Info("Object updated")
-		} else {
-			a.log.WithField("key", key).WithField("GroupVersionKind", gvk).Info("Object has not changed")
-		}
+		return a.updateObject(ctx, c, toBeCreated, old, key, gvk)
 	}
+}
 
+func (a *Asset) createObject(ctx context.Context, c client.Client, toBeCreated client.Object, key client.ObjectKey, gvk schema.GroupVersionKind) error {
+	if err := c.Create(ctx, toBeCreated); err != nil {
+		a.log.WithError(err).WithField("key", key).WithField("GroupVersionKind", gvk).Error("Create failed")
+		return err
+	}
+	a.log.WithField("key", key).WithField("GroupVersionKind", gvk).Info("Object created")
+	return nil
+}
+
+func (a *Asset) updateObject(ctx context.Context, c client.Client, toBeCreated, old client.Object, key client.ObjectKey, gvk schema.GroupVersionKind) error {
+	if !equality.Semantic.DeepDerivative(toBeCreated, old) {
+		toBeCreated.SetResourceVersion(old.GetResourceVersion())
+		if err := c.Update(ctx, toBeCreated); err != nil {
+			a.log.WithError(err).WithField("key", key).WithField("GroupVersionKind", gvk).Error("Update failed")
+			return err
+		}
+		a.log.WithField("key", key).WithField("GroupVersionKind", gvk).Info("Object updated")
+	} else {
+		a.log.WithField("key", key).WithField("GroupVersionKind", gvk).Info("Object has not changed")
+	}
 	return nil
 }
 
