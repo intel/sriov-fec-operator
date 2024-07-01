@@ -91,7 +91,7 @@ require (
 	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae // indirect
 	github.com/xlab/treeprint v1.1.0 // indirect
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
-	golang.org/x/net v0.2.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/term v0.18.0 // indirect
@@ -116,9 +116,6 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-// https://www.cve.org/CVERecord?id=CVE-2023-45288
-replace golang.org/x/net v0.2.0 => golang.org/x/net v0.23.0
 
 // https://www.cve.org/CVERecord?id=CVE-2024-24786
 replace google.golang.org/protobuf v1.28.1 => google.golang.org/protobuf v1.33.0
