@@ -60,7 +60,7 @@ This document provides high-level system features, issues, and limitations infor
 - Add pf-bb-config tool version added to SFNC/SVNC output
 
 ***v2.8.0***
-- Added support to configure and manage VRB2 Accelerator device.
+- Initial support for Intel vRAN Boost v2 on GNR-D (Early Access Pre-Alpha)
 - Updated pf-bb-conf version to 23.11
 - Ability to update srs_fft_windows_coefficient.bin file on worker node for VRB1 and VRB2.
 
