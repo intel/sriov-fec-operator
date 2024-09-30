@@ -141,6 +141,8 @@ data:
           app: sriov-device-plugin-daemonset
       template:
         metadata:
+          annotations:
+            target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
           labels:
             app: sriov-device-plugin-daemonset
         spec:

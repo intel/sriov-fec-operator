@@ -21,6 +21,12 @@ Create the project:
 ```shell
 [user@ctrl1 /home]# oc new-project vran-acceleration-operators
 ```
+
+**Optional:** Annotate the project to enable management workload partitioning:
+```
+oc annotate namespace vran-acceleration-operators workload.openshift.io/allowed=management
+```
+
 Execute following commands on cluster:
 
 Create an operator group and the subscriptions (all the commands are run in the `vran-acceleration-operators` namespace):

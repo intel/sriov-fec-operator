@@ -96,6 +96,8 @@ data:
           app: accelerator-discovery
       template:
         metadata:
+          annotations:
+            target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
           labels:
             app: accelerator-discovery
           name: accelerator-discovery

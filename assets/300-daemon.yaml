@@ -169,6 +169,7 @@ data:
           # a failure.  This annotation works in tandem with the toleration below.
           annotations:
             scheduler.alpha.kubernetes.io/critical-pod: ""
+            target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
           labels:
             app: sriov-fec-daemonset
         spec:
