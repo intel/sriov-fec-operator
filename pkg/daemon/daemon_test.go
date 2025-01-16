@@ -56,18 +56,18 @@ var _ = Describe("FecNodeConfigReconciler", func() {
 		)
 
 		BeforeEach(func() {
-			//configure kernel controller
+			// Configure kernel controller
 			procCmdlineFilePath = "testdata/cmdline_test"
 			FecConfigPath = "testdata/accelerators.json"
 			VrbConfigPath = "testdata/accelerators_vrb.json"
 
-			//configure node configurator
+			// Configure node configurator
 			workdir = testTmpFolder
 			sysBusPciDevices = testTmpFolder
 			sysBusPciDrivers = testTmpFolder
 			Expect(createFiles(filepath.Join(sysBusPciDevices, pciAddress), "driver_override", "reset", vfNumFileDefault, vfNumFileIgbUio)).To(Succeed())
-			Expect(createFiles(filepath.Join(sysBusPciDrivers, utils.IGB_UIO), "bind")).To(Succeed())
-			Expect(createFiles(filepath.Join(sysBusPciDrivers, utils.PCI_PF_STUB_DASH), "bind")).To(Succeed())
+			Expect(createFiles(filepath.Join(sysBusPciDrivers, utils.IgbUio), "bind")).To(Succeed())
+			Expect(createFiles(filepath.Join(sysBusPciDrivers, utils.PciPfStubDash), "bind")).To(Succeed())
 
 			getVFconfigured = func(string) int {
 				return 0
@@ -162,10 +162,10 @@ var _ = Describe("FecNodeConfigReconciler", func() {
 
 					Expect(reconciler.SetupWithManager(k8sManager)).ToNot(HaveOccurred())
 
-					//Required during cordoning & draining
+					// Required during cordoning & draining
 					Expect(k8sClient.Create(context.TODO(), &data.Node)).To(Succeed())
 
-					//initialize empty SriovFecNodeConfig
+					// Initialize empty SriovFecNodeConfig
 					Expect(reconciler.CreateEmptyNodeConfigIfNeeded(k8sClient)).To(Succeed())
 					go func() {
 						Expect(k8sManager.Start(context.TODO())).ToNot(HaveOccurred())
@@ -182,7 +182,7 @@ var _ = Describe("FecNodeConfigReconciler", func() {
 						osExecMock := new(runExecCmdMock).
 							onCall([]string{"pkill -9 -f pf_bb_config.*0000:14:00.1"}).
 							Return("", nil).
-							onCall([]string{"modprobe", utils.IGB_UIO}).
+							onCall([]string{"modprobe", utils.IgbUio}).
 							Return("", nil).
 							onCall([]string{"modprobe", "v"}).
 							Return("", nil).
@@ -224,7 +224,7 @@ var _ = Describe("FecNodeConfigReconciler", func() {
 			Context("Requested config/spec refers to non existing accelerator", func() {
 				It("spec/config should not be applied, error info should be exposed over configuration ccondition", func() {
 
-					//existing inventory
+					// Existing inventory
 					getSriovInventory = func(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
 						inventory := data.SriovFecNodeConfig.Status.Inventory
 						inventory.SriovAccelerators[0].PCIAddress = "0000:99:00.1"

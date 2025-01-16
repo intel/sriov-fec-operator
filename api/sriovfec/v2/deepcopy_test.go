@@ -565,7 +565,6 @@ var _ = Describe("ByPriority DeepCopy Tests", func() {
 
 	Describe("DeepCopyInto", func() {
 		BeforeEach(func() {
-			//copied = ByPriority{}
 			copied = make(ByPriority, len(original))
 			original.DeepCopyInto(&copied)
 		})

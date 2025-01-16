@@ -92,20 +92,20 @@ var _ = Describe("FecNodeConfigReconciler.Reconcile", func() {
 		})
 
 		It("restores/recreates VFs removed after node reboot", func() {
-			//sfnc does not exist yet
+			// SFNC does not exist yet
 			sfnc := new(sriovv2.SriovFecNodeConfig)
 			Expect(fakeClient.Get(context.TODO(), nodeNameRef, sfnc)).To(MatchError(ContainSubstring("not found")))
 
-			//first reconcile creates missing sfnc
-			//created sfnc exposes node inventory: status.NodeInventory
+			// First reconcile creates missing sfnc
+			// Created sfnc exposes node inventory: status.NodeInventory
 			_, err := reconciler.Reconcile(context.TODO(), reconcileRequestes)
 			Expect(err).ToNot(HaveOccurred())
 			sfnc = new(sriovv2.SriovFecNodeConfig)
 			Expect(fakeClient.Get(context.TODO(), nodeNameRef, sfnc)).ToNot(HaveOccurred())
 			Expect(sfnc.Status.Inventory).To(Equal(*nodeInventory))
 
-			//define new spec
-			//fake client doesn't handle generation field so take care about incrementing it
+			// Define new spec
+			// Fake client doesn't handle generation field so take care about incrementing it
 			sfnc.Generation++
 			sfnc.Spec = sriovv2.SriovFecNodeConfigSpec{
 				PhysicalFunctions: []sriovv2.PhysicalFunctionConfigExt{
@@ -121,19 +121,19 @@ var _ = Describe("FecNodeConfigReconciler.Reconcile", func() {
 			err = fakeClient.Patch(context.TODO(), sfnc, client.Merge)
 			Expect(err).ToNot(HaveOccurred())
 
-			//second reconcile should configure inventory to be aligned with requested spec
+			// Second reconcile should configure inventory to be aligned with requested spec
 			_, err = reconciler.Reconcile(context.TODO(), reconcileRequestes)
 			Expect(err).ToNot(HaveOccurred())
 			sfnc = new(sriovv2.SriovFecNodeConfig)
 			Expect(fakeClient.Get(context.TODO(), nodeNameRef, sfnc)).ToNot(HaveOccurred())
 			Expect(sfnc.Status.Inventory).ToNot(Equal(nodeInventory))
 
-			//simulate node reboot - remove all existing VFs
+			// Simulate node reboot - remove all existing VFs
 			for accidx := range nodeInventory.SriovAccelerators {
 				nodeInventory.SriovAccelerators[accidx].VFs = []sriovv2.VF{}
 			}
 
-			//third reconcile should reconfigure VFs
+			// Third reconcile should reconfigure VFs
 			_, err = reconciler.Reconcile(context.TODO(), reconcileRequestes)
 			Expect(err).ToNot(HaveOccurred())
 			sfnc = new(sriovv2.SriovFecNodeConfig)

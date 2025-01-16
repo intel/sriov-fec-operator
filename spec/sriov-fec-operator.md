@@ -6,29 +6,25 @@ Copyright (c) 2020-2024 Intel Corporation
 # SRIOV-FEC Operator for Wireless FEC Accelerators
 
 - [Overview](#overview)
-- [SRIOV-FEC Operator for Wireless FEC Accelerators](#sriov-fec-operator-for-wireless-fec-accelerators)
+- [SRIOV-FEC Operator for Wireless FEC Accelerators](#sriov-fec-operator-for-wireless-fec-accelerators-1)
   - [Wireless FEC Acceleration management](#wireless-fec-acceleration-management)
     - [FEC Configuration](#fec-configuration)
     - [SRIOV Device Plugin](#sriov-device-plugin)
 - [Managing NIC Devices](#managing-nic-devices)
-- [VFIO_PCI Driver](#vfio_pci-driver)
+- [VFIO\_PCI Driver](#vfio_pci-driver)
+  - [Secure Boot](#secure-boot)
+  - [Vfio Token](#vfio-token)
 - [Deploying the Operator](#deploying-the-operator)
-  - [Install dependencies](#install-dependencies)
-  - [Install the Bundle](#install-the-bundle)
   - [Applying Custom Resources](#applying-custom-resources)
-- [Telemetry](#telemetry)
+  - [Telemetry](#telemetry)
 - [Hardware Validation Environment](#hardware-validation-environment)
 - [Summary](#summary)
 - [Appendix 1 - Developer Notes](#appendix-1---developer-notes)
-  - [Running operator on SNO](#running-operator-on-sno)
-- [Appendix 2 - SRIOV-FEC Operator for Wireless FEC Accelerators Examples](#appendix-2---sriov-fec-operator-for-wireless-fec-accelerators-examples)
-  - [ACC100 FEC](#acc100-fec)
-    - [Sample CR for Wireless FEC (ACC100)](#sample-cr-for-wireless-fec-acc100)
-    - [Sample Status for Wireless FEC (ACC100)](#sample-status-for-wireless-fec-acc100)
-    - [Sample Daemon log for Wireless FEC (ACC100)](#sample-daemon-log-for-wireless-fec-acc100)
-  - [ACC200 FEC](#acc200-fec)
-    - [Sample CR for Wireless FEC (ACC200)](#sample-cr-for-wireless-fec-acc200)
-    - [Sample Status for Wireless FEC (ACC200)](#sample-status-for-wireless-fec-acc200)
+  - [Drain skip option](#drain-skip-option)
+- [Appendix 2 - Reference CR configurations for support accelerators in SRIOV-FEC Operator](#appendix-2---reference-cr-configurations-for-support-accelerators-in-sriov-fec-operator)
+  - [ACC100](#acc100)
+  - [vRAN Boost Accelerator V1 (VRB1)](#vran-boost-accelerator-v1-vrb1)
+  - [vRAN Boost Accelerator V2 (VRB2)](#vran-boost-accelerator-v2-vrb2)
 - [Appendix 3 - Gathering logs for bug report](#appendix-3---gathering-logs-for-bug-report)
 
 ## Overview
@@ -508,15 +504,13 @@ The operator handles all the necessary actions from creation of FEC resources to
 
 ## Appendix 1 - Developer Notes
 
-### Running operator on SNO
+### Drain skip option
 
-If user needs to run operator on SNO (Single Node Openshift), then user should provide ClusterConfigs (which are described in following chapters) with `spec.drainSkip: true` to avoid node draining, because it is impossible to drain node if there's only 1 node.
+Using the option `spec.drainSkip: false` in CR will perform the [node drain](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_drain/) while applying the configuration. If you do not want to drain the node during the CR apply, set this option to `true` which is the default behavior.
 
-## Appendix 2 - SRIOV-FEC Operator for Wireless FEC Accelerators Examples
+## Appendix 2 - Reference CR configurations for support accelerators in SRIOV-FEC Operator
 
-### ACC100 FEC
-
-#### Sample CR for Wireless FEC (ACC100)
+### ACC100
 
 ```yaml
 apiVersion: sriovfec.intel.com/v2
@@ -527,184 +521,184 @@ metadata:
 spec:
   priority: 1
   nodeSelector:
-    kubernetes.io/hostname: node1
+    kubernetes.io/hostname: worker-node
   acceleratorSelector:
     pciAddress: 0000:af:00.0
   physicalFunction:  
-    pfDriver: "pci-pf-stub"
+    pfDriver: "vfio-pci"
     vfDriver: "vfio-pci"
-    vfAmount: 16
+    vfAmount: 2
     bbDevConfig:
       acc100:
-        # Programming mode: 0 = VF Programming, 1 = PF Programming
         pfMode: false
-        numVfBundles: 16
+        numVfBundles: 2
         maxQueueSize: 1024
         uplink4G:
-          numQueueGroups: 0
-          numAqsPerGroups: 16
           aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
         downlink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
           numQueueGroups: 0
-          numAqsPerGroups: 16
-          aqDepthLog2: 4
         uplink5G:
-          numQueueGroups: 4
-          numAqsPerGroups: 16
           aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
         downlink5G:
-          numQueueGroups: 4
-          numAqsPerGroups: 16
           aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
 ```
 
-#### Sample Status for Wireless FEC (ACC100)
+### vRAN Boost Accelerator V1 (VRB1)
+
+- Reference CR for VRB1
 
 ```yaml
-status:
-    conditions:
-    - lastTransitionTime: "2021-03-19T11:46:22Z"
-      message: Configured successfully
-      observedGeneration: 1
-      reason: Succeeded
-      status: "True"
-      type: Configured
-    inventory:
-      sriovAccelerators:
-      - deviceID: 0d5c
-        driver: pci-pf-stub
-        maxVirtualFunctions: 16
-        pciAddress: 0000:af:00.0
-        vendorID: "8086"
-        virtualFunctions:
-        - deviceID: 0d5d
-          driver: vfio-pci
-          pciAddress: 0000:b0:00.0
-        - deviceID: 0d5d
-          driver: vfio-pci
-          pciAddress: 0000:b0:00.1
-        - deviceID: 0d5d
-          driver: vfio-pci
-          pciAddress: 0000:b0:00.2
-        - deviceID: 0d5d
-          driver: vfio-pci
-          pciAddress: 0000:b0:00.3
-        - deviceID: 0d5d
-          driver: vfio-pci
-          pciAddress: 0000:b0:00.4
-```
-
-#### Sample Daemon log for Wireless FEC (ACC100)
-
-```shell
-{"level":"Level(-2)","ts":1616794345.4786215,"logger":"daemon.drainhelper.cordonAndDrain()","msg":"node drained"}
-{"level":"Level(-4)","ts":1616794345.4786265,"logger":"daemon.drainhelper.Run()","msg":"worker function - start"}
-{"level":"Level(-4)","ts":1616794345.5762916,"logger":"daemon.NodeConfigurator.applyConfig","msg":"current node status","inventory":{"sriovAccelerat
-ors":[{"vendorID":"8086","deviceID":"0b32","pciAddress":"0000:20:00.0","driver":"","maxVirtualFunctions":1,"virtualFunctions":[]},{"vendorID":"8086"
-,"deviceID":"0d5c","pciAddress":"0000:af:00.0","driver":"","maxVirtualFunctions":16,"virtualFunctions":[]}]}}
-{"level":"Level(-4)","ts":1616794345.5763638,"logger":"daemon.NodeConfigurator.applyConfig","msg":"configuring PF","requestedConfig":{"pciAddress":"
-0000:af:00.0","pfDriver":"pci-pf-stub","vfDriver":"vfio-pci","vfAmount":2,"bbDevConfig":{"acc100":{"pfMode":false,"numVfBundles":16,"maxQueueSize":1
-024,"uplink4G":{"numQueueGroups":4,"numAqsPerGroups":16,"aqDepthLog2":4},"downlink4G":{"numQueueGroups":4,"numAqsPerGroups":16,"aqDepthLog2":4},"uplink5G":{"numQueueGroups":0,"numAqsPerGroups":16,"aqDepthLog2":4},"downlink5G":{"numQueueGroups":0,"numAqsPerGroups":16,"aqDepthLog2":4}}}}}
-{"level":"Level(-4)","ts":1616794345.5774765,"logger":"daemon.NodeConfigurator.loadModule","msg":"executing command","cmd":"modprobe pci-pf-stub"}
-{"level":"Level(-4)","ts":1616794345.5842702,"logger":"daemon.NodeConfigurator.loadModule","msg":"commands output","output":""}
-{"level":"Level(-4)","ts":1616794345.5843055,"logger":"daemon.NodeConfigurator.loadModule","msg":"executing command","cmd":"modprobe vfio-pci"}
-{"level":"Level(-4)","ts":1616794345.6090655,"logger":"daemon.NodeConfigurator.loadModule","msg":"commands output","output":""}
-{"level":"Level(-2)","ts":1616794345.6091156,"logger":"daemon.NodeConfigurator","msg":"device's driver_override path","path":"/sys/bus/pci/devices/0000:af:00.0/driver_override"}
-{"level":"Level(-2)","ts":1616794345.6091807,"logger":"daemon.NodeConfigurator","msg":"driver bind path","path":"/sys/bus/pci/drivers/pci-pf-stub/bind"}
-{"level":"Level(-2)","ts":1616794345.7488534,"logger":"daemon.NodeConfigurator","msg":"device's driver_override path","path":"/sys/bus/pci/devices/0000:b0:00.0/driver_override"}
-{"level":"Level(-2)","ts":1616794345.748938,"logger":"daemon.NodeConfigurator","msg":"driver bind path","path":"/sys/bus/pci/drivers/vfio-pci/bind"}
-{"level":"Level(-2)","ts":1616794345.7492096,"logger":"daemon.NodeConfigurator","msg":"device's driver_override path","path":"/sys/bus/pci/devices/0000:b0:00.1/driver_override"}
-{"level":"Level(-2)","ts":1616794345.7492566,"logger":"daemon.NodeConfigurator","msg":"driver bind path","path":"/sys/bus/pci/drivers/vfio-pci/bind"}
-{"level":"Level(-4)","ts":1616794345.74968,"logger":"daemon.NodeConfigurator.applyConfig","msg":"executing command","cmd":"/sriov_workdir/pf_bb_config ACC100 -c /sriov_workdir/0000:af:00.0.ini -p 0000:af:00.0"}
-{"level":"Level(-4)","ts":1616794346.5203931,"logger":"daemon.NodeConfigurator.applyConfig","msg":"commands output","output":"Queue Groups: 0 5GUL, 0 5GDL, 4 4GUL, 4 4GDL\nNumber of 5GUL engines 8\nConfiguration in VF mode\nPF ACC100 configuration complete\nACC100 PF [0000:af:00.0] configuration complete!\n\n"}
-{"level":"Level(-4)","ts":1616794346.520459,"logger":"daemon.NodeConfigurator.enableMasterBus","msg":"executing command","cmd":"setpci -v -s 0000:af:00.0 COMMAND"}
-{"level":"Level(-4)","ts":1616794346.5458736,"logger":"daemon.NodeConfigurator.enableMasterBus","msg":"commands output","output":"0000:af:00.0 @04 = 0142\n"}
-{"level":"Level(-4)","ts":1616794346.5459251,"logger":"daemon.NodeConfigurator.enableMasterBus","msg":"executing command","cmd":"setpci -v -s 0000:af:00.0 COMMAND=0146"}
-{"level":"Level(-4)","ts":1616794346.5795262,"logger":"daemon.NodeConfigurator.enableMasterBus","msg":"commands output","output":"0000:af:00.0 @04 0146\n"}
-{"level":"Level(-2)","ts":1616794346.5795407,"logger":"daemon.NodeConfigurator.enableMasterBus","msg":"MasterBus set","pci":"0000:af:00.0","output":"0000:af:00.0 @04 0146\n"}
-{"level":"Level(-4)","ts":1616794346.6867144,"logger":"daemon.drainhelper.Run()","msg":"worker function - end","performUncordon":true}
-{"level":"Level(-4)","ts":1616794346.6867719,"logger":"daemon.drainhelper.Run()","msg":"uncordoning node"}
-{"level":"Level(-4)","ts":1616794346.6896322,"logger":"daemon.drainhelper.uncordon()","msg":"starting uncordon attempts"}
-{"level":"Level(-2)","ts":1616794346.69735,"logger":"daemon.drainhelper.uncordon()","msg":"node uncordoned"}
-{"level":"Level(-4)","ts":1616794346.6973662,"logger":"daemon.drainhelper.Run()","msg":"cancelling the context to finish the leadership"}
-{"level":"Level(-4)","ts":1616794346.7029872,"logger":"daemon.drainhelper.Run()","msg":"stopped leading"}
-{"level":"Level(-4)","ts":1616794346.7030034,"logger":"daemon.drainhelper","msg":"releasing the lock (bug mitigation)"}
-{"level":"Level(-4)","ts":1616794346.8040674,"logger":"daemon.updateInventory","msg":"obtained inventory","inv":{"sriovAccelerators":[{"vendorID":"8086","deviceID":"0b32","pciAddress":"0000:20:00.0","driver":"","maxVirtualFunctions":1,"virtualFunctions":[]},{"vendorID":"8086","deviceID":"0d5c","pciAddress":"0000:af:00.0","driver":"pci-pf-stub","maxVirtualFunctions":16,"virtualFunctions":[{"pciAddress":"0000:b0:00.0","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.1","driver":"vfio-pci","deviceID":"0d5d"}]}]}}
-{"level":"Level(-4)","ts":1616794346.9058325,"logger":"daemon","msg":"Update ignored, generation unchanged"}
-{"level":"Level(-2)","ts":1616794346.9065044,"logger":"daemon.Reconcile","msg":"Reconciled","namespace":"vran-acceleration-operators","name":"pg-itengdvs02r.altera.com"}
-```
-
-### ACC200 FEC
-#### Sample CR for Wireless FEC (ACC200)
-ACC200 introduces new section - `qfft`
-```yaml
-apiVersion: sriovfec.intel.com/v2
-kind: SriovFecClusterConfig
+apiVersion: sriovvrb.intel.com/v1
+kind: SriovVrbClusterConfig
 metadata:
   name: config
   namespace: vran-acceleration-operators
 spec:
+  priority: 1
+  nodeSelector:
+    kubernetes.io/hostname: worker-node
   acceleratorSelector:
     pciAddress: 0000:f7:00.0
-  nodeSelector:
-    kubernetes.io/hostname: r02s01-r08
+  drainSkip: true
   physicalFunction:
+    pfDriver: vfio-pci
+    vfDriver: vfio-pci
+    vfAmount: 2
     bbDevConfig:
-      acc200:
+      vrb1:
+        pfMode: false
+        numVfBundles: 2
+        maxQueueSize: 1024
+        uplink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
         downlink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        uplink5G:
           aqDepthLog2: 4
           numAqsPerGroups: 16
           numQueueGroups: 4
         downlink5G:
           aqDepthLog2: 4
           numAqsPerGroups: 16
-          numQueueGroups: 0
-        maxQueueSize: 1024
-        numVfBundles: 2
-        pfMode: false
+          numQueueGroups: 4
         qfft:
           aqDepthLog2: 4
           numAqsPerGroups: 16
           numQueueGroups: 4
+```
+
+- Reference CR for ACC200 (Deprecated)
+
+>NOTE: Use of v2 API for ACC200 is deprecated and suggest to use vrb/v1 API going forward. However, to support the existing applications using acc200, fec/v2 API for ACC200 will be supported. But Intel strongly suggest the new users to use vrb/v1 API to configure the VRB1 devices. There is **NO** functional difference between vrb/v1 and fec/v2 API with respect to VRB1 accelerator device in the Operator. 
+
+```yaml
+apiVersion: sriovfec.intel.com/v2
+kind: SriovFecClusterConfig
+metadata:
+  name: config
+  namespace: vran-acceleration-operators
+spec:
+  priority: 1
+  nodeSelector:
+    kubernetes.io/hostname: worker-node
+  acceleratorSelector:
+    pciAddress: 0000:f7:00.0
+  drainSkip: true
+  physicalFunction:
+    pfDriver: vfio-pci
+    vfDriver: vfio-pci
+    vfAmount: 2
+    bbDevConfig:
+        pfMode: false
+        numVfBundles: 2
+        maxQueueSize: 1024
+      acc200:
         uplink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        downlink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        uplink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        downlink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        qfft:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+```
+
+### vRAN Boost Accelerator V2 (VRB2)
+
+- Reference CR for VRB2
+
+```yaml
+apiVersion: sriovvrb.intel.com/v1
+kind: SriovVrbClusterConfig
+metadata:
+  name: config
+  namespace: vran-acceleration-operators
+spec:
+  priority: 1
+  nodeSelector:
+    kubernetes.io/hostname: worker-node
+  acceleratorSelector:
+    pciAddress: 0000:f7:00.0
+  drainSkip: true
+  physicalFunction:
+    pfDriver: vfio-pci
+    vfDriver: vfio-pci
+    vfAmount: 2
+    bbDevConfig:
+      vrb2:
+        pfMode: false
+        numVfBundles: 2
+        maxQueueSize: 1024
+        downlink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        uplink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        downlink5G:
           aqDepthLog2: 4
           numAqsPerGroups: 16
           numQueueGroups: 4
         uplink5G:
           aqDepthLog2: 4
           numAqsPerGroups: 16
-          numQueueGroups: 0
-    pfDriver: vfio-pci
-    vfAmount: 2
-    vfDriver: vfio-pci
-  priority: 1
+          numQueueGroups: 4
+        qfft:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        qmld:
+          aqDepthLog2: 4
+          numAqsPerGroups: 64
+          numQueueGroups: 4
+```
 
-```
-#### Sample Status for Wireless FEC (ACC200)
-```yaml
-status:
-  conditions:
-    - lastTransitionTime: "2022-11-25T12:43:29Z"
-      message: Configured successfully
-      observedGeneration: 58
-      reason: Succeeded
-      status: "True"
-      type: Configured
-  inventory:
-    sriovAccelerators:
-      - deviceID: 57c0
-        driver: pci-pf-stub
-        maxVirtualFunctions: 16
-        pciAddress: 0000:f7:00.0
-        vendorID: "8086"
-        virtualFunctions:
-          - deviceID: 57c1
-            driver: vfio-pci
-            pciAddress: 0000:f7:00.1
-          - deviceID: 57c1
-            driver: vfio-pci
-            pciAddress: 0000:f7:00.2
-```
 ## Appendix 3 - Gathering logs for bug report
 To gather logs for filing bug report please run `gather_sriovfec_logs.sh` script downloaded from https://github.com/smart-edge-open/sriov-fec-operator/blob/main/gather_sriovfec_logs.sh
 

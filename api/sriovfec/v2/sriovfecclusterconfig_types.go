@@ -75,6 +75,7 @@ type N3000BBDevConfig struct {
 	// +kubebuilder:default:false
 	// +kubebuilder:validation:Enum=false
 	PFMode bool `json:"pfMode,omitempty"`
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Minimum=0
 	FLRTimeOut int            `json:"flrTimeout"`
 	Downlink   UplinkDownlink `json:"downlink"`

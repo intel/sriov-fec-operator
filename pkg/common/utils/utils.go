@@ -25,43 +25,43 @@ type AcceleratorDiscoveryConfig struct {
 }
 
 const (
-	CONFIG_FILE_SIZE_LIMIT_IN_BYTES = 10485760 //10 MB
-	SRIOV_PREFIX                    = "SRIOV_FEC_"
-	PCI_PF_STUB_DASH                = "pci-pf-stub"
-	PCI_PF_STUB_UNDERSCORE          = "pci_pf_stub"
-	VFIO_PCI                        = "vfio-pci"
-	VFIO_PCI_UNDERSCORE             = "vfio_pci"
-	IGB_UIO                         = "igb_uio"
+	ConfigFileSizeLimitInBytes = 10485760 // 10 MB
+	SriovPrefix                = "SRIOV_FEC_"
+	PciPfStubDash              = "pci-pf-stub"
+	PciPfStubUnderscore        = "pci_pf_stub"
+	VfioPci                    = "vfio-pci"
+	VfioPciUnderscore          = "vfio_pci"
+	IgbUio                     = "igb_uio"
 )
 
 func LoadDiscoveryConfig(cfgPath string) (AcceleratorDiscoveryConfig, error) {
 	var cfg AcceleratorDiscoveryConfig
 	file, err := os.Open(filepath.Clean(cfgPath))
 	if err != nil {
-		return cfg, fmt.Errorf("Failed to open config: %v", err)
+		return cfg, fmt.Errorf("failed to open config: %v", err)
 	}
 	defer file.Close()
 
 	// get file stat
 	stat, err := file.Stat()
 	if err != nil {
-		return cfg, fmt.Errorf("Failed to get file stat: %v", err)
+		return cfg, fmt.Errorf("failed to get file stat: %v", err)
 	}
 
 	// check file size
-	if stat.Size() > CONFIG_FILE_SIZE_LIMIT_IN_BYTES {
-		return cfg, fmt.Errorf("Config file size %d, exceeds limit %d bytes",
-			stat.Size(), CONFIG_FILE_SIZE_LIMIT_IN_BYTES)
+	if stat.Size() > ConfigFileSizeLimitInBytes {
+		return cfg, fmt.Errorf("config file size %d, exceeds limit %d bytes",
+			stat.Size(), ConfigFileSizeLimitInBytes)
 	}
 
 	cfgData := make([]byte, stat.Size())
 	bytesRead, err := file.Read(cfgData)
 	if err != nil || int64(bytesRead) != stat.Size() {
-		return cfg, fmt.Errorf("Unable to read config: %s", filepath.Clean(cfgPath))
+		return cfg, fmt.Errorf("unable to read config: %s", filepath.Clean(cfgPath))
 	}
 
 	if err = json.Unmarshal(cfgData, &cfg); err != nil {
-		return cfg, fmt.Errorf("Failed to unmarshal config: %v", err)
+		return cfg, fmt.Errorf("failed to unmarshal config: %v", err)
 	}
 	return cfg, nil
 }
@@ -90,12 +90,12 @@ func IsSingleNodeCluster(c client.Client) (bool, error) {
 var GetPCIDevices = func() ([]*ghw.PCIDevice, error) {
 	pci, err := ghw.PCI()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get PCI info: %v", err)
+		return nil, fmt.Errorf("failed to get PCI info: %v", err)
 	}
 
 	devices := pci.ListDevices()
 	if len(devices) == 0 {
-		return nil, fmt.Errorf("Got 0 devices")
+		return nil, fmt.Errorf("got 0 devices")
 	}
 	return devices, nil
 }
@@ -104,12 +104,12 @@ func FindAccelerator(cfgPath string) (bool, string, error) {
 
 	cfg, err := LoadDiscoveryConfig(cfgPath)
 	if err != nil {
-		return false, "", fmt.Errorf("Failed to load config: %v", err)
+		return false, "", fmt.Errorf("failed to load config: %v", err)
 	}
 
 	devices, err := GetPCIDevices()
 	if err != nil {
-		return false, "", fmt.Errorf("Failed to get PCI devices: %v", err)
+		return false, "", fmt.Errorf("failed to get PCI devices: %v", err)
 	}
 
 	for _, device := range devices {

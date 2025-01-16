@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	v2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
+	vrbv1 "github.com/intel/sriov-fec-operator/api/sriovvrb/v1"
 	"github.com/intel/sriov-fec-operator/pkg/common/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -133,7 +134,7 @@ var _ = Describe("readFileWithTelemetry", func() {
 		fileHandler, err := os.Create(fmt.Sprintf("/var/log/pf_bb_cfg_%v_response.log", pciAddr))
 		Expect(err).To(BeNil())
 		defer fileHandler.Close()
-		fileLogWithoutEndTag := strings.Replace(fileLog, "-- End of Response --", "", -1)
+		fileLogWithoutEndTag := strings.ReplaceAll(fileLog, "-- End of Response --", "")
 		_, err = fileHandler.Write([]byte(fileLogWithoutEndTag))
 		Expect(err).To(BeNil())
 
@@ -222,6 +223,33 @@ var _ = Describe("parseCounters", func() {
 		Expect(hook.expectedErrorOccured).To(BeTrue())
 	})
 
+	It("Value line missing INFO", func() {
+		fieldLine := "Fri Sep 13 10:49:25 2022:INFO:FFT counters: Per Engine"
+		valueLine := "Tue Sep 13 10:49:25 2022:"
+
+		logger := utils.NewLogger()
+		hook := &testHook{
+			expectedError: "Value line missing INFO, skip it.",
+		}
+		logger.AddHook(hook)
+
+		parseCounters(fieldLine, valueLine, []v2.VF{
+			{PCIAddress: "9999:99:99.9"},
+		}, "9999:99:99.0", tg, logger)
+		tg.updateMetrics()
+
+		Expect(testutil.CollectAndCount(tg.engineGauge)).To(Equal(0))
+		Expect(hook.expectedErrorOccured).To(BeTrue())
+
+		VrbparseCounters(fieldLine, valueLine, []vrbv1.VF{
+			{PCIAddress: "9999:99:99.9"},
+		}, "9999:99:99.0", tg, logger)
+		tg.updateMetrics()
+
+		Expect(testutil.CollectAndCount(tg.engineGauge)).To(Equal(0))
+		Expect(hook.expectedErrorOccured).To(BeTrue())
+	})
+
 	It("one FFT engine value is exposed", func() {
 		parseCounters("Fri Sep 13 10:49:25 2022:INFO:FFT counters: Per Engine", "Tue Sep 13 10:49:25 2022:INFO:123", []v2.VF{
 			{PCIAddress: "9999:99:99.9"},
@@ -238,7 +266,7 @@ var _ = Describe("parseCounters", func() {
 		}, pfPciAddr, tg, utils.NewLogger())
 		tg.updateMetrics()
 
-		gauge, err := tg.engineGauge.GetMetricWith(map[string]string{engineIdLabel: "0", queueTypeLabel: "FFT", pciAddressLabel: pfPciAddr})
+		gauge, err := tg.engineGauge.GetMetricWith(map[string]string{engineIDLabel: "0", queueTypeLabel: "FFT", pciAddressLabel: pfPciAddr})
 		Expect(err).To(Succeed())
 		Expect(testutil.ToFloat64(gauge)).To(Equal(float64(999)))
 	})
@@ -551,6 +579,49 @@ Fri Sep 16 10:42:33 2022:INFO:-  VF 3 RTE_BBDEV_DEV_CONFIGURED
 		tg.updateMetrics()
 
 		Expect(testutil.CollectAndCount(tg.vfCountGauge)).To(Equal(1))
+		Expect(hook.expectedErrorOccured).To(BeTrue())
+	})
+})
+
+var _ = Describe("parseTelemetry", func() {
+	tg := newTelemetryGatherer()
+	BeforeEach(func() {
+		tg.resetMetrics()
+	})
+
+	It("Counters line missing", func() {
+		fileLog := `Fri Sep 16 10:42:33 2022:INFO:Device Status:: 6 VFs
+Fri Sep 16 10:42:33 2022:INFO:-  VF 0 RTE_BBDEV_DEV_CONFIGURED
+Fri Sep 16 10:42:33 2022:INFO:-  VF 1 RTE_BBDEV_DEV_CONFIGURED
+Fri Sep 16 10:42:33 2022:INFO:-  VF 2 RTE_BBDEV_DEV_CONFIGURED
+Fri Sep 16 10:42:33 2022:INFO:-  VF 3 RTE_BBDEV_DEV_CONFIGURED
+Fri Sep 16 10:42:33 2022:INFO:-  VF 4 RTE_BBDEV_DEV_CONFIGURED
+Fri Sep 16 10:42:33 2022:INFO:-  VF 5 RTE_BBDEV_DEV_CONFIGURED
+Fri Sep 16 10:42:33 2022:INFO:5GUL counters: Code Blocks
+Fri Sep 16 10:42:33 2022:INFO:0 0 0 0 0 0
+Fri Sep 16 10:42:33 2022:INFO:5GUL counters: Data (Bytes)
+Fri Sep 16 10:42:33 2022:INFO:0 0 0 0 0 0
+Fri Sep 16 10:42:33 2022:INFO:5GUL counters: Per Engine`
+		logger := utils.NewLogger()
+		hook := &testHook{
+			expectedError: "Telemetry counter value line missing.",
+		}
+		logger.AddHook(hook)
+
+		parseTelemetry([]byte(fileLog), []v2.VF{
+			{PCIAddress: "9999:99:99.9"},
+		}, "9999:99:99.0", tg, logger)
+		tg.updateMetrics()
+
+		Expect(testutil.CollectAndCount(tg.engineGauge)).To(Equal(0))
+		Expect(hook.expectedErrorOccured).To(BeTrue())
+
+		VrbparseTelemetry([]byte(fileLog), []vrbv1.VF{
+			{PCIAddress: "9999:99:99.9"},
+		}, "9999:99:99.0", tg, logger)
+		tg.updateMetrics()
+
+		Expect(testutil.CollectAndCount(tg.engineGauge)).To(Equal(0))
 		Expect(hook.expectedErrorOccured).To(BeTrue())
 	})
 })

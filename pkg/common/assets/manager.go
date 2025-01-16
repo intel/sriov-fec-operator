@@ -29,7 +29,7 @@ type Manager struct {
 	Log    *logrus.Logger
 	Assets []Asset
 
-	// Prefix used to gather enviroment variables for the templating the assets
+	// Prefix used to gather environment variables for the templating the assets
 	EnvPrefix string
 
 	// Can be removed after sigs.k8s.io/controller-runtime v0.7.0 release where client.Scheme() is available

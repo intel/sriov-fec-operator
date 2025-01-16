@@ -43,21 +43,21 @@ func (d *DevicePluginController) RestartDevicePlugin() error {
 		d.log.Info("there is no running instance of device plugin, nothing to restart")
 	}
 
-	for _, pod := range pods.Items {
-		if pod.Spec.NodeName != d.nodeNameRef.Name {
+	for i := range pods.Items {
+		if pods.Items[i].Spec.NodeName != d.nodeNameRef.Name {
 			continue
 		}
-		if err := d.Delete(context.TODO(), &pod, &client.DeleteOptions{}); err != nil {
+		if err := d.Delete(context.TODO(), &pods.Items[i], &client.DeleteOptions{}); err != nil {
 			return errors.Wrap(err, "failed to delete sriov-device-plugin-daemonset pod")
 		}
-
 		backoff := wait.Backoff{Steps: 300, Duration: 1 * time.Second, Factor: 1}
-		err = wait.ExponentialBackoff(backoff, d.waitForDevicePluginRestart(pod.Name))
+		err = wait.ExponentialBackoff(backoff, d.waitForDevicePluginRestart(pods.Items[i].Name))
 		if err == wait.ErrWaitTimeout {
 			return fmt.Errorf("failed to restart sriov-device-plugin within specified time")
 		}
 		return err
 	}
+
 	return nil
 }
 

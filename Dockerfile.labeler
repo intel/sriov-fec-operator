@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020-2024 Intel Corporation
 
-FROM golang:1.21.5 as builder
+FROM golang:1.23.4 as builder
 
 WORKDIR /workspace
 COPY go.mod go.sum ./
@@ -15,16 +15,17 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o node_lab
 
 RUN wget --progress=dot:giga https://pci-ids.ucw.cz/v2.2/pci.ids.gz -O pci.ids.gz && gunzip pci.ids.gz
 
-FROM registry.access.redhat.com/ubi9/ubi-micro:9.4-6
+FROM registry.access.redhat.com/ubi9/ubi-micro:9.5-1733126338
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="Intel® FPGA discovery container" \
+LABEL name="Intel® vRAN Boost accelerator operator discovery container" \
     vendor="Intel Corporation" \
     version=$VERSION \
     release="1" \
-    summary="Intel® FPGA discovery container labels kubernetes nodes that include Intel® FPGA accelerator" \
-    description="The container tries to detect Intel® FPGA accelerators and label the nodes that contain them \
+    maintainer="Intel Corporation" \
+    summary="Detects and labels kubernetes nodes that include Intel® vRAN Boost accelerator" \
+    description="The container tries to detect Intel® vRAN Boost accelerators and label the nodes that contain them \
 and remove the label for nodes that do not."
 
 RUN mkdir -p /usr/share/misc/

@@ -45,17 +45,22 @@ type DrainAndExecute func(configurer func(ctx context.Context) bool, drain bool)
 type RestartDevicePluginFunction func() error
 
 func pfBbConfigProcIsDead(log *logrus.Logger, pciAddr string) bool {
+	defaultLogLevel := log.GetLevel()
+	if defaultLogLevel == logrus.InfoLevel {
+		log.SetLevel(logrus.WarnLevel)
+	}
 	stdout, err := execCmd([]string{
 		"pgrep",
 		"--count",
 		"--full",
 		fmt.Sprintf("pf_bb_config.*%s", pciAddr),
 	}, log)
+	log.SetLevel(defaultLogLevel)
 	if err != nil {
 		log.WithError(err).Error("failed to determine status of pf-bb-config daemon")
 		return true
 	}
-	matchingProcCount, err := strconv.Atoi(stdout[0:1]) //stdout contains characters like '\n', so we are removing them
+	matchingProcCount, err := strconv.Atoi(stdout[0:1]) // Stdout contains characters like '\n', so we are removing them
 	if err != nil {
 		log.WithError(err).Error("failed to convert 'pgrep' output to int")
 		return true
@@ -72,13 +77,13 @@ func isReady(p corev1.Pod) bool {
 	return false
 }
 
-func CreateManager(config *rest.Config, scheme *runtime.Scheme, namespace string, metricsPort int, HealthProbePort int, log *logrus.Logger) (manager.Manager, error) {
+func CreateManager(config *rest.Config, scheme *runtime.Scheme, namespace string, metricsPort int, healthProbePort int, log *logrus.Logger) (manager.Manager, error) {
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     ":" + strconv.Itoa(metricsPort),
 		LeaderElection:         false,
 		Namespace:              namespace,
-		HealthProbeBindAddress: ":" + strconv.Itoa(HealthProbePort),
+		HealthProbeBindAddress: ":" + strconv.Itoa(healthProbePort),
 	})
 	if err != nil {
 		return nil, err
@@ -106,7 +111,7 @@ func moduleParameterIsEnabled(moduleName, parameter string) error {
 		}
 	}
 	if strings.Contains(strings.ToLower(string(value)), "n") {
-		return fmt.Errorf(moduleName + " is loaded and doesn't has " + parameter + " set")
+		return fmt.Errorf("%v is loaded and doesn't have %v set", moduleName, parameter)
 	}
 	return nil
 }

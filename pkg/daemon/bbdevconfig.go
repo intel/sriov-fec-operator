@@ -5,6 +5,7 @@ package daemon
 
 import (
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -12,7 +13,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
+	"github.com/hpcloud/tail"
 	sriovv2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
 	vrbv1 "github.com/intel/sriov-fec-operator/api/sriovvrb/v1"
 	"github.com/intel/sriov-fec-operator/pkg/common/utils"
@@ -24,9 +27,11 @@ var (
 	untarFile       = Untar
 	artifactsFolder = "/tmp"
 
-	pfConfigAppFilepath              string
 	srsFftWindowsCoefficientFilepath string
+	monitoredFiles                   sync.Map
 )
+
+const pfConfigAppFilepath = "/sriov_workdir/pf_bb_config"
 
 type fftUpdater struct {
 	log        *logrus.Logger
@@ -35,18 +40,17 @@ type fftUpdater struct {
 
 func NewPfBBConfigController(log *logrus.Logger, sharedVfioToken string) *pfBBConfigController {
 	var err error
-	cert := getTlsCert(log)
+	cert := getTLSCert(log)
 
 	httpClient := http.DefaultClient
 	if cert != nil {
-		log.Info("found certificate - using HTTPS client")
-		httpClient, err = NewSecureHttpsClient(cert)
+		log.Info("using HTTPS client")
+		httpClient, err = NewSecureHTTPSClient(cert)
 		if err != nil {
-			log.WithError(err)
+			log.WithError(err).Error("failed to create HTTPS client")
 			return nil
 		}
 	}
-
 	return &pfBBConfigController{
 		log:             log,
 		sharedVfioToken: sharedVfioToken,
@@ -63,16 +67,23 @@ type pfBBConfigController struct {
 	fftUpdater      *fftUpdater
 }
 
-func getTlsCert(log *logrus.Logger) *x509.Certificate {
-	derBytes, err := os.ReadFile("/etc/certificate/tls.crt")
+func getTLSCert(log *logrus.Logger) *x509.Certificate {
+
+	var certFilePath = "/etc/certificate/tls.crt"
+
+	if _, err := os.Stat(certFilePath); errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+
+	derBytes, err := os.ReadFile(certFilePath)
 	if err != nil {
-		log.Error(err, "failed to read mounted certificate")
+		log.WithError(err).Error("failed to read certificate file")
 		return nil
 	}
 
 	cert, err := x509.ParseCertificate(derBytes)
 	if err != nil {
-		log.Error(err, "failed to parse certificate")
+		log.WithError(err).Error("failed to parse certificate")
 		return nil
 	}
 	return cert
@@ -111,13 +122,11 @@ func (p *pfBBConfigController) configureDevice(acc sriovv2.SriovAccelerator, pf 
 		}
 		p.log.Infof("SRS FFT file path is : %s", srsFftWindowsCoefficientFilepath)
 	}
-	if pfConfigAppFilepath == "" {
-		pfConfigAppFilepath = "/sriov_workdir/pf_bb_config"
-	}
+
 	p.log.Infof("pf-bb-config file path is : %s", pfConfigAppFilepath)
 	logLinkStatus(pf.PCIAddress, p.log)
 	var token *string
-	if strings.EqualFold(pf.PFDriver, utils.VFIO_PCI) {
+	if strings.EqualFold(pf.PFDriver, utils.VfioPci) {
 		token = &p.sharedVfioToken
 	}
 
@@ -149,13 +158,13 @@ func (p *pfBBConfigController) configureVrbDevice(acc vrbv1.SriovAccelerator, pf
 
 	switch deviceName {
 	case "VRB1":
-		err := p.updateFftWindowsCoefficientFilepath("VRB1", &pf.BBDevConfig.VRB1.FFTLut, "/sriov_workdir/vrb1/srs_fft_windows_coefficient.bin")
+		err := p.updateFftWindowsCoefficientFilepath(&pf.BBDevConfig.VRB1.FFTLut, "/sriov_workdir/vrb1/srs_fft_windows_coefficient.bin")
 		if err != nil {
 			return err
 		}
 
 	case "VRB2":
-		err := p.updateFftWindowsCoefficientFilepath("VRB2", &pf.BBDevConfig.VRB2.FFTLut, "/sriov_workdir/vrb2/srs_fft_windows_coefficient.bin")
+		err := p.updateFftWindowsCoefficientFilepath(&pf.BBDevConfig.VRB2.FFTLut, "/sriov_workdir/vrb2/srs_fft_windows_coefficient.bin")
 		if err != nil {
 			return err
 		}
@@ -166,20 +175,16 @@ func (p *pfBBConfigController) configureVrbDevice(acc vrbv1.SriovAccelerator, pf
 		return fmt.Errorf("unsupported device name: %s", deviceName)
 	}
 
-	if pfConfigAppFilepath == "" {
-		pfConfigAppFilepath = "/sriov_workdir/pf_bb_config"
-	}
-
 	logLinkStatus(pf.PCIAddress, p.log)
 	var token *string
-	if strings.EqualFold(pf.PFDriver, utils.VFIO_PCI) {
+	if strings.EqualFold(pf.PFDriver, utils.VfioPci) {
 		token = &p.sharedVfioToken
 	}
 
 	return p.runPFConfig(deviceName, bbdevConfigFilepath, pf.PCIAddress, token)
 }
 
-func (p *pfBBConfigController) updateFftWindowsCoefficientFilepath(deviceName string, fftLutConfig *vrbv1.FFTLutParam, defaultFilePath string) error {
+func (p *pfBBConfigController) updateFftWindowsCoefficientFilepath(fftLutConfig *vrbv1.FFTLutParam, defaultFilePath string) error {
 	var err error
 	srsFftWindowsCoefficientFilepath, err = p.fftUpdater.VrbgetFftFilePath(p, fftLutConfig)
 	if err != nil {
@@ -194,38 +199,40 @@ func (p *pfBBConfigController) updateFftWindowsCoefficientFilepath(deviceName st
 }
 
 // runPFConfig executes a pf-bb-config tool
-// deviceName is one of: FPGA_LTE or FPGA_5GNR or ACC100
+// deviceName is one of: FPGA_LTE (N3000) FPGA_5GNR (N3000), ACC100, ACC200(deprecated), VRB1, VRB2
 // cfgFilepath is a filepath to the config
 // pciAddress points to a specific PF device
 func (p *pfBBConfigController) runPFConfig(deviceName, cfgFilepath, pciAddress string, token *string) error {
 	switch deviceName {
-	case "FPGA_LTE", "FPGA_5GNR", "ACC100", "ACC200", "VRB1", "VRB2":
+	case "FPGA_LTE", "FPGA_5GNR", "ACC100", "VRB1", "VRB2":
+	case "ACC200":
+		deviceName = "VRB1"
 	default:
 		return fmt.Errorf("incorrect deviceName for pf config: %s", deviceName)
 	}
-	if token == nil {
-		if deviceName == "ACC200" || deviceName == "VRB1" {
-			_, err := runExecCmd([]string{pfConfigAppFilepath, "VRB1", "-c", cfgFilepath, "-p", pciAddress, "-f", srsFftWindowsCoefficientFilepath}, p.log)
-			return err
-		} else if deviceName == "VRB2" {
-			_, err := runExecCmd([]string{pfConfigAppFilepath, deviceName, "-c", cfgFilepath, "-p", pciAddress, "-f", srsFftWindowsCoefficientFilepath}, p.log)
-			return err
-		} else {
-			_, err := runExecCmd([]string{pfConfigAppFilepath, deviceName, "-c", cfgFilepath, "-p", pciAddress}, p.log)
-			return err
-		}
-	} else {
-		if deviceName == "ACC200" || deviceName == "VRB1" {
-			_, err := runExecCmd([]string{pfConfigAppFilepath, "VRB1", "-c", cfgFilepath, "-v", *token, "-p", pciAddress, "-f", srsFftWindowsCoefficientFilepath}, p.log)
-			return err
-		} else if deviceName == "VRB2" {
-			_, err := runExecCmd([]string{pfConfigAppFilepath, deviceName, "-c", cfgFilepath, "-v", *token, "-p", pciAddress, "-f", srsFftWindowsCoefficientFilepath}, p.log)
-			return err
-		} else {
-			_, err := runExecCmd([]string{pfConfigAppFilepath, deviceName, "-c", cfgFilepath, "-v", *token, "-p", pciAddress}, p.log)
+	args := []string{pfConfigAppFilepath, deviceName, "-c", cfgFilepath, "-p", pciAddress}
+
+	if token != nil {
+		args = append(args, "-v", *token)
+	}
+
+	if strings.Contains(deviceName, "VRB") {
+		args = append(args, "-f", srsFftWindowsCoefficientFilepath)
+	}
+	_, err := runExecCmd(args, p.log)
+	if err != nil {
+		p.log.WithError(err).Error("failed to run pf_bb_config")
+		return err
+	}
+
+	// Monitor the log file only when vfio-pci is used
+	if token != nil {
+		if err := monitorLogFile(pciAddress, p.log); err != nil {
 			return err
 		}
 	}
+
+	return nil
 }
 
 func (p *pfBBConfigController) stopPfBBConfig(pciAddress string) error {
@@ -242,8 +249,8 @@ func (p *pfBBConfigController) stopPfBBConfig(pciAddress string) error {
 		return false
 	})
 
-	//TODO: Remove workaround
-	//Code below implements workaround problem related with pf_bb_config app. Ticket describing an issue SCSY-190446
+	// TODO: Remove workaround
+	// Code below implements workaround problem related with pf_bb_config app. Ticket describing an issue SCSY-190446
 	sockFileToBeDeleted := fmt.Sprintf("/tmp/pf_bb_config.%s.sock", pciAddress)
 	p.log.WithField("applying-work-around", "SCSY-190446").Info("deleting", sockFileToBeDeleted)
 
@@ -256,12 +263,12 @@ func (p *pfBBConfigController) stopPfBBConfig(pciAddress string) error {
 }
 
 func (f *fftUpdater) getFftFilePath(p *pfBBConfigController, pf *sriovv2.FFTLutParam) (string, error) {
-	// when both url and checksum are empty
+	// When both url and checksum are empty
 	if pf.FftUrl == "" && pf.FftChecksum == "" {
 		p.log.Info("Using default SRS FFT file for configuration")
 		return "", nil
 	}
-	// when both url and checksum are not empty
+	// When both url and checksum are not empty
 	if pf.FftUrl != "" && pf.FftChecksum != "" {
 		newFftFp, err := p.fftUpdater.updateFftFile(pf)
 		if err != nil {
@@ -300,12 +307,12 @@ func (f *fftUpdater) updateFftFile(fft *sriovv2.FFTLutParam) (string, error) {
 }
 
 func (f *fftUpdater) VrbgetFftFilePath(p *pfBBConfigController, pf *vrbv1.FFTLutParam) (string, error) {
-	// when both url and checksum are empty
+	// When both url and checksum are empty
 	if pf.FftUrl == "" && pf.FftChecksum == "" {
 		p.log.Info("Using default SRS FFT file for configuration")
 		return "", nil
 	}
-	// when both url and checksum are not empty
+	// When both url and checksum are not empty
 	if pf.FftUrl != "" && pf.FftChecksum != "" {
 		newFftFp, err := p.fftUpdater.VrbupdateFftFile(pf)
 		if err != nil {
@@ -361,14 +368,47 @@ func logLinkStatus(pciAddr string, log *logrus.Logger) {
 
 	// Trim leading and trailing whitespace
 	match = strings.TrimSpace(match)
-	match = strings.Replace(match, "\t", " ", -1)
+	match = strings.ReplaceAll(match, "\t", " ")
 
 	if match != "" {
 		// Report warning only if link is downgraded
 		if strings.Contains(match, "downgraded") {
-			log.WithField("pciAddr", pciAddr).Warning(string(match))
+			log.WithField("pciAddr", pciAddr).Warning(match)
 		} else {
-			log.WithField("pciAddr", pciAddr).Debug(string(match))
+			log.WithField("pciAddr", pciAddr).Debug(match)
 		}
 	}
+}
+
+func monitorLogFile(pciAddr string, log *logrus.Logger) error {
+	pfBbConfigLog := fmt.Sprintf("/var/log/pf_bb_cfg_%s.log", pciAddr)
+	// Check if the pciAddr is already being monitored
+	if _, loaded := monitoredFiles.LoadOrStore(pciAddr, struct{}{}); loaded {
+		// If loaded is true, it means the pciAddr is already being monitored
+		log.WithField("pciAddr", pciAddr).Infof("%s file is already being monitored", pfBbConfigLog)
+		return nil
+	}
+	t, err := tail.TailFile(pfBbConfigLog, tail.Config{Follow: true, ReOpen: true, Logger: log, Poll: true})
+	if err != nil {
+		log.WithError(err).WithField("pciAddr", pciAddr).Errorf("Failed to tail log file: %v", err)
+		monitoredFiles.Delete(pciAddr)
+		return err
+	}
+
+	// Start watching the file
+	go func() {
+		defer t.Cleanup()
+		defer func() {
+			err := t.Stop()
+			if err != nil {
+				log.WithError(err).Errorf("tail Stop returned error")
+			}
+		}()
+		defer monitoredFiles.Delete(pciAddr)
+		for line := range t.Lines {
+			log.WithField("pciAddr", pciAddr).Infof("%s", line.Text)
+		}
+	}()
+
+	return nil
 }

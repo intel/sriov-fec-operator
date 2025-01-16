@@ -68,7 +68,7 @@ var (
 			NodeSelector: map[string]string{},
 			PhysicalFunction: sriovv2.PhysicalFunctionConfig{
 				//PCIAddress: "0000:14:00.1",
-				PFDriver: utils.PCI_PF_STUB_DASH,
+				PFDriver: utils.PciPfStubDash,
 				VFDriver: "v",
 				VFAmount: 5,
 				BBDevConfig: sriovv2.BBDevConfig{
@@ -185,9 +185,9 @@ var _ = Describe("SriovControllerTest", func() {
 			It("ConfigurationPropagationCondition should appear on SriovFecNodeConfig", func() {
 				n1 := createNode("n1")
 
-				//Inventory is broken since it doesn't expose PcieAddress field which is obligatory,
-				//It comes with a reason, when controller will try to rewrite cluster config spec into node config spec,
-				//request should be rejected(again PciAddress field is obligatory)
+				// Inventory is broken since it doesn't expose PcieAddress field which is obligatory,
+				// It comes with a reason, when controller will try to rewrite cluster config spec into node config spec,
+				// request should be rejected(again PciAddress field is obligatory)
 				createNodeInventory(n1.Name, []sriovv2.SriovAccelerator{
 					{
 						VendorID: "vendor",
@@ -200,7 +200,7 @@ var _ = Describe("SriovControllerTest", func() {
 						VendorID: "vendor",
 					}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: utils.PCI_PF_STUB_DASH,
+						PFDriver: utils.PciPfStubDash,
 						VFAmount: 1,
 					}
 				})
@@ -243,7 +243,7 @@ var _ = Describe("SriovControllerTest", func() {
 						VendorID: "notExistingVendor",
 					}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: utils.PCI_PF_STUB_DASH,
+						PFDriver: utils.PciPfStubDash,
 						VFAmount: 1,
 					}
 				})
@@ -285,7 +285,7 @@ var _ = Describe("SriovControllerTest", func() {
 				})
 
 				pfc := sriovv2.PhysicalFunctionConfig{
-					PFDriver: utils.PCI_PF_STUB_DASH,
+					PFDriver: utils.PciPfStubDash,
 					VFDriver: "vfio-pci",
 					VFAmount: 3,
 				}
@@ -344,7 +344,7 @@ var _ = Describe("SriovControllerTest", func() {
 				})
 
 				pfc := sriovv2.PhysicalFunctionConfig{
-					PFDriver: utils.PCI_PF_STUB_DASH,
+					PFDriver: utils.PciPfStubDash,
 					VFDriver: "vfio-pci",
 					VFAmount: 3,
 				}
@@ -407,14 +407,14 @@ var _ = Describe("SriovControllerTest", func() {
 				_ = createAcceleratorConfig("cc1", func(cc *sriovv2.SriovFecClusterConfig) {
 					cc.Spec.AcceleratorSelector = sriovv2.AcceleratorSelector{DeviceID: "id1"}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: utils.PCI_PF_STUB_DASH,
+						PFDriver: utils.PciPfStubDash,
 						VFAmount: 1,
 					}
 				})
 				_ = createAcceleratorConfig("cc2", func(cc *sriovv2.SriovFecClusterConfig) {
 					cc.Spec.AcceleratorSelector = sriovv2.AcceleratorSelector{DeviceID: "id2"}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: utils.IGB_UIO,
+						PFDriver: utils.IgbUio,
 						VFAmount: 1,
 					}
 				})
@@ -424,7 +424,7 @@ var _ = Describe("SriovControllerTest", func() {
 				_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest("cc1"))
 				Expect(err).ToNot(HaveOccurred())
 
-				//Check if node config was created out of cluster config
+				// Check if node config was created out of cluster config
 				nodeConfigs := new(sriovv2.SriovFecNodeConfigList)
 				Expect(k8sClient.List(context.TODO(), nodeConfigs)).ToNot(HaveOccurred())
 				Expect(len(nodeConfigs.Items)).To(Equal(1))
@@ -455,14 +455,14 @@ var _ = Describe("SriovControllerTest", func() {
 				cc1 := createAcceleratorConfig("cc1", func(cc *sriovv2.SriovFecClusterConfig) {
 					cc.Spec.AcceleratorSelector = sriovv2.AcceleratorSelector{PCIAddress: "0000:14:00.1"}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: utils.PCI_PF_STUB_DASH,
+						PFDriver: utils.PciPfStubDash,
 						VFAmount: 1,
 					}
 				})
 				cc2 := createAcceleratorConfig("cc2", func(cc *sriovv2.SriovFecClusterConfig) {
 					cc.Spec.AcceleratorSelector = sriovv2.AcceleratorSelector{PCIAddress: "0000:15:00.1"}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: utils.IGB_UIO,
+						PFDriver: utils.IgbUio,
 						VFAmount: 1,
 					}
 				})
@@ -474,7 +474,7 @@ var _ = Describe("SriovControllerTest", func() {
 					_, err := reconciler.Reconcile(context.TODO(), createDummyReconcileRequest(cc))
 					Expect(err).ToNot(HaveOccurred())
 
-					//Check if node config was created out of cluster config
+					// Check if node config was created out of cluster config
 					nodeConfigs := new(sriovv2.SriovFecNodeConfigList)
 					Expect(k8sClient.List(context.TODO(), nodeConfigs)).ToNot(HaveOccurred())
 					Expect(len(nodeConfigs.Items)).To(Equal(1))
@@ -509,7 +509,7 @@ var _ = Describe("SriovControllerTest", func() {
 						VendorID: "testvendor",
 					}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: utils.PCI_PF_STUB_DASH,
+						PFDriver: utils.PciPfStubDash,
 						VFDriver: "vfDriver",
 						VFAmount: 1,
 					}
@@ -521,7 +521,7 @@ var _ = Describe("SriovControllerTest", func() {
 						PCIAddress: "0000:15:00.1",
 					}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: utils.IGB_UIO,
+						PFDriver: utils.IgbUio,
 						VFDriver: "secondVfDriver",
 						VFAmount: 2,
 					}
@@ -559,14 +559,14 @@ var _ = Describe("SriovControllerTest", func() {
 							VendorID: "testvendor",
 						}
 						cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-							PFDriver: utils.PCI_PF_STUB_DASH,
+							PFDriver: utils.PciPfStubDash,
 							VFDriver: "vfDriver",
 							VFAmount: 1,
 						}
 						cc.Spec.Priority = 1
 					})
 
-					//put some delay between one and another config creation
+					// Put some delay between one and another config creation
 					time.Sleep(time.Second)
 
 					newerCC := createAcceleratorConfig("config2", func(cc *sriovv2.SriovFecClusterConfig) {
@@ -574,7 +574,7 @@ var _ = Describe("SriovControllerTest", func() {
 							PCIAddress: "0000:15:00.1",
 						}
 						cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-							PFDriver: utils.IGB_UIO,
+							PFDriver: utils.IgbUio,
 							VFDriver: "secondVfDriver",
 							VFAmount: 2,
 						}
@@ -613,7 +613,7 @@ var _ = Describe("SriovControllerTest", func() {
 							PCIAddress: "0000:15:00.1",
 						}
 						cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-							PFDriver: utils.IGB_UIO,
+							PFDriver: utils.IgbUio,
 							VFDriver: "secondVfDriver",
 							VFAmount: 2,
 						}
@@ -625,7 +625,7 @@ var _ = Describe("SriovControllerTest", func() {
 							VendorID: "testvendor",
 						}
 						cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-							PFDriver: utils.PCI_PF_STUB_DASH,
+							PFDriver: utils.PciPfStubDash,
 							VFDriver: "vfDriver",
 							VFAmount: 1,
 						}
@@ -674,7 +674,7 @@ var _ = Describe("SriovControllerTest", func() {
 						VendorID: "testvendor",
 					}
 					cc.Spec.PhysicalFunction = sriovv2.PhysicalFunctionConfig{
-						PFDriver: utils.PCI_PF_STUB_DASH,
+						PFDriver: utils.PciPfStubDash,
 						VFDriver: "vfDriver",
 						VFAmount: 2,
 					}

@@ -25,16 +25,16 @@ var getInclusterConfigFunc = rest.InClusterConfig
 func setNodeLabel(nodeName, label string, removeLabel bool) error {
 	cfg, err := getInclusterConfigFunc()
 	if err != nil {
-		return fmt.Errorf("Failed to get cluster config: %v\n", err.Error())
+		return fmt.Errorf("failed to get cluster config: %v", err.Error())
 	}
 	cli, err := clientset.NewForConfig(cfg)
 	if err != nil {
-		return fmt.Errorf("Failed to initialize clientset: %v\n", err.Error())
+		return fmt.Errorf("failed to initialize clientset: %v", err.Error())
 	}
 
 	node, err := cli.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to get the node object: %v\n", err)
+		return fmt.Errorf("failed to get the node object: %v", err)
 	}
 	nodeLabels := node.GetLabels()
 	if removeLabel {
@@ -46,7 +46,7 @@ func setNodeLabel(nodeName, label string, removeLabel bool) error {
 	node.SetLabels(nodeLabels)
 	_, err = cli.CoreV1().Nodes().Update(context.Background(), node, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to update the node object: %v\n", err)
+		return fmt.Errorf("failed to update the node object: %v", err)
 	}
 	return nil
 }
@@ -57,7 +57,7 @@ func acceleratorDiscovery(cfgPath string, vrbCfgPath string) error {
 	vrbAccFound, vrbNodeLabel, err2 := utils.FindAccelerator(vrbCfgPath)
 
 	if err1 != nil && err2 != nil {
-		return fmt.Errorf("Failed to find accelerator: %v \n%v\n", err1, err2)
+		return fmt.Errorf("failed to find accelerator: %v %v", err1, err2)
 	}
 	nodeName := os.Getenv("NODENAME")
 	if nodeName == "" {

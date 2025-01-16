@@ -52,7 +52,7 @@ func (l *logrusWrapper) WithValues(keysAndValues ...interface{}) logr.LogSink {
 
 func (l *logrusWrapper) parseFields(keysAndValues []interface{}) logrus.Fields {
 	res := logrus.Fields{}
-	for i := 0; i+1 < len(keysAndValues); i = i + 2 {
+	for i := 0; i+1 < len(keysAndValues); i += 2 {
 		key, ok := keysAndValues[i].(string)
 		if ok {
 			res[key] = keysAndValues[i+1]

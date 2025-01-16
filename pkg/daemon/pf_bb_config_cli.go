@@ -15,6 +15,7 @@ import (
 	"time"
 
 	fec "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
+	vrb "github.com/intel/sriov-fec-operator/api/sriovvrb/v1"
 	"github.com/intel/sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -72,26 +73,26 @@ var cliCommands = map[string]cmdDef{
 
 // pf_bb_config_cli command IDs
 var (
-	RESET_MODE_CMD_ID  = []byte{0x2, 0x0}
-	AUTO_RESET_CMD_ID  = []byte{0x3, 0x0}
-	CLEAR_LOG_CMD_ID   = []byte{0x4, 0x0}
-	REG_DUMP_CMD_ID    = []byte{0x6, 0x0}
-	MM_READ_CMD_ID     = []byte{0x8, 0x0}
-	DEVICE_DATA_CMD_ID = []byte{0x9, 0x0}
+	ResetModeCmdID  = []byte{0x2, 0x0}
+	AutoResetCmdID  = []byte{0x3, 0x0}
+	ClearLogCmdID   = []byte{0x4, 0x0}
+	RegDumpCmdID    = []byte{0x6, 0x0}
+	MmReadCmdID     = []byte{0x8, 0x0}
+	DeviceDataCmdID = []byte{0x9, 0x0}
 )
 
 // CLI command arguments
 var (
-	CLUSTER_RESET_MODE = []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
-	PF_FLR_MODE        = []byte{0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0}
-	AUTO_RESET_OFF     = []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
-	AUTO_RESET_ON      = []byte{0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0}
-	MM_READ_REG_READ   = []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
-	VOID_PRIVATE       = []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
+	ClusterResetMode = []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
+	PfFlrMode        = []byte{0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0}
+	AutoResetOff     = []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
+	AutoResetOn      = []byte{0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0}
+	MmReadRegRead    = []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
+	VoidPrivate      = []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 )
 
 func ShowHelp() {
-	fmt.Println("Usage: ./sriov_fec_daemon -C <command_type> [additional_arguments]")
+	fmt.Println("Usage: ./sriov_fec_daemon -C <command_type> [additional_arguments] [-P <pci_address>]")
 	fmt.Println("Supported <commands>")
 	fmt.Println("\treset_mode <pf_flr|cluster_reset>")
 	fmt.Println("\tauto_reset <on|off>")
@@ -141,11 +142,13 @@ func resetModeParse(args []string) ([]byte, error) {
 		resetModeHelp()
 		return nil, errors.New("error: missing argument for command reset_mode")
 	}
-	if args[0] == "pf_flr" {
-		return PF_FLR_MODE, nil
-	} else if args[0] == "cluster_reset" {
-		return CLUSTER_RESET_MODE, nil
-	} else {
+
+	switch args[0] {
+	case "pf_flr":
+		return PfFlrMode, nil
+	case "cluster_reset":
+		return ClusterResetMode, nil
+	default:
 		fmt.Println("error: invalid reset_mode value")
 		resetModeHelp()
 		return nil, errors.New("error: invalid reset_mode value")
@@ -157,9 +160,9 @@ func resetMode(args []string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	request := append([]byte(RESET_MODE_CMD_ID), 0x8, 0x0) // short id, short len
-	request = append(request, VOID_PRIVATE...)   // void *priv;
-	request = append(request, resetModeBytes...) // unsigned int mode;
+	request := append([]byte(ResetModeCmdID), 0x8, 0x0) // short id, short len
+	request = append(request, VoidPrivate...)           // void *priv;
+	request = append(request, resetModeBytes...)        // unsigned int mode;
 	return request, nil
 }
 
@@ -176,11 +179,12 @@ func autoResetParse(args []string) ([]byte, error) {
 		autoResetHelp()
 		return nil, errors.New("error: missing argument for command auto_reset")
 	}
-	if args[0] == "on" {
-		return AUTO_RESET_ON, nil
-	} else if args[0] == "off" {
-		return AUTO_RESET_OFF, nil
-	} else {
+	switch args[0] {
+	case "on":
+		return AutoResetOn, nil
+	case "off":
+		return AutoResetOff, nil
+	default:
 		fmt.Println("error: invalid auto_reset value")
 		autoResetHelp()
 		return nil, errors.New("error: invalid auto_reset value")
@@ -192,21 +196,21 @@ func autoReset(args []string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	request := append([]byte(AUTO_RESET_CMD_ID), 0x8, 0x0)  // short id, short len;
-	request = append(request, VOID_PRIVATE...)   // void *priv;
-	request = append(request, autoResetBytes...) // unsigned int mode;
+	request := append([]byte(AutoResetCmdID), 0x8, 0x0) // short id, short len;
+	request = append(request, VoidPrivate...)           // void *priv;
+	request = append(request, autoResetBytes...)        // unsigned int mode;
 	return request, nil
 }
 
 func clearLogCli(args []string) ([]byte, error) {
-	request := append([]byte(CLEAR_LOG_CMD_ID), 0x0, 0x0) // short id, short len;
-	request = append(request, VOID_PRIVATE...) // void *priv;
+	request := append([]byte(ClearLogCmdID), 0x0, 0x0) // short id, short len;
+	request = append(request, VoidPrivate...)          // void *priv;
 	return request, nil
 }
 
 func regDump(args []string) ([]byte, error) {
-	request := append([]byte(REG_DUMP_CMD_ID), 0x8, 0x0)  // short id, short len;
-	request = append(request, VOID_PRIVATE...) // void *priv;
+	request := append([]byte(RegDumpCmdID), 0x8, 0x0) // short id, short len;
+	request = append(request, VoidPrivate...)         // void *priv;
 
 	if len(args) < 1 {
 		fmt.Println("error: missing argument for reg_dump")
@@ -260,16 +264,16 @@ func mmRead(args []string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	request := append([]byte(MM_READ_CMD_ID), 0x20, 0x0)  // short id, short len;
-	request = append(request, VOID_PRIVATE...)     // void *priv;
-	request = append(request, MM_READ_REG_READ...) // unsigned int reg_op_flag;
-	request = append(request, regAddrBytes...)     // unsigned int reg_rw_address;
+	request := append([]byte(MmReadCmdID), 0x20, 0x0) // short id, short len;
+	request = append(request, VoidPrivate...)         // void *priv;
+	request = append(request, MmReadRegRead...)       // unsigned int reg_op_flag;
+	request = append(request, regAddrBytes...)        // unsigned int reg_rw_address;
 	return request, nil
 }
 
 func deviceData(args []string) ([]byte, error) {
-	request := append([]byte(DEVICE_DATA_CMD_ID), 0x0, 0x0) // short id, short len;
-	request = append(request, VOID_PRIVATE...) // void *priv;
+	request := append([]byte(DeviceDataCmdID), 0x0, 0x0) // short id, short len;
+	request = append(request, VoidPrivate...)            // void *priv;
 	return request, nil
 }
 
@@ -326,53 +330,169 @@ func pollLogFile(pciAddr string, filePath string, searchStr string, log *logrus.
 	return file, nil
 }
 
-func StartPfBbConfigCli(nodeName string, ns string, directClient client.Client, cmd string, args []string, log *logrus.Logger) {
+func StartPfBbConfigCli(nodeName string, ns string, directClient client.Client, cmd string, args []string, pciAddr string, log *logrus.Logger) {
+	var deviceID, pfPciAddr string
+	var err error
+
+	if pciAddr != "" {
+		deviceID, pfPciAddr, err = findDeviceByPciAddr(nodeName, ns, directClient, pciAddr, log)
+		if err != nil {
+			log.WithError(err).WithField("nodeName", nodeName).WithField("namespace", ns).WithField("pciAddr", pciAddr).Error("no device found")
+			return
+		}
+	} else {
+		deviceID, pfPciAddr, err = findDevice(nodeName, ns, directClient)
+		if err != nil {
+			log.WithError(err).WithField("nodeName", nodeName).WithField("namespace", ns).Error(err)
+			return
+		}
+	}
+
+	if cmd == "reg_dump" {
+		args = append(args, deviceID)
+	}
+
+	if err := executeCommand(cmd, args, pfPciAddr, log); err != nil {
+		log.WithError(err).WithField("nodeName", nodeName).WithField("namespace", ns).WithField("pciAddr", pfPciAddr).Error(err)
+		ShowHelp()
+		return
+	}
+}
+
+/******************************************************************************
+ * Function: findDevice
+ * Description: Searches for a device in the fec.SriovFecNodeConfig configuration.
+ *              If a device is found, it returns the deviceID and pfPciAddr.
+ *              If no device is found, it calls findVrbDevice to search in the
+ *              vrb.SriovVrbNodeConfig configuration.
+ *****************************************************************************/
+func findDevice(nodeName, ns string, directClient client.Client) (string, string, error) {
+	var deviceID, pfPciAddr string
+
+	// Fetch the fec.SriovFecNodeConfig for the given node and namespace
+	nodeConfig := &fec.SriovFecNodeConfig{}
+	err := directClient.Get(context.Background(), client.ObjectKey{Name: nodeName, Namespace: ns}, nodeConfig)
+	if err == nil && len(nodeConfig.Spec.PhysicalFunctions) > 0 {
+		// Iterate through the SriovAccelerators in the nodeConfig
+		for _, acc := range nodeConfig.Status.Inventory.SriovAccelerators {
+			// Check if the deviceID exists in fecDevices and the PFDriver is vfio-pci
+			if _, exists := fecDevices[acc.DeviceID]; exists && strings.EqualFold(acc.PFDriver, utils.VfioPci) {
+				// If a device is already found, return an error indicating multiple devices found
+				if deviceID != "" {
+					return "", "", fmt.Errorf("multiple devices found. Please specify PCI address using -P flag")
+				} else {
+					// Set the deviceID and pfPciAddr
+					deviceID = acc.DeviceID
+					pfPciAddr = acc.PCIAddress
+				}
+			}
+		}
+	}
+
+	// If a device is found, return the deviceID and pfPciAddr
+	if deviceID != "" {
+		return deviceID, pfPciAddr, nil
+	}
+
+	// If no device is found, call findVrbDevice to search in vrb.SriovVrbNodeConfig
+	return findVrbDevice(nodeName, ns, directClient)
+}
+
+/******************************************************************************
+ * Function: findVrbDevice
+ * Description: Searches for a device in the vrb.SriovVrbNodeConfig configuration.
+ *              If a device is found, it returns the deviceID and pfPciAddr.
+ *              If no device is found, it returns an error indicating no device found.
+ *****************************************************************************/
+func findVrbDevice(nodeName, ns string, directClient client.Client) (string, string, error) {
+	var deviceID, pfPciAddr string
+
+	// Fetch the vrb.SriovVrbNodeConfig for the given node and namespace
+	vrbNodeConfig := &vrb.SriovVrbNodeConfig{}
+	err := directClient.Get(context.Background(), client.ObjectKey{Name: nodeName, Namespace: ns}, vrbNodeConfig)
+	if err == nil && len(vrbNodeConfig.Spec.PhysicalFunctions) > 0 {
+		// Iterate through the SriovAccelerators in the vrbNodeConfig
+		for _, acc := range vrbNodeConfig.Status.Inventory.SriovAccelerators {
+			// Check if the deviceID exists in fecDevices and the PFDriver is vfio-pci
+			if _, exists := fecDevices[acc.DeviceID]; exists && strings.EqualFold(acc.PFDriver, utils.VfioPci) {
+				// If a device is already found, return an error indicating multiple devices found
+				if deviceID != "" {
+					return "", "", fmt.Errorf("multiple devices found. Please specify PCI address using -P flag")
+				} else {
+					// Set the deviceID and pfPciAddr
+					deviceID = acc.DeviceID
+					pfPciAddr = acc.PCIAddress
+				}
+			}
+		}
+	}
+
+	// If no device is found, return an error indicating no device found
+	if deviceID == "" {
+		return "", "", fmt.Errorf("no device found")
+	}
+
+	// Return the found deviceID and pfPciAddr
+	return deviceID, pfPciAddr, nil
+}
+
+func findDeviceByPciAddr(nodeName, ns string, directClient client.Client, pciAddr string, log *logrus.Logger) (string, string, error) {
 	nodeConfig := &fec.SriovFecNodeConfig{}
 	err := directClient.Get(context.Background(), client.ObjectKey{Name: nodeName, Namespace: ns}, nodeConfig)
 	if err != nil {
-		log.WithError(err).WithField("nodeName", nodeName).WithField("namespace", ns).Error("failed to get SriovFecNodeConfig to run CLI command")
-		return
-	}
-	if cmdInfo, exists := cliCommands[cmd]; exists {
-		var deviceID string
-		var pfPciAddr string
-		var pfBbConfigLog string
+		log.WithError(err).WithField("nodeName", nodeName).WithField("namespace", ns).Warn("failed to get SriovFecNodeConfig to run CLI command")
+	} else {
 		for _, acc := range nodeConfig.Status.Inventory.SriovAccelerators {
-			if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
-				deviceID = acc.DeviceID
-				pfPciAddr = acc.PCIAddress
-				break
+			if acc.PCIAddress == pciAddr && strings.EqualFold(acc.PFDriver, utils.VfioPci) {
+				return acc.DeviceID, acc.PCIAddress, nil
 			}
 		}
-		if cmd == "reg_dump" {
-			args = append(args, deviceID)
-		}
-		request, err := cmdInfo.execFunc(args)
-		if err != nil {
-			log.WithError(err).WithField("nodeName", nodeName).WithField("namespace", ns).WithField("pciAddr", pfPciAddr).Error(err)
-			fmt.Println("Usage: ./sriov_fec_daemon -C <command_type> [additional_arguments]")
-			return
-		}
-		if cmdInfo.respFile == "main" {
-			pfBbConfigLog = fmt.Sprintf("/var/log/pf_bb_cfg_%v.log", pfPciAddr)
-		} else {
-			pfBbConfigLog = fmt.Sprintf("/var/log/pf_bb_cfg_%v_response.log", pfPciAddr)
-		}
-
-		err = sendCmd(pfPciAddr, request, log)
-		if err != nil {
-			log.WithError(err).WithField("nodeName", nodeName).WithField("namespace", ns).WithField("pciAddr", pfPciAddr).Error(err)
-			return
-		}
-
-		file, err := pollLogFile(pfPciAddr, pfBbConfigLog, cmdInfo.respPattern, log)
-		if err != nil {
-			log.WithField("pciAddr", pfPciAddr).WithError(err).Error("failed to read response log")
-			return
-		}
-		fmt.Printf("%s", file)
-		return
 	}
-	log.WithField("nodeName", nodeName).WithField("namespace", ns).Error("invalid CLI command")
-	ShowHelp()
+
+	vrbNodeConfig := &vrb.SriovVrbNodeConfig{}
+	err = directClient.Get(context.Background(), client.ObjectKey{Name: nodeName, Namespace: ns}, vrbNodeConfig)
+	if err != nil {
+		log.WithError(err).WithField("nodeName", nodeName).WithField("namespace", ns).Warn("failed to get SriovVrbNodeConfig to run CLI command")
+	} else {
+		for _, acc := range vrbNodeConfig.Status.Inventory.SriovAccelerators {
+			if acc.PCIAddress == pciAddr && strings.EqualFold(acc.PFDriver, utils.VfioPci) {
+				return acc.DeviceID, acc.PCIAddress, nil
+			}
+		}
+	}
+
+	return "", "", fmt.Errorf("no device found with PCI address %s", pciAddr)
+}
+
+func executeCommand(cmd string, args []string, pfPciAddr string, log *logrus.Logger) error {
+	cmdInfo, exists := cliCommands[cmd]
+	if !exists {
+		return fmt.Errorf("invalid CLI command")
+	}
+
+	request, err := cmdInfo.execFunc(args)
+	if err != nil {
+		return err
+	}
+
+	pfBbConfigLog := getLogFilePath(cmdInfo.respFile, pfPciAddr)
+	if err := sendCmd(pfPciAddr, request, log); err != nil {
+		return err
+	}
+
+	file, err := pollLogFile(pfPciAddr, pfBbConfigLog, cmdInfo.respPattern, log)
+	if err != nil {
+		log.WithField("pciAddr", pfPciAddr).WithError(err).Error("failed to read response log")
+		return err
+	}
+
+	fmt.Printf("%s", file)
+	return nil
+}
+
+func getLogFilePath(respFile, pfPciAddr string) string {
+	if respFile == "main" {
+		return fmt.Sprintf("/var/log/pf_bb_cfg_%v.log", pfPciAddr)
+	}
+	return fmt.Sprintf("/var/log/pf_bb_cfg_%v_response.log", pfPciAddr)
 }

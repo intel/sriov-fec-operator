@@ -62,7 +62,7 @@ var _ = Describe("Creation of SriovVrbClusterConfig without vrb1 bbdevconfig", f
 		cc := ccPrototype.DeepCopy()
 		cc.Spec = SriovVrbClusterConfigSpec{
 			PhysicalFunction: PhysicalFunctionConfig{
-				PFDriver:    utils.PCI_PF_STUB_DASH,
+				PFDriver:    utils.PciPfStubDash,
 				BBDevConfig: BBDevConfig{},
 				VFAmount:    1,
 			},
@@ -82,7 +82,7 @@ var _ = Describe("Creation of SriovVrbClusterConfig with bbdevconfig containing 
 			},
 			Spec: SriovVrbClusterConfigSpec{
 				PhysicalFunction: PhysicalFunctionConfig{
-					PFDriver: utils.PCI_PF_STUB_DASH,
+					PFDriver: utils.PciPfStubDash,
 					VFAmount: 16,
 					BBDevConfig: BBDevConfig{
 						VRB1: &VRB1BBDevConfig{
@@ -168,7 +168,7 @@ var _ = Describe("Creation of SriovVrbClusterConfig with vrb1 bbdevconfig", func
 		It("invalid spec should be rejected", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
-				PFDriver: utils.PCI_PF_STUB_DASH,
+				PFDriver: utils.PciPfStubDash,
 				VFAmount: 16,
 				BBDevConfig: BBDevConfig{
 					VRB1: &VRB1BBDevConfig{
@@ -261,7 +261,7 @@ var _ = Describe("Creation of SriovVrbClusterConfig with vrb2 bbdevconfig", func
 		It("invalid spec should be rejected", func() {
 			cc := ccPrototype.DeepCopy()
 			cc.Spec.PhysicalFunction = PhysicalFunctionConfig{
-				PFDriver: utils.PCI_PF_STUB_DASH,
+				PFDriver: utils.PciPfStubDash,
 				VFAmount: 64,
 				BBDevConfig: BBDevConfig{
 					VRB2: &VRB2BBDevConfig{

@@ -33,12 +33,12 @@ var (
 	sysBusPciDrivers = "/sys/bus/pci/drivers"
 )
 
-func NewNodeConfigurator(logger *logrus.Logger, PfBBConfigController *pfBBConfigController, client client.Client, nodeNameRef types.NamespacedName) *NodeConfigurator {
+func NewNodeConfigurator(logger *logrus.Logger, pfBBConfigController *pfBBConfigController, client client.Client, nodeNameRef types.NamespacedName) *NodeConfigurator {
 	return &NodeConfigurator{
 		Client:               client,
 		Log:                  logger,
 		nodeNameRef:          nodeNameRef,
-		pfBBConfigController: PfBBConfigController,
+		pfBBConfigController: pfBBConfigController,
 	}
 }
 
@@ -152,9 +152,9 @@ func (n *NodeConfigurator) changeAmountOfVFs(driver string, pfPCIAddress string,
 		unbindPath := filepath.Join(sysBusPciDevices, pfPCIAddress)
 
 		switch driver {
-		case sriovutils.PCI_PF_STUB_DASH, sriovutils.PCI_PF_STUB_UNDERSCORE, sriovutils.VFIO_PCI:
+		case sriovutils.PciPfStubDash, sriovutils.PciPfStubUnderscore, sriovutils.VfioPci:
 			unbindPath = filepath.Join(unbindPath, vfNumFileDefault)
-		case sriovutils.IGB_UIO:
+		case sriovutils.IgbUio:
 			unbindPath = filepath.Join(unbindPath, vfNumFileIgbUio)
 		default:
 			return fmt.Errorf("unknown driver %v", driver)
@@ -355,6 +355,19 @@ func (n *NodeConfigurator) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpec)
 	return nil
 }
 
+func (n *NodeConfigurator) loadAndBindDrivers(pciAddress, pfDriver, vfDriver string) error {
+
+	if err := loadDrivers(n, pfDriver, vfDriver); err != nil {
+		return err
+	}
+
+	if err := n.bindDeviceToDriver(pciAddress, pfDriver); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (n *NodeConfigurator) configureAccelerator(acc sriovv2.SriovAccelerator, requestedConfig *sriovv2.PhysicalFunctionConfigExt) error {
 	n.Log.WithField("requestedConfig", requestedConfig).Info("configuring PF")
 
@@ -362,16 +375,14 @@ func (n *NodeConfigurator) configureAccelerator(acc sriovv2.SriovAccelerator, re
 		return err
 	}
 
-	if err := loadDrivers(n, requestedConfig.PFDriver, requestedConfig.VFDriver); err != nil {
+	if err := n.loadAndBindDrivers(requestedConfig.PCIAddress, requestedConfig.PFDriver, requestedConfig.VFDriver); err != nil {
 		return err
 	}
 
-	if err := n.bindDeviceToDriver(requestedConfig.PCIAddress, requestedConfig.PFDriver); err != nil {
-		return err
-	}
-
-	if err := n.configureCommandRegister(requestedConfig.PCIAddress); err != nil {
-		return err
+	if requestedConfig.BBDevConfig.N3000 != nil {
+		if err := n.configureCommandRegister(requestedConfig.PCIAddress); err != nil {
+			return err
+		}
 	}
 
 	if err := n.pfBBConfigController.initializePfBBConfig(acc, requestedConfig); err != nil {
@@ -405,15 +416,7 @@ func (n *NodeConfigurator) VrbconfigureAccelerator(acc vrbv1.SriovAccelerator, r
 		return err
 	}
 
-	if err := loadDrivers(n, requestedConfig.PFDriver, requestedConfig.VFDriver); err != nil {
-		return err
-	}
-
-	if err := n.bindDeviceToDriver(requestedConfig.PCIAddress, requestedConfig.PFDriver); err != nil {
-		return err
-	}
-
-	if err := n.configureCommandRegister(requestedConfig.PCIAddress); err != nil {
+	if err := n.loadAndBindDrivers(requestedConfig.PCIAddress, requestedConfig.PFDriver, requestedConfig.VFDriver); err != nil {
 		return err
 	}
 
@@ -460,7 +463,7 @@ func VrbgetMatchingConfiguration(pciAddress string, configurations []vrbv1.Physi
 }
 
 func appendMandatoryArgs(driver string) []string {
-	if strings.EqualFold(driver, sriovutils.VFIO_PCI) {
+	if strings.EqualFold(driver, sriovutils.VfioPci) {
 		return []string{"enable_sriov=1", "disable_idle_d3=1"}
 	}
 	return []string{}

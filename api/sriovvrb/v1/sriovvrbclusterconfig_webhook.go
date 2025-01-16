@@ -55,6 +55,7 @@ func validate(spec SriovVrbClusterConfigSpec) (errs field.ErrorList) {
 		vrb1NumAqsPerGroupsValidator,
 		vrb2VfAmountValidator,
 		vrb2NumQueueGroupsValidator,
+		vrb2NumQueuesPerOperationValidator,
 	}
 
 	for _, validate := range validators {
@@ -89,7 +90,7 @@ func hasAmbiguousBBDevConfigs(bbDevConfig BBDevConfig) *field.Error {
 func ambiguousBBDevConfigValidator(spec SriovVrbClusterConfigSpec) (errs field.ErrorList) {
 	if err := hasAmbiguousBBDevConfigs(spec.PhysicalFunction.BBDevConfig); err != nil {
 		errs = append(errs, err)
-		return
+		return errs
 	}
 
 	if spec.PhysicalFunction.BBDevConfig.VRB1 == nil &&
@@ -99,9 +100,9 @@ func ambiguousBBDevConfigValidator(spec SriovVrbClusterConfigSpec) (errs field.E
 			field.NewPath("spec").Child("physicalFunction").Child("bbDevConfig"),
 			"bbDevConfig section cannot be empty")
 		errs = append(errs, err)
-		return
+		return errs
 	}
-	return
+	return errs
 }
 
 func vrb1VfAmountValidator(spec SriovVrbClusterConfigSpec) (errs field.ErrorList) {
@@ -136,7 +137,7 @@ func vrb1VfAmountValidator(spec SriovVrbClusterConfigSpec) (errs field.ErrorList
 		errs = append(errs, err)
 	}
 
-	return
+	return errs
 }
 
 func vrb1NumQueueGroupsValidator(spec SriovVrbClusterConfigSpec) (errs field.ErrorList) {
@@ -154,7 +155,7 @@ func vrb1NumQueueGroupsValidator(spec SriovVrbClusterConfigSpec) (errs field.Err
 
 		if sum := downlink5g + uplink5g + downlink4g + uplink4g + qfft; sum > vrb1maxQueueGroups {
 			return field.Invalid(
-				field.NewPath("spec", "physicalFunction", "bbDevConfig", "vrb1", "[downlink4G|uplink4G|downlink5G|uplink5G|qfft]", "numQueueGroups"),
+				path,
 				sum,
 				fmt.Sprintf("sum of all numQueueGroups should not be greater than %d", vrb1maxQueueGroups),
 			)
@@ -166,7 +167,7 @@ func vrb1NumQueueGroupsValidator(spec SriovVrbClusterConfigSpec) (errs field.Err
 		errs = append(errs, err)
 	}
 
-	return
+	return errs
 }
 
 func vrb1NumAqsPerGroupsValidator(spec SriovVrbClusterConfigSpec) (errs field.ErrorList) {
@@ -185,7 +186,7 @@ func vrb1NumAqsPerGroupsValidator(spec SriovVrbClusterConfigSpec) (errs field.Er
 		if downlink4g > vrb1maxQueueGroups || uplink4g > vrb1maxQueueGroups || downlink5g > vrb1maxQueueGroups ||
 			uplink5g > vrb1maxQueueGroups || qfft > vrb1maxQueueGroups {
 			return field.Invalid(
-				field.NewPath("spec", "physicalFunction", "bbDevConfig", "vrb1", "[downlink4G|uplink4G|downlink5G|uplink5G|qfft]", "NumAqsPerGroups"),
+				path,
 				"incorrect",
 				fmt.Sprintf("NumAqsPerGroups should not be greater than %d", vrb1maxQueueGroups),
 			)
@@ -197,7 +198,7 @@ func vrb1NumAqsPerGroupsValidator(spec SriovVrbClusterConfigSpec) (errs field.Er
 		errs = append(errs, err)
 	}
 
-	return
+	return errs
 
 }
 
@@ -225,7 +226,7 @@ func vrb2VfAmountValidator(spec SriovVrbClusterConfigSpec) (errs field.ErrorList
 		errs = append(errs, err)
 	}
 
-	return
+	return errs
 }
 
 func vrb2NumQueueGroupsValidator(spec SriovVrbClusterConfigSpec) (errs field.ErrorList) {
@@ -244,7 +245,7 @@ func vrb2NumQueueGroupsValidator(spec SriovVrbClusterConfigSpec) (errs field.Err
 
 		if sum := downlink5g + uplink5g + downlink4g + uplink4g + qfft + qmld; sum > vrb2maxQueueGroups {
 			return field.Invalid(
-				field.NewPath("spec", "physicalFunction", "bbDevConfig", "vrb2", "[downlink4G|uplink4G|downlink5G|uplink5G|qfft|qmld]", "numQueueGroups"),
+				path,
 				sum,
 				fmt.Sprintf("sum of all numQueueGroups should not be greater than %d", vrb2maxQueueGroups),
 			)
@@ -256,5 +257,82 @@ func vrb2NumQueueGroupsValidator(spec SriovVrbClusterConfigSpec) (errs field.Err
 		errs = append(errs, err)
 	}
 
-	return
+	return errs
+}
+
+func vrb2NumQueuesPerOperationValidator(spec SriovVrbClusterConfigSpec) (errs field.ErrorList) {
+
+	validate := func(accConfig *VRB2BBDevConfig, path *field.Path) *field.Error {
+		if accConfig == nil {
+			return nil
+		}
+
+		numQgroups := accConfig.Downlink4G.NumQueueGroups
+		numAgsPerGroup := accConfig.Downlink4G.NumAqsPerGroups
+		if totalQueues := numQgroups * numAgsPerGroup; totalQueues > vrb2maxQueuesPerOperation {
+			return field.Invalid(
+				path,
+				totalQueues,
+				fmt.Sprintf("total number of queues per operation(Downlink4g) should not be greater than %d", vrb2maxQueuesPerOperation),
+			)
+		}
+
+		numQgroups = accConfig.Uplink4G.NumQueueGroups
+		numAgsPerGroup = accConfig.Uplink4G.NumAqsPerGroups
+		if totalQueues := numQgroups * numAgsPerGroup; totalQueues > vrb2maxQueuesPerOperation {
+			return field.Invalid(
+				path,
+				totalQueues,
+				fmt.Sprintf("total number of queues per operation(Uplink4g) should not be greater than %d", vrb2maxQueuesPerOperation),
+			)
+		}
+
+		numQgroups = accConfig.Downlink5G.NumQueueGroups
+		numAgsPerGroup = accConfig.Downlink4G.NumAqsPerGroups
+		if totalQueues := numQgroups * numAgsPerGroup; totalQueues > vrb2maxQueuesPerOperation {
+			return field.Invalid(
+				path,
+				totalQueues,
+				fmt.Sprintf("total number of queues per operation(Downlink5g) should not be greater than %d", vrb2maxQueuesPerOperation),
+			)
+		}
+
+		numQgroups = accConfig.Uplink5G.NumQueueGroups
+		numAgsPerGroup = accConfig.Uplink5G.NumAqsPerGroups
+		if totalQueues := numQgroups * numAgsPerGroup; totalQueues > vrb2maxQueuesPerOperation {
+			return field.Invalid(
+				path,
+				totalQueues,
+				fmt.Sprintf("total number of queues per operation(Uplink5g) should not be greater than %d", vrb2maxQueuesPerOperation),
+			)
+		}
+
+		numQgroups = accConfig.QFFT.NumQueueGroups
+		numAgsPerGroup = accConfig.QFFT.NumAqsPerGroups
+		if totalQueues := numQgroups * numAgsPerGroup; totalQueues > vrb2maxQueuesPerOperation {
+			return field.Invalid(
+				path,
+				totalQueues,
+				fmt.Sprintf("total number of queues per operation(QFFT) should not be greater than %d", vrb2maxQueuesPerOperation),
+			)
+		}
+
+		numQgroups = accConfig.QMLD.NumQueueGroups
+		numAgsPerGroup = accConfig.QMLD.NumAqsPerGroups
+		if totalQueues := numQgroups * numAgsPerGroup; totalQueues > vrb2maxQueuesPerOperation {
+			return field.Invalid(
+				path,
+				totalQueues,
+				fmt.Sprintf("total number of queues per operation(QMLD) should not be greater than %d", vrb2maxQueuesPerOperation),
+			)
+		}
+
+		return nil
+	}
+
+	if err := validate(spec.PhysicalFunction.BBDevConfig.VRB2, field.NewPath("spec", "physicalFunction", "bbDevConfig", "vrb2", "[downlink4G|uplink4G|downlink5G|uplink5G|qfft|qmld]", "numQueueGroups")); err != nil {
+		errs = append(errs, err)
+	}
+
+	return errs
 }

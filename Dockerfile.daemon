@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2020-2024 Intel Corporation
 
-FROM golang:1.21.5 AS builder
+FROM golang:1.23.4 AS builder
 
 WORKDIR /workspace-pf
 
-RUN git clone --depth 1 --branch v24.03 https://github.com/intel/pf-bb-config /workspace-pf/pf-bb-config
+RUN git clone --depth 1 --branch v24.11 https://github.com/intel/pf-bb-config /workspace-pf/pf-bb-config
 
 WORKDIR /workspace-pf/pf-bb-config
 
@@ -23,10 +23,10 @@ COPY api api/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
 
-FROM registry.access.redhat.com/ubi9/ubi:9.4-947 AS package_installer
+FROM registry.access.redhat.com/ubi9/ubi:9.5-1732804088 AS package_installer
 
 RUN yum install \
-	kmod-28-9.el9 \
+	kmod-28-10.el9 \
 	pciutils-3.7.0-5.el9 \
 	procps-ng-3.3.17-14.el9 \
 	--releasever 9 --setopt install_weak_deps=false --nodocs -y && \
@@ -38,16 +38,17 @@ RUN curl -L https://pci-ids.ucw.cz/v2.2/pci.ids.gz -o pci.ids.gz && \
 	gzip -d -v pci.ids.gz && \
 	rm -rfv ./pci.ids.gz
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4-949
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.5-1731593028
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="SR-IOV Operator for Wireless FEC Accelerators daemonset" \
+LABEL name="Intel® vRAN Boost accelerator operator daemonset container" \
 	vendor="Intel Corporation" \
 	version=$VERSION \
 	release="1" \
-	summary="Manages SR-IOV resources on Wireless FEC Accelerators" \
-	description="The daemonset container is responsible for building the nodes inventory and configuring the SRIOV-FEC portion of the supported accelerators"
+	maintainer="Intel Corporation" \
+	summary="Manages SR-IOV resources on Intel® vRAN Boost accelerator" \
+	description="The daemonset container is responsible for building the nodes inventory and configuring the SR-IOV portion of the supported accelerators"
 
 COPY --from=package_installer \
 	/lib64/libpci.so.3 \

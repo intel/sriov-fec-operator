@@ -6,7 +6,7 @@ package daemon
 import (
 	"archive/tar"
 	"compress/gzip"
-	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
@@ -130,7 +130,7 @@ func OpenFileNoLinks(path string, flag int, perm os.FileMode) (*os.File, error) 
 	return file, nil
 }
 
-func NewSecureHttpsClient(cert *x509.Certificate) (*http.Client, error) {
+func NewSecureHTTPSClient(cert *x509.Certificate) (*http.Client, error) {
 	certPool, err := x509.SystemCertPool()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get syscerts - %v", err)
@@ -140,6 +140,7 @@ func NewSecureHttpsClient(cert *x509.Certificate) (*http.Client, error) {
 		TLSClientConfig: &tls.Config{
 			RootCAs:    certPool,
 			ClientAuth: tls.RequireAndVerifyClientCert,
+			MinVersion: tls.VersionTLS12,
 		},
 	}
 	httpsClient := http.Client{
@@ -157,7 +158,7 @@ func verifyChecksum(path, expected string) (bool, error) {
 		return false, errors.New("failed to open file to calculate sha-1")
 	}
 	defer f.Close()
-	h := sha1.New()
+	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
 		return false, errors.New("failed to copy file to calculate sha-1")
 	}
@@ -233,12 +234,12 @@ func Untar(tarFile string, dstPath string, log *logrus.Logger) (string, error) {
 			return "", err
 		}
 		if fh == nil {
-			err = fmt.Errorf("invalid header in file %s", fh.Name)
+			err = fmt.Errorf("nil header in file %s", tarFile)
 			log.Error(err, "Invalid tar header")
 			return "", err
 		}
 
-		nfDst = filepath.Join(dstPath, fh.Name)
+		nfDst = filepath.Join(dstPath, fh.Name) // #nosec G305
 
 		// Check for ZipSlip (Directory traversal)
 		// https://snyk.io/research/zip-slip-vulnerability

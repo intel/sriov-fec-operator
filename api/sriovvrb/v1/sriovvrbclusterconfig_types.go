@@ -12,9 +12,10 @@ import (
 type SyncStatus string
 
 const (
-	vrb1maxQueueGroups = 16
-	vrb2maxQueueGroups = 32
-	vrb1maxVfNums      = 16
+	vrb1maxQueueGroups        = 16
+	vrb2maxQueueGroups        = 32
+	vrb1maxVfNums             = 16
+	vrb2maxQueuesPerOperation = 256
 )
 
 var (

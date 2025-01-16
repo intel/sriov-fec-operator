@@ -5,6 +5,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"syscall"
 
@@ -110,15 +111,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	pfBbConfigCliCmd := flag.String("C", "", "CLI command string")
-	flag.Usage = func() {
-		daemon.ShowHelp()
-	}
-	flag.Parse()
+	pfBbConfigCliCmd, pfBbConfigCliPciAddr := parseFlags()
 	if *pfBbConfigCliCmd != "" {
-		// Get the additional arguments after CLI command
+		// Get the remaining arguments
 		args := flag.Args()
-		daemon.StartPfBbConfigCli(nodeName, ns, directClient, *pfBbConfigCliCmd, args, setupLog)
+		daemon.StartPfBbConfigCli(nodeName, ns, directClient, *pfBbConfigCliCmd, args, *pfBbConfigCliPciAddr, setupLog)
 		return
 	}
 
@@ -127,6 +124,7 @@ func main() {
 		setupLog.WithError(err).Error("failed to create clientset")
 		os.Exit(1)
 	}
+
 	mgr, err := daemon.CreateManager(config, scheme, ns, 8080, 8081, setupLog)
 	if err != nil {
 		setupLog.WithError(err).Error("unable to start manager")
@@ -135,15 +133,9 @@ func main() {
 
 	daemon.StartTelemetryDaemon(mgr, nodeName, ns, directClient, setupLog)
 
-	vfioTokenBytes, err := os.ReadFile("/sriov_config/vfiotoken")
+	vfioToken, err := readVfioToken()
 	if err != nil {
 		setupLog.Error(err)
-		os.Exit(1)
-	}
-
-	vfioToken, err := uuid.ParseBytes(vfioTokenBytes)
-	if err != nil {
-		setupLog.Errorf("provided vfioToken(%s) is not in UUID format: %s", vfioTokenBytes, err)
 		os.Exit(1)
 	}
 
@@ -159,13 +151,8 @@ func main() {
 	nodeConfigurer := daemon.NewNodeConfigurator(utils.NewLogger(), pfBBConfigController, mgr.GetClient(), nodeNameRef)
 	devicePluginController := daemon.NewDevicePluginController(mgr.GetClient(), utils.NewLogger(), nodeNameRef)
 
-	if err := initFecReconciler(mgr, drainHelper, nodeNameRef, nodeConfigurer, devicePluginController, directClient); err != nil {
-		setupLog.WithError(err).Error("Fail to start FEC Reconciler")
-		os.Exit(1)
-	}
-
-	if err := initVrbReconciler(mgr, drainHelper, nodeNameRef, nodeConfigurer, devicePluginController, directClient); err != nil {
-		setupLog.WithError(err).Error("Fail to start VRB Reconciler")
+	if err := initReconciler(mgr, drainHelper, nodeNameRef, nodeConfigurer, devicePluginController, directClient); err != nil {
+		setupLog.WithError(err).Error("Fail to start Reconciler")
 		os.Exit(1)
 	}
 
@@ -173,6 +160,42 @@ func main() {
 		setupLog.WithError(err).Error("problem running manager")
 		os.Exit(1)
 	}
+}
+
+func parseFlags() (*string, *string) {
+	pfBbConfigCliCmd := flag.String("C", "", "CLI command string")
+	pfBbConfigCliPciAddr := flag.String("P", "", "PCI address in format 0000:xx:xx.x")
+	flag.Usage = func() {
+		daemon.ShowHelp()
+	}
+	flag.Parse()
+	return pfBbConfigCliCmd, pfBbConfigCliPciAddr
+}
+
+func readVfioToken() (uuid.UUID, error) {
+	vfioTokenBytes, err := os.ReadFile("/sriov_config/vfiotoken")
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	vfioToken, err := uuid.ParseBytes(vfioTokenBytes)
+	if err != nil {
+		return uuid.UUID{}, fmt.Errorf("provided vfioToken(%s) is not in UUID format: %s", vfioTokenBytes, err)
+	}
+
+	return vfioToken, nil
+}
+
+func initReconciler(mgr ctrl.Manager, drainHelper *drainhelper.DrainHelper, nodeNameRef types.NamespacedName, nodeConfigurer *daemon.NodeConfigurator, devicePluginController *daemon.DevicePluginController, directClient client.Client) error {
+	if err := initFecReconciler(mgr, drainHelper, nodeNameRef, nodeConfigurer, devicePluginController, directClient); err != nil {
+		return fmt.Errorf("fail to start FEC Reconciler: %w", err)
+	}
+
+	if err := initVrbReconciler(mgr, drainHelper, nodeNameRef, nodeConfigurer, devicePluginController, directClient); err != nil {
+		return fmt.Errorf("fail to start VRB Reconciler: %w", err)
+	}
+
+	return nil
 }
 
 func getSriovFecNameSpaceFromEnvOrDie() string {

@@ -51,16 +51,23 @@ This document provides high-level system features, issues, and limitations infor
 | 2.7.2   | October 2023   | 4.10, 4.11, 4.12, 4.13       | 4.10.67, 4.11.50, 4.12.37, 4.13.15           |
 | 2.8.0   | Dec 2023       | 4.11, 4.12, 4.13, 4.14       | 4.11.54, 4.12.45, 4.13.27, 4.14.7            |
 | 2.9.0   | May 2024       | 4.11, 4.12, 4.13, 4.14, 4.15 | 4.11.54, 4.12.57, 4.13.27, 4.14.25, 4.15.13  |
+| 2.10.0  | Dec 2024       | 4.12 and higher versions     | 4.12 and higher (latest stable versions)     |
 
 # Features for Release
+
+***v2.10.0***
+- Update pf-bb-config version to 24.11 to support VRB2 on GRN-D B0 ES2 Device.
+- Reduce periodic log messages for controller-manager and daemonset
+- Redirect pf-bb-config logs to daemonset pod logs
+
 ***v2.9.0***
 - Updated pf-bb-conf version to 24.03
-- drainSkip paramter default value set to true
+- drainSkip parameter default value set to true
 - Log the PCI link status of accelerator in Daemon pod logs
 - Add pf-bb-config tool version added to SFNC/SVNC output
 
 ***v2.8.0***
-- Initial support for Intel vRAN Boost v2 on GNR-D (Early Access Pre-Alpha)
+- Initial support for Intel vRAN Boost v2 (VRB2) on GNR-D (Early Access Pre-Alpha)
 - Updated pf-bb-conf version to 23.11
 - Ability to update srs_fft_windows_coefficient.bin file on worker node for VRB1 and VRB2.
 
@@ -145,6 +152,20 @@ This document provides high-level system features, issues, and limitations infor
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
 
 # Changes to Existing Features
+
+***v2.10.0***
+- Telemetry functionality enhancements
+  - Telemetry disabled by default
+  - Config option for enable/disable
+  - Config option for collect time interval
+  - Addition validation in telemetry processing
+- Update UBI base image to v9.5
+- golang version update to 1.23.4
+- Update kmod pkg version to 28.10-el9
+- go x/net pkg version set to 0.23.0
+- sriov-network-device-plugin version set to 3.7.0
+- Update to collect VRB device configuration details for debugging
+
 ***v2.9.0***
 - refactoring daemon/reconciler for SFCC and SVCC APIs
 - Bump controller tool version to fix nil pointer
@@ -240,6 +261,11 @@ This document provides high-level system features, issues, and limitations infor
 - There are no unsupported or discontinued features relevant to this release.
 
 # Fixed Issues
+
+***2.10.0***
+- Fix for golang linter errors
+- Fix for OCP meta data annotations
+
 ***2.9.0***
 - Applying SriovFecClusterConfig fails in some cases issue fixed
 - Daemon loger issue fixed
@@ -288,6 +314,12 @@ This document provides high-level system features, issues, and limitations infor
 - n/a - this is the first release.
 
 # Known issues
+
+***v2.10.0***
+- Limitation on two accelerator devices on same node
+  - Request to a specific accelerator resource is not supported
+  - Update/Delete of configuration on one accelerator will trigger reconfiguration on other accelerator device also.
+
 ***v2.9.0***
 - N3000 8VF(max) SFCC configuration apply fail
 
@@ -299,6 +331,11 @@ This document provides high-level system features, issues, and limitations infor
 - Documentation
 
 # Supported Operating Systems
+***v2.10.0***
+- OS: Ubuntu 22.04, 24.04 LTS
+- OpenShift: 4.12.x  (or higher version)
+- Kubernetes 1.26.5+ (or higher versions)
+
 ***v2.9.0***
 - OS: Ubuntu 22.04 LTS (Jammy Jellyfish)
 	- Kubernetes 1.26.2
@@ -469,5 +506,5 @@ This document provides high-level system features, issues, and limitations infor
 
 # Package Versions
 Package:
-- Golang: 1.21.5
-- pf-bb-config-app: v24.03
+- Golang: 1.23.4
+- pf-bb-config-app: v24.11

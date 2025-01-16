@@ -6,7 +6,7 @@ export CLI_EXEC?=oc
 # Container format for podman. Required to build containers with "ManifestType": "application/vnd.oci.image.manifest.v2+json",
 export BUILDAH_FORMAT=docker
 # Current Operator version
-VERSION ?= 2.9.0
+VERSION ?= 2.10.0
 # Supported channels
 CHANNELS ?= stable
 # Default channel
@@ -54,7 +54,7 @@ ifeq ($(CONTAINER_TOOL),podman)
  export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= registry.redhat.io/openshift4/ose-sriov-network-device-plugin:v4.14
  export KUBE_RBAC_PROXY_IMAGE ?= registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.14
 else
- export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= quay.io/openshift/origin-sriov-network-device-plugin:4.15
+ export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= ghcr.io/k8snetworkplumbingwg/sriov-network-device-plugin:v3.7.0
  export KUBE_RBAC_PROXY_IMAGE ?= gcr.io/kubebuilder/kube-rbac-proxy:v0.15.0
 endif
 

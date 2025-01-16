@@ -124,7 +124,7 @@ func deployOperatorAssets(c client.Client, operatorDeployment *appsv1.Deployment
 		Client:    c,
 		Namespace: controllers.NAMESPACE,
 		Log:       logger,
-		EnvPrefix: utils.SRIOV_PREFIX,
+		EnvPrefix: utils.SriovPrefix,
 		Scheme:    scheme,
 		Owner:     operatorDeployment,
 		Assets: []assets.Asset{
@@ -276,7 +276,7 @@ func getClusterType(restConfig *rest.Config) error {
 	for _, v := range apiList.Groups {
 		if v.Name == "route.openshift.io" {
 			setupLog.Info("found 'route.openshift.io' API - operator is running on OpenShift")
-			err = utils.SetOsEnvIfNotSet(utils.SRIOV_PREFIX+"GENERIC_K8S", "false", logr.New(utils.NewLogWrapper()))
+			err = utils.SetOsEnvIfNotSet(utils.SriovPrefix+"GENERIC_K8S", "false", logr.New(utils.NewLogWrapper()))
 			if err != nil {
 				return fmt.Errorf("failed to set SRIOV_FEC_GENERIC_K8S env variable - %v", err)
 			}
@@ -285,7 +285,7 @@ func getClusterType(restConfig *rest.Config) error {
 	}
 
 	setupLog.Info("couldn't find 'route.openshift.io' API - operator is running on Kubernetes")
-	err = utils.SetOsEnvIfNotSet(utils.SRIOV_PREFIX+"GENERIC_K8S", "true", logr.New(utils.NewLogWrapper()))
+	err = utils.SetOsEnvIfNotSet(utils.SriovPrefix+"GENERIC_K8S", "true", logr.New(utils.NewLogWrapper()))
 
 	if err != nil {
 		setupLog.Error(err, "unable to determine cluster type")

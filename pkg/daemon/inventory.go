@@ -5,6 +5,7 @@ package daemon
 
 import (
 	"errors"
+	"strings"
 
 	commonUtils "github.com/intel/sriov-fec-operator/pkg/common/utils"
 	"github.com/jaypipes/ghw/pkg/pci"
@@ -15,6 +16,28 @@ import (
 	"github.com/jaypipes/ghw"
 	"github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/utils"
 )
+
+func getVFDeviceInfo(log *logrus.Logger, pciInfo *ghw.PCIInfo, pfAddress, vfAddress string) (string, string) {
+
+	driver, err := utils.GetDriverName(vfAddress)
+	if err != nil {
+		driver = ""
+		log.WithFields(logrus.Fields{
+			"pci":    vfAddress,
+			"pf":     pfAddress,
+			"reason": err.Error(),
+		}).Info("failed to get driver name for VF")
+	}
+
+	deviceID := ""
+	if vfDeviceInfo := pciInfo.GetDevice(vfAddress); vfDeviceInfo == nil {
+		log.WithField("pci", vfAddress).Info("failed to get device info for vf")
+	} else {
+		deviceID = vfDeviceInfo.Product.ID
+	}
+
+	return driver, deviceID
+}
 
 func GetSriovInventory(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
 	pciInfo, err := ghw.PCI()
@@ -42,8 +65,12 @@ func GetSriovInventory(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
 
 		driver, err := utils.GetDriverName(device.Address)
 		if err != nil {
-			log.WithField("pci", device.Address).WithField("reason", err.Error()).Info("unable to get driver for device")
 			driver = ""
+			if strings.Contains(err.Error(), "no such file or directory") {
+				log.WithField("pci", device.Address).WithField("reason", err.Error()).Debug("driver link does not exist for device")
+			} else {
+				log.WithField("pci", device.Address).WithField("reason", err.Error()).Info("unable to get driver for device")
+			}
 		}
 
 		acc := sriovv2.SriovAccelerator{
@@ -65,22 +92,7 @@ func GetSriovInventory(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
 				PCIAddress: vf,
 			}
 
-			driver, err := utils.GetDriverName(vf)
-			if err != nil {
-				log.WithFields(logrus.Fields{
-					"pci":    vf,
-					"pf":     device.Address,
-					"reason": err.Error(),
-				}).Info("failed to get driver name for VF")
-			} else {
-				vfInfo.Driver = driver
-			}
-
-			if vfDeviceInfo := pciInfo.GetDevice(vf); vfDeviceInfo == nil {
-				log.WithField("pci", vf).Info("failed to get device info for vf")
-			} else {
-				vfInfo.DeviceID = vfDeviceInfo.Product.ID
-			}
+			vfInfo.Driver, vfInfo.DeviceID = getVFDeviceInfo(log, pciInfo, device.Address, vf)
 
 			acc.VFs = append(acc.VFs, vfInfo)
 		}
@@ -117,8 +129,12 @@ func VrbGetSriovInventory(log *logrus.Logger) (*vrbv1.NodeInventory, error) {
 
 		driver, err := utils.GetDriverName(device.Address)
 		if err != nil {
-			log.WithField("pci", device.Address).WithField("reason", err.Error()).Info("unable to get driver for device")
 			driver = ""
+			if strings.Contains(err.Error(), "no such file or directory") {
+				log.WithField("pci", device.Address).WithField("reason", err.Error()).Debug("driver link does not exist for device")
+			} else {
+				log.WithField("pci", device.Address).WithField("reason", err.Error()).Info("unable to get driver for device")
+			}
 		}
 
 		acc := vrbv1.SriovAccelerator{
@@ -140,22 +156,7 @@ func VrbGetSriovInventory(log *logrus.Logger) (*vrbv1.NodeInventory, error) {
 				PCIAddress: vf,
 			}
 
-			driver, err := utils.GetDriverName(vf)
-			if err != nil {
-				log.WithFields(logrus.Fields{
-					"pci":    vf,
-					"pf":     device.Address,
-					"reason": err.Error(),
-				}).Info("failed to get driver name for VF")
-			} else {
-				vfInfo.Driver = driver
-			}
-
-			if vfDeviceInfo := pciInfo.GetDevice(vf); vfDeviceInfo == nil {
-				log.WithField("pci", vf).Info("failed to get device info for vf")
-			} else {
-				vfInfo.DeviceID = vfDeviceInfo.Product.ID
-			}
+			vfInfo.Driver, vfInfo.DeviceID = getVFDeviceInfo(log, pciInfo, device.Address, vf)
 
 			acc.VFs = append(acc.VFs, vfInfo)
 		}
@@ -168,20 +169,20 @@ func VrbGetSriovInventory(log *logrus.Logger) (*vrbv1.NodeInventory, error) {
 
 func isKnownDevice(device *pci.Device) bool {
 	_, hasKnownVendor := supportedAccelerators.VendorID[device.Vendor.ID]
-	_, hasKnownDeviceId := supportedAccelerators.Devices[device.Product.ID]
+	_, hasKnownDeviceID := supportedAccelerators.Devices[device.Product.ID]
 
 	return hasKnownVendor &&
-		hasKnownDeviceId &&
+		hasKnownDeviceID &&
 		device.Class.ID == supportedAccelerators.Class &&
 		device.Subclass.ID == supportedAccelerators.SubClass
 }
 
 func VrbisKnownDevice(device *pci.Device) bool {
 	_, hasKnownVendor := VrbsupportedAccelerators.VendorID[device.Vendor.ID]
-	_, hasKnownDeviceId := VrbsupportedAccelerators.Devices[device.Product.ID]
+	_, hasKnownDeviceID := VrbsupportedAccelerators.Devices[device.Product.ID]
 
 	return hasKnownVendor &&
-		hasKnownDeviceId &&
+		hasKnownDeviceID &&
 		device.Class.ID == VrbsupportedAccelerators.Class &&
 		device.Subclass.ID == VrbsupportedAccelerators.SubClass
 }

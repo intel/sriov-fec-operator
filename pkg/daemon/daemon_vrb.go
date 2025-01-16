@@ -49,7 +49,7 @@ type VrbConfigurer interface {
  *
  ****************************************************************************/
 func (r *VrbNodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.log.Infof("VrbReconcile(...) triggered by %s", req.NamespacedName.String())
+	r.log.Debugf("VrbReconcile(...) triggered by %s", req.NamespacedName.String())
 
 	vrbnc, err := r.readNodeConfig(req.NamespacedName)
 
@@ -72,7 +72,7 @@ func (r *VrbNodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request)
 	}
 
 	if !r.isCardUpdateRequired(vrbnc, vrbdetectedInventory) {
-		r.log.Info("SriovVrb: Nothing to do")
+		r.log.Debug("SriovVrb: Nothing to do")
 		return requeueLater()
 	}
 
@@ -298,6 +298,24 @@ func (r *VrbNodeConfigReconciler) configureNode(nodeConfig *vrbv1.SriovVrbNodeCo
 }
 
 /*****************************************************************************
+ * Method: bbDevConfigDaemonIsDead
+ * Description:
+ *
+ ****************************************************************************/
+func (r *VrbNodeConfigReconciler) bbDevConfigDaemonIsDead(nc *vrbv1.SriovVrbNodeConfig) bool {
+	for _, acc := range nc.Spec.PhysicalFunctions {
+		if strings.EqualFold(acc.PFDriver, utils.VfioPci) {
+			if pfBbConfigProcIsDead(r.log, acc.PCIAddress) {
+				r.log.WithField("pciAddress", acc.PCIAddress).
+					Info("pf-bb-config process for card is not running")
+				return true
+			}
+		}
+	}
+	return false
+}
+
+/*****************************************************************************
  * Method: VrbNodeConfigReconciler::isCardUpdateRequierd
  * Description:
  *
@@ -323,7 +341,7 @@ func (r *VrbNodeConfigReconciler) isCardUpdateRequired(nc *vrbv1.SriovVrbNodeCon
 		if isGenerationChanged() {
 			return true
 		}
-		r.log.Info("Empty VRB PF")
+		r.log.Debug("Empty VRB PF")
 		return false
 	}
 
@@ -340,20 +358,7 @@ func (r *VrbNodeConfigReconciler) isCardUpdateRequired(nc *vrbv1.SriovVrbNodeCon
 		return false
 	}
 
-	bbDevConfigDaemonIsDead := func() bool {
-		for _, acc := range nc.Spec.PhysicalFunctions {
-			if strings.EqualFold(acc.PFDriver, utils.VFIO_PCI) {
-				if pfBbConfigProcIsDead(r.log, acc.PCIAddress) {
-					r.log.WithField("pciAddress", acc.PCIAddress).
-						Info("pf-bb-config process for card is not running")
-					return true
-				}
-			}
-		}
-		return false
-	}
-
-	return isGenerationChanged() || exposedInventoryOutdated() || bbDevConfigDaemonIsDead()
+	return isGenerationChanged() || exposedInventoryOutdated() || r.bbDevConfigDaemonIsDead(nc)
 }
 
 /*****************************************************************************
@@ -428,25 +433,25 @@ func validateVrbNodeConfig(nodeConfig vrbv1.SriovVrbNodeConfigSpec) error {
 		return fmt.Errorf("failed to read file contents: path: %v, error - %v", procCmdlineFilePath, err)
 	}
 	cmdline := string(cmdlineBytes)
-	//common attributes for SRIOV
+	// Common attributes for SRIOV
 	if err := validateOrdinalKernelParams(cmdline); err != nil {
 		return err
 	}
 
 	for _, physFunc := range nodeConfig.PhysicalFunctions {
 		switch physFunc.PFDriver {
-		case utils.PCI_PF_STUB_DASH, utils.PCI_PF_STUB_UNDERSCORE, utils.IGB_UIO:
+		case utils.PciPfStubDash, utils.PciPfStubUnderscore, utils.IgbUio:
 			cmdlineBytes, err = os.ReadFile(sysLockdownFilePath)
 			if err != nil {
 				return fmt.Errorf("failed to read file contents: path: %v, error - %v", sysLockdownFilePath, err)
 			}
 			cmdline = string(cmdlineBytes)
 			if !strings.Contains(cmdline, "[none]") {
-				return fmt.Errorf("Kernel lockdown is enabled, '%s' driver doesn't supports, use 'vfio-pci'", physFunc.PFDriver)
+				return fmt.Errorf("kernel lockdown is enabled, '%s' driver doesn't supports, use 'vfio-pci'", physFunc.PFDriver)
 			}
 
-		case utils.VFIO_PCI:
-			err := moduleParameterIsEnabled(utils.VFIO_PCI_UNDERSCORE, "enable_sriov")
+		case utils.VfioPci:
+			err := moduleParameterIsEnabled(utils.VfioPciUnderscore, "enable_sriov")
 			if err != nil {
 				return err
 			}
@@ -458,7 +463,6 @@ func validateVrbNodeConfig(nodeConfig vrbv1.SriovVrbNodeConfigSpec) error {
 }
 
 func (r *VrbNodeConfigReconciler) getVrbPfBbConfVersion() string {
-	pfConfigAppFilepath = "/sriov_workdir/pf_bb_config"
 	cmdString := fmt.Sprintf("%s version 2>/dev/null | sed -n 's/.*Version \\(\\S*\\) .*/\\1/p' | tr -d '\\n'", pfConfigAppFilepath)
 	cmd := exec.Command("bash", "-c", cmdString)
 	var out bytes.Buffer

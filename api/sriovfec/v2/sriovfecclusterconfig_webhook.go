@@ -49,6 +49,7 @@ func validate(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
 	validators := []func(spec SriovFecClusterConfigSpec) field.ErrorList{
 		ambiguousBBDevConfigValidator,
 		n3000LinkQueuesValidator,
+		n3000FlrTimeoutValidator,
 		acc100VfAmountValidator,
 		acc200VfAmountValidator,
 		acc200NumQueueGroupsValidator,
@@ -65,7 +66,7 @@ func validate(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (in *SriovFecClusterConfig) ValidateDelete() error {
 	sriovfecclusterconfiglog.WithField("name", in.Name).Info("validate delete")
-	//do nothing
+	// Do nothing
 	return nil
 }
 
@@ -105,7 +106,7 @@ func ambiguousBBDevConfigValidator(spec SriovFecClusterConfigSpec) (errs field.E
 func n3000LinkQueuesValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
 
 	validateN3000Queues := func(qID *field.Path, queues UplinkDownlinkQueues) *field.Error {
-		total := queues.VF0 + queues.VF1 + queues.VF2 + queues.VF3 + queues.VF4 + queues.VF5 + queues.VF5 + queues.VF6 + queues.VF7
+		total := queues.VF0 + queues.VF1 + queues.VF2 + queues.VF3 + queues.VF4 + queues.VF5 + queues.VF6 + queues.VF7
 		if total > 32 {
 			return field.Invalid(qID, total, "sum of all specified queues must be no more than 32")
 		}
@@ -126,6 +127,28 @@ func n3000LinkQueuesValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorL
 			Child("bbDevConfig", "n3000", "downlink", "queues")
 
 		if err := validateN3000Queues(queuePath, n3000Config.Downlink.Queues); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return
+}
+
+func n3000FlrTimeoutValidator(spec SriovFecClusterConfigSpec) (errs field.ErrorList) {
+
+	validateN3000FlrTimeout := func(qID *field.Path, networkType string, flrTimeout int) *field.Error {
+		if networkType != "FPGA_LTE" && flrTimeout != 0 {
+			return field.Invalid(qID, flrTimeout, "flrTimeout is only valid when networkType is FPGA_LTE")
+		}
+		return nil
+	}
+
+	if n3000Config := spec.PhysicalFunction.BBDevConfig.N3000; n3000Config != nil {
+		flrPath := field.NewPath("spec").
+			Child("physicalFunction").
+			Child("bbDevConfig", "n3000", "flrTimeout")
+
+		if err := validateN3000FlrTimeout(flrPath, n3000Config.NetworkType, n3000Config.FLRTimeOut); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -201,7 +224,7 @@ func acc100NumQueueGroupsValidator(spec SriovFecClusterConfigSpec) (errs field.E
 
 		if sum := downlink5g + uplink5g + downlink4g + uplink4g; sum > 8 {
 			return field.Invalid(
-				field.NewPath("spec", "physicalFunction", "bbDevConfig", "acc100", "[downlink4G|uplink4G|downlink5G|uplink5G]", "numQueueGroups"),
+				path,
 				sum,
 				"sum of all numQueueGroups should not be greater than 8",
 			)
@@ -231,7 +254,7 @@ func acc200NumQueueGroupsValidator(spec SriovFecClusterConfigSpec) (errs field.E
 
 		if sum := downlink5g + uplink5g + downlink4g + uplink4g + qfft; sum > acc200maxQueueGroups {
 			return field.Invalid(
-				field.NewPath("spec", "physicalFunction", "bbDevConfig", "acc100", "[downlink4G|uplink4G|downlink5G|uplink5G]", "numQueueGroups"),
+				path,
 				sum,
 				fmt.Sprintf("sum of all numQueueGroups should not be greater than %d", acc200maxQueueGroups),
 			)
@@ -239,7 +262,7 @@ func acc200NumQueueGroupsValidator(spec SriovFecClusterConfigSpec) (errs field.E
 		return nil
 	}
 
-	if err := validate(spec.PhysicalFunction.BBDevConfig.ACC200, field.NewPath("spec", "physicalFunction", "bbDevConfig", "acc100", "[downlink4G|uplink4G|downlink5G|uplink5G|qfft]", "numQueueGroups")); err != nil {
+	if err := validate(spec.PhysicalFunction.BBDevConfig.ACC200, field.NewPath("spec", "physicalFunction", "bbDevConfig", "acc200", "[downlink4G|uplink4G|downlink5G|uplink5G|qfft]", "numQueueGroups")); err != nil {
 		errs = append(errs, err)
 	}
 

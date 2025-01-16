@@ -8,7 +8,7 @@ import (
 	"compress/gzip"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
@@ -69,7 +69,7 @@ var _ = Describe("verifyChecksum", func() {
 
 		f, _ := os.Open(tmpfile.Name())
 
-		h := sha1.New()
+		h := sha256.New()
 		_, err = io.Copy(h, f)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -85,7 +85,7 @@ var _ = Describe("DownloadFile", func() {
 	}))
 	defer server.Close()
 
-	secureClient, err := NewSecureHttpsClient(server.Certificate())
+	secureClient, err := NewSecureHTTPSClient(server.Certificate())
 	Expect(err).ToNot(HaveOccurred())
 
 	var _ = It("will return error if URL is valid and certificate isn't", func() {
@@ -113,7 +113,7 @@ var _ = Describe("DownloadFile", func() {
 		crt, err := x509.ParseCertificates(certPem)
 		Expect(err).ToNot(HaveOccurred())
 
-		clientWithInvalidCertificate, err := NewSecureHttpsClient(crt[0])
+		clientWithInvalidCertificate, err := NewSecureHTTPSClient(crt[0])
 		Expect(err).ToNot(HaveOccurred())
 
 		err = DownloadFile("/tmp/somefolder", srv.URL, "", clientWithInvalidCertificate)
@@ -300,7 +300,7 @@ func createTarArchive(tarPath string, pathToArchiveDirectory string, dirToBeArch
 		header, err := tar.FileInfoHeader(fileInfo, fileInfo.Name())
 		Expect(err).ToNot(HaveOccurred())
 		header.Name = strings.TrimPrefix(
-			strings.Replace(path, pathToArchiveDirectory, "", -1),
+			strings.ReplaceAll(path, pathToArchiveDirectory, ""),
 			string(filepath.Separator),
 		)
 

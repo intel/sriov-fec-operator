@@ -2,7 +2,7 @@
 ## Copyright (c) 2020-2024 Intel Corporation
 
 # Build the manager binary
-FROM golang:1.21.5 as builder
+FROM golang:1.23.4 as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -22,16 +22,17 @@ COPY controllers/ controllers/
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
 
-FROM registry.access.redhat.com/ubi9/ubi-micro:9.4-6
+FROM registry.access.redhat.com/ubi9/ubi-micro:9.5-1733126338
 
 ARG VERSION
 ### Required OpenShift Labels
-LABEL name="SR-IOV Operator for Wireless FEC Accelerators" \
+LABEL name="SRIOV-FEC Operator for Intel® vRAN Boost accelerators" \
     vendor="Intel Corporation" \
     version=$VERSION \
     release="1" \
-    summary="SR-IOV Operator for Wireless FEC Accelerators for 5G Cloudnative/vRAN deployment" \
-    description="SR-IOV Operator for Wireless FEC Accelerators ACC100 and ACC200 for 5G Cloudnative/vRAN deployment"
+    maintainer="Intel Corporation" \
+    summary="SRIOV-FEC Operator for Intel® vRAN Boost accelerators for vRAN cloudnative deployments" \
+    description="SRIOV-FEC Operator for Intel® vRAN Boost accelerators for vRAN cloudnative deployments"
 
 COPY TEMP_LICENSE_COPY /licenses/LICENSE
 

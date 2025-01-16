@@ -52,7 +52,7 @@ type SriovVrbClusterConfigReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.4/pkg/reconcile
 func (r *SriovVrbClusterConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.Log.Infof("Reconcile(...) triggered by %s", req.NamespacedName.String())
+	r.Log.Debugf("Reconcile(...) triggered by %s", req.NamespacedName.String())
 
 	clusterConfigList := new(vrbv1.SriovVrbClusterConfigList)
 	if err := r.List(context.TODO(), clusterConfigList, client.InNamespace(NAMESPACE)); err != nil {
@@ -237,10 +237,10 @@ func (pm *clusterConfigMatcher) prepareAcceleratorConfigContext(nodeConfig *vrbv
 
 				previous, _ := acceleratorConfigContext.Get(accelerator.PCIAddress)
 				switch {
-				case current.Spec.Priority > previous.Spec.Priority: //override with higher prioritized config
+				case current.Spec.Priority > previous.Spec.Priority: // Override with higher prioritized config
 					acceleratorConfigContext.Set(accelerator.PCIAddress, current)
-				case current.Spec.Priority == previous.Spec.Priority: //multiple configs with same priority; drop older one
-					//TODO: Update Timestamp would be better than CreationTime
+				case current.Spec.Priority == previous.Spec.Priority: // Multiple configs with same priority; drop older one
+					// TODO: Update Timestamp would be better than CreationTime
 					if current.CreationTimestamp.After(previous.CreationTimestamp.Time) {
 						pm.log.WithFields(logrus.Fields{
 							"Node":                  nodeConfig.Name,
@@ -252,7 +252,7 @@ func (pm *clusterConfigMatcher) prepareAcceleratorConfigContext(nodeConfig *vrbv
 						acceleratorConfigContext.Set(accelerator.PCIAddress, current)
 					}
 
-				case current.Spec.Priority < previous.Spec.Priority: //drop current with lower priority
+				case current.Spec.Priority < previous.Spec.Priority: // Drop current with lower priority
 					pm.log.WithFields(logrus.Fields{
 						"node":                  nodeConfig.Name,
 						"SriovVrbClusterConfig": current.Name,

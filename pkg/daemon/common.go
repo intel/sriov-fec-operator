@@ -5,8 +5,9 @@ package daemon
 
 import (
 	"errors"
-	"github.com/sirupsen/logrus"
 	"os/exec"
+
+	"github.com/sirupsen/logrus"
 )
 
 func execCmd(args []string, log *logrus.Logger) (string, error) {
@@ -20,14 +21,16 @@ func execAndSuppress(args []string, log *logrus.Logger, suppressError func(e err
 	if len(args) == 0 {
 		log.Error("provided cmd is empty")
 		return "", errors.New("cmd is empty")
-	} else if len(args) == 1 {
+	}
+
+	if len(args) == 1 {
 		cmd = exec.Command(args[0])
 	} else {
 		cmd = exec.Command(args[0], args[1:]...)
 	}
 
 	log.WithFields(logrus.Fields{
-		"cmd": cmd.Path,
+		"cmd":  cmd.Path,
 		"args": cmd.Args,
 	}).Info("executing command")
 

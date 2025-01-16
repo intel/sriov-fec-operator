@@ -24,19 +24,17 @@ func generateBBDevConfigFile(bbDevConfig sriovv2.BBDevConfig, file string) (err 
 
 	switch {
 	case bbDevConfig.ACC100 != nil:
-		if iniFile, err = createIniFileContent(acc100BBDevConfigToIniStruct, bbDevConfig.ACC100); err != nil {
-			return fmt.Errorf("creation of pf_bb_config config file for ACC100 failed, %s", err)
-		}
+		iniFile, err = createIniFileContent(acc100BBDevConfigToIniStruct, bbDevConfig.ACC100)
 	case bbDevConfig.ACC200 != nil:
-		if iniFile, err = createIniFileContent(acc200BBDevConfigToIniStruct, bbDevConfig.ACC200); err != nil {
-			return fmt.Errorf("creation of pf_bb_config config file for ACC200 failed, %s", err)
-		}
+		iniFile, err = createIniFileContent(acc200BBDevConfigToIniStruct, bbDevConfig.ACC200)
 	case bbDevConfig.N3000 != nil:
-		if iniFile, err = createIniFileContent(n3000BBDevConfigToIniStruct, bbDevConfig.N3000); err != nil {
-			return fmt.Errorf("creation of pf_bb_config config file for N3000 failed, %s", err)
-		}
+		iniFile, err = createIniFileContent(n3000BBDevConfigToIniStruct, bbDevConfig.N3000)
 	default:
 		return fmt.Errorf("received BBDevConfig is empty")
+	}
+
+	if err != nil {
+		return err
 	}
 
 	if err := logIniFile(iniFile); err != nil {
@@ -93,7 +91,7 @@ func createIniFileContent[BB bbDeviceConfig, C func(BB) interface{}](convertToIn
 
 	iniFile := ini.Empty()
 	if err := iniFile.ReflectFrom(convertToIniStruct(bbDevConfig)); err != nil {
-		return nil, fmt.Errorf("creation of pf_bb_config config file for ACC200/VRB1 failed, %s", err)
+		return nil, fmt.Errorf("creation of pf_bb_config config file failed, %s", err)
 	}
 
 	return iniFile, nil
@@ -257,24 +255,18 @@ type n3000BBDevConfigIniWrapper struct {
 		Vfqmap      string `ini:"vfqmap"`
 	} `ini:"DL"`
 
-	FLR struct {
+	FLR *struct {
 		FLR int `ini:"flr_time_out"`
-	} `ini:"FLR"`
+	} `ini:"FLR,omitempty"`
 }
 
 func n3000BBDevConfigToIniStruct(in *sriovv2.N3000BBDevConfig) interface{} {
-	return &n3000BBDevConfigIniWrapper{
+	wrapper := &n3000BBDevConfigIniWrapper{
 		PFMode: struct {
 			PFMode string `ini:"pf_mode_en"`
 		}{
 			PFMode: AsIntString(in.PFMode),
 		},
-		FLR: struct {
-			FLR int `ini:"flr_time_out"`
-		}{
-			FLR: in.FLRTimeOut,
-		},
-
 		Downlink: struct {
 			Bandwidth   int    `ini:"bandwidth"`
 			LoadBalance int    `ini:"load_balance"`
@@ -284,7 +276,6 @@ func n3000BBDevConfigToIniStruct(in *sriovv2.N3000BBDevConfig) interface{} {
 			LoadBalance: in.Downlink.LoadBalance,
 			Vfqmap:      in.Downlink.Queues.String(),
 		},
-
 		Uplink: struct {
 			Bandwidth   int    `ini:"bandwidth"`
 			LoadBalance int    `ini:"load_balance"`
@@ -295,6 +286,16 @@ func n3000BBDevConfigToIniStruct(in *sriovv2.N3000BBDevConfig) interface{} {
 			Vfqmap:      in.Uplink.Queues.String(),
 		},
 	}
+
+	if in.FLRTimeOut != 0 {
+		wrapper.FLR = &struct {
+			FLR int `ini:"flr_time_out"`
+		}{
+			FLR: in.FLRTimeOut,
+		}
+	}
+
+	return wrapper
 }
 
 var boolToIntStringMapping = map[bool]string{false: "0", true: "1"}

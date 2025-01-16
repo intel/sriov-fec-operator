@@ -79,5 +79,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: SRIOV_FEC_METRIC_GATHER_INTERVAL
+          value: 0s
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
