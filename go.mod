@@ -102,7 +102,7 @@ require (
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
@@ -121,5 +121,3 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-// https://www.cve.org/CVERecord?id=CVE-2024-24786
-replace google.golang.org/protobuf v1.28.1 => google.golang.org/protobuf v1.33.0
