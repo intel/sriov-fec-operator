@@ -26,6 +26,7 @@ Copyright (c) 2020-2024 Intel Corporation
   - [vRAN Boost Accelerator V1 (VRB1)](#vran-boost-accelerator-v1-vrb1)
   - [vRAN Boost Accelerator V2 (VRB2)](#vran-boost-accelerator-v2-vrb2)
 - [Appendix 3 - Gathering logs for bug report](#appendix-3---gathering-logs-for-bug-report)
+- [Appendix 4 - Additional instructions for applications using VF interface in case of VFIO mode](#appendix-4---additional-instructions-for-applications-using-vf-interface-in-case-of-vfio-mode)
 
 ## Overview
 
@@ -726,3 +727,12 @@ Please attach 'sriov-fec.logs.tar.gz' to bug report. If you had to apply some co
 [user@ctrl1 /home]# ls -F
  gather_sriovfec_logs.sh*  'sriov-fec-ctrl1-Wed Aug 24 15:09:57 UTC 2022'/   sriov-fec.logs.tar.gz
 ```
+
+## Appendix 4 - Additional instructions for applications using VF interface in case of VFIO mode
+
+As described in [pf-bb-config application documentation](https://github.com/intel/pf-bb-config?tab=readme-ov-file#using-vfio-pci-driver),  In case of VFIO mode after applying the configuration through CR, pf-bb-config application runs in a daemon mode in side the Operator daemon POD all the time, and this is a must requirement for the DU application to be able to consciously use the VF interface.   Below are additional information and instructions that developer should be aware of while using VF interfaces in VFIO mode:
+
+- If the user wants to update/modify existing accelerator configuration, DU application has to stop and release the VF resource before changing or deleting the configuration.
+- It is not expected to happen that Operator daemon pod to be killed and restarted by itself, but for any external event reason (one such example is probe failures) if the daemon pod happens to be restarted, then pf-bb-config application run in the daemon mode will also be terminated and will be restarted and reconfigure the accelerator in the new instance of daemon pod that deployed automatically.
+- In the event of daemon pod restarts, DU application may not be able to use the VF interface. To recover from this state, DU application should release the VF interface and reconfigure VF interface (or DU application terminate and restart) as referenced in pf-bb-config documentation.
+- Reset of other Operator pods ie., manager and labeler will not cause any interruption for application to use VF interface.
