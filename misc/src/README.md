@@ -1,6 +1,6 @@
 <!---
 SPDX-License-Identifier: Apache-2.0
-Copyright (c) 2020-2024 Intel Corporation
+Copyright (c) 2020-2025 Intel Corporation
 --->
 # List of 3rd party source code packages used in SRIOV-FEC Operator:
 

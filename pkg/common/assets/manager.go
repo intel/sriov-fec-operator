@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2024 Intel Corporation
+// Copyright (c) 2020-2025 Intel Corporation
 
 package assets
 
@@ -91,7 +91,7 @@ func (m *Manager) setDefaultValues(tp *map[string]string) {
 		m.EnvPrefix + "5G_RESOURCE_NAME":     "intel_fec_5g",
 		m.EnvPrefix + "ACC100_RESOURCE_NAME": "intel_fec_acc100",
 		m.EnvPrefix + "ACC200_RESOURCE_NAME": "intel_fec_acc200",
-		"SRIOV_VRB_VRB2_RESOURCE_NAME":       "intel_vrb_vrb2",
+		m.EnvPrefix + "VRB2_RESOURCE_NAME":   "intel_vrb_vrb2",
 	}
 
 	for key, value := range defaults {

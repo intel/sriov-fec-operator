@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2024 Intel Corporation
+// Copyright (c) 2020-2025 Intel Corporation
 
 package v1
 
@@ -160,6 +160,9 @@ type PhysicalFunctionConfigExt struct {
 
 	// BBDevConfig is a config for PF's queues
 	BBDevConfig BBDevConfig `json:"bbDevConfig"`
+
+	// VrbResourceName is optional for custom resource name for sriov-device-plugin
+	VrbResourceName string `json:"vrbResourceName"`
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -187,6 +190,11 @@ type SriovVrbClusterConfigSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// Skips drain process when true; default false. Should be true if operator is running on SNO
 	DrainSkip *bool `json:"drainSkip,omitempty"`
+
+	// Indicates custom resource name for sriov-device-plugin
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9-_]+$`
+	VrbResourceName string `json:"vrbResourceName,omitempty"`
 }
 
 type AcceleratorSelector struct {

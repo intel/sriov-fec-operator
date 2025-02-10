@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2024 Intel Corporation
+// Copyright (c) 2020-2025 Intel Corporation
 
 package sriovvrb
 
@@ -131,11 +131,12 @@ func (r *SriovVrbClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConf
 	for _, pciAddress := range acceleratorConfigContext.Keys() {
 		cc, _ := acceleratorConfigContext.Get(pciAddress)
 		pf := vrbv1.PhysicalFunctionConfigExt{
-			PCIAddress:  pciAddress,
-			PFDriver:    cc.Spec.PhysicalFunction.PFDriver,
-			VFDriver:    cc.Spec.PhysicalFunction.VFDriver,
-			VFAmount:    cc.Spec.PhysicalFunction.VFAmount,
-			BBDevConfig: cc.Spec.PhysicalFunction.BBDevConfig,
+			PCIAddress:      pciAddress,
+			PFDriver:        cc.Spec.PhysicalFunction.PFDriver,
+			VFDriver:        cc.Spec.PhysicalFunction.VFDriver,
+			VFAmount:        cc.Spec.PhysicalFunction.VFAmount,
+			BBDevConfig:     cc.Spec.PhysicalFunction.BBDevConfig,
+			VrbResourceName: cc.Spec.VrbResourceName,
 		}
 		if cc.Spec.DrainSkip == nil {
 			newNodeConfig.Spec.DrainSkip = true

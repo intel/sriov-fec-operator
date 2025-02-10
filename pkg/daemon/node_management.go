@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2024 Intel Corporation
+// Copyright (c) 2020-2025 Intel Corporation
 
 package daemon
 
@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	sriovv2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
 	vrbv1 "github.com/intel/sriov-fec-operator/api/sriovvrb/v1"
@@ -189,6 +190,10 @@ func (n *NodeConfigurator) flrReset(pfPCIAddress string) error {
 		return fmt.Errorf("failed to execute Function Level Reset for PF (%s): %s", pfPCIAddress, err)
 	}
 
+	// Add a 1-second delay between PF FLR and starting pf_bb_config
+	// to ensure that the PF is fully reset
+	time.Sleep(1 * time.Second)
+
 	return nil
 }
 
@@ -297,7 +302,7 @@ func loadDrivers(nc *NodeConfigurator, pfDriver string, vfDriver string) error {
 	return nil
 }
 
-func (n *NodeConfigurator) ApplySpec(nodeConfig sriovv2.SriovFecNodeConfigSpec) error {
+func (n *NodeConfigurator) ApplySpec(nodeConfig sriovv2.SriovFecNodeConfigSpec, fecDeviceUpdateRequired map[string]bool) error {
 	inv, err := getSriovInventory(n.Log)
 	if err != nil {
 		n.Log.WithError(err).Error("failed to obtain current sriov inventory")
@@ -307,6 +312,9 @@ func (n *NodeConfigurator) ApplySpec(nodeConfig sriovv2.SriovFecNodeConfigSpec) 
 	n.Log.WithField("inventory", inv).Info("current node status")
 
 	for _, acc := range inv.SriovAccelerators {
+		if !fecDeviceUpdateRequired[acc.PCIAddress] {
+			continue
+		}
 		requestedConfig := getMatchingConfiguration(acc.PCIAddress, nodeConfig.PhysicalFunctions)
 		if requestedConfig == nil {
 			if len(acc.VFs) > 0 {
@@ -326,7 +334,7 @@ func (n *NodeConfigurator) ApplySpec(nodeConfig sriovv2.SriovFecNodeConfigSpec) 
 	return nil
 }
 
-func (n *NodeConfigurator) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpec) error {
+func (n *NodeConfigurator) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpec, vrbDeviceUpdateRequired map[string]bool) error {
 	inv, err := VrbgetSriovInventory(n.Log)
 	if err != nil {
 		n.Log.WithError(err).Error("failed to obtain current sriov inventory")
@@ -336,6 +344,9 @@ func (n *NodeConfigurator) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpec)
 	n.Log.WithField("inventory", inv).Info("current node status")
 
 	for _, acc := range inv.SriovAccelerators {
+		if !vrbDeviceUpdateRequired[acc.PCIAddress] {
+			continue
+		}
 		requestedConfig := VrbgetMatchingConfiguration(acc.PCIAddress, nodeConfig.PhysicalFunctions)
 		if requestedConfig == nil {
 			if len(acc.VFs) > 0 {

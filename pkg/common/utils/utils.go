@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2024 Intel Corporation
+// Copyright (c) 2020-2025 Intel Corporation
 
 package utils
 
@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/jaypipes/ghw"
@@ -126,4 +127,44 @@ func FindAccelerator(cfgPath string) (bool, string, error) {
 		}
 	}
 	return false, "", nil
+}
+
+// Function to find all VFs associated with a given PF PCI address
+func FindVFs(pfPCIAddress string) ([]string, error) {
+	// Path to the PF's SR-IOV directory in sysfs
+	sriovPath := fmt.Sprintf("/sys/bus/pci/devices/%s/virtfn*", pfPCIAddress)
+
+	// Find all symbolic links matching the virtfn* pattern
+	vfLinks, err := filepath.Glob(sriovPath)
+	if err != nil {
+		return nil, err
+	}
+
+	vfAddresses := make([]string, 0, len(vfLinks))
+	for _, vfLink := range vfLinks {
+		// Read the target of the symbolic link to get the VF PCI address
+		vfTarget, err := os.Readlink(vfLink)
+		if err != nil {
+			return nil, err
+		}
+
+		// Extract the VF PCI address from the target path
+		vfAddress := filepath.Base(vfTarget)
+		vfAddresses = append(vfAddresses, vfAddress)
+	}
+
+	return vfAddresses, nil
+}
+
+func GetVFDeviceID(pfPCIAddress string) (string, error) {
+	// Path to the PF's SR-IOV VF device ID file in sysfs
+	deviceIDPath := fmt.Sprintf("/sys/bus/pci/devices/%s/sriov_vf_device", pfPCIAddress)
+
+	// Read the device ID from the file
+	deviceID, err := os.ReadFile(deviceIDPath)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.ToLower(strings.TrimSpace(string(deviceID))), nil
 }

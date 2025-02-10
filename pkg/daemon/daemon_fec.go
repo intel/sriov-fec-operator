@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	fec "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
+	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,9 +26,12 @@ import (
 )
 
 var (
-	FecConfigPath         = "/sriov_config/config/accelerators.json"
-	getSriovInventory     = GetSriovInventory
-	supportedAccelerators utils.AcceleratorDiscoveryConfig
+	FecConfigPath           = "/sriov_config/config/accelerators.json"
+	getSriovInventory       = GetSriovInventory
+	supportedAccelerators   utils.AcceleratorDiscoveryConfig
+	fecPreviousConfig       = make(map[string]fec.PhysicalFunctionConfigExt)
+	fecCurrentConfig        = make(map[string]fec.PhysicalFunctionConfigExt)
+	fecDeviceUpdateRequired = make(map[string]bool)
 )
 
 type FecNodeConfigReconciler struct {
@@ -40,7 +44,7 @@ type FecNodeConfigReconciler struct {
 }
 
 type Configurer interface {
-	ApplySpec(nodeConfig fec.SriovFecNodeConfigSpec) error
+	ApplySpec(nodeConfig fec.SriovFecNodeConfigSpec, fecDeviceUpdateRequired map[string]bool) error
 }
 
 /*****************************************************************************
@@ -68,6 +72,10 @@ func (r *FecNodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request)
 	if isConfigurationOfNonExistingInventoryRequested(sfnc.Spec.PhysicalFunctions, detectedInventory) {
 		r.log.Info("requested configuration refers to not existing accelerator(s)")
 		return requeueLaterOrNowIfError(r.updateStatus(sfnc, metav1.ConditionFalse, ConfigurationFailed, "requested configuration refers to not existing accelerator"))
+	}
+
+	for _, accelerator := range detectedInventory.SriovAccelerators {
+		fecDeviceUpdateRequired[accelerator.PCIAddress] = true
 	}
 
 	if !r.isCardUpdateRequired(sfnc, detectedInventory) {
@@ -175,12 +183,33 @@ func (r *FecNodeConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 /*****************************************************************************
- * Method: FecNodeConfigReconciler::
- * Description:
- *
+ * Method: FecNodeConfigReconciler::updateStatus
+ * Description: Updates the status of the SriovFecNodeConfig resource.
+ * Returns error if the status update fails
  ****************************************************************************/
 func (r *FecNodeConfigReconciler) updateStatus(nc *fec.SriovFecNodeConfig, status metav1.ConditionStatus, reason ConfigurationConditionReason, msg string) error {
 	previousCondition := findOrCreateConfigurationStatusCondition(nc)
+
+	if reason == ConfigurationInProgress {
+		// Clear the current configuration map
+		for key := range fecCurrentConfig {
+			delete(fecCurrentConfig, key)
+		}
+		// Update the current configuration map with the new configuration
+		for _, pf := range nc.Spec.PhysicalFunctions {
+			fecCurrentConfig[pf.PCIAddress] = pf
+		}
+		r.checkIfDeviceUpdateNeeded(fecPreviousConfig, fecCurrentConfig)
+	} else if reason == ConfigurationSucceeded {
+		// Clear the previous configuration map
+		for key := range fecPreviousConfig {
+			delete(fecPreviousConfig, key)
+		}
+		// Update the previous configuration with the current configuration
+		for _, pf := range nc.Spec.PhysicalFunctions {
+			fecPreviousConfig[pf.PCIAddress] = pf
+		}
+	}
 
 	// SriovFecNodeConfig.generation is under K8S management
 	// metav1.Condition.observedGeneration is under this reconciler management.
@@ -278,7 +307,7 @@ func (r *FecNodeConfigReconciler) configureNode(nodeConfig *fec.SriovFecNodeConf
 	var configurationError error
 
 	drainFunc := func(ctx context.Context) bool {
-		if err := r.sriovfecconfigurer.ApplySpec(nodeConfig.Spec); err != nil {
+		if err := r.sriovfecconfigurer.ApplySpec(nodeConfig.Spec, fecDeviceUpdateRequired); err != nil {
 			r.log.WithError(err).Error("failed applying new PF/VF configuration")
 			configurationError = err
 			return true
@@ -480,5 +509,28 @@ func (r *FecNodeConfigReconciler) getPfBbConfVersion() string {
 	} else {
 		r.log.Info("pf_bb_config Version is:", out.String())
 		return out.String()
+	}
+}
+
+/*****************************************************************************
+ * Method: FecNodeConfigReconciler::checkIfDeviceUpdateNeeded
+ * Description: Determines if a device update is required based on the current
+ *		and requested configurations
+ ****************************************************************************/
+func (r *FecNodeConfigReconciler) checkIfDeviceUpdateNeeded(previousConf, currentConf map[string]fec.PhysicalFunctionConfigExt) {
+	// Check for updates in previous configuration
+	for k, prevConfig := range previousConf {
+		if currConfig, exists := currentConf[k]; !exists || !equality.Semantic.DeepEqual(prevConfig, currConfig) {
+			fecDeviceUpdateRequired[k] = true
+		} else {
+			fecDeviceUpdateRequired[k] = false
+		}
+	}
+
+	// Check for new entries in current configuration
+	for k := range currentConf {
+		if _, exists := previousConf[k]; !exists {
+			fecDeviceUpdateRequired[k] = true
+		}
 	}
 }

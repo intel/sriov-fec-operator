@@ -1,6 +1,6 @@
 ```text
 SPDX-License-Identifier: Apache-2.0
-Copyright (c) 2020-2024 Intel Corporation
+Copyright (c) 2020-2025 Intel Corporation
 ```
 <!-- omit in toc -->
 # SRIOV-FEC Operator for Wireless FEC Accelerators
@@ -21,6 +21,7 @@ Copyright (c) 2020-2024 Intel Corporation
 - [Summary](#summary)
 - [Appendix 1 - Developer Notes](#appendix-1---developer-notes)
   - [Drain skip option](#drain-skip-option)
+  - [VrbResourceName (Optional)](#vrbresourcename-optional)
 - [Appendix 2 - Reference CR configurations for support accelerators in SRIOV-FEC Operator](#appendix-2---reference-cr-configurations-for-support-accelerators-in-sriov-fec-operator)
   - [ACC100](#acc100)
   - [vRAN Boost Accelerator V1 (VRB1)](#vran-boost-accelerator-v1-vrb1)
@@ -509,6 +510,20 @@ The operator handles all the necessary actions from creation of FEC resources to
 
 Using the option `spec.drainSkip: false` in CR will perform the [node drain](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_drain/) while applying the configuration. If you do not want to drain the node during the CR apply, set this option to `true` which is the default behavior.
 
+### VrbResourceName (Optional)
+
+Using the `sriovvrbclusterconfig.spec.vrbResourceName` allows you to specify a custom resource name for the sriov-device-plugin specific to VRB2 with multiple accelerators. If not provided, the default resource name `intel_vrb_vrb2` will be used. Using this option will link the custom vrbResourceName to a specific VRB2 physical function.
+
+- **Description**: Indicates a custom resource name for the sriov-device-plugin specific to VRB2.
+- **Type**: `string`
+- **Optional**: Yes
+- **Pattern**: `^[a-zA-Z0-9-_]+$`
+
+**Limitations:**
+- In the case of dual VRB2 devices in one node, if `vrbResourceName` is used in one device CR, then it is mandatory to use it in the CR for the second device.
+- Once `vrbResourceName` is set, it cannot be removed from the CR; it can only be renamed.
+- It is mandatory to have different `vrbResourceName` values across different sriovvrbclusterconfig. If the same `vrbResourceName` is used in multiple CRs, the sriov-device-plugin will crash. This can be fixed by updating one of the CRs to use a different `vrbResourceName` and re-applying the configuration.
+
 ## Appendix 2 - Reference CR configurations for support accelerators in SRIOV-FEC Operator
 
 ### ACC100
@@ -663,7 +678,7 @@ spec:
   nodeSelector:
     kubernetes.io/hostname: worker-node
   acceleratorSelector:
-    pciAddress: 0000:f7:00.0
+    pciAddress: 0000:07:00.0
   drainSkip: true
   physicalFunction:
     pfDriver: vfio-pci
@@ -698,6 +713,57 @@ spec:
           aqDepthLog2: 4
           numAqsPerGroups: 64
           numQueueGroups: 4
+```
+
+- Reference CR for VRB2 using optional VrbResourceName
+
+```yaml
+apiVersion: sriovvrb.intel.com/v1
+kind: SriovVrbClusterConfig
+metadata:
+  name: config
+  namespace: vran-acceleration-operators
+spec:
+  priority: 1
+  nodeSelector:
+    kubernetes.io/hostname: worker-node
+  acceleratorSelector:
+    pciAddress: 0000:07:00.0
+  drainSkip: true
+  physicalFunction:
+    pfDriver: vfio-pci
+    vfDriver: vfio-pci
+    vfAmount: 2
+    bbDevConfig:
+      vrb2:
+        pfMode: false
+        numVfBundles: 2
+        maxQueueSize: 1024
+        downlink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        uplink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        downlink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        uplink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        qfft:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        qmld:
+          aqDepthLog2: 4
+          numAqsPerGroups: 64
+          numQueueGroups: 4
+  vrbResourceName: "intel_vrb_vrb2_1"
 ```
 
 ## Appendix 3 - Gathering logs for bug report

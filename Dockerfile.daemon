@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020-2024 Intel Corporation
+# Copyright (c) 2020-2025 Intel Corporation
 
 FROM golang:1.23.4 AS builder
 
 WORKDIR /workspace-pf
 
-RUN git clone --depth 1 --branch v24.11 https://github.com/intel/pf-bb-config /workspace-pf/pf-bb-config
+RUN git clone --depth 1 --branch v25.01 https://github.com/intel/pf-bb-config /workspace-pf/pf-bb-config
 
 WORKDIR /workspace-pf/pf-bb-config
 
@@ -23,7 +23,7 @@ COPY api api/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
 
-FROM registry.access.redhat.com/ubi9/ubi:9.5-1732804088 AS package_installer
+FROM registry.access.redhat.com/ubi9/ubi:9.5-1736404036 AS package_installer
 
 RUN yum install \
 	kmod-28-10.el9 \

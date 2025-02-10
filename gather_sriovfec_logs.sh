@@ -1,6 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020-2024 Intel Corporation
+# Copyright (c) 2020-2025 Intel Corporation
 
 K8S_BIN="${1:-oc}"
 NAMESPACE="${2:-vran-acceleration-operators}"

@@ -1,6 +1,6 @@
 ```text
 SPDX-License-Identifier: Apache-2.0
-Copyright (c) 2020-2024 Intel Corporation
+Copyright (c) 2020-2025 Intel Corporation
 ```
 <!-- omit in toc -->
 # Release Notes
@@ -52,8 +52,13 @@ This document provides high-level system features, issues, and limitations infor
 | 2.8.0   | Dec 2023       | 4.11, 4.12, 4.13, 4.14       | 4.11.54, 4.12.45, 4.13.27, 4.14.7            |
 | 2.9.0   | May 2024       | 4.11, 4.12, 4.13, 4.14, 4.15 | 4.11.54, 4.12.57, 4.13.27, 4.14.25, 4.15.13  |
 | 2.10.0  | Dec 2024       | 4.12 and higher versions     | 4.12 and higher (latest stable versions)     |
+| 2.11.0  | Dec 2024       | 4.12 and higher versions     | 4.12 and higher (latest stable versions)     |
 
 # Features for Release
+
+***v2.11.0***
+- Updated pf-bb-config version to 25.01 to support VRB2 on GNR-D
+- Bug fixes
 
 ***v2.10.0***
 - Update pf-bb-config version to 24.11 to support VRB2 on GRN-D B0 ES2 Device.
@@ -152,6 +157,11 @@ This document provides high-level system features, issues, and limitations infor
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
 
 # Changes to Existing Features
+
+***v2.11.0***
+- Update UBI base image to latest version
+- daemonset deployment configuration moved to configMaps to enable configuration changes
+- golan/glog version update to 1.2.4
 
 ***v2.10.0***
 - Telemetry functionality enhancements
@@ -262,6 +272,14 @@ This document provides high-level system features, issues, and limitations infor
 
 # Fixed Issues
 
+***2.11.0***
+- Enhancement for dual VRB2 accelerator to map VF resource by explicit 
+  mention to the underlying PF.
+- Fix for the first accelerator is reconfigured when second accelerator is configured
+  in case of dual accelerators present on same worker node.
+- Fix for CR apply failure on ACC100 in HP DL110 platforms (issue #322)
+- Set the protobuf version (1.33.0) properly in go.mod file
+
 ***2.10.0***
 - Fix for golang linter errors
 - Fix for OCP meta data annotations
@@ -314,6 +332,10 @@ This document provides high-level system features, issues, and limitations infor
 - n/a - this is the first release.
 
 # Known issues
+
+***v2.11.0***
+- GNR-D with two VRB2 accelerator instances, in case of multiple worker nodes deployment
+  user defined resource naming is not supported.
 
 ***v2.10.0***
 - Limitation on two accelerator devices on same node
@@ -507,4 +529,4 @@ This document provides high-level system features, issues, and limitations infor
 # Package Versions
 Package:
 - Golang: 1.23.4
-- pf-bb-config-app: v24.11
+- pf-bb-config-app: v25.01
