@@ -52,7 +52,7 @@ This document provides high-level system features, issues, and limitations infor
 | 2.8.0   | Dec 2023       | 4.11, 4.12, 4.13, 4.14       | 4.11.54, 4.12.45, 4.13.27, 4.14.7            |
 | 2.9.0   | May 2024       | 4.11, 4.12, 4.13, 4.14, 4.15 | 4.11.54, 4.12.57, 4.13.27, 4.14.25, 4.15.13  |
 | 2.10.0  | Dec 2024       | 4.12 and higher versions     | 4.12 and higher (latest stable versions)     |
-| 2.11.0  | Dec 2024       | 4.12 and higher versions     | 4.12 and higher (latest stable versions)     |
+| 2.11.0  | Feb 2025       | 4.12 and higher versions     | 4.12 and higher (latest stable versions)     |
 
 # Features for Release
 
