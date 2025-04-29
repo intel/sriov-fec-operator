@@ -83,21 +83,16 @@ func (r *FecNodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request)
 		return requeueLater()
 	}
 
-	if r.isCardUpdateRequired(sfnc, detectedInventory) {
-
-		if err := r.updateStatus(sfnc, metav1.ConditionFalse, ConfigurationInProgress, "Configuration started"); err != nil {
-			return requeueNowWithError(err)
-		}
-
-		if err := r.configureNode(sfnc); err != nil {
-			r.log.WithError(err).Error("error occurred during configuring node")
-			return requeueNowWithError(r.updateStatus(sfnc, metav1.ConditionFalse, ConfigurationFailed, err.Error()))
-		} else {
-			return requeueLaterOrNowIfError(r.updateStatus(sfnc, metav1.ConditionTrue, ConfigurationSucceeded, "Configured successfully"))
-		}
+	if err := r.updateStatus(sfnc, metav1.ConditionFalse, ConfigurationInProgress, "Configuration started"); err != nil {
+		return requeueNowWithError(err)
 	}
 
-	return requeueLater()
+	if err := r.configureNode(sfnc); err != nil {
+		r.log.WithError(err).Error("error occurred during configuring node")
+		return requeueNowWithError(r.updateStatus(sfnc, metav1.ConditionFalse, ConfigurationFailed, err.Error()))
+	}
+
+	return requeueLaterOrNowIfError(r.updateStatus(sfnc, metav1.ConditionTrue, ConfigurationSucceeded, "Configured successfully"))
 }
 
 /*****************************************************************************

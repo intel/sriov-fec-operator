@@ -52,9 +52,12 @@ This document provides high-level system features, issues, and limitations infor
 | 2.8.0   | Dec 2023       | 4.11, 4.12, 4.13, 4.14       | 4.11.54, 4.12.45, 4.13.27, 4.14.7            |
 | 2.9.0   | May 2024       | 4.11, 4.12, 4.13, 4.14, 4.15 | 4.11.54, 4.12.57, 4.13.27, 4.14.25, 4.15.13  |
 | 2.10.0  | Dec 2024       | 4.12 and higher versions     | 4.12 and higher (latest stable versions)     |
-| 2.11.0  | Feb 2025       | 4.12 and higher versions     | 4.12 and higher (latest stable versions)     |
+| 2.11.0  | Jan 2025       | 4.12 and higher versions     | 4.12 and higher (latest stable versions)     |
 
 # Features for Release
+
+***v2.11.1***
+- Bug fixes
 
 ***v2.11.0***
 - Updated pf-bb-config version to 25.01 to support VRB2 on GNR-D
@@ -157,6 +160,9 @@ This document provides high-level system features, issues, and limitations infor
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
 
 # Changes to Existing Features
+
+***v2.11.1***
+- None
 
 ***v2.11.0***
 - Update UBI base image to latest version
@@ -271,6 +277,10 @@ This document provides high-level system features, issues, and limitations infor
 - There are no unsupported or discontinued features relevant to this release.
 
 # Fixed Issues
+
+***v2.11.1***
+- Fix for issue of configuration reapplied to accelerators in some cases when
+  node having dual accelerators and both are configured.
 
 ***2.11.0***
 - Enhancement for dual VRB2 accelerator to map VF resource by explicit 

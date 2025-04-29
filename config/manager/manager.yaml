@@ -277,6 +277,8 @@ data:
                     value: "600"
                   - name: SRIOV_FEC_METRIC_GATHER_INTERVAL
                     value: {{ .SRIOV_FEC_METRIC_GATHER_INTERVAL }}
+                  - name: GHW_DISABLE_WARNINGS
+                    value: "1"
                 securityContext:
                   readOnlyRootFilesystem: true
                   privileged: true

@@ -23,7 +23,7 @@ COPY api api/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o sriov_fec_daemon cmd/daemon/main.go
 
-FROM registry.access.redhat.com/ubi9/ubi:9.5-1736404036 AS package_installer
+FROM registry.access.redhat.com/ubi9/ubi:9.5-1744101466 AS package_installer
 
 RUN yum install \
 	kmod-28-10.el9 \
@@ -38,7 +38,9 @@ RUN curl -L https://pci-ids.ucw.cz/v2.2/pci.ids.gz -o pci.ids.gz && \
 	gzip -d -v pci.ids.gz && \
 	rm -rfv ./pci.ids.gz
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.5-1731593028
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.5-1742914212
+
+
 
 ARG VERSION
 ### Required OpenShift Labels

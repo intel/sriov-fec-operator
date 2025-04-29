@@ -127,7 +127,7 @@ func (r *SriovVrbClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConf
 
 	newNodeConfig := copyWithEmptySpec(ncc.SriovVrbNodeConfig)
 
-	// Use orederedmap for iteration
+	// Use orderedmap for iteration
 	for _, pciAddress := range acceleratorConfigContext.Keys() {
 		cc, _ := acceleratorConfigContext.Get(pciAddress)
 		pf := vrbv1.PhysicalFunctionConfigExt{
@@ -146,15 +146,27 @@ func (r *SriovVrbClusterConfigReconciler) synchronizeNodeConfigSpec(ncc NodeConf
 		newNodeConfig.Spec.PhysicalFunctions = append(newNodeConfig.Spec.PhysicalFunctions, pf)
 	}
 
-	// copy latest known drainSkip from NodeConfig for cleanup
+	// Copy latest known drainSkip from NodeConfig for cleanup
 	if acceleratorConfigContext.Len() == 0 {
 		newNodeConfig.Spec.DrainSkip = ncc.Spec.DrainSkip
 	}
 
+	// Sort the physical functions by PCI address to ensure consistent order
+	sort.Slice(newNodeConfig.Spec.PhysicalFunctions, func(i, j int) bool {
+		return newNodeConfig.Spec.PhysicalFunctions[i].PCIAddress < newNodeConfig.Spec.PhysicalFunctions[j].PCIAddress
+	})
+	sort.Slice(currentNodeConfig.Spec.PhysicalFunctions, func(i, j int) bool {
+		return currentNodeConfig.Spec.PhysicalFunctions[i].PCIAddress < currentNodeConfig.Spec.PhysicalFunctions[j].PCIAddress
+	})
+
 	if !equality.Semantic.DeepEqual(newNodeConfig.Spec, currentNodeConfig.Spec) {
-		r.Log.Info("Node Config Changed")
+		r.Log.WithFields(logrus.Fields{
+			"CurrentSpec": currentNodeConfig.Spec,
+			"NewSpec":     newNodeConfig.Spec,
+		}).Info("Node Config Changed")
 		return r.Update(context.TODO(), newNodeConfig)
 	}
+
 	return nil
 }
 
