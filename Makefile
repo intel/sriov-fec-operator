@@ -6,7 +6,7 @@ export CLI_EXEC?=oc
 # Container format for podman. Required to build containers with "ManifestType": "application/vnd.oci.image.manifest.v2+json",
 export BUILDAH_FORMAT=docker
 # Current Operator version
-VERSION ?= 2.11.0
+VERSION ?= 2.12.0
 # Supported channels
 CHANNELS ?= stable
 # Default channel
@@ -55,7 +55,7 @@ ifeq ($(CONTAINER_TOOL),podman)
  export KUBE_RBAC_PROXY_IMAGE ?= registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.14
 else
  export SRIOV_FEC_NETWORK_DEVICE_PLUGIN_IMAGE ?= ghcr.io/k8snetworkplumbingwg/sriov-network-device-plugin:v3.7.0
- export KUBE_RBAC_PROXY_IMAGE ?= gcr.io/kubebuilder/kube-rbac-proxy:v0.15.0
+ export KUBE_RBAC_PROXY_IMAGE ?= registry.k8s.io/kubebuilder/kube-rbac-proxy:v0.15.0
 endif
 
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
@@ -172,7 +172,7 @@ deploy: manifests kustomize
 .PHONY: manifests
 manifests: controller-gen
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-	FOLDER=. COPYRIGHT_FILE=COPYRIGHT ./copyright.sh
+	FOLDER=. COPYRIGHT_FILE=COPYRIGHT ./cpright.sh
 
 # Run go fmt against code
 .PHONY: fmt
@@ -256,7 +256,7 @@ bundle: check-operator-sdk-version manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image sriov-fec-operator=$(SRIOV_FEC_OPERATOR_IMAGE)
 	$(KUSTOMIZE) build config/manifests | envsubst | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
-	FOLDER=. COPYRIGHT_FILE=COPYRIGHT ./copyright.sh
+	FOLDER=. COPYRIGHT_FILE=COPYRIGHT ./cpright.sh
 	cat COPYRIGHT bundle.Dockerfile >bundle.tmp
 	printf "\nLABEL com.redhat.openshift.versions=\"v4.10\"\n" >> bundle.tmp
 	printf "\nCOPY TEMP_LICENSE_COPY /licenses/LICENSE\n" >> bundle.tmp

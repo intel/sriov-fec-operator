@@ -657,7 +657,7 @@ func FuzzVrbIsCardUpdateRequired(f *testing.F) {
 
 		defer func() {
 			if r := recover(); r != nil {
-				t.Errorf("Error: %v", vicur)
+				t.Errorf("Error: %v", r)
 			}
 		}()
 		_ = vicur.isCardUpdateRequired(&svnc, &detectedInventory)

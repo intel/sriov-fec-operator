@@ -465,8 +465,7 @@ var _ = Describe("VrbResourceName", func() {
 			reconciler.nodeNameRef.Namespace = "default"
 
 			// Run the loadCurrentDevicePluginConfig function
-			ctx := context.TODO()
-			config, err := reconciler.loadCurrentDevicePluginConfig(ctx)
+			config, err := reconciler.loadCurrentDevicePluginConfig()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(config).NotTo(BeNil())
 			Expect(config["resourceList"]).To(HaveLen(1))

@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/intel/sriov-fec-operator/pkg/common/utils"
 	"github.com/sirupsen/logrus"
@@ -45,6 +46,8 @@ type VrbNodeConfigReconciler struct {
 	drainerAndExecute   DrainAndExecute
 	vrbconfigurer       VrbConfigurer
 	restartDevicePlugin RestartDevicePluginFunction
+	cmRetrieveTime      time.Time
+	cmRetrieveMutex     sync.Mutex
 }
 
 type VrbConfigurer interface {
@@ -72,9 +75,16 @@ type VrbConfigurer interface {
 func (r *VrbNodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.log.Debugf("VrbReconcile(...) triggered by %s", req.NamespacedName.String())
 
+	r.setLogLevel()
+
 	vrbnc, err := r.readNodeConfig(req.NamespacedName)
 
 	if err != nil {
+		return requeueNowWithError(err)
+	}
+
+	// Update PfBbConfVersion if it has changed
+	if err := r.updatePfBbConfVersionIfChanged(vrbnc); err != nil {
 		return requeueNowWithError(err)
 	}
 
@@ -182,7 +192,7 @@ func (r *VrbNodeConfigReconciler) CreateEmptyNodeConfigIfNeeded(c client.Client)
 		VrbnodeConfig.Status.Inventory = *inv
 	}
 
-	VrbnodeConfig.Status.PfBbConfVersion = r.getVrbPfBbConfVersion()
+	VrbnodeConfig.Status.PfBbConfVersion = r.getVrbPfBbConfVersion(true)
 
 	if updateErr := c.Status().Update(context.Background(), VrbnodeConfig); updateErr != nil {
 		r.log.WithError(updateErr).Error("failed to update cr status")
@@ -527,7 +537,7 @@ func validateVrbNodeConfig(nodeConfig vrbv1.SriovVrbNodeConfigSpec) error {
 	return nil
 }
 
-func (r *VrbNodeConfigReconciler) getVrbPfBbConfVersion() string {
+func (r *VrbNodeConfigReconciler) getVrbPfBbConfVersion(shouldLog bool) string {
 	cmdString := fmt.Sprintf("%s version 2>/dev/null | sed -n 's/.*Version \\(\\S*\\) .*/\\1/p' | tr -d '\\n'", pfConfigAppFilepath)
 	cmd := exec.Command("bash", "-c", cmdString)
 	var out bytes.Buffer
@@ -536,10 +546,10 @@ func (r *VrbNodeConfigReconciler) getVrbPfBbConfVersion() string {
 	if err != nil {
 		r.log.WithError(err).Error("failed to execute command")
 		return "null"
-	} else {
+	} else if shouldLog {
 		r.log.Info("pf_bb_config Version is:", out.String())
-		return out.String()
 	}
+	return out.String()
 }
 
 /*****************************************************************************
@@ -550,7 +560,7 @@ func (r *VrbNodeConfigReconciler) getVrbPfBbConfVersion() string {
  ****************************************************************************/
 func (r *VrbNodeConfigReconciler) loadAndModifyDevicePluginConfig(vrbnc *vrbv1.SriovVrbNodeConfig, acc vrbv1.PhysicalFunctionConfigExt) error {
 	// Load the current sriovdp-config ConfigMap
-	currentConfig, err := r.loadCurrentDevicePluginConfig(context.TODO())
+	currentConfig, err := r.loadCurrentDevicePluginConfig()
 	if err != nil {
 		return r.updateStatus(vrbnc, metav1.ConditionFalse, ConfigurationFailed, err.Error())
 	}
@@ -577,8 +587,12 @@ func (r *VrbNodeConfigReconciler) loadAndModifyDevicePluginConfig(vrbnc *vrbv1.S
 	}
 
 	// Check if the ConfigMap resource exists and needs to be updated
-	if r.resourceFoundAndUpdated(currentConfig, resourceList, vfDeviceID, acc, vfAddresses) {
-		return nil
+	if modified, err := r.resourceFoundAndUpdated(currentConfig, resourceList, vfDeviceID, acc, vfAddresses); err != nil {
+		r.log.WithError(err).WithField("pfPciAddress", acc.PCIAddress).WithField("resourceName", acc.VrbResourceName).Error("failed to update ConfigMap")
+		return r.updateStatus(vrbnc, metav1.ConditionFalse, ConfigurationFailed, err.Error())
+	} else if modified {
+		r.log.WithField("pfPciAddress", acc.PCIAddress).WithField("resourceName", acc.VrbResourceName).Info("ConfigMap resource updated successfully")
+		return r.updateStatus(vrbnc, metav1.ConditionTrue, ConfigurationSucceeded, "ConfigMap resource updated successfully")
 	}
 
 	// Handle the case where a resource matching vfDeviceID and pfPciAddress was not found in the ConfigMap
@@ -592,7 +606,7 @@ func (r *VrbNodeConfigReconciler) loadAndModifyDevicePluginConfig(vrbnc *vrbv1.S
  *		if the number of pciAddresses in the resourceMap match the VFs found and the resourceName is the same as the newResourceName
  * 	   false otherwise
  ****************************************************************************/
-func (r *VrbNodeConfigReconciler) resourceFoundAndUpdated(currentConfig map[string]interface{}, resourceList []interface{}, vfDeviceID string, acc vrbv1.PhysicalFunctionConfigExt, vfAddresses []string) bool {
+func (r *VrbNodeConfigReconciler) resourceFoundAndUpdated(currentConfig map[string]interface{}, resourceList []interface{}, vfDeviceID string, acc vrbv1.PhysicalFunctionConfigExt, vfAddresses []string) (bool, error) {
 	for i := 0; i < len(resourceList); i++ {
 		resourceMap, ok := resourceList[i].(map[string]interface{})
 		if !ok {
@@ -606,15 +620,20 @@ func (r *VrbNodeConfigReconciler) resourceFoundAndUpdated(currentConfig map[stri
 		}
 		if r.matchVFsAndResourceName(resourceMap, acc.VrbResourceName, vfAddresses) {
 			// VFs and resourceName match, no need to update the resource
-			return true
+			r.log.WithField("pfPciAddress", acc.PCIAddress).WithField("resourceName", acc.VrbResourceName).Info("ConfigMap resource already exists and is up-to-date")
+			return true, nil
 		}
 		if r.modifyResource(resourceMap, acc.VrbResourceName, acc.PCIAddress, vfAddresses) {
-			if r.updateConfigMap(currentConfig, acc.VrbResourceName) == nil {
-				return true
+			if err := r.updateConfigMap(currentConfig, acc.VrbResourceName); err != nil {
+				r.log.WithError(err).WithField("pfPciAddress", acc.PCIAddress).WithField("resourceName", acc.VrbResourceName).Error("failed to update ConfigMap")
+				return false, err
+			} else {
+				r.log.WithField("pfPciAddress", acc.PCIAddress).WithField("resourceName", acc.VrbResourceName).Info("ConfigMap resource modified successfully")
+				return true, nil
 			}
 		}
 	}
-	return false
+	return false, nil
 }
 
 /*****************************************************************************
@@ -693,7 +712,10 @@ func (r *VrbNodeConfigReconciler) matchVFDeviceID(resourceMap map[string]interfa
 	if deviceID, ok := devices[0].(string); ok && deviceID == vfDeviceID {
 		// Save original ConfigMap resource
 		if _, loaded := configMapResource.LoadOrStore(vfDeviceID, copyResource(resourceMap)); !loaded {
-			r.log.WithField("vfDeviceID", vfDeviceID).Info("original ConfigMap resource saved")
+			r.log.WithFields(logrus.Fields{
+				"vfDeviceID":       vfDeviceID,
+				"originalResource": resourceMap,
+			}).Info("original resource saved")
 		}
 		return true
 	}
@@ -755,6 +777,10 @@ func (r *VrbNodeConfigReconciler) updateConfigMap(newConfig map[string]interface
 	}
 	ctx := context.TODO()
 	configMapName := "sriovdp-config"
+
+	// Extract the node name to construct a key for node-specific configuration in the ConfigMap.
+	// This key is used to check if a node-specific entry (config_$nodeName.json) exists and to update it if necessary
+	nodeName := r.nodeNameRef.Name
 	r.log.WithField("configMapName", configMapName).Debug("loading current sriovdp-config")
 
 	// Load the ConfigMap
@@ -763,9 +789,17 @@ func (r *VrbNodeConfigReconciler) updateConfigMap(newConfig map[string]interface
 		r.log.WithError(err).WithField("ConfigMap name", configMapName).Error("failed to load ConfigMap")
 		return err
 	}
-	configMap.Data["config.json"] = string(modifiedData)
 
-	// Update the ConfigMap in the cluster
+	// Check for config_$nodeName.json entry
+	nodeConfigKey := fmt.Sprintf("config_%s.json", nodeName)
+	_, ok := configMap.Data[nodeConfigKey]
+	if ok {
+		configMap.Data[nodeConfigKey] = string(modifiedData)
+	} else {
+		nodeConfigKey = "config.json"
+		configMap.Data["config.json"] = string(modifiedData)
+	}
+	// Attempt to update the ConfigMap in the cluster
 	if err := r.Client.Update(ctx, configMap); err != nil {
 		r.log.WithError(err).WithField("ConfigMap name", configMapName).Error("failed to update ConfigMap")
 		return err
@@ -773,6 +807,7 @@ func (r *VrbNodeConfigReconciler) updateConfigMap(newConfig map[string]interface
 
 	r.log.WithFields(logrus.Fields{
 		"ConfigMap name": configMapName,
+		"nodeConfigKey":  nodeConfigKey,
 		"resourceName":   newResourceName,
 	}).Info("sriovdp-config modified successfully")
 
@@ -838,28 +873,60 @@ func copyResource(resource interface{}) interface{} {
  * Description: Loads the current sriovdp-config ConfigMap
  * Returns the config.json data as a map[string]interface{} or an error
  ****************************************************************************/
-func (r *VrbNodeConfigReconciler) loadCurrentDevicePluginConfig(ctx context.Context) (map[string]interface{}, error) {
+func (r *VrbNodeConfigReconciler) loadCurrentDevicePluginConfig() (map[string]interface{}, error) {
+	r.cmRetrieveMutex.Lock()
+	defer r.cmRetrieveMutex.Unlock()
+
+	// Enforce a delay of at least 1 second between executions
+	timeSinceLastExecution := time.Since(r.cmRetrieveTime)
+	if timeSinceLastExecution < time.Second {
+		time.Sleep(time.Second - timeSinceLastExecution)
+	}
+
+	// Update the last execution time
+	r.cmRetrieveTime = time.Now()
+
 	configMapName := "sriovdp-config"
-	r.log.WithField("configMapName", configMapName).Debug("loading current sriovdp-config")
+	nodeName := r.nodeNameRef.Name
+	r.log.WithField("configMapName", configMapName).Info("loading current sriovdp-config")
 
 	// Load the ConfigMap
 	configMap := &v1.ConfigMap{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: configMapName, Namespace: r.nodeNameRef.Namespace}, configMap); err != nil {
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{Name: configMapName, Namespace: r.nodeNameRef.Namespace}, configMap); err != nil {
 		r.log.WithError(err).WithField("ConfigMap name", configMapName).Error("failed to load ConfigMap")
 		return nil, err
 	}
 
-	// Parse the config.json data
-	data, ok := configMap.Data["config.json"]
+	// Check for config_$nodeName.json entry
+	nodeConfigKey := fmt.Sprintf("config_%s.json", nodeName)
+	data, ok := configMap.Data[nodeConfigKey]
 	if !ok {
-		err := fmt.Errorf("config.json not found in ConfigMap %s", configMapName)
-		r.log.WithError(err).Error("failed to find config.json in ConfigMap")
-		return nil, err
+		// If config_$nodeName.json entry does not exist, create it from config.json
+		// This is a fallback mechanism to ensure that the node-specific configuration is created when vrbCustomResourceName is set
+		r.log.WithField("nodeConfigKey", nodeConfigKey).Infof("%s not found, creating %s entry from config.json", nodeConfigKey, nodeConfigKey)
+
+		// Attempt to copy config.json if it exists
+		defaultConfigData, defaultConfigExists := configMap.Data["config.json"]
+		if !defaultConfigExists {
+			err := fmt.Errorf("config.json not found in ConfigMap %s", configMapName)
+			r.log.WithError(err).Error("failed to find config.json in ConfigMap")
+			return nil, err
+		}
+
+		// Copy config.json to config_$nodeName.json
+		configMap.Data[nodeConfigKey] = defaultConfigData
+		if err := r.Client.Update(context.TODO(), configMap); err != nil {
+			r.log.WithError(err).Errorf("failed to update ConfigMap with %s", nodeConfigKey)
+			return nil, err
+		}
+
+		data = defaultConfigData
 	}
 
+	// Parse the config_$nodeName.json data
 	var config map[string]interface{}
 	if err := json.Unmarshal([]byte(data), &config); err != nil {
-		r.log.WithError(err).Error("failed to unmarshal config.json")
+		r.log.WithError(err).Errorf("failed to unmarshal %s", nodeConfigKey)
 		return nil, err
 	}
 
@@ -886,5 +953,76 @@ func (r *VrbNodeConfigReconciler) checkIfDeviceUpdateNeeded(previousConf, curren
 		if _, exists := previousConf[k]; !exists {
 			vrbDeviceUpdateRequired[k] = true
 		}
+	}
+}
+
+/*****************************************************************************
+ * Method: VrbNodeConfigReconciler::updatePfBbConfVersionIfChanged
+ * Description: Updates the PfBbConfVersion in the status of the VrbNodeConfig
+ *		if it has changed.
+ * Returns an error if the update failed.
+ ****************************************************************************/
+func (r *VrbNodeConfigReconciler) updatePfBbConfVersionIfChanged(vrbnc *vrbv1.SriovVrbNodeConfig) error {
+	currentVersion := r.getVrbPfBbConfVersion(false)
+	if vrbnc.Status.PfBbConfVersion != currentVersion {
+		r.log.Infof("PfBbConfVersion changed from %s to %s", vrbnc.Status.PfBbConfVersion, currentVersion)
+		vrbnc.Status.PfBbConfVersion = currentVersion
+		if err := r.Client.Status().Update(context.Background(), vrbnc); err != nil {
+			r.log.WithError(err).Error("failed to update PfBbConfVersion in status")
+			return err
+		}
+	}
+	return nil
+}
+
+/*****************************************************************************
+ * Method: VrbNodeConfigReconciler::setLogLevel
+ * Description: Sets the log level based on the contents of the log level file.
+ * If the file is empty or does not exist, it does nothing.
+ * If the log level is changed, it logs a message indicating the change.
+ ****************************************************************************/
+func (r *VrbNodeConfigReconciler) setLogLevel() {
+	logLevelFilePath := "/var/log/level.dat"
+	logLevelContent, err := os.ReadFile(logLevelFilePath)
+	if err != nil {
+		return
+	}
+
+	// If the file is empty, do nothing
+	if len(logLevelContent) == 0 {
+		r.log.Debugf("Log level file %s is empty", logLevelFilePath)
+		return
+	}
+
+	logLevelContent = bytes.TrimSpace(logLevelContent)
+	logLevelContent = bytes.ToLower(logLevelContent)
+	logLevelString := string(logLevelContent)
+
+	// Get the current log level
+	currentLogLevel := r.log.GetLevel()
+
+	switch logLevelString {
+	case "warn":
+		if currentLogLevel != logrus.WarnLevel {
+			r.log.SetLevel(logrus.WarnLevel)
+			r.log.Warn("Log level changed to Warn")
+		}
+	case "error":
+		if currentLogLevel != logrus.ErrorLevel {
+			r.log.SetLevel(logrus.ErrorLevel)
+			r.log.Error("Log level changed to Error")
+		}
+	case "info":
+		if currentLogLevel != logrus.InfoLevel {
+			r.log.SetLevel(logrus.InfoLevel)
+			r.log.Info("Log level changed to Info")
+		}
+	case "debug":
+		if currentLogLevel != logrus.DebugLevel {
+			r.log.SetLevel(logrus.DebugLevel)
+			r.log.Debug("Log level changed to Debug")
+		}
+	default:
+		r.log.Debugf("Unknown log level: %s", logLevelString)
 	}
 }

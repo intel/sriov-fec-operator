@@ -34,7 +34,7 @@ type resourceNamePredicate struct {
 
 func (r resourceNamePredicate) Update(e event.UpdateEvent) bool {
 	if e.ObjectNew.GetName() != r.requiredName {
-		r.log.WithField("expected name", r.requiredName).Info("CR intended for another node - ignoring")
+		r.log.WithField("expected name", r.requiredName).Debug("CR intended for another node - ignoring")
 		return false
 	}
 	return true
@@ -42,7 +42,7 @@ func (r resourceNamePredicate) Update(e event.UpdateEvent) bool {
 
 func (r resourceNamePredicate) Create(e event.CreateEvent) bool {
 	if e.Object.GetName() != r.requiredName {
-		r.log.WithField("expected name", r.requiredName).Info("CR intended for another node - ignoring")
+		r.log.WithField("expected name", r.requiredName).Debug("CR intended for another node - ignoring")
 		return false
 	}
 	return true

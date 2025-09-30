@@ -1,6 +1,7 @@
-## SPDX-License-Identifier: Apache-2.0
-## Copyright (c) 2020-2025 Intel Corporation
-
+```text
+SPDX-License-Identifier: Apache-2.0
+Copyright (c) 2020-2025 Intel Corporation
+```
 ## Technical Requirements and Dependencies
 
 The SRIOV-FEC Operator for Wireless FEC Accelerators has the following requirements:

@@ -155,8 +155,19 @@ data:
             securityContext:
               readOnlyRootFilesystem: true
               privileged: true
+            command: ["/bin/sh", "-c"]
             args:
-            - --log-level=10
+            - |
+              if [ -e /etc/pcidp/config_${NODE_NAME}.json ]; then
+                /entrypoint.sh --log-level=10 --config-file=/etc/pcidp/config_${NODE_NAME}.json;
+              else
+                /entrypoint.sh --log-level=10;
+              fi
+            env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
             volumeMounts:
             - name: devicesock
               mountPath: /var/lib/kubelet/device-plugins
@@ -171,6 +182,3 @@ data:
             - name: config-volume
               configMap:
                 name: sriovdp-config
-                items:
-                - key: config.json
-                  path: config.json

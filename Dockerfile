@@ -2,7 +2,7 @@
 ## Copyright (c) 2020-2025 Intel Corporation
 
 # Build the manager binary
-FROM golang:1.23.4 AS builder
+FROM golang:1.24.5 AS builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -22,7 +22,7 @@ COPY controllers/ controllers/
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
 
-FROM registry.access.redhat.com/ubi9/ubi-micro:9.5-1744118077
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.6-1758184547
 
 ARG VERSION
 ### Required OpenShift Labels

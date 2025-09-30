@@ -55,8 +55,15 @@ type Configurer interface {
 func (r *FecNodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.log.Debugf("Reconcile(...) triggered by %s", req.NamespacedName.String())
 
+	r.setLogLevel()
+
 	sfnc, err := r.readNodeConfig(req.NamespacedName)
 	if err != nil {
+		return requeueNowWithError(err)
+	}
+
+	// Update PfBbConfVersion if it has changed
+	if err := r.updatePfBbConfVersionIfChanged(sfnc); err != nil {
 		return requeueNowWithError(err)
 	}
 
@@ -147,7 +154,7 @@ func (r *FecNodeConfigReconciler) CreateEmptyNodeConfigIfNeeded(c client.Client)
 		SriovFecnodeConfig.Status.Inventory = *inv
 	}
 
-	SriovFecnodeConfig.Status.PfBbConfVersion = r.getPfBbConfVersion()
+	SriovFecnodeConfig.Status.PfBbConfVersion = r.getPfBbConfVersion(true)
 
 	if updateErr := c.Status().Update(context.Background(), SriovFecnodeConfig); updateErr != nil {
 		r.log.WithError(updateErr).Error("failed to update cr status")
@@ -492,7 +499,7 @@ func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {
 	return nil
 }
 
-func (r *FecNodeConfigReconciler) getPfBbConfVersion() string {
+func (r *FecNodeConfigReconciler) getPfBbConfVersion(shouldLog bool) string {
 	cmdString := fmt.Sprintf("%s version 2>/dev/null | sed -n 's/.*Version \\(\\S*\\) .*/\\1/p' | tr -d '\\n'", pfConfigAppFilepath)
 	cmd := exec.Command("bash", "-c", cmdString)
 	var out bytes.Buffer
@@ -501,10 +508,10 @@ func (r *FecNodeConfigReconciler) getPfBbConfVersion() string {
 	if err != nil {
 		r.log.WithError(err).Error("failed to execute command")
 		return "null"
-	} else {
+	} else if shouldLog {
 		r.log.Info("pf_bb_config Version is:", out.String())
-		return out.String()
 	}
+	return out.String()
 }
 
 /*****************************************************************************
@@ -527,5 +534,76 @@ func (r *FecNodeConfigReconciler) checkIfDeviceUpdateNeeded(previousConf, curren
 		if _, exists := previousConf[k]; !exists {
 			fecDeviceUpdateRequired[k] = true
 		}
+	}
+}
+
+/*****************************************************************************
+ * Method: FecNodeConfigReconciler::updatePfBbConfVersionIfChanged
+ * Description: Updates the PfBbConfVersion in the status of the SriovFecNodeConfig
+ *		if it has changed.
+ * Returns an error if the update failed.
+ ****************************************************************************/
+func (r *FecNodeConfigReconciler) updatePfBbConfVersionIfChanged(nodeConfig *fec.SriovFecNodeConfig) error {
+	currentVersion := r.getPfBbConfVersion(false)
+	if nodeConfig.Status.PfBbConfVersion != currentVersion {
+		r.log.Infof("PfBbConfVersion changed from %s to %s", nodeConfig.Status.PfBbConfVersion, currentVersion)
+		nodeConfig.Status.PfBbConfVersion = currentVersion
+		if err := r.Client.Status().Update(context.Background(), nodeConfig); err != nil {
+			r.log.WithError(err).Error("failed to update PfBbConfVersion in status")
+			return err
+		}
+	}
+	return nil
+}
+
+/*****************************************************************************
+ * Method: FecNodeConfigReconciler::setLogLevel
+ * Description: Sets the log level based on the contents of the log level file.
+ * If the file is empty or does not exist, it does nothing.
+ * If the log level is changed, it logs a message indicating the change.
+ ****************************************************************************/
+func (r *FecNodeConfigReconciler) setLogLevel() {
+	logLevelFilePath := "/var/log/level.dat"
+	logLevelContent, err := os.ReadFile(logLevelFilePath)
+	if err != nil {
+		return
+	}
+
+	// If the file is empty, do nothing
+	if len(logLevelContent) == 0 {
+		r.log.Debugf("Log level file %s is empty", logLevelFilePath)
+		return
+	}
+
+	logLevelContent = bytes.TrimSpace(logLevelContent)
+	logLevelContent = bytes.ToLower(logLevelContent)
+	logLevelString := string(logLevelContent)
+
+	// Get the current log level
+	currentLogLevel := r.log.GetLevel()
+
+	switch logLevelString {
+	case "warn":
+		if currentLogLevel != logrus.WarnLevel {
+			r.log.SetLevel(logrus.WarnLevel)
+			r.log.Warn("Log level changed to Warn")
+		}
+	case "error":
+		if currentLogLevel != logrus.ErrorLevel {
+			r.log.SetLevel(logrus.ErrorLevel)
+			r.log.Error("Log level changed to Error")
+		}
+	case "info":
+		if currentLogLevel != logrus.InfoLevel {
+			r.log.SetLevel(logrus.InfoLevel)
+			r.log.Info("Log level changed to Info")
+		}
+	case "debug":
+		if currentLogLevel != logrus.DebugLevel {
+			r.log.SetLevel(logrus.DebugLevel)
+			r.log.Debug("Log level changed to Debug")
+		}
+	default:
+		r.log.Debugf("Unknown log level: %s", logLevelString)
 	}
 }
