@@ -9,20 +9,33 @@ Copyright (c) 2020-2025 Intel Corporation
 - [SRIOV-FEC Operator for Wireless FEC Accelerators](#sriov-fec-operator-for-wireless-fec-accelerators-1)
   - [Wireless FEC Acceleration management](#wireless-fec-acceleration-management)
     - [FEC Configuration](#fec-configuration)
-    - [SRIOV Device Plugin](#sriov-device-plugin)
-- [Managing NIC Devices](#managing-nic-devices)
-- [VFIO\_PCI Driver](#vfio_pci-driver)
+  - [SRIOV-FEC Operator Pods](#sriov-fec-operator-pods)
+  - [SRIOV-FEC Operator APIs](#sriov-fec-operator-apis)
+  - [SRIOV Network Device Plugin](#sriov-network-device-plugin)
+- [Virtual Function I/O (VFIO) Driver](#virtual-function-io-vfio-driver)
   - [Secure Boot](#secure-boot)
-  - [Vfio Token](#vfio-token)
+  - [VFIO Token](#vfio-token)
 - [Deploying the Operator](#deploying-the-operator)
+  - [Getting available nodes](#getting-available-nodes)
+  - [Getting accelerators from node](#getting-accelerators-from-node)
+  - [Creating Custom Resource](#creating-custom-resource-cr)
+    - [Sample CR for ACC100](#acc100)
+    - [Sample CR for VRB1](#vran-boost-accelerator-v1-vrb1)
+    - [Sample CR for VRB2](#vran-boost-accelerator-v2-vrb2)
   - [Applying Custom Resources](#applying-custom-resources)
+  - [Retrieving daemon pod logs](#retrieving-daemon-pod-logs)
+    - [ACC100 daemon pod log snippet](#full-sample-daemon-pod-log-for-acc100)
+    - [VRB1 daemon pod log snippet](#full-sample-daemon-pod-log-for-vrb1)
+    - [VRB2 daemon pod log snippet](#full-sample-daemon-pod-log-for-vrb2)
+  - [Retrieving Node Configuration](#retrieving-node-configuration)
+  - [Deploying a sample test-bbdev pod](#deploying-a-sample-test-bbdev-pod)
   - [Telemetry](#telemetry)
 - [Hardware Validation Environment](#hardware-validation-environment)
 - [Summary](#summary)
 - [Appendix 1 - Developer Notes](#appendix-1---developer-notes)
   - [Drain skip option](#drain-skip-option)
-  - [VrbResourceName (Optional)](#vrbresourcename-optional)
-- [Appendix 2 - Reference CR configurations for support accelerators in SRIOV-FEC Operator](#appendix-2---reference-cr-configurations-for-support-accelerators-in-sriov-fec-operator)
+  - [VrbResourceName](#vrbresourcename-optional)
+- [Appendix 2 - Reference CR configurations for supported accelerators in SRIOV-FEC Operator](#appendix-2---reference-cr-configurations-for-supported-accelerators-in-sriov-fec-operator)
   - [ACC100](#acc100)
   - [vRAN Boost Accelerator V1 (VRB1)](#vran-boost-accelerator-v1-vrb1)
   - [vRAN Boost Accelerator V2 (VRB2)](#vran-boost-accelerator-v2-vrb2)
@@ -31,192 +44,66 @@ Copyright (c) 2020-2025 Intel Corporation
 
 ## Overview
 
-This document provides the instructions for using the SRIOV-FEC Operator for Wireless FEC Accelerators in Red Hat's OpenShift Container Platform and Kubernetes. This operator was developed with aid of the Operator SDK project.
+This document provides instructions for using the SRIOV-FEC Operator for Wireless FEC Accelerators in Red Hat's OpenShift Container Platform and Kubernetes. Developed with the aid of the Operator SDK project, this operator is designed to manage FEC devices, including Intel® vRAN Dedicated Accelerator ACC100, Intel® FPGA Programmable Acceleration Card N3000 and Intel® vRAN Boost Accelerators like VRB1 and VRB2, which are used to accelerate the FEC process in vRAN L1 applications. While the operator efficiently handles the orchestration and management of FEC resources, it does not cover the management of NIC SRIOV devices/resources within the OpenShift cluster. Users are expected to deploy a separate operator or SRIOV Network Device plugin to manage the orchestration of SRIOV NIC VFs between pods, ensuring comprehensive network resource management alongside FEC acceleration.
 
 ## SRIOV-FEC Operator for Wireless FEC Accelerators
 
 The role of the SRIOV-FEC Operator for Intel Wireless FEC Accelerator is to orchestrate and manage the resources/devices exposed by a range of Intel's vRAN FEC acceleration devices/hardware within the OpenShift or Kubernetes cluster. The operator is a state machine which will configure the resources and then monitor them and act autonomously based on the user interaction.
 The operator design of the SRIOV-FEC Operator for Intel Wireless FEC Accelerator supports the following vRAN FEC accelerators:
 
-* [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/intel/sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100)
-* [Intel® vRAN Dedicated Accelerator ACC200](https://github.com/intel/sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc200)
+* [Intel® vRAN Dedicated Accelerator ACC100](vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100)
+* [Intel® FPGA Programmable Acceleration Card N3000](vran-accelerators-supported-by-operator.md#intel-fpga-programmable-acceleration-card-n3000)
+* [Intel® vRAN Boost Accelerator V1 (VRB1)](vran-accelerators-supported-by-operator.md#intel-vran-boost-accelerator-v1-vrb1)
+* [Intel® vRAN Boost Accelerator V2 (VRB2)](vran-accelerators-supported-by-operator.md#intel-vran-boost-accelerator-v2-vrb2)
 
 ### Wireless FEC Acceleration management
 
-This operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications - the FEC devices are provided by a designated hardware (ie. Intel® vRAN Dedicated Accelerator ACC100).
-It provides functionality to create desired VFs (Virtual Functions) for the FEC device, binds them to appropriate drivers and configures the VF's queues for desired functionality in 4G or 5G deployment. 
+This operator handles the management of the FEC devices used to accelerate the FEC process in vRAN L1 applications. These FEC devices are provided by designated hardware, including Intel® vRAN Dedicated Accelerator ACC100 and the more advanced Intel® vRAN Boost Accelerators such as VRB1 and VRB2.
+The operator provides functionality to create desired VFs (Virtual Functions) for the FEC device, binds them to appropriate drivers, and configures the VF's queues for desired functionality in 4G or 5G deployment.
 It also deploys an instance of the [SR-IOV Network Device Plugin](https://github.com/k8snetworkplumbingwg/sriov-network-device-plugin) which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources. 
 The user interacts with the operator by providing a CR (CustomResource). 
 The operator constantly monitors the state of the CR to detect any changes and acts based on the changes detected. 
 The CR is provided per cluster configuration. The components for individual nodes can be configured by specifying appropriate values for each component per "nodeSelector".
-Once the CR is applied or updated, the operator/daemon checks if the configuration is already applied, and, if not it binds the PFs to driver, creates desired amount of VFs, binds them to driver and runs the [pf-bb-config utility](https://github.com/intel/pf-bb-config) to configure the VF queues to the desired configuration.
+Once the CR is applied or updated, the operator/daemon checks if the configuration is already applied, and, if not it binds the PFs to driver, creates desired amount of VFs, binds them to driver and runs the [pf-bb-config](https://github.com/intel/pf-bb-config) utility to configure the VF queues to the desired configuration.
 
-This operator is a common operator for FEC device/resource management for a range on accelerator cards. For specific examples of CRs dedicated to single accelerator card only see:
+This operator is a common operator for FEC device/resource management across a range of accelerator cards, including the Intel® vRAN Boost Accelerators. For specific examples of CRs dedicated to a single accelerator card only, see:
 
-* [Sample CR for Wireless FEC (ACC100)](#sample-cr-for-wireless-fec-acc100)
+* [Sample CR for ACC100](#sample-cr-for-wireless-fec-acc100)
+* [Sample CR for VRB1](#vran-boost-accelerator-v1-vrb1)
+* [Sample CR for VRB2](#vran-boost-accelerator-v1-vrb1)
 
-The workflow of the SRIOV FEC operator is shown in the following diagram:
-![SRIOV FEC Operator Design](images/sriov_fec_operator_acc100.png)
+The workflow of the SRIOV-FEC operator is shown in the following diagram:
+
+![SRIOV-FEC Operator Design](images/sriov_fec_operator_acc100.png)
 
 #### FEC Configuration
 
-The Intel's vRAN FEC acceleration devices/hardware expose the FEC PF device which is to be bound to PCI-PF-STUB, IGB_UIO and VFIO-PCI in order to enable creation of the FEC VF devices. Once the FEC PF is bound to the correct driver, the user can create a number of devices to be used in Cloud Native deployment of vRAN to accelerate FEC. Once these devices are created they are to be bound to a user-space driver such as VFIO-PCI in order for them to work and be consumed in vRAN application pods. Before the device can be used by the application, the device needs to be configured - notably the mapping of queues exposed to the VFs - this is done via pf-bb-config application with the input from the CR used as a configuration.
+Intel's vRAN FEC acceleration devices/hardware expose the FEC PF device, which must be bound to drivers such as `pci-pf-stub`, `igb_uio` and `vfio-pci` to enable the creation of FEC VF devices. Among these, VFIO-PCI is strongly recommended for obtaining telemetry data, providing enhanced monitoring and diagnostics capabilities. Once the FEC PF is bound to the correct driver, users can create a number of devices to be used in Cloud Native deployment of vRAN to accelerate FEC. These devices, once created, should be bound to a user-space driver like VFIO-PCI to function properly and be consumed in vRAN application pods. Before the device can be utilized by the application, it needs to be configured, specifically the mapping of queues exposed to the VFs. This configuration is accomplished via the pf-bb-config application, using input from the CR (CustomResource) as a configuration guide.
 
-> NOTE: For [Intel® vRAN Dedicated Accelerator ACC100](https://github.com/intel/sriov-fec-operator/blob/master/spec/vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100) it is advised to create all 16 VFs. The card is configured to provide up to 8 queue groups with up to 16 queues per group. The queue groups can be divided between groups allocated to 5G/4G and Uplink/Downlink, it can be configured for 4G or 5G only, or both 4G and 5G at the same time. Each configured VF has access to all the queues. Each of the queue groups has a distinct priority level. The request for given queue group is made from application level (ie. vRAN application leveraging the FEC device).
+> NOTE: For [Intel® vRAN Dedicated Accelerator ACC100](vran-accelerators-supported-by-operator.md#intel-vran-dedicated-accelerator-acc100) it is advised to create all 16 VFs. The card is configured to provide up to 8 queue groups with up to 16 queues per group. The queue groups can be divided between groups allocated to 5G/4G and Uplink/Downlink, it can be configured for 4G or 5G only, or both 4G and 5G at the same time. Each configured VF has access to all the queues. Each of the queue groups has a distinct priority level. The request for given queue group is made from application level (ie. vRAN application leveraging the FEC device).
 
-To get all the nodes containing one of the supported vRAN FEC accelerator devices run the following command (all the commands are run in the `vran-acceleration-operators` namespace, if operator is used on Kubernetes then use `kubectl` instead of `oc`):
-```shell
-[user@ctrl1 /home]# oc get sriovfecnodeconfig
-NAME             CONFIGURED
-node1            Succeeded
-```
+### SRIOV-FEC Operator Pods
+- `sriov-fec-bundle`: This pod is part of the deployment bundle for the SRIOV-FEC Operator, containing necessary components and configurations for the operator to function correctly. It ensures that the operator's resources are properly initialized and available for use.
+- `accelerator-discovery`: This pod is responsible for discovering and identifying hardware accelerators available in the cluster. It scans the nodes to detect the presence of FEC devices and other accelerators, providing essential information for resource allocation and management.
+- `sriov-device-plugin`: This pod runs the SRIOV device plugin, which is responsible for managing SRIOV virtual functions (VFs) as Kubernetes resources. It ensures that VFs are correctly allocated to pods based on their resource requests and constraints.
+- `sriov-fec-controller-manager`: This pod is a critical component of the SRIOV-FEC Operator, responsible for orchestrating and managing the resources and devices exposed by Intel's vRAN FEC acceleration hardware within the OpenShift cluster. This pod includes two main containers:
+  - kube-rbac-proxy: This container provides a secure proxy for the Kubernetes API server, ensuring that access to the operator's metrics and health endpoints is properly authenticated and authorized. It listens on port 8443 and uses the kube-rbac-proxy image to facilitate secure communication.
+  - manager: The manager container is the core of the controller-manager pod, executing the operator's logic to manage FEC devices. It handles tasks such as leader election, metrics collection, and health checks. The manager container uses the sriov-fec-operator image and is configured with environment variables to specify images for the daemon, labeler, and network device plugin, as well as liveness and readiness probe settings.
+The pod is configured with various volumes for storing certificates and service account tokens, ensuring secure operation. It also includes node selectors and tolerations to ensure compatibility across different node architectures. The controller-manager pod plays a vital role in maintaining the desired state of FEC resources, applying configurations specified in Custom Resources (CRs) such as SriovFecClusterConfig and SriovFecNodeConfig, and ensuring efficient resource management and acceleration of vRAN workloads.
+- `sriov-fec-daemonset`: The sriov-fec-daemonset pod is a key component of the SRIOV-FEC Operator, deployed as a DaemonSet to ensure that it runs on every node in the cluster. This pod is responsible for configuring and managing the FEC devices on individual nodes, ensuring they are correctly set up and available for use by application pods. Here are the details of its configuration and functionality:
+  - sriov-fec-daemon container: This container runs the sriov-fec-daemon image, which is responsible for the node-level management of FEC devices. It listens on port 8080 for internal communications and performs health and readiness checks via HTTP endpoints. The container is configured with environment variables to specify the namespace, node name, and various operational parameters such as drain timeout and lease duration. Additionally, the [pf-bb-config](https://github.com/intel/pf-bb-config) utility runs inside this container, executing the necessary configurations for FEC devices, such as queue mappings and driver bindings, to ensure optimal performance and resource allocation.
+  - Node Selectors and Tolerations: The pod is configured with node selectors to ensure it runs on nodes with Intel accelerators present. It also includes tolerations for various node conditions, allowing it to remain scheduled even under resource pressure.
+  - Functionality: The daemonset pod continuously monitors the state of FEC devices, applies necessary configurations using the pf-bb-config utility, and ensures that they are ready for use by application pods. It plays a crucial role in maintaining the operational readiness of FEC resources across the cluster.
 
-To find the PF of the SRIOV FEC accelerator device to be configured, run the following command:
+### SRIOV-FEC Operator APIs
+The SRIOV-FEC Operator provides two distinct APIs to manage different types of FEC acceleration devices and integrated solutions. These APIs are designed to cater to the specific requirements and configurations of the hardware they support, ensuring efficient resource management and acceleration of FEC processes in vRAN deployments.
+- Legacy API for ACC100 and N3000: The operator includes a legacy API located at [sriovfec/v2](https://github.com/intel/sriov-fec-operator/tree/main/api/sriovfec/v2). This API is primarily used for managing the Intel® vRAN Dedicated Accelerator ACC100 card and the Intel® FPGA Programmable Acceleration Card N3000. It features two main resources: `sriovfecnodeconfig` (sfnc) and `sriovfecclusterconfig` (sfcc). These resources allow users to configure and manage node-specific and cluster-wide settings, respectively, providing tailored functionalities for the operation of these devices. In this documentation, we will be using the sriovfec/v2 API for examples with ACC100.
+- API for VRB1, VRB2, and Future Deployments: For the more advanced Intel® vRAN Boost integrated solutions, such as VRB1 and VRB2, the operator offers a dedicated API located at [sriovvrb/v1](https://github.com/intel/sriov-fec-operator/tree/main/api/sriovvrb/v1). This API is designed to support the unique features and capabilities of the VRB1 and VRB2 solutions, facilitating their integration and management within cloud-native environments. It includes two main resources: `sriovvrbnodeconfig` (svnc) and `sriovvrbclusterconfig` (svcc), which enable users to configure node-specific and cluster-wide settings for these solutions. This API allows users to leverage the enhanced processing capabilities of VRB1 and VRB2, including advanced queue management and signal processing features.
+By providing these two APIs, the SRIOV-FEC Operator ensures comprehensive support for a wide range of FEC acceleration devices and solutions, allowing users to optimize their vRAN deployments according to the specific hardware in use.
 
-```shell
-[user@ctrl1 /home]# oc get sriovfecnodeconfig node1 -o yaml
+### SRIOV Network Device Plugin
 
-***
-status:
-  conditions:
-  - lastTransitionTime: "2021-03-19T17:19:37Z"
-    message: Configured successfully
-    observedGeneration: 1
-    reason: ConfigurationSucceeded
-    status: "True"
-    type: Configured
-  inventory:
-    sriovAccelerators:
-    - deviceID: 0d5c
-      driver: ""
-      maxVirtualFunctions: 16
-      pciAddress: 0000:af:00.0
-      vendorID: "8086"
-      virtualFunctions: []
-```
-
-To configure the FEC device with desired setting create a CR (An example below configures ACC100's 8/8 queue groups for 5G, 4 queue groups for Uplink and another 4 queues groups for Downlink), for the list of CRs applicable to all supported devices see:
-
-* [Sample CR for Wireless FEC (ACC100)](#sample-cr-for-wireless-fec-acc100)
-
-```yaml
-apiVersion: sriovfec.intel.com/v2
-kind: SriovFecClusterConfig
-metadata:
-  name: config
-spec:
-  priority: 1
-  nodeSelector:
-    kubernetes.io/hostname: node1
-  acceleratorSelector:
-    pciAddress: 0000:af:00.0    
-  physicalFunction:
-    pfDriver: "pci-pf-stub"
-    vfDriver: "vfio-pci"
-    vfAmount: 16
-    bbDevConfig:
-      acc100:
-        # Programming mode: 0 = VF Programming, 1 = PF Programming
-        pfMode: false
-        numVfBundles: 16
-        maxQueueSize: 1024
-        uplink4G:
-          numQueueGroups: 0
-          numAqsPerGroups: 16
-          aqDepthLog2: 4
-        downlink4G:
-          numQueueGroups: 0
-          numAqsPerGroups: 16
-          aqDepthLog2: 4
-        uplink5G:
-          numQueueGroups: 4
-          numAqsPerGroups: 16
-          aqDepthLog2: 4
-        downlink5G:
-          numQueueGroups: 4
-          numAqsPerGroups: 16
-          aqDepthLog2: 4
-```
-
-To apply the CR run:
-
-```shell
-[user@ctrl1 /home]# oc apply -f <sriovfec_cr_name>.yaml
-```
-
-After creation of the CR, the SRIOV FEC daemon starts configuring the FEC device. Once the SRIOV FEC configuration is complete, the following status is reported:
-
-```shell
-[user@ctrl1 /home]# oc get sriovfecnodeconfig
-NAME             CONFIGURED
-node1            Succeeded
-```
-
-From SRIOV FEC daemon pod, the user should see logs similar to the output below, if the VF queues were successfully programmed. For a list of sample log outputs for applicable devices see:
-
-* [Sample Daemon log for Wireless FEC (ACC100)](#sample-daemon-log-for-wireless-fec-acc100)
-
-```shell
-[user@ctrl1 /home]# oc get pod | grep sriov-fec-daemonset
-sriov-fec-daemonset-h4jf8                      1/1     Running   0          19h
-
-[user@ctrl1 /home]# oc logs sriov-fec-daemonset-h4jf8
-
-***
-{"level":"Level(-2)","ts":1616798129.251027,"logger":"daemon.drainhelper.cordonAndDrain()","msg":"node drained"}
-{"level":"Level(-4)","ts":1616798129.2510319,"logger":"daemon.drainhelper.Run()","msg":"worker function - start"}
-{"level":"Level(-4)","ts":1616798129.341839,"logger":"daemon.NodeConfigurator.applyConfig","msg":"current node status","inventory":{"sriovAccelerators":[{"vendorID":"8086","deviceID":"0b32","pciAddress":"0000:20:00.0","driver":"pci-pf-stub","maxVirtualFunctions":1,"virtualFunctions":[{"pciAddress":"0000:20:00.1","driver":"vfio-pci","deviceID":"0b33"}]},{"vendorID":"8086","deviceID":"0d5c","pciAddress":"0000:af:00.0","driver":"pci-pf-stub","maxVirtualFunctions":16,"virtualFunctions":[{"pciAddress":"0000:b0:00.0","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.1","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.2","driver":"vfio-pci","deviceID":"0d5d"},{"pciAddress":"0000:b0:00.3","driver":"vfio-pci","deviceID":"0d5d"}]}]}}
-{"level":"Level(-4)","ts":1616798129.3419566,"logger":"daemon.NodeConfigurator.applyConfig","msg":"configuring PF","requestedConfig":{"pciAddress":"0000:20:00.0","pfDriver":"pci-pf-stub","vfDriver":"vfio-pci","vfAmount":1,"bbDevConfig":{"acc100":{"numVfBundles":1,"maxQueueSize":1024,"uplink4G":{"numQueueGroups":0,"numAqsPerGroups":16,"aqDepthLog2":4},"downlink4G":{"numQueueGroups":0,"numAqsPerGroups":16,"aqDepthLog2":4},"uplink5G":{"numQueueGroups":4,"numAqsPerGroups":16,"aqDepthLog2":4},"downlink5G":{"numQueueGroups":4,"numAqsPerGroups":16,"aqDepthLog2":4}}}}{"level":"Level(-4)","ts":1616798129.3419993,"logger":"daemon.NodeConfigurator.loadModule","msg":"executing command","cmd":"modprobe pci-pf-stub"}
-{"level":"Level(-4)","ts":1616798129.3458664,"logger":"daemon.NodeConfigurator.loadModule","msg":"commands output","output":""}
-{"level":"Level(-4)","ts":1616798129.345896,"logger":"daemon.NodeConfigurator.loadModule","msg":"executing command","cmd":"modprobe vfio-pci"}
-{"level":"Level(-4)","ts":1616798129.3490586,"logger":"daemon.NodeConfigurator.loadModule","msg":"commands output","output":""}
-{"level":"Level(-2)","ts":1616798130.3972273,"logger":"daemon.NodeConfigurator","msg":"device is bound to driver","path":"/sys/bus/pci/devices/0000:20:00.0/driver"}
-```
-
-The user can observe the change of the cards FEC configuration. The created devices should appear similar to the following output (The '0d5c' is a PF of the FEC device and the '0d5d' is a VF of the FEC device). For a list of sample status output for applicable devices see:
-
-* [Sample Status for Wireless FEC (ACC100)](#sample-status-for-wireless-fec-acc100)
-
-```yaml
-[user@ctrl1 /home]# oc get sriovfecnodeconfig node1 -o yaml
-
-***
-status:
-    conditions:
-    - lastTransitionTime: "2021-03-19T11:46:22Z"
-      message: Configured successfully
-      observedGeneration: 1
-      reason: Succeeded
-      status: "True"
-      type: Configured
-    inventory:
-      sriovAccelerators:
-      - deviceID: 0d5c
-        driver: pci-pf-stub
-        maxVirtualFunctions: 16
-        pciAddress: 0000:af:00.0
-        vendorID: "8086"
-        virtualFunctions:
-        - deviceID: 0d5d
-          driver: vfio-pci
-          pciAddress: 0000:b0:00.0
-        - deviceID: 0d5d
-          driver: vfio-pci
-          pciAddress: 0000:b0:00.1
-        - deviceID: 0d5d
-          driver: vfio-pci
-          pciAddress: 0000:b0:00.2
-        - deviceID: 0d5d
-          driver: vfio-pci
-          pciAddress: 0000:b0:00.3
-        - deviceID: 0d5d
-          driver: vfio-pci
-          pciAddress: 0000:b0:00.4
-```
-
-#### SRIOV Device Plugin
-
-As part of the SRIOV FEC operator the K8s SRIOV Network Device plugin is being deployed. The plugin is configured to detect the FEC devices only and is being configured according to the CR. This deployment of the SRIOV Network Device plugin does not manage non-FEC devices. For more information, refer to the documentation for [SRIOV Network Device plugin](https://github.com/openshift/sriov-network-device-plugin). After the deployment of the Operator and update/application of the CR, the user will be able to detect the FEC VFs as allocatable resources in the OpenShift cluster. The output should be similar to this (`intel.com/intel_fec_acc100` or alternative for a different FEC accelerator):
+As part of the SRIOV-FEC operator the K8s SRIOV Network Device plugin is being deployed. The plugin is configured to detect the FEC devices only and is being configured according to the CR. This deployment of the SRIOV Network Device plugin does not manage non-FEC devices. For more information, refer to the documentation for [SRIOV Network Device plugin](https://github.com/openshift/sriov-network-device-plugin). After the deployment of the Operator and update/application of the CR, the user will be able to detect the FEC VFs as allocatable resources in the OpenShift cluster. The output should be similar to this (`intel.com/intel_fec_acc100` or alternative for a different FEC accelerator):
 
 ```shell
 [user@node1 /home]# oc get node <node_name> -o json | jq '.status.allocatable'
@@ -230,9 +117,425 @@ As part of the SRIOV FEC operator the K8s SRIOV Network Device plugin is being d
 }
 ```
 
-Once the SRIOV operator takes care of setting up and configuring the device, user can test the device using a sample 'test-bbdev' application from the [DPDK project (DPDK 20.11)](https://github.com/DPDK/dpdk/tree/v20.11/app/test-bbdev). An example of a prepared sample application's docker image can be found in [Intel® SEO project github EdgeApps repo](https://github.com/smart-edge-open/edgeapps/tree/master/applications/fpga-sample-app). SEO is an edge computing software toolkit that enables highly optimized and performant edge platforms to on-board and manage applications and network functions with cloud-like agility across any type of network. For more information, go to [www.smart-edge-open.github.io](https://smart-edge-open.github.io/).
+## Virtual Function I/O (VFIO) Driver
 
-With a sample image of the DPDK application, the following pod can be created similar to the following file as an example (`intel.com/intel_fec_acc100` needs to be replaced as needed when different accelerator is used):
+### Secure Boot
+
+Until SRIOV-FEC operator 2.3.0, `pf-bb-config` application which comes as part of SRIOV-FEC operator distribution, 
+relied on MMIO access to the PF of the ACC100 (access through mmap of the PF PCIe BAR config space using igb_uio and/or pf_pci_stub drivers).
+
+In case of enabled secure boot, this access is blocked by kernel through a feature called [lockdown](https://man7.org/linux/man-pages/man7/kernel_lockdown.7.html).
+Lockdown mode automatically prevents relying on igb_uio and/or pf_pci_stub drivers due to the direct mmap.
+In other words: when secure boot is enabled, this legacy usage is not supported.
+
+To be able to support this special mode, `pf_bb_config` application has been enhanced (v22.03) and now it could use more secure approach relying on vfio-pci.  
+
+| ![SRIOV-FEC Operator Design](images/vfio/vfio-pci.svg) |
+|------------------------------------------------------|
+
+SRIOV-FEC operator 2.3.0 leverages enhancements provided by `pf_bb_config` and it provides support for vfio-pci driver. 
+It means operator would work correctly on a platforms where secure boot is enabled.
+
+'vfio-pci' driver support implemented in SRIOV-FEC operator 2.3.0 is visualized by diagram below:
+
+
+| ![SRIOV-FEC Operator Design](images/vfio/vfio-pci-support-in-operator.svg) |
+|-------------------------------------------------------------------------------|
+
+Previously supported drivers `pci-pf-stub` and `igb_uio` are still supported by an operator, but they cannot be used together with secure boot feature.
+
+### VFIO Token
+
+Please be aware that usage of `vfio-pci` driver requires following arguments added to the kernel:
+ - vfio_pci.enable_sriov=1
+ - vfio_pci.disable_idle_d3=1
+
+If `vfio-pci` PF driver is used, then access to VF requires `UUID` token. Token is identical for all nodes in cluster, has default value of `02bddbbf-bbb0-4d79-886b-91bad3fbb510` and could be changed by
+    setting `SRIOV_FEC_VFIO_TOKEN` in `subscription.spec.config.env` field. Applications that are using VFs should provide token via EAL parameters - e.g
+    `./test-bbdev.py -e="--vfio-vf-token=02bddbbf-bbb0-4d79-886b-91bad3fbb510 -a0000:f7:00.1"`
+
+The `VFIO_TOKEN` can be fetched by "secret" using following commands, but this will be deprecated in future release due to security concern.
+
+```shell
+kubectl get secret vfio-token -o jsonpath='{.data.VFIO_TOKEN}' | base64 --decode
+```
+
+Sriov-network-device-plugin v4.14 has the capability to inject the VFIO token as an environment variable to the application pod. FEC Operator pointing to v4.14, leverages this feature to pass the VFIO token in more secured method to the application pods. You can use following commands to get the `VFIO_TOKEN` in application pods.
+
+```shell
+#Premise you have successfully configured fec-operator settings and enter an application pod
+[root@pod:/home]# env | grep VFIO_TOKEN
+PCIDEVICE_INTEL_COM_INTEL_FEC_ACC100_INFO={"0000:8b:01.5":{"extra":{"VFIO_TOKEN":"02bddbbf-bbb0-4d79-886b-91bad3fbb510"},"generic":{"deviceID":"0000:8b:01.5"},"vfio":{"dev-mount":"/dev/vfio/178","mount":"/dev/vfio/vfio"}},"0000:8b:01.7":{"extra":{"VFIO_TOKEN":"02bddbbf-bbb0-4d79-886b-91bad3fbb510"},"generic":{"deviceID":"0000:8b:01.7"},"vfio":{"dev-mount":"/dev/vfio/180","mount":"/dev/vfio/vfio"}}}
+[root@pod:/home]# export VFIO_TOKEN=02bddbbf-bbb0-4d79-886b-91bad3fbb510
+```
+
+## Deploying the Operator
+
+The SRIOV-FEC Operator for Wireless FEC Accelerators is easily deployable from the OpenShift or Kubernetes cluster via provisioning and application of YAML spec files.
+If operator is being installed on OpenShift, then follow [deployment steps for OpenShift](openshift-deployment.md).
+Otherwise follow [steps for Kubernetes](kubernetes-deployment.md).
+> **_NOTE:_** **The following examples use the `sriovfec/v2` API (`sriovfecnodeconfig`, `sriovfecclusterconfig`).**  
+> **If deploying VRB1 or VRB2, the `sriovvrb/v1` API (`sriovvrbnodeconfig`, `sriovvrbclusterconfig`) must be used instead.**
+
+### Getting available nodes
+To get all the nodes containing one of the supported vRAN FEC accelerator devices run the following command (all the commands are run in the `vran-acceleration-operators` namespace, if operator is used on Kubernetes then use `kubectl` instead of `oc`):
+```shell
+[user@ctrl1 /home]# oc get sriovfecnodeconfig
+NAME             CONFIGURED
+node1            NotRequested
+```
+
+### Getting accelerators from node
+To find the PF of the SRIOV-FEC accelerator device to be configured, run the following command:
+
+```shell
+[user@ctrl1 /home]# oc get sriovfecnodeconfig node1 -o yaml
+
+***
+status:
+  conditions:
+  - lastTransitionTime: "2025-05-07T22:32:15Z"
+    message: ""
+    observedGeneration: 1
+    reason: NotRequested
+    status: "False"
+    type: Configured
+  inventory:
+    sriovAccelerators:
+    - deviceID: 0d5c
+      driver: ""
+      maxVirtualFunctions: 16
+      pciAddress: 0000:af:00.0
+      vendorID: "8086"
+      virtualFunctions: []
+  pfBbConfVersion: v25.01-0-g812e032
+```
+
+### Creating Custom Resource (CR)
+To configure the FEC device with desired settings, create YAML file for the CR.
+For the list of sample CRs applicable to all supported devices see:
+
+* [Sample CR for ACC100](#acc100)
+* [Sample CR for VRB1](#vran-boost-accelerator-v1-vrb1)
+* [Sample CR for VRB2](#vran-boost-accelerator-v2-vrb2)
+
+### Applying Custom Resources
+To apply a CR run:
+
+```shell
+[user@ctrl1 /home]# oc apply -f <cr-yaml-file>
+```
+
+After creation of the CR, the SRIOV-FEC daemon starts configuring the FEC device. Once the SRIOV-FEC configuration is complete, the following status is reported:
+
+```shell
+[user@ctrl1 /home]# oc get sriovfecnodeconfig
+NAME             CONFIGURED
+node1            Succeeded
+```
+
+To view the status of current CR run (sample output):
+
+```shell
+[user@ctrl1 /home]# oc get sriovfecclusterconfig config -o yaml
+***
+spec:
+  priority: 1
+  nodeSelector:
+    kubernetes.io/hostname: node1
+  acceleratorSelector:
+    pciAddress: 0000:af:00.0    
+  physicalFunction:  
+    bbDevConfig:
+      acc100:
+        downlink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        downlink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+        maxQueueSize: 1024
+        numVfBundles: 16
+        pfMode: false
+        uplink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 0
+        uplink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 4
+    pciAddress: 0000:af:00.0
+    pfDriver: pci-pf-stub
+    vfAmount: 16
+    vfDriver: vfio-pci
+status:
+  syncStatus: Succeeded
+```
+
+### Retrieving daemon pod logs
+To view logs from the SRIOV-FEC daemon pod, which indicate successful programming of the VF queues, you can use the following command.
+
+```shell
+[user@ctrl1 /home]# oc get pod | grep sriov-fec-daemonset
+sriov-fec-daemonset-h4jf8                      1/1     Running   0          19h
+
+[user@ctrl1 /home]# oc logs sriov-fec-daemonset-h4jf8
+```
+By executing these commands, you can access the logs that provide insights into the configuration and status of the FEC devices managed by the operator.
+To access the pf-bb-config log data within the daemon pod logs, users can search for the string monitorLogFile. This string indicates that the pf-bb-config log file has been integrated into the daemon pod logs, allowing users to easily locate and review the configuration details and status updates related to the FEC device.
+For detailed examples of sample log outputs for applicable devices, please refer to the following links:
+
+#### [Full sample daemon pod log for ACC100](samples/acc100-daemon-pod.log)
+```
+***
+{"file":"/workspace-go/pkg/daemon/common.go:48","func":"github.com/intel/sriov-fec-operator/pkg/daemon.execAndSuppress","level":"info","msg":"commands output","output":"== pf_bb_config Version v25.01-0-g812e032 ==\nACC100 PF [0000:8a:00.0] configuration complete!\nLog file = /var/log/pf_bb_cfg_0000:8a:00.0.log\n","time":"2025-05-07T22:43:31Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:43:29 2025:INFO:Queue Groups: 2 5GUL, 2 5GDL, 2 4GUL, 2 4GDL","pciAddr":"0000:8a:00.0","time":"2025-05-07T22:43:31Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:43:29 2025:INFO:Configuration in VF mode","pciAddr":"0000:8a:00.0","time":"2025-05-07T22:43:31Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:43:30 2025:INFO: ROM version MM 99AD92","pciAddr":"0000:8a:00.0","time":"2025-05-07T22:43:31Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:43:31 2025:INFO:DDR Training completed in 1250 ms","pciAddr":"0000:8a:00.0","time":"2025-05-07T22:43:31Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:43:31 2025:INFO:PF ACC100 configuration complete","pciAddr":"0000:8a:00.0","time":"2025-05-07T22:43:31Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:43:31 2025:INFO:ACC100 PF [0000:8a:00.0] configuration complete!","pciAddr":"0000:8a:00.0","time":"2025-05-07T22:43:31Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:43:31 2025:INFO:Running in daemon mode for VFIO VF token","pciAddr":"0000:8a:00.0","time":"2025-05-07T22:43:31Z"}
+{"file":"/workspace-go/pkg/daemon/node_management.go:65","func":"github.com/intel/sriov-fec-operator/pkg/daemon.(*NodeConfigurator).isDeviceBoundToDriver","level":"info","msg":"device is bound to driver","path":"/sys/bus/pci/devices/0000:8b:00.0/driver","time":"2025-05-07T22:43:31Z"}
+```
+#### [Full sample daemon pod log for VRB1](samples/vrb1-daemon-pod.log)
+```
+***
+{"file":"/workspace-go/pkg/daemon/bbdevconfig_ini_generator.go:107","func":"github.com/intel/sriov-fec-operator/pkg/daemon.logIniFile","generated BBDevConfig":"[MODE]\npf_mode_en = 0\n\n[VFBUNDLES]\nnum_vf_bundles = 1\n\n[MAXQSIZE]\nmax_queue_size = 1024\n\n[QUL4G]\nnum_qgroups        = 2\nnum_aqs_per_groups = 16\naq_depth_log2      = 4\n\n[QDL4G]\nnum_qgroups        = 2\nnum_aqs_per_groups = 16\naq_depth_log2      = 4\n\n[QUL5G]\nnum_qgroups        = 2\nnum_aqs_per_groups = 16\naq_depth_log2      = 4\n\n[QDL5G]\nnum_qgroups        = 2\nnum_aqs_per_groups = 16\naq_depth_log2      = 4\n\n[QFFT]\nnum_qgroups        = 2\nnum_aqs_per_groups = 16\naq_depth_log2      = 4\n","level":"info","msg":"logIniFile","time":"2025-05-07T22:56:00Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:312","func":"github.com/intel/sriov-fec-operator/pkg/daemon.(*fftUpdater).VrbgetFftFilePath","level":"info","msg":"Using default SRS FFT file for configuration","time":"2025-05-07T22:56:00Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:197","func":"github.com/intel/sriov-fec-operator/pkg/daemon.(*pfBBConfigController).updateFftWindowsCoefficientFilepath","level":"info","msg":"SRS FFT file path is : /sriov_workdir/vrb1/srs_fft_windows_coefficient.bin","time":"2025-05-07T22:56:00Z"}
+{"args":["/sriov_workdir/pf_bb_config","VRB1","-c","/tmp/0000:f7:00.0.ini","-p","0000:f7:00.0","-v","02bddbbf-bbb0-4d79-886b-91bad3fbb510","-f","/sriov_workdir/vrb1/srs_fft_windows_coefficient.bin"],"cmd":"/sriov_workdir/pf_bb_config","file":"/workspace-go/pkg/daemon/common.go:35","func":"github.com/intel/sriov-fec-operator/pkg/daemon.execAndSuppress","level":"info","msg":"executing command","time":"2025-05-07T22:56:00Z"}
+{"file":"/workspace-go/pkg/daemon/common.go:48","func":"github.com/intel/sriov-fec-operator/pkg/daemon.execAndSuppress","level":"info","msg":"commands output","output":"== pf_bb_config Version v25.01-0-g812e032 ==\nVRB1 PF [0000:f7:00.0] configuration complete!\nLog file = /var/log/pf_bb_cfg_0000:f7:00.0.log\n","time":"2025-05-07T22:56:00Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:56:00 2025:INFO:Queue Groups UL4G 2 DL4G 2 UL5G 2 DL5G 2 FFT 2","pciAddr":"0000:f7:00.0","time":"2025-05-07T22:56:00Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:56:00 2025:INFO:Configuration in VF mode","pciAddr":"0000:f7:00.0","time":"2025-05-07T22:56:00Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:56:00 2025:INFO:  FFT Window coeffs preloading from /sriov_workdir/vrb1/srs_fft_windows_coefficient.bin","pciAddr":"0000:f7:00.0","time":"2025-05-07T22:56:00Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:56:00 2025:INFO:  FFT Size 2048 Window 0 Size 296 Start -40","pciAddr":"0000:f7:00.0","time":"2025-05-07T22:56:00Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:56:00 2025:INFO:  FFT Version Number D588","pciAddr":"0000:f7:00.0","time":"2025-05-07T22:56:00Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:56:00 2025:INFO:VRB1 configuration complete","pciAddr":"0000:f7:00.0","time":"2025-05-07T22:56:00Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:56:00 2025:INFO:VRB1 PF [0000:f7:00.0] configuration complete!","pciAddr":"0000:f7:00.0","time":"2025-05-07T22:56:00Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Wed May  7 22:56:00 2025:INFO:Running in daemon mode for VFIO VF token","pciAddr":"0000:f7:00.0","time":"2025-05-07T22:56:00Z"}
+{"file":"/workspace-go/pkg/daemon/node_management.go:65","func":"github.com/intel/sriov-fec-operator/pkg/daemon.(*NodeConfigurator).isDeviceBoundToDriver","level":"info","msg":"device is bound to driver","path":"/sys/bus/pci/devices/0000:f7:00.1/driver","time":"2025-05-07T22:56:00Z"}
+```
+#### [Full sample daemon pod log for VRB2](samples/vrb2-daemon-pod.log)
+```
+***
+{"file":"/workspace-go/pkg/daemon/bbdevconfig_ini_generator.go:107","func":"github.com/intel/sriov-fec-operator/pkg/daemon.logIniFile","generated BBDevConfig":"[MODE]\npf_mode_en = 0\n\n[VFBUNDLES]\nnum_vf_bundles = 1\n\n[MAXQSIZE]\nmax_queue_size = 1024\n\n[QUL4G]\nnum_qgroups        = 2\nnum_aqs_per_groups = 16\naq_depth_log2      = 4\n\n[QDL4G]\nnum_qgroups        = 2\nnum_aqs_per_groups = 16\naq_depth_log2      = 4\n\n[QUL5G]\nnum_qgroups        = 2\nnum_aqs_per_groups = 16\naq_depth_log2      = 4\n\n[QDL5G]\nnum_qgroups        = 2\nnum_aqs_per_groups = 16\naq_depth_log2      = 4\n\n[QFFT]\nnum_qgroups        = 4\nnum_aqs_per_groups = 64\naq_depth_log2      = 4\n\n[QMLD]\nnum_qgroups        = 4\nnum_aqs_per_groups = 64\naq_depth_log2      = 4\n","level":"info","msg":"logIniFile","time":"2025-05-08T14:44:21Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:312","func":"github.com/intel/sriov-fec-operator/pkg/daemon.(*fftUpdater).VrbgetFftFilePath","level":"info","msg":"Using default SRS FFT file for configuration","time":"2025-05-08T14:44:21Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:197","func":"github.com/intel/sriov-fec-operator/pkg/daemon.(*pfBBConfigController).updateFftWindowsCoefficientFilepath","level":"info","msg":"SRS FFT file path is : /sriov_workdir/vrb2/srs_fft_windows_coefficient.bin","time":"2025-05-08T14:44:21Z"}
+{"args":["/sriov_workdir/pf_bb_config","VRB2","-c","/tmp/0000:07:00.0.ini","-p","0000:07:00.0","-v","02bddbbf-bbb0-4d79-886b-91bad3fbb510","-f","/sriov_workdir/vrb2/srs_fft_windows_coefficient.bin"],"cmd":"/sriov_workdir/pf_bb_config","file":"/workspace-go/pkg/daemon/common.go:35","func":"github.com/intel/sriov-fec-operator/pkg/daemon.execAndSuppress","level":"info","msg":"executing command","time":"2025-05-08T14:44:21Z"}
+{"file":"/workspace-go/pkg/daemon/common.go:48","func":"github.com/intel/sriov-fec-operator/pkg/daemon.execAndSuppress","level":"info","msg":"commands output","output":"== pf_bb_config Version v25.01-0-g812e032 ==\nVRB2 PF [0000:07:00.0] configuration complete!\nLog file = /var/log/pf_bb_cfg_0000:07:00.0.log\n","time":"2025-05-08T14:44:21Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Thu May  8 14:44:21 2025:INFO:Adjust PG on the device from 4 to 0","pciAddr":"0000:07:00.0","time":"2025-05-08T14:44:21Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Thu May  8 14:44:21 2025:INFO:Queue Groups UL4G 2 DL4G 2 UL5G 2 DL5G 2 FFT 4 MLD 4","pciAddr":"0000:07:00.0","time":"2025-05-08T14:44:21Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Thu May  8 14:44:21 2025:INFO:Configuration in VF mode","pciAddr":"0000:07:00.0","time":"2025-05-08T14:44:21Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Thu May  8 14:44:21 2025:INFO:  FFT Window coeffs preloading from /sriov_workdir/vrb2/srs_fft_windows_coefficient.bin on engine 0 ","pciAddr":"0000:07:00.0","time":"2025-05-08T14:44:21Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Thu May  8 14:44:21 2025:INFO:  FFT Size 2048 Window 0 Size 512 Start -256","pciAddr":"0000:07:00.0","time":"2025-05-08T14:44:21Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Thu May  8 14:44:21 2025:INFO:  FFT Version Number E74A","pciAddr":"0000:07:00.0","time":"2025-05-08T14:44:21Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Thu May  8 14:44:21 2025:INFO:PF VRB2 configuration complete","pciAddr":"0000:07:00.0","time":"2025-05-08T14:44:21Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Thu May  8 14:44:21 2025:INFO:VRB2 PF [0000:07:00.0] configuration complete!","pciAddr":"0000:07:00.0","time":"2025-05-08T14:44:21Z"}
+{"file":"/workspace-go/pkg/daemon/bbdevconfig.go:409","func":"github.com/intel/sriov-fec-operator/pkg/daemon.monitorLogFile.func1","level":"info","msg":"Thu May  8 14:44:21 2025:INFO:Running in daemon mode for VFIO VF token","pciAddr":"0000:07:00.0","time":"2025-05-08T14:44:21Z"}
+{"file":"/workspace-go/pkg/daemon/node_management.go:65","func":"github.com/intel/sriov-fec-operator/pkg/daemon.(*NodeConfigurator).isDeviceBoundToDriver","level":"info","msg":"device is bound to driver","path":"/sys/bus/pci/devices/0000:07:00.1/driver","time":"2025-05-08T14:44:21Z"}
+```
+
+### Retrieving Node Configuration
+The user can observe changes in the FEC configuration. The created devices should appear similar to the following output. In this example, 0d5c is the Physical Function (PF) for the ACC100 card, while 57c0 is the PF for the VRB1 integrated solution, and 57c2 is the PF for the VRB2 integrated solution. Correspondingly, 0d5d is a Virtual Function (VF) for the ACC100, 57c1 is a VF for VRB1, and 57c3 is a VF for VRB2.
+
+```shell
+[user@ctrl1 /home]# oc get sriovfecnodeconfig node1 -o yaml
+```
+
+For a list of sample status outputs for applicable devices, see:
+#### Sample Node Config Output for ACC100
+```yaml
+[user@ctrl1 /home]# oc get sriovfecnodeconfig node1 -o yaml
+apiVersion: sriovfec.intel.com/v2
+kind: SriovFecNodeConfig
+metadata:
+  creationTimestamp: "2025-05-07T22:31:43Z"
+  generation: 1
+  name: node1
+  namespace: vran-acceleration-operators
+  resourceVersion: "1435385"
+  uid: 18cb6746-6a94-4802-836a-fada54a867e1
+spec:
+  physicalFunctions: []
+status:
+  conditions:
+  - lastTransitionTime: "2025-05-07T22:32:33Z"
+    message: ""
+    observedGeneration: 1
+    reason: NotRequested
+    status: "False"
+    type: Configured
+  inventory:
+    sriovAccelerators:
+    - deviceID: 0d5c
+      driver: vfio-pci
+      maxVirtualFunctions: 16
+      pciAddress: "0000:31:00.0"
+      vendorID: "8086"
+      virtualFunctions:
+      - deviceID: 0d5d
+        driver: vfio-pci
+        pciAddress: "0000:32:00.0"
+      - deviceID: 0d5d
+        driver: vfio-pci
+        pciAddress: "0000:32:00.1"
+  pfBbConfVersion: v25.01-0-g812e032
+```
+#### Sample Node Config Output for VRB1
+```yaml
+[user@ctrl1 /home]# oc get sriovvrbnodeconfig node1 -o yaml
+apiVersion: sriovvrb.intel.com/v1
+kind: SriovVrbNodeConfig
+metadata:
+  creationTimestamp: "2025-05-07T22:53:44Z"
+  generation: 2
+  name: node1
+  namespace: vran-acceleration-operators
+  resourceVersion: "58673984"
+  uid: 202cdb07-9ae3-4f86-9f99-f64477a7fc5c
+spec:
+  drainSkip: true
+  physicalFunctions:
+  - bbDevConfig:
+      vrb1:
+        downlink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 2
+        downlink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 2
+        fftLut:
+          fftChecksum: ""
+          fftUrl: ""
+        maxQueueSize: 1024
+        numVfBundles: 1
+        qfft:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 2
+        uplink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 2
+        uplink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 2
+    pciAddress: 0000:f7:00.0
+    pfDriver: vfio-pci
+    vfAmount: 1
+    vfDriver: vfio-pci
+    vrbResourceName: ""
+status:
+  conditions:
+  - lastTransitionTime: "2025-05-07T22:56:02Z"
+    message: Configured successfully
+    observedGeneration: 2
+    reason: Succeeded
+    status: "True"
+    type: Configured
+  inventory:
+    sriovAccelerators:
+    - deviceID: 57c0
+      driver: vfio-pci
+      maxVirtualFunctions: 16
+      pciAddress: 0000:f7:00.0
+      vendorID: "8086"
+      virtualFunctions:
+      - deviceID: 57c1
+        driver: vfio-pci
+        pciAddress: 0000:f7:00.1
+  pfBbConfVersion: v25.01-0-g812e032
+```
+#### Sample Node Config Output for VRB2
+```yaml
+[user@ctrl1 /home]# oc get sriovvrbnodeconfig node1 -o yaml
+apiVersion: sriovvrb.intel.com/v1
+kind: SriovVrbNodeConfig
+metadata:
+  creationTimestamp: "2025-05-08T14:42:04Z"
+  generation: 2
+  name: node1
+  namespace: vran-acceleration-operators
+  resourceVersion: "48861353"
+  uid: 4650cf89-dc37-4918-b87e-fd7d706f9f06
+spec:
+  drainSkip: true
+  physicalFunctions:
+  - bbDevConfig:
+      vrb2:
+        downlink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 2
+        downlink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 2
+        fftLut:
+          fftChecksum: ""
+          fftUrl: ""
+        maxQueueSize: 1024
+        numVfBundles: 1
+        qfft:
+          aqDepthLog2: 4
+          numAqsPerGroups: 64
+          numQueueGroups: 4
+        qmld:
+          aqDepthLog2: 4
+          numAqsPerGroups: 64
+          numQueueGroups: 4
+        uplink4G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 2
+        uplink5G:
+          aqDepthLog2: 4
+          numAqsPerGroups: 16
+          numQueueGroups: 2
+    pciAddress: "0000:07:00.0"
+    pfDriver: vfio-pci
+    vfAmount: 1
+    vfDriver: vfio-pci
+    vrbResourceName: ""
+status:
+  conditions:
+  - lastTransitionTime: "2025-05-08T14:44:28Z"
+    message: Configured successfully
+    observedGeneration: 2
+    reason: Succeeded
+    status: "True"
+    type: Configured
+  inventory:
+    sriovAccelerators:
+    - deviceID: 57c2
+      driver: vfio-pci
+      maxVirtualFunctions: 64
+      pciAddress: "0000:07:00.0"
+      vendorID: "8086"
+      virtualFunctions:
+      - deviceID: 57c3
+        driver: vfio-pci
+        pciAddress: "0000:07:00.1"
+    - deviceID: 57c2
+      driver: vfio-pci
+      maxVirtualFunctions: 64
+      pciAddress: 0000:0a:00.0
+      vendorID: "8086"
+      virtualFunctions: []
+  pfBbConfVersion: v25.01-0-g812e032
+```
+
+### Deploying a sample test-bbdev pod
+Once the SRIOV-FEC operator has set up and configured the device, users can test the device using a sample 'test-bbdev' application from the [DPDK project](https://github.com/DPDK/dpdk/tree/main/app/test-bbdev). To facilitate this, users are encouraged to create a sample Docker image of the DPDK application. This image will serve as a basis for deploying and testing the application within a Kubernetes environment. Please note that instructions on how to create a sample test-bbdev application are beyond the scope of this documentation.
+
+With a sample image of the DPDK application, the following pod can be created similar to the example below (`intel.com/intel_fec_acc100` needs to be replaced as needed when a different accelerator is used):
 
 ```yaml
 apiVersion: v1
@@ -332,120 +635,6 @@ TestCase [ 0] : validation_tc passed
  + ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ +
 ```
 
-## Managing NIC Devices
-
-The management of the NIC SRIOV devices/resources in the OpenShift cluster is out of scope of this operator. The user is expected to deploy an operator/[SRIOV Network Device plugin](https://github.com/openshift/sriov-network-device-plugin) which will handle the orchestration of SRIOV NIC VFs between pods.
-
-## VFIO_PCI Driver
-
-### Secure Boot
-
-Until SRIOV-FEC operator 2.3.0, `pf-bb-config` application which comes as part of SRIOV-FEC operator distribution, 
-relied on MMIO access to the PF of the ACC100 (access through mmap of the PF PCIe BAR config space using igb_uio and/or pf_pci_stub drivers).
-
-In case of enabled secure boot, this access is blocked by kernel through a feature called [lockdown](https://man7.org/linux/man-pages/man7/kernel_lockdown.7.html).
-Lockdown mode automatically prevents relying on igb_uio and/or pf_pci_stub drivers due to the direct mmap.
-In other words: when secure boot is enabled, this legacy usage is not supported.
-
-To be able to support this special mode, `pf_bb_config` application has been enhanced (v22.03) and now it could use more secure approach relying on vfio-pci.  
-
-| ![SRIOV FEC Operator Design](images/vfio/vfio-pci.svg) |
-|------------------------------------------------------|
-
-SRIOV-FEC operator 2.3.0 leverages enhancements provided by `pf_bb_config` and it provides support for vfio-pci driver. 
-It means operator would work correctly on a platforms where secure boot is enabled.
-
-'vfio-pci' driver support implemented in SRIOV-FEC operator 2.3.0 is visualized by diagram below:
-
-
-| ![SRIOV FEC Operator Design](images/vfio/vfio-pci-support-in-operator.svg) |
-|-------------------------------------------------------------------------------|
-
-Previously supported drivers `pci-pf-stub` and `igb_uio` are still supported by an operator, but they cannot be used together with secure boot feature.
-
-### Vfio Token
-
-Please be aware that usage of `vfio-pci` driver requires following arguments added to the kernel:
- - vfio_pci.enable_sriov=1
- - vfio_pci.disable_idle_d3=1
-
-If `vfio-pci` PF driver is used, then access to VF requires `UUID` token. Token is identical for all nodes in cluster, has default value of `02bddbbf-bbb0-4d79-886b-91bad3fbb510` and could be changed by
-    setting `SRIOV_FEC_VFIO_TOKEN` in `subscription.spec.config.env` field. Applications that are using VFs should provide token via EAL parameters - e.g
-    `./test-bbdev.py -e="--vfio-vf-token=02bddbbf-bbb0-4d79-886b-91bad3fbb510 -a0000:f7:00.1"`
-
-The `VFIO_TOKEN` can be fetched by "secret" using following commands, but this will be deprecated in future release due to security concern.
-
-```shell
-kubectl get secret vfio-token -o jsonpath='{.data.VFIO_TOKEN}' | base64 --decode
-```
-
-Sriov-network-device-plugin v4.14 has the capability to inject the VFIO token as an environment variable to the application pod. FEC Operator pointing to v4.14, leverages this feature to pass the VFIO token in more secured method to the application pods. You can use following commands to get the `VFIO_TOKEN` in application pods.
-
-```shell
-#Premise you have successfully configured fec-operator settings and enter an application pod
-[root@pod:/home]# env | grep VFIO_TOKEN
-PCIDEVICE_INTEL_COM_INTEL_FEC_ACC100_INFO={"0000:8b:01.5":{"extra":{"VFIO_TOKEN":"02bddbbf-bbb0-4d79-886b-91bad3fbb510"},"generic":{"deviceID":"0000:8b:01.5"},"vfio":{"dev-mount":"/dev/vfio/178","mount":"/dev/vfio/vfio"}},"0000:8b:01.7":{"extra":{"VFIO_TOKEN":"02bddbbf-bbb0-4d79-886b-91bad3fbb510"},"generic":{"deviceID":"0000:8b:01.7"},"vfio":{"dev-mount":"/dev/vfio/180","mount":"/dev/vfio/vfio"}}}
-[root@pod:/home]# export VFIO_TOKEN=02bddbbf-bbb0-4d79-886b-91bad3fbb510
-```
-
-## Deploying the Operator
-
-The SRIOV-FEC Operator for Wireless FEC Accelerators is easily deployable from the OpenShift or Kubernetes cluster via provisioning and application of the following YAML spec files:
-
-If operator is being installed on OpenShift, then follow [deployment steps for OpenShift](openshift-deployment.md).
-Otherwise follow [steps for Kubernetes](kubernetes-deployment.md).
-
-### Applying Custom Resources
-
-Once the operator is successfully deployed, the user interacts with it by creating CRs which will be interpreted by the operators, for examples of CRs see the following section:
-- [FEC Configuration](#fec-configuration)
-
-To apply a CR run:
-
-```shell
-[user@ctrl1 /home]# oc apply -f <cr-name>
-```
-
-To view the status of current CR run (sample output):
-
-```shell
-[user@ctrl1 /home]# oc get sriovfecclusterconfig config -o yaml
-***
-spec:
-  priority: 1
-  nodeSelector:
-    kubernetes.io/hostname: node1
-  acceleratorSelector:
-    pciAddress: 0000:af:00.0    
-  physicalFunction:  
-    bbDevConfig:
-      acc100:
-        downlink4G:
-          aqDepthLog2: 4
-          numAqsPerGroups: 16
-          numQueueGroups: 0
-        downlink5G:
-          aqDepthLog2: 4
-          numAqsPerGroups: 16
-          numQueueGroups: 4
-        maxQueueSize: 1024
-        numVfBundles: 16
-        pfMode: false
-        uplink4G:
-          aqDepthLog2: 4
-          numAqsPerGroups: 16
-          numQueueGroups: 0
-        uplink5G:
-          aqDepthLog2: 4
-          numAqsPerGroups: 16
-          numQueueGroups: 4
-    pciAddress: 0000:af:00.0
-    pfDriver: pci-pf-stub
-    vfAmount: 16
-    vfDriver: vfio-pci
-status:
-  syncStatus: Succeeded
-```
 ### Telemetry
 Operator exposes telemetry from pf-bb-config application for any supported card which uses `vfio-pci` PF driver in Prometheus format.
       It is available in `daemonset` container under `:8080/bbdevconfig` endpoint.
@@ -512,7 +701,8 @@ Using the option `spec.drainSkip: false` in CR will perform the [node drain](htt
 
 ### VrbResourceName (Optional)
 
-Using the `sriovvrbclusterconfig.spec.vrbResourceName` allows you to specify a custom resource name for the sriov-device-plugin specific to VRB2 with multiple accelerators. If not provided, the default resource name `intel_vrb_vrb2` will be used. Using this option will link the custom vrbResourceName to a specific VRB2 physical function.
+Using the `sriovvrbclusterconfig.spec.vrbResourceName` allows you to specify a custom resource name for the sriov-device-plugin specific to VRB2 with multiple accelerators. If not provided, the default resource name `intel_vrb_vrb2` will be used. Using this option will link the custom `vrbResourceName` to a specific VRB2 physical function.
+If the `vrbResourceName` option is used, the `sriovvrbclusterconfig` must specify the `sriovvrbclusterconfig.spec.acceleratorSelector.pciAddress` to ensure proper linkage and configuration of the VRB2 physical function.
 
 - **Description**: Indicates a custom resource name for the sriov-device-plugin specific to VRB2.
 - **Type**: `string`
@@ -524,10 +714,11 @@ Using the `sriovvrbclusterconfig.spec.vrbResourceName` allows you to specify a c
 - Once `vrbResourceName` is set, it cannot be removed from the CR; it can only be renamed.
 - It is mandatory to have different `vrbResourceName` values across different sriovvrbclusterconfig. If the same `vrbResourceName` is used in multiple CRs, the sriov-device-plugin will crash. This can be fixed by updating one of the CRs to use a different `vrbResourceName` and re-applying the configuration.
 
-## Appendix 2 - Reference CR configurations for support accelerators in SRIOV-FEC Operator
+
+## Appendix 2 - Reference CR configurations for supported accelerators in SRIOV-FEC Operator
 
 ### ACC100
-
+- Reference CR for ACC100
 ```yaml
 apiVersion: sriovfec.intel.com/v2
 kind: SriovFecClusterConfig
@@ -617,7 +808,7 @@ spec:
 
 - Reference CR for ACC200 (Deprecated)
 
->NOTE: Use of v2 API for ACC200 is deprecated and suggest to use vrb/v1 API going forward. However, to support the existing applications using acc200, fec/v2 API for ACC200 will be supported. But Intel strongly suggest the new users to use vrb/v1 API to configure the VRB1 devices. There is **NO** functional difference between vrb/v1 and fec/v2 API with respect to VRB1 accelerator device in the Operator. 
+> **_NOTE:_** The use of the `sriovfec/v2` API for ACC200 is deprecated. Intel recommends transitioning to the `sriovvrb/v1` API for future configurations. While the `sriovfec/v2` API will continue to support existing applications using ACC200, new users are strongly encouraged to utilize the `sriovvrb/v1` API for configuring VRB1 devices. It is important to note that there is **NO** functional difference between the `sriovvrb/v1` and `sriovfec/v2` APIs concerning the VRB1 accelerator device within the Operator.
 
 ```yaml
 apiVersion: sriovfec.intel.com/v2

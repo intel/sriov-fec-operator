@@ -57,6 +57,11 @@ This document provides high-level system features, issues, and limitations infor
 
 # Features for Release
 
+***v2.12.0***
+- Operator Daemonset functionality enhancements
+  - Support for custom VRB resource names for multi node cluster deployments.
+  - Increase or decrease log level at runtime for debugging.
+
 ***v2.11.1***
 - Bug fixes
 
@@ -161,6 +166,15 @@ This document provides high-level system features, issues, and limitations infor
   - Deploys an instance of K8s SRIOV device plugin which manages the FEC VFs as an OpenShift cluster resource and configures this device plugin to detect the resources
 
 # Changes to Existing Features
+
+***v2.12.0***
+- Log gather script enhancements for collecting additional information
+- Updated ubi base image to latest version(9.6-1758184547)
+- kube-rbac-proxy docker image pointing to new location: registry.k8s.io/kubebuilder/kube-rbac-proxy:v0.15.0
+- golang version updated to 1.24.5
+- x/net version updated to 0.44.0
+- protobuf version updated to 1.5.4
+- oauth2 version updated to 0.27.0
 
 ***v2.11.1***
 - None
@@ -279,6 +293,9 @@ This document provides high-level system features, issues, and limitations infor
 
 # Fixed Issues
 
+***v2.12.0***
+- None
+
 ***v2.11.1***
 - Fix for issue of configuration reapplied to accelerators in some cases when
   node having dual accelerators and both are configured.
@@ -344,6 +361,10 @@ This document provides high-level system features, issues, and limitations infor
 
 # Known issues
 
+***v2.12.0***
+- None
+
+***v2.11.1***
 ***v2.11.0***
 - GNR-D with two VRB2 accelerator instances, in case of multiple worker nodes deployment
   user defined resource naming is not supported.
@@ -364,6 +385,9 @@ This document provides high-level system features, issues, and limitations infor
 - Documentation
 
 # Supported Operating Systems
+***v2.12.0***
+***v2.11.1***
+***v2.11.0***
 ***v2.10.0***
 - OS: Ubuntu 22.04, 24.04 LTS
 - OpenShift: 4.12.x  (or higher version)
@@ -539,5 +563,5 @@ This document provides high-level system features, issues, and limitations infor
 
 # Package Versions
 Package:
-- Golang: 1.23.4
+- Golang: 1.24.5
 - pf-bb-config-app: v25.01
