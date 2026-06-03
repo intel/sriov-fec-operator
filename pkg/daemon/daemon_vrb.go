@@ -115,6 +115,33 @@ func (r *VrbNodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request)
 		return requeueNowWithError(err)
 	}
 
+	/*
+	 * checkIfDeviceUpdateNeeded (called inside updateStatus above) compares
+	 * only the Kubernetes spec against the previously-applied spec.  It may
+	 * set vrbDeviceUpdateRequired[pci]=false when the spec is unchanged, even
+	 * though VFs are missing from sysfs (e.g. after an external sriov_numvfs
+	 * reset).  Override that decision here: if the hardware state does not
+	 * match the requested state, always force a hardware reconfiguration.
+	 */
+	pciToVfsAmount := map[string]int{}
+	for _, pf := range vrbnc.Spec.PhysicalFunctions {
+		pciToVfsAmount[pf.PCIAddress] = pf.VFAmount
+	}
+	for _, acc := range vrbdetectedInventory.SriovAccelerators {
+		requested, ok := pciToVfsAmount[acc.PCIAddress]
+		if !ok {
+			/* accelerator not in spec — skip to avoid misleading log */
+			continue
+		}
+		if len(acc.VFs) != requested {
+			r.log.WithField("pciAddress", acc.PCIAddress).
+				WithField("exposedVfs", len(acc.VFs)).
+				WithField("requestedVfs", requested).
+				Info("Hardware VF count mismatch — forcing reconfiguration")
+			vrbDeviceUpdateRequired[acc.PCIAddress] = true
+		}
+	}
+
 	if err := r.configureNode(vrbnc); err != nil {
 		r.log.WithError(err).Error("error occurred during configuring node")
 		return requeueNowWithError(r.updateStatus(vrbnc, metav1.ConditionFalse, ConfigurationFailed, err.Error()))

@@ -40,7 +40,6 @@ Copyright (c) 2020-2025 Intel Corporation
   - [vRAN Boost Accelerator V1 (VRB1)](#vran-boost-accelerator-v1-vrb1)
   - [vRAN Boost Accelerator V2 (VRB2)](#vran-boost-accelerator-v2-vrb2)
 - [Appendix 3 - Gathering logs for bug report](#appendix-3---gathering-logs-for-bug-report)
-- [Appendix 4 - Additional instructions for applications using VF interface in case of VFIO mode](#appendix-4---additional-instructions-for-applications-using-vf-interface-in-case-of-vfio-mode)
 
 ## Overview
 
@@ -637,9 +636,44 @@ TestCase [ 0] : validation_tc passed
 
 ### Telemetry
 Operator exposes telemetry from pf-bb-config application for any supported card which uses `vfio-pci` PF driver in Prometheus format.
-      It is available in `daemonset` container under `:8080/bbdevconfig` endpoint.
-      By default endpoint updates metrics every 15 second, however this interval could be modified by
-      changing value of `SRIOV_FEC_METRIC_GATHER_INTERVAL` env var in operators subscription.
+It is available in the `sriov-fec-daemonset` container under the `:8080/bbdevconfig` endpoint.
+
+#### Configuration
+
+Telemetry collection is controlled by the `SRIOV_FEC_METRIC_GATHER_INTERVAL` environment variable, set on the **controller-manager** deployment. The controller-manager propagates this value to the daemonset.
+
+| Value | Behaviour |
+|-------|-----------|
+| `0s` (default) | Telemetry is **disabled**. No metrics are collected or updated. |
+| Any valid Go duration (e.g. `15s`, `1m`) | Telemetry is **enabled** and metrics are refreshed at that interval. |
+
+**Default:** `0s` — telemetry is disabled out of the box.
+
+To enable telemetry, set the `SRIOV_FEC_METRIC_GATHER_INTERVAL` environment variable in the `manager` container of the `sriov-fec-controller-manager` deployment. The relevant section of the deployment spec is shown below:
+
+```yaml
+# config/manager/manager.yaml — controller-manager Deployment
+containers:
+- name: manager
+  ...
+  env:
+  - name: SRIOV_FEC_METRIC_GATHER_INTERVAL
+    value: "15s"   # set to "0s" to disable telemetry (default)
+```
+
+This value is propagated by the controller-manager to the `sriov-fec-daemonset` pods on each node via the `SRIOV_FEC_METRIC_GATHER_INTERVAL` env var in the daemonset spec.
+
+The value is parsed as a standard Go duration string. If the value cannot be parsed, telemetry is disabled and an error is logged in the controller-manager pod.
+
+**Updating telemetry on a live deployment:**
+
+Edit the `sriov-fec-controller-manager` deployment directly and update the `SRIOV_FEC_METRIC_GATHER_INTERVAL` value:
+
+```shell
+kubectl edit deployment sriov-fec-controller-manager -n vran-acceleration-operators
+```
+
+Change the value under `.spec.template.spec.containers[name=manager].env[name=SRIOV_FEC_METRIC_GATHER_INTERVAL]`. Once saved, the controller-manager pod will automatically restart with the new value and will propagate it to the daemonset, causing the daemon pods to redeploy with the updated interval.
 
 There are 5 available metrics:
 - bytes_processed_per_vfs - represents number of bytes that are processed by VF
@@ -984,12 +1018,3 @@ Please attach 'sriov-fec.logs.tar.gz' to bug report. If you had to apply some co
 [user@ctrl1 /home]# ls -F
  gather_sriovfec_logs.sh*  'sriov-fec-ctrl1-Wed Aug 24 15:09:57 UTC 2022'/   sriov-fec.logs.tar.gz
 ```
-
-## Appendix 4 - Additional instructions for applications using VF interface in case of VFIO mode
-
-As described in [pf-bb-config application documentation](https://github.com/intel/pf-bb-config?tab=readme-ov-file#using-vfio-pci-driver),  In case of VFIO mode after applying the configuration through CR, pf-bb-config application runs in a daemon mode inside the Operator daemon POD all the time, and this is a must requirement for the DU application to be able to consciously use the VF interface.   Below are additional information and instructions that developer should be aware of while using VF interfaces in VFIO mode:
-
-- If the user wants to update/modify existing accelerator configuration, DU application has to stop and release the VF resource before changing or deleting the configuration.
-- It is not expected to happen that Operator daemon pod to be killed and restarted by itself, but for any external event reason (one such example is probe failures) if the daemon pod happens to be restarted, then pf-bb-config application run in the daemon mode will also be terminated and will be restarted and reconfigure the accelerator in the new instance of daemon pod that deployed automatically.
-- In the event of daemon pod restarts, DU application may not be able to use the VF interface. To recover from this state, DU application should release the VF interface and reconfigure VF interface (or DU application terminate and restart) as referenced in pf-bb-config documentation.
-- Reset of other Operator pods ie., manager and labeler will not cause any interruption for application to use VF interface.

@@ -212,6 +212,11 @@ func (n *NodeConfigurator) cleanAcceleratorConfig(acc sriovv2.SriovAccelerator) 
 		return err
 	}
 
+	n.Log.WithField("pciAddress", acc.PCIAddress).Debug("unbind PF device from driver")
+	if err := n.unbindIfBound(acc.PCIAddress); err != nil {
+		return err
+	}
+
 	if err := n.flrReset(acc.PCIAddress); err != nil {
 		return err
 	}
@@ -231,6 +236,11 @@ func (n *NodeConfigurator) VrbcleanAcceleratorConfig(acc vrbv1.SriovAccelerator)
 	}
 
 	if err := VrbremoveVFs(n, acc); err != nil {
+		return err
+	}
+
+	n.Log.WithField("pciAddress", acc.PCIAddress).Debug("unbind PF device from driver")
+	if err := n.unbindIfBound(acc.PCIAddress); err != nil {
 		return err
 	}
 

@@ -40,7 +40,19 @@ var _ = Describe("FecNodeConfigReconciler.Reconcile", func() {
 			nodeInventory      *sriovv2.NodeInventory
 		)
 		BeforeEach(func() {
+			/* Reset package-level globals so each test starts from a clean state. */
+			for k := range fecPreviousConfig {
+				delete(fecPreviousConfig, k)
+			}
+			for k := range fecCurrentConfig {
+				delete(fecCurrentConfig, k)
+			}
+			for k := range fecDeviceUpdateRequired {
+				delete(fecDeviceUpdateRequired, k)
+			}
+			getSriovInventory = GetSriovInventory
 			procCmdlineFilePath = "testdata/cmdline_test"
+			sysLockdownFilePath = "testdata/lockdown_none"
 			fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
 			nodeNameRef = types.NamespacedName{Name: "worker", Namespace: "testNamespace"}
 			nodeInventory = &sriovv2.NodeInventory{
@@ -91,6 +103,121 @@ var _ = Describe("FecNodeConfigReconciler.Reconcile", func() {
 					return nil
 				}}
 			reconcileRequestes = ctrl.Request{NamespacedName: nodeNameRef}
+		})
+
+		AfterEach(func() {
+			for k := range fecPreviousConfig {
+				delete(fecPreviousConfig, k)
+			}
+			for k := range fecCurrentConfig {
+				delete(fecCurrentConfig, k)
+			}
+			for k := range fecDeviceUpdateRequired {
+				delete(fecDeviceUpdateRequired, k)
+			}
+			getSriovInventory = GetSriovInventory
+			procCmdlineFilePath = "/proc/cmdline"
+			sysLockdownFilePath = "/sys/kernel/security/lockdown"
+		})
+
+		It("restores/recreates VFs when sriov_numvfs is reset externally", func() {
+			// Verifies that when VFs disappear from sysfs without any Kubernetes
+			// spec change, the reconciler still calls configureAccelerator to
+			// restore them.  Uses a gated configurer that honours the
+			// fecDeviceUpdateRequired flag (filters spec, not live inventory).
+
+			configureCallCount := 0
+			gatedInventory := nodeInventory
+			gatedConfigurer := testGatedConfigurerProto{
+				configureNodeFunction: func(nodeConfig sriovv2.SriovFecNodeConfigSpec) error {
+					configureCallCount++
+					for _, pf := range nodeConfig.PhysicalFunctions {
+						for i, acc := range gatedInventory.SriovAccelerators {
+							if acc.PCIAddress != pf.PCIAddress {
+								continue
+							}
+							gatedInventory.SriovAccelerators[i].VFs = []sriovv2.VF{}
+							for j := 0; j < pf.VFAmount; j++ {
+								gatedInventory.SriovAccelerators[i].VFs = append(
+									gatedInventory.SriovAccelerators[i].VFs,
+									sriovv2.VF{
+										PCIAddress: fmt.Sprintf("%s%d",
+											pf.PCIAddress[0:len(pf.PCIAddress)-1], j+1),
+										Driver:   "vfDriver",
+										DeviceID: "deviceId",
+									})
+							}
+						}
+					}
+					return nil
+				},
+			}
+			reconciler.sriovfecconfigurer = gatedConfigurer
+			getSriovInventory = func(log *logrus.Logger) (*sriovv2.NodeInventory, error) {
+				return gatedInventory, nil
+			}
+
+			// Reconcile 1: creates empty SriovFecNodeConfig (no spec yet)
+			_, err := reconciler.Reconcile(context.TODO(), reconcileRequestes)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Set spec requesting 1 VF — bump generation so reconciler sees a change
+			sfnc := new(sriovv2.SriovFecNodeConfig)
+			Expect(fakeClient.Get(context.TODO(), nodeNameRef, sfnc)).ToNot(HaveOccurred())
+			sfnc.Generation++
+			sfnc.Spec = sriovv2.SriovFecNodeConfigSpec{
+				PhysicalFunctions: []sriovv2.PhysicalFunctionConfigExt{
+					{
+						PCIAddress: pciAddress,
+						/* igb_uio is used here instead of the production default
+						 * vfio-pci to avoid validateNodeConfig reading the real
+						 * /sys/module/vfio_pci/parameters/enable_sriov, which
+						 * may not be set on CI hosts.  The driver value does not
+						 * affect the VF-restore logic under test.
+						 */
+						PFDriver:    utils.IgbUio,
+						VFDriver:    utils.IgbUio,
+						VFAmount:    1,
+						BBDevConfig: sriovv2.BBDevConfig{},
+					},
+				},
+			}
+			Expect(fakeClient.Patch(context.TODO(), sfnc, client.Merge)).ToNot(HaveOccurred())
+
+			// Reconcile 2: spec changed (generation bump) → configureAccelerator called,
+			// VFs created, fecPreviousConfig populated with current spec
+			configureCallCount = 0
+			_, err = reconciler.Reconcile(context.TODO(), reconcileRequestes)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(configureCallCount).To(Equal(1), "reconcile 2 must call configureAccelerator")
+
+			sfnc = new(sriovv2.SriovFecNodeConfig)
+			Expect(fakeClient.Get(context.TODO(), nodeNameRef, sfnc)).ToNot(HaveOccurred())
+			Expect(sfnc.Status.Inventory.SriovAccelerators[0].VFs).To(HaveLen(1),
+				"VFs should be present after reconcile 2")
+
+			// Simulate external sriov_numvfs reset (e.g. StarlingX sysinv-agent or
+			// pf_bb_config daemon exit) — VFs disappear from sysfs without any
+			// Kubernetes spec change
+			for i := range gatedInventory.SriovAccelerators {
+				gatedInventory.SriovAccelerators[i].VFs = []sriovv2.VF{}
+			}
+
+			// Reconcile 3: spec UNCHANGED, VFs missing.
+			// isCardUpdateRequired returns true (exposedVfs=0 != requestedVfs=1).
+			// checkIfDeviceUpdateNeeded sees prev==curr so it clears
+			// fecDeviceUpdateRequired; the hardware mismatch override must
+			// re-set the flag so configureAccelerator is called.
+			configureCallCount = 0
+			_, err = reconciler.Reconcile(context.TODO(), reconcileRequestes)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(configureCallCount).To(Equal(1),
+				"reconcile 3 must call configureAccelerator to restore externally-cleared VFs")
+
+			sfnc = new(sriovv2.SriovFecNodeConfig)
+			Expect(fakeClient.Get(context.TODO(), nodeNameRef, sfnc)).ToNot(HaveOccurred())
+			Expect(sfnc.Status.Inventory.SriovAccelerators[0].VFs).To(HaveLen(1),
+				"VFs must be restored after reconcile 3")
 		})
 
 		It("restores/recreates VFs removed after node reboot", func() {
@@ -158,6 +285,60 @@ func (t testConfigurerProto) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpe
 	return t.vrbConfigureNodeFunction(nodeConfig)
 }
 
+/* testGatedConfigurerProto honours the fecDeviceUpdateRequired gate by
+ * skipping PCI addresses where the flag is false and only invoking the
+ * configure function for those where it is true.  Unlike testConfigurerProto
+ * it does not bypass the gate, so tests can verify that
+ * fecDeviceUpdateRequired is set before configureAccelerator is called.
+ * Note: it filters the spec rather than iterating the live inventory as
+ * the production NodeConfigurator.ApplySpec does.
+ */
+type testGatedConfigurerProto struct {
+	configureNodeFunction func(nodeConfig sriovv2.SriovFecNodeConfigSpec) error
+}
+
+func (t testGatedConfigurerProto) ApplySpec(nodeConfig sriovv2.SriovFecNodeConfigSpec, fecDeviceUpdateRequired map[string]bool) error {
+	filtered := sriovv2.SriovFecNodeConfigSpec{}
+	for _, pf := range nodeConfig.PhysicalFunctions {
+		if fecDeviceUpdateRequired[pf.PCIAddress] {
+			filtered.PhysicalFunctions = append(filtered.PhysicalFunctions, pf)
+		}
+	}
+	if len(filtered.PhysicalFunctions) == 0 {
+		return nil
+	}
+	return t.configureNodeFunction(filtered)
+}
+
+func (t testGatedConfigurerProto) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpec, vrbDeviceUpdateRequired map[string]bool) error {
+	return nil
+}
+
+/* testGatedVrbConfigurerProto honours the vrbDeviceUpdateRequired gate by
+ * skipping PCI addresses where the flag is false and only invoking the
+ * configure function for those where it is true.  Unlike testConfigurerProto
+ * it does not bypass the gate, so tests can verify that
+ * vrbDeviceUpdateRequired is set before VrbApplySpec is called.
+ * Note: it filters the spec rather than iterating the live inventory as
+ * the production NodeConfigurator.VrbApplySpec does.
+ */
+type testGatedVrbConfigurerProto struct {
+	vrbConfigureNodeFunction func(nodeConfig vrbv1.SriovVrbNodeConfigSpec) error
+}
+
+func (t testGatedVrbConfigurerProto) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpec, vrbDeviceUpdateRequired map[string]bool) error {
+	filtered := vrbv1.SriovVrbNodeConfigSpec{}
+	for _, pf := range nodeConfig.PhysicalFunctions {
+		if vrbDeviceUpdateRequired[pf.PCIAddress] {
+			filtered.PhysicalFunctions = append(filtered.PhysicalFunctions, pf)
+		}
+	}
+	if len(filtered.PhysicalFunctions) == 0 {
+		return nil
+	}
+	return t.vrbConfigureNodeFunction(filtered)
+}
+
 var _ = Describe("VrbNodeConfigReconciler.Reconcile", func() {
 	var scheme *runtime.Scheme
 
@@ -175,7 +356,19 @@ var _ = Describe("VrbNodeConfigReconciler.Reconcile", func() {
 			nodeInventory      *vrbv1.NodeInventory
 		)
 		BeforeEach(func() {
+			/* Reset package-level globals so each test starts from a clean state. */
+			for k := range vrbPreviousConfig {
+				delete(vrbPreviousConfig, k)
+			}
+			for k := range vrbCurrentConfig {
+				delete(vrbCurrentConfig, k)
+			}
+			for k := range vrbDeviceUpdateRequired {
+				delete(vrbDeviceUpdateRequired, k)
+			}
+			VrbgetSriovInventory = VrbGetSriovInventory
 			procCmdlineFilePath = "testdata/cmdline_test"
+			sysLockdownFilePath = "testdata/lockdown_none"
 			fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
 			nodeNameRef = types.NamespacedName{Name: "worker", Namespace: "testNamespace"}
 			nodeInventory = &vrbv1.NodeInventory{
@@ -228,6 +421,21 @@ var _ = Describe("VrbNodeConfigReconciler.Reconcile", func() {
 			reconcileRequestes = ctrl.Request{NamespacedName: nodeNameRef}
 		})
 
+		AfterEach(func() {
+			for k := range vrbPreviousConfig {
+				delete(vrbPreviousConfig, k)
+			}
+			for k := range vrbCurrentConfig {
+				delete(vrbCurrentConfig, k)
+			}
+			for k := range vrbDeviceUpdateRequired {
+				delete(vrbDeviceUpdateRequired, k)
+			}
+			VrbgetSriovInventory = VrbGetSriovInventory
+			procCmdlineFilePath = "/proc/cmdline"
+			sysLockdownFilePath = "/sys/kernel/security/lockdown"
+		})
+
 		It("restores/recreates VFs removed after node reboot", func() {
 			// SVNC does not exist yet
 			svnc := new(vrbv1.SriovVrbNodeConfig)
@@ -276,6 +484,106 @@ var _ = Describe("VrbNodeConfigReconciler.Reconcile", func() {
 			svnc = new(vrbv1.SriovVrbNodeConfig)
 			Expect(fakeClient.Get(context.TODO(), nodeNameRef, svnc)).ToNot(HaveOccurred())
 			Expect(svnc.Status.Inventory).ToNot(Equal(nodeInventory))
+		})
+
+		It("restores/recreates VFs when sriov_numvfs is reset externally", func() {
+			// Verifies that when VFs disappear from sysfs without any Kubernetes
+			// spec change, the reconciler still calls VrbApplySpec to restore
+			// them.  Uses a gated configurer that honours the
+			// vrbDeviceUpdateRequired flag (filters spec, not live inventory).
+
+			configureCallCount := 0
+			gatedInventory := nodeInventory
+			gatedConfigurer := testGatedVrbConfigurerProto{
+				vrbConfigureNodeFunction: func(nodeConfig vrbv1.SriovVrbNodeConfigSpec) error {
+					configureCallCount++
+					for _, pf := range nodeConfig.PhysicalFunctions {
+						for i, acc := range gatedInventory.SriovAccelerators {
+							if acc.PCIAddress != pf.PCIAddress {
+								continue
+							}
+							gatedInventory.SriovAccelerators[i].VFs = []vrbv1.VF{}
+							for j := 0; j < pf.VFAmount; j++ {
+								gatedInventory.SriovAccelerators[i].VFs = append(
+									gatedInventory.SriovAccelerators[i].VFs,
+									vrbv1.VF{
+										PCIAddress: fmt.Sprintf("%s%d",
+											pf.PCIAddress[0:len(pf.PCIAddress)-1], j+1),
+										Driver:   "vfDriver",
+										DeviceID: "deviceId",
+									})
+							}
+						}
+					}
+					return nil
+				},
+			}
+			reconciler.vrbconfigurer = gatedConfigurer
+			VrbgetSriovInventory = func(log *logrus.Logger) (*vrbv1.NodeInventory, error) {
+				return gatedInventory, nil
+			}
+
+			// Reconcile 1: creates empty SriovVrbNodeConfig (no spec yet)
+			_, err := reconciler.Reconcile(context.TODO(), reconcileRequestes)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Set spec requesting 1 VF — bump generation so reconciler sees a change
+			svnc := new(vrbv1.SriovVrbNodeConfig)
+			Expect(fakeClient.Get(context.TODO(), nodeNameRef, svnc)).ToNot(HaveOccurred())
+			svnc.Generation++
+			svnc.Spec = vrbv1.SriovVrbNodeConfigSpec{
+				PhysicalFunctions: []vrbv1.PhysicalFunctionConfigExt{
+					{
+						PCIAddress: pciAddress,
+						/* igb_uio is used here instead of the production default
+						 * vfio-pci to avoid validateVrbNodeConfig reading the
+						 * real /sys/module/vfio_pci/parameters/enable_sriov,
+						 * which may not be set on CI hosts.  The driver value
+						 * does not affect the VF-restore logic under test.
+						 */
+						PFDriver:    utils.IgbUio,
+						VFDriver:    utils.IgbUio,
+						VFAmount:    1,
+						BBDevConfig: vrbv1.BBDevConfig{},
+					},
+				},
+			}
+			Expect(fakeClient.Patch(context.TODO(), svnc, client.Merge)).ToNot(HaveOccurred())
+
+			// Reconcile 2: spec changed (generation bump) → VrbApplySpec called,
+			// VFs created, vrbPreviousConfig populated with current spec
+			configureCallCount = 0
+			_, err = reconciler.Reconcile(context.TODO(), reconcileRequestes)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(configureCallCount).To(Equal(1), "reconcile 2 must call VrbApplySpec")
+
+			svnc = new(vrbv1.SriovVrbNodeConfig)
+			Expect(fakeClient.Get(context.TODO(), nodeNameRef, svnc)).ToNot(HaveOccurred())
+			Expect(svnc.Status.Inventory.SriovAccelerators[0].VFs).To(HaveLen(1),
+				"VFs should be present after reconcile 2")
+
+			// Simulate external sriov_numvfs reset (e.g. StarlingX sysinv-agent or
+			// pf_bb_config daemon exit) — VFs disappear from sysfs without any
+			// Kubernetes spec change
+			for i := range gatedInventory.SriovAccelerators {
+				gatedInventory.SriovAccelerators[i].VFs = []vrbv1.VF{}
+			}
+
+			// Reconcile 3: spec UNCHANGED, VFs missing.
+			// isCardUpdateRequired returns true (exposedVfs=0 != requestedVfs=1).
+			// checkIfDeviceUpdateNeeded sees prev==curr so it clears
+			// vrbDeviceUpdateRequired; the hardware mismatch override must
+			// re-set the flag so VrbApplySpec is called.
+			configureCallCount = 0
+			_, err = reconciler.Reconcile(context.TODO(), reconcileRequestes)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(configureCallCount).To(Equal(1),
+				"reconcile 3 must call VrbApplySpec to restore externally-cleared VFs")
+
+			svnc = new(vrbv1.SriovVrbNodeConfig)
+			Expect(fakeClient.Get(context.TODO(), nodeNameRef, svnc)).ToNot(HaveOccurred())
+			Expect(svnc.Status.Inventory.SriovAccelerators[0].VFs).To(HaveLen(1),
+				"VFs must be restored after reconcile 3")
 		})
 	})
 })
