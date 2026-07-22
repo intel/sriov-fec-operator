@@ -58,7 +58,7 @@ else
  export KUBE_RBAC_PROXY_IMAGE ?= registry.k8s.io/kubebuilder/kube-rbac-proxy:v0.15.0
 endif
 
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
+CONTROLLER_TOOLS_VERSION ?= v0.19.0
 ENVTEST_K8S_VERSION ?= 1.24
 KUSTOMIZE_VERSION ?= 4.5.7
 OPM_VERSION ?= 1.26.2
