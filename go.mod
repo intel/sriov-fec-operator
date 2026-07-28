@@ -6,7 +6,7 @@ require (
 	github.com/elliotchance/orderedmap/v2 v2.2.0
 	github.com/go-logr/logr v1.2.3
 	github.com/google/gofuzz v1.2.0
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.6.0
 	github.com/hpcloud/tail v1.0.0
 	github.com/jaypipes/ghw v0.9.0
 	github.com/k8snetworkplumbingwg/sriov-network-device-plugin v0.0.0-20220614121156-6fff085aed91
