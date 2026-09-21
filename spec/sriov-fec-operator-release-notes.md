@@ -13,6 +13,8 @@ This document provides high-level system features, issues, and limitations infor
     - [SRIOV-FEC Operator for OpenShift Operating System](#sriov-fec-operator-for-openshift-operating-system)
     - [SRIOV-FEC Operator for Ubuntu Operating System](#sriov-fec-operator-for-ubuntu-operating-system)
 - [Features for release](#features-for-release)
+    - [v2.12.2](#v2122)
+    - [v2.12.1](#v2121)
     - [v2.12.0](#v2120)
     - [v2.11.1](#v2111)
     - [v2.11.0](#v2110)
@@ -77,6 +79,7 @@ This document provides high-level system features, issues, and limitations infor
 ## SRIOV-FEC Operator for Ubuntu Operating System
 | Version            | Release Date   | Ubuntu OS Version    | K8s Version          |
 |--------------------|----------------|----------------------|----------------------|
+| [v2.12.2](#v2122)  | September 2026 | v24.04 LTS           | v1.28                |
 | [v2.12.1](#v2121)  | June 2026      | v24.04 LTS           | v1.28                |
 | [v2.12.0](#v2120)  | Sept 2025      | v24.04 LTS           | v1.26, v1.28         |
 | [v2.11.1](#v2111)  | Apr 2025       | v24.04 LTS           | v1.26                |
@@ -90,6 +93,24 @@ This document provides high-level system features, issues, and limitations infor
 
 
 # Features for release
+
+## v2.12.2
+### New features
+- None
+
+### Changes to existing features
+- Update ubi-minimal image to latest version 9.8-1789546276
+
+### Fixed issues
+- Fix manager crash caused by concurrent logger wrapper state mutation
+
+### Known issues
+- None
+
+### Tested with Operating Systems
+- Ubuntu 24.04
+  - Kubernetes 1.28
+
 ## v2.12.1
 ### New features
 - None
@@ -98,6 +119,8 @@ This document provides high-level system features, issues, and limitations infor
 - ubi base image version upgraded to latest v9.8
 - promethus/client_golang version set to 1.14.0
 - logrus pkg version set to 1.9.1
+- goLan version upgraded to 1.25
+- Controller-tool version set to v0.19.0
 
 ### Fixed issues
 - Fix for configuration restore when VFs are deleted
@@ -750,3 +773,4 @@ This document provides high-level system features, issues, and limitations infor
 >Daemon part (running on each featured worker node) of operator drains a node (moves its workloads to another node) before applying requested configuration.  
 >Node draining doesn't work on SNO deployment. Because of that, operator's API exposes `SriovFecClusterConfig.spec.drainSkip` parameter which stops daemon doing workload migration.
 >In theory it is all what is needed to find operator usable on SNO, however, operator's validation cycle is executed _ONLY_ on multi-worker-node clusters.
+

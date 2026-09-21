@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2020-2025 Intel Corporation
+// Copyright (c) 2020-2026 Intel Corporation
 
 package utils
 
@@ -9,8 +9,8 @@ import (
 )
 
 type logrusWrapper struct {
-	log       *logrus.Logger
-	lastEntry *logrus.Entry
+	log   *logrus.Logger
+	entry *logrus.Entry
 }
 
 // Init implements logr.LogSink
@@ -22,21 +22,11 @@ func (l *logrusWrapper) Enabled(level int) bool {
 }
 
 func (l *logrusWrapper) Info(level int, msg string, keysAndValues ...interface{}) {
-	if l.lastEntry != nil {
-		l.lastEntry.WithFields(l.parseFields(keysAndValues)).Info(msg)
-		l.lastEntry = nil
-	} else {
-		logrus.WithFields(l.parseFields(keysAndValues)).Info(msg)
-	}
+	l.getEntry().WithFields(l.parseFields(keysAndValues)).Info(msg)
 }
 
 func (l *logrusWrapper) Error(err error, msg string, keysAndValues ...interface{}) {
-	if l.lastEntry != nil {
-		l.lastEntry.WithError(err).WithFields(l.parseFields(keysAndValues)).Error(msg)
-		l.lastEntry = nil
-	} else {
-		logrus.WithError(err).WithFields(l.parseFields(keysAndValues)).Error(msg)
-	}
+	l.getEntry().WithError(err).WithFields(l.parseFields(keysAndValues)).Error(msg)
 }
 
 func (l *logrusWrapper) V(level int) logr.LogSink {
@@ -44,10 +34,8 @@ func (l *logrusWrapper) V(level int) logr.LogSink {
 }
 
 func (l *logrusWrapper) WithValues(keysAndValues ...interface{}) logr.LogSink {
-	entry := l.getEntry()
-	entry.WithFields(l.parseFields(keysAndValues))
-	l.lastEntry = entry
-	return l
+	entry := l.getEntry().WithFields(l.parseFields(keysAndValues))
+	return &logrusWrapper{log: l.log, entry: entry}
 }
 
 func (l *logrusWrapper) parseFields(keysAndValues []interface{}) logrus.Fields {
@@ -62,16 +50,22 @@ func (l *logrusWrapper) parseFields(keysAndValues []interface{}) logrus.Fields {
 }
 
 func (l *logrusWrapper) getEntry() *logrus.Entry {
-	if l.lastEntry != nil {
-		return l.lastEntry
+	if l.entry != nil {
+		return l.entry
 	}
-	return logrus.NewEntry(l.log)
+	logger := l.log
+	if logger == nil {
+		logger = logrus.StandardLogger()
+	}
+	return logrus.NewEntry(logger)
 }
 
 func (l *logrusWrapper) WithName(name string) logr.LogSink {
-	entry := l.getEntry()
-	l.lastEntry = entry.WithField("name", name)
-	return l
+	if existing, ok := l.getEntry().Data["name"].(string); ok && existing != "" {
+		name = existing + "/" + name
+	}
+	entry := l.getEntry().WithField("name", name)
+	return &logrusWrapper{log: l.log, entry: entry}
 }
 
 func NewLogger() *logrus.Logger {

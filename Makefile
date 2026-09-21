@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020-2025 Intel Corporation
+# Copyright (c) 2020-2026 Intel Corporation
 
 # Default k8s command-line tool exec
 export CLI_EXEC?=oc
 # Container format for podman. Required to build containers with "ManifestType": "application/vnd.oci.image.manifest.v2+json",
 export BUILDAH_FORMAT=docker
 # Current Operator version
-VERSION ?= 2.12.1
+VERSION ?= 2.12.2
 # Supported channels
 CHANNELS ?= stable
 # Default channel

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2020-2025 Intel Corporation
+# Copyright (c) 2020-2026 Intel Corporation
 
 {"addr":":8080","file":"/workspace-go/pkg/common/utils/logger_wrapper.go:26","func":"github.com/intel/sriov-fec-operator/pkg/common/utils.(*logrusWrapper).Info","level":"info","msg":"Metrics server is starting to listen","name":"events","time":"2025-03-14T14:31:16Z"}
 time="2025-03-14T14:31:16Z" level=info msg="Registering metrics http server extra handler" path=/bbdevconfig
