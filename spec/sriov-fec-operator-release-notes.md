@@ -49,6 +49,7 @@ This document provides high-level system features, issues, and limitations infor
 ## SRIOV-FEC Operator for OpenShift Operating System
 | Version            | Release Date   | OCP Version(s) compatibility | Verified on OCP                              |
 |--------------------|----------------|------------------------------|----------------------------------------------|
+| [v2.12.2](#v2122)  | September 2026 | 4.12 and higher versions     | 4.12 and higher (latest stable versions)     |
 | [v2.12.0](#v2120)  | Sept 2025      | 4.12 and higher versions     | 4.12 and higher (latest stable versions)     |
 | [v2.11.1](#v2111)  | Apr 2025       | 4.12 and higher versions     | 4.12 and higher (latest stable versions)     |
 | [v2.11.0](#v2110)  | Feb 2025       | 4.12 and higher versions     | 4.12 and higher (latest stable versions)     |
@@ -110,6 +111,7 @@ This document provides high-level system features, issues, and limitations infor
 ### Tested with Operating Systems
 - Ubuntu 24.04
   - Kubernetes 1.28
+- OpenShift: 4.20
 
 ## v2.12.1
 ### New features
