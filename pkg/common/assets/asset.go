@@ -236,10 +236,14 @@ func (a *Asset) updateObject(ctx context.Context, c client.Client, toBeCreated, 
 	return nil
 }
 
+// propagateTolerations merges the operator deployment's tolerations into the DaemonSet's
+// pod template. Tolerations already declared by the asset template are preserved: they are
+// kept as-is and manager tolerations are appended, skipping any that are already present.
+//
+// Previously the manager's tolerations were assigned unconditionally, which silently
+// discarded any toleration declared in the asset template and made the Subscription's
+// spec.config.tolerations the only tolerations an operator-managed DaemonSet could ever have.
 func propagateTolerations(c client.Client, log *logrus.Logger, toBeCreated client.Object) (client.Object, error) {
-	managerDeployment := FetchOperatorDeployment(c, log)
-	log.WithField("name", toBeCreated.GetName()).WithField("tolerations", managerDeployment.Spec.Template.Spec.Tolerations).
-		Info("propagating tolerations to daemonset")
 	uns, err := runtime.DefaultUnstructuredConverter.ToUnstructured(toBeCreated)
 	if err != nil {
 		return nil, err
@@ -249,7 +253,29 @@ func propagateTolerations(c client.Client, log *logrus.Logger, toBeCreated clien
 	if err != nil {
 		return nil, err
 	}
-	ds.Spec.Template.Spec.Tolerations = managerDeployment.Spec.Template.Spec.Tolerations
+
+	managerDeployment := FetchOperatorDeployment(c, log)
+	merged := ds.Spec.Template.Spec.Tolerations
+	for _, mt := range managerDeployment.Spec.Template.Spec.Tolerations {
+		duplicate := false
+		for _, existing := range merged {
+			if existing.MatchToleration(&mt) {
+				duplicate = true
+				break
+			}
+		}
+		if !duplicate {
+			merged = append(merged, mt)
+		}
+	}
+
+	log.WithField("name", toBeCreated.GetName()).
+		WithField("templateTolerations", ds.Spec.Template.Spec.Tolerations).
+		WithField("managerTolerations", managerDeployment.Spec.Template.Spec.Tolerations).
+		WithField("mergedTolerations", merged).
+		Info("propagating tolerations to daemonset")
+
+	ds.Spec.Template.Spec.Tolerations = merged
 	return ds, nil
 }
 

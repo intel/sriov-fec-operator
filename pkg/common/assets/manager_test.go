@@ -401,5 +401,87 @@ var _ = Describe("Asset Tests", func() {
 			Expect(toleration.Effect).To(Equal(tolerationEffect))
 			Expect(toleration.Operator).To(Equal(tolerationOperator))
 		})
+
+		var _ = It("should preserve tolerations already defined in the template", func() {
+			templateToleration := corev1.Toleration{Operator: corev1.TolerationOpExists}
+
+			ds := newDaemonSetWithTolerations([]corev1.Toleration{templateToleration})
+
+			newObj, err := propagateTolerations(k8sClient, log, ds)
+			Expect(err).To(Succeed())
+
+			newDs, err := asDaemonSet(newObj)
+			Expect(err).To(Succeed())
+
+			// The template's own toleration must survive, and the manager's is appended.
+			Expect(newDs.Spec.Template.Spec.Tolerations).To(ContainElement(templateToleration))
+			Expect(newDs.Spec.Template.Spec.Tolerations).To(HaveLen(2))
+			Expect(newDs.Spec.Template.Spec.Tolerations[0]).To(Equal(templateToleration))
+			Expect(newDs.Spec.Template.Spec.Tolerations[1].Key).To(Equal(tolerationKey))
+		})
+
+		var _ = It("should not duplicate a toleration present in both template and manager", func() {
+			managerToleration := corev1.Toleration{
+				Key:      tolerationKey,
+				Operator: tolerationOperator,
+				Effect:   tolerationEffect,
+			}
+
+			ds := newDaemonSetWithTolerations([]corev1.Toleration{managerToleration})
+
+			newObj, err := propagateTolerations(k8sClient, log, ds)
+			Expect(err).To(Succeed())
+
+			newDs, err := asDaemonSet(newObj)
+			Expect(err).To(Succeed())
+
+			Expect(newDs.Spec.Template.Spec.Tolerations).To(HaveLen(1))
+			Expect(newDs.Spec.Template.Spec.Tolerations[0]).To(Equal(managerToleration))
+		})
 	})
 })
+
+// newDaemonSetWithTolerations builds a minimal DaemonSet whose pod template carries the
+// given tolerations, for use with propagateTolerations.
+func newDaemonSetWithTolerations(tolerations []corev1.Toleration) *appsv1.DaemonSet {
+	return &appsv1.DaemonSet{
+		TypeMeta: v1.TypeMeta{
+			Kind:       "daemonset",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "test-ds",
+			Namespace: "default",
+		},
+		Spec: appsv1.DaemonSetSpec{
+			Selector: &v1.LabelSelector{
+				MatchLabels: map[string]string{"a": "b"},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: v1.ObjectMeta{
+					Labels: map[string]string{"a": "b"},
+				},
+				Spec: corev1.PodSpec{
+					Tolerations: tolerations,
+					Containers: []corev1.Container{{
+						Name:  "test",
+						Image: "test",
+					}},
+				},
+			},
+		},
+	}
+}
+
+// asDaemonSet converts the client.Object returned by propagateTolerations back to a DaemonSet.
+func asDaemonSet(obj client.Object) (*appsv1.DaemonSet, error) {
+	uns, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+	if err != nil {
+		return nil, err
+	}
+	ds := &appsv1.DaemonSet{}
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(uns, ds); err != nil {
+		return nil, err
+	}
+	return ds, nil
+}
