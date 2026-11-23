@@ -232,6 +232,9 @@ func (n *NodeConfigurator) cleanAcceleratorConfig(acc sriovv2.SriovAccelerator) 
 		return err
 	}
 
+	// the PF is now in a known state
+	staleSysfsWrites.clear(acc.PCIAddress)
+
 	return nil
 }
 
@@ -262,6 +265,9 @@ func (n *NodeConfigurator) VrbcleanAcceleratorConfig(acc vrbv1.SriovAccelerator)
 	if err := n.flrReset(acc.PCIAddress); err != nil {
 		return err
 	}
+
+	// the PF is now in a known state
+	staleSysfsWrites.clear(acc.PCIAddress)
 
 	return nil
 }
@@ -391,6 +397,8 @@ func (n *NodeConfigurator) ApplySpec(nodeConfig sriovv2.SriovFecNodeConfigSpec, 
 					return err
 				}
 			}
+			// not managed by the operator: nothing to reconfigure
+			staleSysfsWrites.clear(acc.PCIAddress)
 
 			continue
 		}
@@ -423,6 +431,8 @@ func (n *NodeConfigurator) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpec,
 					return err
 				}
 			}
+			// not managed by the operator: nothing to reconfigure
+			staleSysfsWrites.clear(acc.PCIAddress)
 
 			continue
 		}

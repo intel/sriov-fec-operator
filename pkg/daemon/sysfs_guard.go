@@ -5,6 +5,7 @@ package daemon
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -16,6 +17,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 /*
@@ -190,11 +193,13 @@ func writeSysfs(pciAddress, path, data string) error {
 		nodeWide: isNodeWideSysfsAttr(path),
 	}
 	id := tracker.add(w)
+	marker := createSysfsWriteMarker(w)
 
 	done := make(chan error, 1)
 	go func() {
 		err := os.WriteFile(path, []byte(data), os.ModeAppend)
 		tracker.remove(id)
+		removeSysfsWriteMarker(marker)
 		done <- err
 	}()
 
@@ -360,4 +365,110 @@ func newPciConfigCmd(args ...string) (*exec.Cmd, context.CancelFunc) {
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.WaitDelay = pciCmdWaitDelay
 	return cmd, cancel
+}
+
+/*
+ * Pending writes are also recorded on disk (in the pod's emptyDir), one file
+ * per write, removed when the write returns. A file left behind by a previous
+ * daemon instance means that instance exited, or was restarted, while the
+ * write was in flight - typically blocked behind a vfio user and carried out
+ * only when the device was released. The PF may then be in a state the
+ * operator did not expect (e.g. a VF unbound with the VF count unchanged, which
+ * the inventory check does not notice), so it is reconfigured once.
+ */
+
+type sysfsWriteMarker struct {
+	PF    string    `json:"pf"`
+	Path  string    `json:"path"`
+	Data  string    `json:"data"`
+	Since time.Time `json:"since"`
+}
+
+func sysfsWriteMarkerDir() string {
+	return filepath.Join(workdir, "pending-sysfs-writes")
+}
+
+func createSysfsWriteMarker(w pendingSysfsWrite) string {
+	dir := sysfsWriteMarkerDir()
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return ""
+	}
+	f, err := os.CreateTemp(dir, "write-*.json")
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	if err := json.NewEncoder(f).Encode(sysfsWriteMarker{PF: w.pf, Path: w.path, Data: w.data, Since: w.since}); err != nil {
+		_ = os.Remove(f.Name())
+		return ""
+	}
+	return f.Name()
+}
+
+func removeSysfsWriteMarker(path string) {
+	if path != "" {
+		_ = os.Remove(path)
+	}
+}
+
+type staleSysfsWriteSet struct {
+	mu  sync.Mutex
+	pfs map[string][]sysfsWriteMarker
+}
+
+var (
+	staleSysfsWrites        = &staleSysfsWriteSet{pfs: map[string][]sysfsWriteMarker{}}
+	loadStaleSysfsWriteOnce sync.Once
+)
+
+// has tells whether a previous daemon instance left a write on pf unfinished
+// and the PF has not been reconfigured since.
+func (s *staleSysfsWriteSet) has(pf string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.pfs[pf]) > 0
+}
+
+func (s *staleSysfsWriteSet) clear(pf string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.pfs, pf)
+}
+
+func (s *staleSysfsWriteSet) add(m sysfsWriteMarker) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.pfs[m.PF] = append(s.pfs[m.PF], m)
+}
+
+// loadStaleSysfsWriteMarkers picks up the markers left by a previous daemon
+// instance. It must run before this instance writes to sysfs; it is called
+// from the reconciler constructors, before the manager starts.
+func loadStaleSysfsWriteMarkers(log *logrus.Logger) {
+	loadStaleSysfsWriteOnce.Do(func() {
+		loadStaleSysfsWriteMarkersFrom(sysfsWriteMarkerDir(), staleSysfsWrites, log)
+	})
+}
+
+func loadStaleSysfsWriteMarkersFrom(dir string, set *staleSysfsWriteSet, log *logrus.Logger) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		path := filepath.Join(dir, e.Name())
+		data, err := os.ReadFile(path)
+		_ = os.Remove(path)
+		if err != nil {
+			continue
+		}
+		var m sysfsWriteMarker
+		if err := json.Unmarshal(data, &m); err != nil || m.PF == "" {
+			log.WithField("file", path).Warning("ignoring malformed pending sysfs write marker")
+			continue
+		}
+		log.WithField("pf", m.PF).WithField("path", m.Path).WithField("data", m.Data).WithField("since", m.Since).
+			Warning("a previous daemon instance did not see this sysfs write complete; the PF will be reconfigured")
+		set.add(m)
+	}
 }

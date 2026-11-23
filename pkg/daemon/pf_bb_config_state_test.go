@@ -5,6 +5,9 @@ package daemon
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
+	"syscall"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -92,5 +95,80 @@ var _ = Describe("pf_bb_config process state", func() {
 			p := &pfBBConfigController{log: logrus.New()}
 			Expect(p.waitForPfBBConfigExit(pci)).To(MatchError(ContainSubstring("state: unknown")))
 		})
+	})
+})
+
+var _ = Describe("pending sysfs write markers", func() {
+	const pf = "0000:1d:00.0"
+
+	var (
+		tmp                      string
+		origWorkdir, origDevices string
+		origWriteTimeout         time.Duration
+		origTracker              *sysfsWriteTracker
+	)
+
+	BeforeEach(func() {
+		var err error
+		tmp, err = os.MkdirTemp("", "sysfs-markers")
+		Expect(err).ToNot(HaveOccurred())
+		origWorkdir, origDevices, origWriteTimeout, origTracker = workdir, sysBusPciDevices, sysfsWriteTimeout, sysfsWrites
+		workdir = filepath.Join(tmp, "work")
+		sysBusPciDevices = filepath.Join(tmp, "devices")
+		sysfsWriteTimeout = 200 * time.Millisecond
+		sysfsWrites = newSysfsWriteTracker()
+	})
+
+	AfterEach(func() {
+		workdir, sysBusPciDevices, sysfsWriteTimeout, sysfsWrites = origWorkdir, origDevices, origWriteTimeout, origTracker
+		Expect(os.RemoveAll(tmp)).To(Succeed())
+	})
+
+	markers := func() []string {
+		entries, _ := os.ReadDir(sysfsWriteMarkerDir())
+		names := []string{}
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		return names
+	}
+
+	It("keeps a marker while a write is pending and removes it once the write completes", func() {
+		path := filepath.Join(sysBusPciDevices, pf, "reset")
+		Expect(os.MkdirAll(filepath.Dir(path), 0755)).To(Succeed())
+		Expect(syscall.Mkfifo(path, 0644)).To(Succeed())
+
+		var timeoutErr *SysfsWriteTimeoutError
+		Expect(errors.As(writeSysfs(pf, path, "1"), &timeoutErr)).To(BeTrue())
+		Expect(markers()).To(HaveLen(1))
+
+		f, err := os.OpenFile(path, os.O_RDONLY, 0)
+		Expect(err).ToNot(HaveOccurred())
+		_, _ = f.Read(make([]byte, 4))
+		Expect(f.Close()).To(Succeed())
+
+		Eventually(markers).Should(BeEmpty())
+	})
+
+	It("loads markers left by a previous instance, removes them and remembers the PF", func() {
+		createSysfsWriteMarker(pendingSysfsWrite{pf: pf, path: "/sys/bus/pci/drivers/vfio-pci/unbind", data: "0000:1d:00.1", since: time.Now()})
+		Expect(os.WriteFile(filepath.Join(sysfsWriteMarkerDir(), "write-bad.json"), []byte("{"), 0600)).To(Succeed())
+		Expect(markers()).To(HaveLen(2))
+
+		set := &staleSysfsWriteSet{pfs: map[string][]sysfsWriteMarker{}}
+		loadStaleSysfsWriteMarkersFrom(sysfsWriteMarkerDir(), set, logrus.New())
+
+		Expect(markers()).To(BeEmpty())
+		Expect(set.has(pf)).To(BeTrue())
+		Expect(set.has("0000:3b:00.0")).To(BeFalse())
+
+		set.clear(pf)
+		Expect(set.has(pf)).To(BeFalse())
+	})
+
+	It("does nothing when there is no marker directory", func() {
+		set := &staleSysfsWriteSet{pfs: map[string][]sysfsWriteMarker{}}
+		loadStaleSysfsWriteMarkersFrom(sysfsWriteMarkerDir(), set, logrus.New())
+		Expect(set.pfs).To(BeEmpty())
 	})
 })

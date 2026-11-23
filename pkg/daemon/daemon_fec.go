@@ -119,6 +119,11 @@ func (r *FecNodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request)
 				Info("Hardware VF count mismatch — forcing reconfiguration")
 			fecDeviceUpdateRequired[acc.PCIAddress] = true
 		}
+		if staleSysfsWrites.has(acc.PCIAddress) {
+			r.log.WithField("pciAddress", acc.PCIAddress).
+				Info("sysfs write left unfinished by a previous daemon instance — forcing reconfiguration")
+			fecDeviceUpdateRequired[acc.PCIAddress] = true
+		}
 	}
 
 	if err := r.configureNode(sfnc); err != nil {
@@ -415,7 +420,18 @@ func (r *FecNodeConfigReconciler) isCardUpdateRequired(nc *fec.SriovFecNodeConfi
 		return false
 	}
 
-	return isGenerationChanged() || exposedInventoryOutdated() || r.bbDevConfigDaemonIsDead(nc)
+	staleSysfsWriteLeft := func() bool {
+		for _, pf := range nc.Spec.PhysicalFunctions {
+			if staleSysfsWrites.has(pf.PCIAddress) {
+				r.log.WithField("pciAddress", pf.PCIAddress).
+					Info("sysfs write left unfinished by a previous daemon instance")
+				return true
+			}
+		}
+		return false
+	}
+
+	return isGenerationChanged() || exposedInventoryOutdated() || staleSysfsWriteLeft() || r.bbDevConfigDaemonIsDead(nc)
 }
 
 /*****************************************************************************
@@ -430,6 +446,8 @@ func FecNewNodeConfigReconciler(k8sClient client.Client, drainer DrainAndExecute
 	if supportedAccelerators, err = utils.LoadDiscoveryConfig(FecConfigPath); err != nil {
 		return nil, err
 	}
+
+	loadStaleSysfsWriteMarkers(log)
 
 	return &FecNodeConfigReconciler{
 		Client:              k8sClient,
