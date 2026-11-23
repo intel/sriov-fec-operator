@@ -149,7 +149,11 @@ func (r *VrbNodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request)
 
 	if err := r.configureNode(vrbnc); err != nil {
 		r.log.WithError(err).Error("error occurred during configuring node")
-		return requeueNowWithError(r.updateStatus(vrbnc, metav1.ConditionFalse, ConfigurationFailed, err.Error()))
+		reason, retryLater := configurationFailureReason(err)
+		if retryLater {
+			return requeueLaterOrNowIfError(r.updateStatus(vrbnc, metav1.ConditionFalse, reason, err.Error()))
+		}
+		return requeueNowWithError(r.updateStatus(vrbnc, metav1.ConditionFalse, reason, err.Error()))
 	}
 
 	return requeueLaterOrNowIfError(r.updateStatus(vrbnc, metav1.ConditionTrue, ConfigurationSucceeded, "Configured successfully"))

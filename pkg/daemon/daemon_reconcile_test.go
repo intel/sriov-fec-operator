@@ -783,3 +783,83 @@ var _ = Describe("VrbResourceName", func() {
 		})
 	})
 })
+
+var _ = Describe("configurationFailureReason", func() {
+	It("classifies errors that only go away when the device is released", func() {
+		reason, later := configurationFailureReason(&DeviceInUseError{PF: "0000:07:00.0", Users: map[string][]string{"0000:07:00.1": {"1 (dpdk)"}}})
+		Expect(reason).To(Equal(ConfigurationDeviceInUse))
+		Expect(later).To(BeTrue())
+
+		reason, later = configurationFailureReason(fmt.Errorf("failed to set new amount of VFs: %w", &SysfsWriteTimeoutError{Path: "sriov_numvfs", Data: "0"}))
+		Expect(reason).To(Equal(ConfigurationSysfsWritePending))
+		Expect(later).To(BeTrue())
+
+		reason, later = configurationFailureReason(&SysfsWriteBlockedError{Path: "reset"})
+		Expect(reason).To(Equal(ConfigurationSysfsWritePending))
+		Expect(later).To(BeTrue())
+	})
+
+	It("keeps other errors as Failed with an immediate retry", func() {
+		reason, later := configurationFailureReason(fmt.Errorf("modprobe failed"))
+		Expect(reason).To(Equal(ConfigurationFailed))
+		Expect(later).To(BeFalse())
+	})
+})
+
+var _ = Describe("FecNodeConfigReconciler.Reconcile with a VF in use", func() {
+	It("reports DeviceInUse and retries on the regular resync", func() {
+		scheme := runtime.NewScheme()
+		Expect(sriovv2.AddToScheme(scheme)).To(Succeed())
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		nodeNameRef := types.NamespacedName{Name: "worker", Namespace: "testNamespace"}
+
+		origInventory, origCmdline, origLockdown := getSriovInventory, procCmdlineFilePath, sysLockdownFilePath
+		defer func() {
+			getSriovInventory, procCmdlineFilePath, sysLockdownFilePath = origInventory, origCmdline, origLockdown
+		}()
+		procCmdlineFilePath = "testdata/cmdline_test"
+		sysLockdownFilePath = "testdata/lockdown_none"
+		inventory := &sriovv2.NodeInventory{SriovAccelerators: []sriovv2.SriovAccelerator{
+			{VendorID: "8086", DeviceID: "0d8f", PCIAddress: pciAddress, PFDriver: utils.IgbUio, MaxVFs: 8},
+		}}
+		getSriovInventory = func(*logrus.Logger) (*sriovv2.NodeInventory, error) { return inventory, nil }
+
+		inUse := &DeviceInUseError{PF: pciAddress, Users: map[string][]string{"0000:14:00.2": {"4242 (dpdk-app)"}}}
+		reconciler := FecNodeConfigReconciler{
+			Client:      fakeClient,
+			log:         utils.NewLogger(),
+			nodeNameRef: nodeNameRef,
+			sriovfecconfigurer: testConfigurerProto{configureNodeFunction: func(sriovv2.SriovFecNodeConfigSpec) error {
+				return inUse
+			}},
+			drainerAndExecute: func(configurer func(ctx context.Context) bool, drain bool) error {
+				_ = configurer(context.TODO())
+				return nil
+			},
+			restartDevicePlugin: func() error { return nil },
+		}
+		request := ctrl.Request{NamespacedName: nodeNameRef}
+
+		_, err := reconciler.Reconcile(context.TODO(), request)
+		Expect(err).ToNot(HaveOccurred())
+
+		sfnc := new(sriovv2.SriovFecNodeConfig)
+		Expect(fakeClient.Get(context.TODO(), nodeNameRef, sfnc)).To(Succeed())
+		sfnc.Generation++
+		sfnc.Spec = sriovv2.SriovFecNodeConfigSpec{PhysicalFunctions: []sriovv2.PhysicalFunctionConfigExt{
+			{PCIAddress: pciAddress, PFDriver: utils.IgbUio, VFDriver: utils.IgbUio, VFAmount: 1},
+		}}
+		Expect(fakeClient.Patch(context.TODO(), sfnc, client.Merge)).To(Succeed())
+
+		result, err := reconciler.Reconcile(context.TODO(), request)
+		Expect(err).ToNot(HaveOccurred(), "a VF in use is not a reconcile error")
+		Expect(result.Requeue).To(BeFalse())
+		Expect(result.RequeueAfter).To(Equal(resyncPeriod))
+
+		Expect(fakeClient.Get(context.TODO(), nodeNameRef, sfnc)).To(Succeed())
+		condition := findOrCreateConfigurationStatusCondition(sfnc)
+		Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+		Expect(condition.Reason).To(Equal(string(ConfigurationDeviceInUse)))
+		Expect(condition.Message).To(ContainSubstring("4242 (dpdk-app)"))
+	})
+})

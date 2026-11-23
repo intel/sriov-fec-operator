@@ -33,7 +33,31 @@ const (
 	ConfigurationFailed       ConfigurationConditionReason = "Failed"
 	ConfigurationNotRequested ConfigurationConditionReason = "NotRequested"
 	ConfigurationSucceeded    ConfigurationConditionReason = "Succeeded"
+	// a VF of a PF to reconfigure is held open through vfio
+	ConfigurationDeviceInUse ConfigurationConditionReason = "DeviceInUse"
+	// an earlier sysfs write on the device is still pending in the kernel
+	ConfigurationSysfsWritePending ConfigurationConditionReason = "SysfsWritePending"
 )
+
+// configurationFailureReason returns the condition reason for an error from
+// applying a configuration, and whether it is worth retrying only on the
+// regular resync: a VF in use or a pending sysfs write only goes away when
+// the vfio user releases the device, and retrying immediately with backoff
+// just fills the log.
+func configurationFailureReason(err error) (ConfigurationConditionReason, bool) {
+	var (
+		inUse   *DeviceInUseError
+		blocked *SysfsWriteBlockedError
+		timeout *SysfsWriteTimeoutError
+	)
+	switch {
+	case errors.As(err, &inUse):
+		return ConfigurationDeviceInUse, true
+	case errors.As(err, &blocked), errors.As(err, &timeout):
+		return ConfigurationSysfsWritePending, true
+	}
+	return ConfigurationFailed, false
+}
 
 var (
 	resyncPeriod        = time.Minute
