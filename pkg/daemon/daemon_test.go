@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -69,8 +70,8 @@ var _ = Describe("FecNodeConfigReconciler", func() {
 			Expect(createFiles(filepath.Join(sysBusPciDrivers, utils.IgbUio), "bind")).To(Succeed())
 			Expect(createFiles(filepath.Join(sysBusPciDrivers, utils.PciPfStubDash), "bind")).To(Succeed())
 
-			getVFconfigured = func(string) int {
-				return 0
+			getVFconfigured = func(string) (int, error) {
+				return 0, nil
 			}
 
 			getVFList = func(string) ([]string, error) {
@@ -186,7 +187,7 @@ var _ = Describe("FecNodeConfigReconciler", func() {
 							Return("", nil).
 							onCall([]string{"modprobe", "v"}).
 							Return("", nil).
-							onCall([]string{"setpci", "-v", "-s", "0000:14:00.1", "COMMAND=06"}).
+							onCall([]string{"setpci", "-v", "-s", "0000:14:00.1", "COMMAND=06:06"}).
 							Return("", nil).
 							onCall([]string{"/sriov_workdir/pf_bb_config", "FPGA_5GNR", "-c", fmt.Sprintf("%s.ini", filepath.Join(workdir, pciAddress)), "-p", pciAddress}).
 							Return("", nil)
@@ -590,77 +591,28 @@ func (r *resultCatcher) Return(toBeReturned ...interface{}) *runExecCmdMock {
 	return r.mock
 }
 
-func FuzzIsCardUpdateRequired(f *testing.F) {
-	icur := FecNodeConfigReconciler{
-		Client:      nil,
-		log:         &logrus.Logger{},
-		nodeNameRef: types.NamespacedName{},
-		drainerAndExecute: func(configurer func(ctx context.Context) bool, drain bool) error {
-			return nil
-		},
-		sriovfecconfigurer: nil,
-		restartDevicePlugin: func() error {
-			return nil
-		},
-	}
-	f.Fuzz(func(t *testing.T, data []byte) {
-		sfnc := sriovv2.SriovFecNodeConfig{
-			TypeMeta:   metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{},
-			Spec:       sriovv2.SriovFecNodeConfigSpec{},
-			Status:     sriovv2.SriovFecNodeConfigStatus{},
+func FuzzPlanPFAction(f *testing.F) {
+	f.Fuzz(func(t *testing.T, inSpec bool, pfDriver, vfDriver string, vfAmount int, hash, applied string,
+		statePFDriver string, vfDrivers string, staleWrite bool, dead bool) {
+		var req *pfRequest
+		if inSpec {
+			req = &pfRequest{pfDriver: pfDriver, vfDriver: vfDriver, vfAmount: vfAmount, hash: hash}
 		}
-
-		detectedInventory := sriovv2.NodeInventory{
-			SriovAccelerators: []sriovv2.SriovAccelerator{},
+		state := pfDeviceState{pfDriver: statePFDriver}
+		if vfDrivers != "" {
+			state.vfDrivers = strings.Split(vfDrivers, ",")
 		}
-
-		fuzz.NewFromGoFuzz(data).Fuzz(&sfnc)
-		fuzz.NewFromGoFuzz(data).Fuzz(&detectedInventory)
-
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("Error: %v", icur)
-			}
-		}()
-		_ = icur.isCardUpdateRequired(&sfnc, &detectedInventory)
-	})
-}
-
-func FuzzVrbIsCardUpdateRequired(f *testing.F) {
-	vicur := VrbNodeConfigReconciler{
-		Client:      nil,
-		log:         &logrus.Logger{},
-		nodeNameRef: types.NamespacedName{},
-		drainerAndExecute: func(configurer func(ctx context.Context) bool, drain bool) error {
-			return nil
-		},
-		vrbconfigurer: nil,
-		restartDevicePlugin: func() error {
-			return nil
-		},
-	}
-	f.Fuzz(func(t *testing.T, data []byte) {
-		svnc := vrbv1.SriovVrbNodeConfig{
-			TypeMeta:   metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{},
-			Spec:       vrbv1.SriovVrbNodeConfigSpec{},
-			Status:     vrbv1.SriovVrbNodeConfigStatus{},
+		proc := procAlive
+		if dead {
+			proc = procDead
 		}
-
-		detectedInventory := vrbv1.NodeInventory{
-			SriovAccelerators: []vrbv1.SriovAccelerator{},
+		action, _ := planPFAction(req, applied, state, staleWrite, func() procState { return proc })
+		if staleWrite && action != pfReconfigure {
+			t.Errorf("a stale write must always lead to a reconfiguration, got %s", action)
 		}
-
-		fuzz.NewFromGoFuzz(data).Fuzz(&svnc)
-		fuzz.NewFromGoFuzz(data).Fuzz(&detectedInventory)
-
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("Error: %v", r)
-			}
-		}()
-		_ = vicur.isCardUpdateRequired(&svnc, &detectedInventory)
+		if action == pfRestartPfBBConfig && (!inSpec || applied != hash) {
+			t.Errorf("pf_bb_config may only be restarted on a PF whose applied configuration matches the spec")
+		}
 	})
 }
 
@@ -695,3 +647,44 @@ func FuzzVrbValidateNodeConfig(f *testing.F) {
 		_ = validateVrbNodeConfig(nc)
 	})
 }
+
+var _ = Describe("validateNodeConfig", func() {
+	var tmp, origModuleDir, origCmdline, origLockdown string
+
+	BeforeEach(func() {
+		var err error
+		tmp, err = os.MkdirTemp("", "validate-node-config")
+		Expect(err).ToNot(HaveOccurred())
+		origModuleDir, origCmdline, origLockdown = sysModuleDir, procCmdlineFilePath, sysLockdownFilePath
+		sysModuleDir = tmp
+		procCmdlineFilePath = "testdata/cmdline_test"
+		sysLockdownFilePath = "testdata/lockdown_none"
+
+		params := filepath.Join(tmp, utils.VfioPciUnderscore, "parameters")
+		Expect(os.MkdirAll(params, 0755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(params, "enable_sriov"), []byte("Y\n"), 0644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(params, "disable_idle_d3"), []byte("N\n"), 0644)).To(Succeed())
+	})
+
+	AfterEach(func() {
+		sysModuleDir, procCmdlineFilePath, sysLockdownFilePath = origModuleDir, origCmdline, origLockdown
+		Expect(os.RemoveAll(tmp)).To(Succeed())
+	})
+
+	It("checks the vfio-pci parameters of every PF, not only the first one", func() {
+		spec := sriovv2.SriovFecNodeConfigSpec{PhysicalFunctions: []sriovv2.PhysicalFunctionConfigExt{
+			{PCIAddress: "0000:1d:00.0", PFDriver: utils.IgbUio, VFDriver: utils.IgbUio},
+			{PCIAddress: "0000:b8:00.0", PFDriver: utils.VfioPci, VFDriver: utils.VfioPci,
+				BBDevConfig: sriovv2.BBDevConfig{ACC100: &sriovv2.ACC100BBDevConfig{}}},
+		}}
+		Expect(validateNodeConfig(spec)).To(MatchError(ContainSubstring("disable_idle_d3")))
+	})
+
+	It("accepts PFs whose drivers are set up correctly", func() {
+		spec := sriovv2.SriovFecNodeConfigSpec{PhysicalFunctions: []sriovv2.PhysicalFunctionConfigExt{
+			{PCIAddress: "0000:1d:00.0", PFDriver: utils.IgbUio, VFDriver: utils.IgbUio},
+			{PCIAddress: "0000:b8:00.0", PFDriver: utils.VfioPci, VFDriver: utils.VfioPci},
+		}}
+		Expect(validateNodeConfig(spec)).To(Succeed())
+	})
+})

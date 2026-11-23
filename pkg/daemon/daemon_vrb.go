@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -20,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	vrbv1 "github.com/intel/sriov-fec-operator/api/sriovvrb/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,9 +34,6 @@ var (
 	VrbgetSriovInventory     = VrbGetSriovInventory
 	VrbsupportedAccelerators utils.AcceleratorDiscoveryConfig
 	configMapResource        sync.Map
-	vrbPreviousConfig        = make(map[string]vrbv1.PhysicalFunctionConfigExt)
-	vrbCurrentConfig         = make(map[string]vrbv1.PhysicalFunctionConfigExt)
-	vrbDeviceUpdateRequired  = make(map[string]bool)
 )
 
 type VrbNodeConfigReconciler struct {
@@ -51,7 +48,10 @@ type VrbNodeConfigReconciler struct {
 }
 
 type VrbConfigurer interface {
+	// VrbApplySpec reconfigures the accelerators for which vrbDeviceUpdateRequired is true.
 	VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpec, vrbDeviceUpdateRequired map[string]bool) error
+	// VrbRestartPfBBConfig starts pf_bb_config again for a PF that is otherwise configured.
+	VrbRestartPfBBConfig(acc vrbv1.SriovAccelerator, pf *vrbv1.PhysicalFunctionConfigExt) error
 }
 
 /*****************************************************************************
@@ -102,12 +102,14 @@ func (r *VrbNodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request)
 		return requeueLaterOrNowIfError(r.updateStatus(vrbnc, metav1.ConditionFalse, ConfigurationFailed, "requested configuration refers to not existing accelerator"))
 	}
 
-	for _, accelerator := range vrbdetectedInventory.SriovAccelerators {
-		vrbDeviceUpdateRequired[accelerator.PCIAddress] = true
-	}
-
-	if !r.isCardUpdateRequired(vrbnc, vrbdetectedInventory) {
+	plan := r.planActions(vrbnc, vrbdetectedInventory)
+	if !plan.anyAction() && !r.isGenerationChanged(vrbnc) {
 		r.log.Debug("SriovVrb: Nothing to do")
+		if plan.adopted {
+			if err := storeAppliedConfigs(context.Background(), r.Client, vrbnc, vrbAppliedConfigAnnotation, plan.applied); err != nil {
+				return requeueNowWithError(err)
+			}
+		}
 		return requeueLater()
 	}
 
@@ -115,39 +117,148 @@ func (r *VrbNodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request)
 		return requeueNowWithError(err)
 	}
 
-	/*
-	 * checkIfDeviceUpdateNeeded (called inside updateStatus above) compares
-	 * only the Kubernetes spec against the previously-applied spec.  It may
-	 * set vrbDeviceUpdateRequired[pci]=false when the spec is unchanged, even
-	 * though VFs are missing from sysfs (e.g. after an external sriov_numvfs
-	 * reset).  Override that decision here: if the hardware state does not
-	 * match the requested state, always force a hardware reconfiguration.
-	 */
-	pciToVfsAmount := map[string]int{}
-	for _, pf := range vrbnc.Spec.PhysicalFunctions {
-		pciToVfsAmount[pf.PCIAddress] = pf.VFAmount
-	}
-	for _, acc := range vrbdetectedInventory.SriovAccelerators {
-		requested, ok := pciToVfsAmount[acc.PCIAddress]
-		if !ok {
-			/* accelerator not in spec — skip to avoid misleading log */
-			continue
-		}
-		if len(acc.VFs) != requested {
-			r.log.WithField("pciAddress", acc.PCIAddress).
-				WithField("exposedVfs", len(acc.VFs)).
-				WithField("requestedVfs", requested).
-				Info("Hardware VF count mismatch — forcing reconfiguration")
-			vrbDeviceUpdateRequired[acc.PCIAddress] = true
-		}
-	}
-
-	if err := r.configureNode(vrbnc); err != nil {
+	if err := r.applyPlan(vrbnc, plan); err != nil {
 		r.log.WithError(err).Error("error occurred during configuring node")
-		return requeueNowWithError(r.updateStatus(vrbnc, metav1.ConditionFalse, ConfigurationFailed, err.Error()))
+		reason, retryLater := configurationFailureReason(err)
+		if retryLater {
+			return requeueLaterOrNowIfError(r.updateStatus(vrbnc, metav1.ConditionFalse, reason, err.Error()))
+		}
+		return requeueNowWithError(r.updateStatus(vrbnc, metav1.ConditionFalse, reason, err.Error()))
 	}
 
 	return requeueLaterOrNowIfError(r.updateStatus(vrbnc, metav1.ConditionTrue, ConfigurationSucceeded, "Configured successfully"))
+}
+
+// vrbPlan is what has to be done with each accelerator of the node.
+type vrbPlan struct {
+	actions   map[string]pfAction
+	applied   appliedConfigs
+	adopted   bool // applied was taken from the status, not from a record
+	specByPCI map[string]vrbv1.PhysicalFunctionConfigExt
+	accByPCI  map[string]vrbv1.SriovAccelerator
+}
+
+func (p vrbPlan) anyAction() bool {
+	for _, a := range p.actions {
+		if a != pfNoAction {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *VrbNodeConfigReconciler) isGenerationChanged(nc *vrbv1.SriovVrbNodeConfig) bool {
+	observedGeneration := VrbfindOrCreateConfigurationStatusCondition(nc).ObservedGeneration
+	if nc.GetGeneration() != observedGeneration {
+		r.log.WithField("observed", observedGeneration).
+			WithField("requested", nc.GetGeneration()).
+			Info("Observed generation doesn't reflect requested one")
+		return true
+	}
+	return false
+}
+
+// planActions decides, for each accelerator, whether it is left alone, gets
+// pf_bb_config started again, or is reconfigured. See planPFAction.
+func (r *VrbNodeConfigReconciler) planActions(nc *vrbv1.SriovVrbNodeConfig, inventory *vrbv1.NodeInventory) vrbPlan {
+	applied, recordPresent := readAppliedConfigs(nc, vrbAppliedConfigAnnotation)
+	plan := vrbPlan{
+		actions:   map[string]pfAction{},
+		applied:   applied,
+		specByPCI: map[string]vrbv1.PhysicalFunctionConfigExt{},
+		accByPCI:  map[string]vrbv1.SriovAccelerator{},
+	}
+
+	adopt := adoptCurrentConfiguration(recordPresent, VrbfindOrCreateConfigurationStatusCondition(nc), nc.GetGeneration())
+	for _, pf := range nc.Spec.PhysicalFunctions {
+		plan.specByPCI[pf.PCIAddress] = pf
+		if adopt {
+			applied[pf.PCIAddress] = configHash(pf)
+		}
+	}
+	plan.adopted = adopt
+	if adopt && len(nc.Spec.PhysicalFunctions) > 0 {
+		r.log.WithField("generation", nc.GetGeneration()).
+			Info("no record of the applied configuration; taking the configuration reported as applied by the status")
+	}
+
+	for _, acc := range inventory.SriovAccelerators {
+		acc := acc
+		plan.accByPCI[acc.PCIAddress] = acc
+
+		state := pfDeviceState{pfDriver: acc.PFDriver}
+		for _, vf := range acc.VFs {
+			state.vfDrivers = append(state.vfDrivers, vf.Driver)
+		}
+		var req *pfRequest
+		if pf, ok := plan.specByPCI[acc.PCIAddress]; ok {
+			req = &pfRequest{pfDriver: pf.PFDriver, vfDriver: pf.VFDriver, vfAmount: pf.VFAmount, hash: configHash(pf)}
+		}
+
+		action, why := planPFAction(req, applied[acc.PCIAddress], state, staleSysfsWrites.has(acc.PCIAddress),
+			func() procState { return pfBbConfigProcState(r.log, acc.PCIAddress) })
+		plan.actions[acc.PCIAddress] = action
+		if action != pfNoAction {
+			r.log.WithField("pciAddress", acc.PCIAddress).WithField("action", action.String()).Info(why)
+		}
+	}
+	return plan
+}
+
+// applyPlan carries out the plan and records, per PF, the configuration
+// that was applied.
+func (r *VrbNodeConfigReconciler) applyPlan(nc *vrbv1.SriovVrbNodeConfig, plan vrbPlan) error {
+	var firstErr error
+	keepErr := func(err error) {
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	var reconfigure []string
+	for pci, action := range plan.actions {
+		if action == pfReconfigure {
+			reconfigure = append(reconfigure, pci)
+		}
+	}
+	sort.Strings(reconfigure)
+
+	if len(reconfigure) > 0 {
+		results, err := r.configureNode(nc, reconfigure)
+		for pci, perr := range results {
+			pf, inSpec := plan.specByPCI[pci]
+			switch {
+			case perr == nil && inSpec:
+				plan.applied[pci] = configHash(pf)
+			case perr == nil || !refusedBeforeTeardown(perr):
+				// not in the spec any more, or the teardown may have started
+				delete(plan.applied, pci)
+			}
+		}
+		keepErr(err)
+	}
+
+	for pci, action := range plan.actions {
+		if action != pfRestartPfBBConfig {
+			continue
+		}
+		pf := plan.specByPCI[pci]
+		keepErr(r.vrbconfigurer.VrbRestartPfBBConfig(plan.accByPCI[pci], &pf))
+	}
+
+	// drop records of PFs that are gone from the node or from the spec
+	for pci := range plan.applied {
+		_, inSpec := plan.specByPCI[pci]
+		_, onNode := plan.accByPCI[pci]
+		if !inSpec || !onNode {
+			delete(plan.applied, pci)
+		}
+	}
+	if err := storeAppliedConfigs(context.Background(), r.Client, nc, vrbAppliedConfigAnnotation, plan.applied); err != nil {
+		r.log.WithError(err).Error("failed to record the applied configuration")
+		keepErr(err)
+	}
+	return firstErr
 }
 
 /*****************************************************************************
@@ -260,27 +371,6 @@ func (r *VrbNodeConfigReconciler) updateStatus(nc *vrbv1.SriovVrbNodeConfig,
 
 	previousCondition := VrbfindOrCreateConfigurationStatusCondition(nc)
 
-	if reason == ConfigurationInProgress {
-		// Clear the current configuration map
-		for key := range vrbCurrentConfig {
-			delete(vrbCurrentConfig, key)
-		}
-		// Update the current configuration map with the new configuration
-		for _, pf := range nc.Spec.PhysicalFunctions {
-			vrbCurrentConfig[pf.PCIAddress] = pf
-		}
-		r.checkIfDeviceUpdateNeeded(vrbPreviousConfig, vrbCurrentConfig)
-	} else if reason == ConfigurationSucceeded {
-		// Clear the previous configuration
-		for key := range vrbPreviousConfig {
-			delete(vrbPreviousConfig, key)
-		}
-		// Update the previous configuration with the current configuration
-		for _, pf := range nc.Spec.PhysicalFunctions {
-			vrbPreviousConfig[pf.PCIAddress] = pf
-		}
-	}
-
 	// SriovFecNodeConfig.generation is under K8S management
 	// metav1.Condition.observedGeneration is under this reconciler management.
 	// observedGeneration would be incremented then and only then when spec which comes with updated generation would be processed without any error.
@@ -374,93 +464,47 @@ func (r *VrbNodeConfigReconciler) readNodeConfig(nn types.NamespacedName) (nc *v
  * 		Applies the new PF/VF configuration and updates the sriov device plugin ConfigMap.
  * Returns an error if the configuration failed.
  ****************************************************************************/
-func (r *VrbNodeConfigReconciler) configureNode(nodeConfig *vrbv1.SriovVrbNodeConfig) error {
+func (r *VrbNodeConfigReconciler) configureNode(nodeConfig *vrbv1.SriovVrbNodeConfig, pciAddresses []string) (map[string]error, error) {
+	results := map[string]error{}
 	var configurationError error
 
+	// one PF at a time, so that the outcome is known for each of them
 	drainFunc := func(ctx context.Context) bool {
-		if err := r.vrbconfigurer.VrbApplySpec(nodeConfig.Spec, vrbDeviceUpdateRequired); err != nil {
-			r.log.WithError(err).Error("failed applying new PF/VF configuration")
-			configurationError = err
+		applied := false
+		for _, pci := range pciAddresses {
+			err := r.vrbconfigurer.VrbApplySpec(nodeConfig.Spec, map[string]bool{pci: true})
+			results[pci] = err
+			if err != nil {
+				r.log.WithError(err).WithField("pciAddress", pci).Error("failed applying new PF/VF configuration")
+				if configurationError == nil {
+					configurationError = err
+				}
+				continue
+			}
+			applied = true
+		}
+
+		if !applied {
 			return true
 		}
 		if err := r.handleSriovDevicePluginConfigMap(nodeConfig); err != nil {
 			r.log.WithError(err).Error("failed updating the sriov device plugin ConfigMap")
-			configurationError = err
+			if configurationError == nil {
+				configurationError = err
+			}
 			return true
 		}
-		configurationError = r.restartDevicePlugin()
+		if err := r.restartDevicePlugin(); err != nil && configurationError == nil {
+			configurationError = err
+		}
 		return true
 	}
 
 	if err := r.drainerAndExecute(drainFunc, !nodeConfig.Spec.DrainSkip); err != nil {
-		return err
+		return results, err
 	}
 
-	return configurationError
-}
-
-/*****************************************************************************
- * Method: bbDevConfigDaemonIsDead
- * Description:
- *
- ****************************************************************************/
-func (r *VrbNodeConfigReconciler) bbDevConfigDaemonIsDead(nc *vrbv1.SriovVrbNodeConfig) bool {
-	for _, acc := range nc.Spec.PhysicalFunctions {
-		if strings.EqualFold(acc.PFDriver, utils.VfioPci) {
-			if pfBbConfigProcIsDead(r.log, acc.PCIAddress) {
-				r.log.WithField("pciAddress", acc.PCIAddress).
-					Info("pf-bb-config process for card is not running")
-				return true
-			}
-		}
-	}
-	return false
-}
-
-/*****************************************************************************
- * Method: VrbNodeConfigReconciler::isCardUpdateRequierd
- * Description:
- *
- ****************************************************************************/
-func (r *VrbNodeConfigReconciler) isCardUpdateRequired(nc *vrbv1.SriovVrbNodeConfig,
-	detectedInventory *vrbv1.NodeInventory) bool {
-	pciToVfsAmount := map[string]int{}
-	for _, physicalFunction := range nc.Spec.PhysicalFunctions {
-		pciToVfsAmount[physicalFunction.PCIAddress] = physicalFunction.VFAmount
-	}
-	isGenerationChanged := func() bool {
-		observedGeneration := VrbfindOrCreateConfigurationStatusCondition(nc).ObservedGeneration
-		if nc.GetGeneration() != observedGeneration {
-			r.log.WithField("observed", observedGeneration).
-				WithField("requested", nc.GetGeneration()).
-				Info("Observed generation doesn't reflect requested one")
-			return true
-		}
-		return false
-	}
-
-	if len(nc.Spec.PhysicalFunctions) == 0 {
-		if isGenerationChanged() {
-			return true
-		}
-		r.log.Debug("Empty VRB PF")
-		return false
-	}
-
-	exposedInventoryOutdated := func() bool {
-		for _, accelerator := range detectedInventory.SriovAccelerators {
-			if len(accelerator.VFs) != pciToVfsAmount[accelerator.PCIAddress] {
-				r.log.WithField("pciAddress", accelerator.PCIAddress).
-					WithField("exposedVfs", len(accelerator.VFs)).
-					WithField("requestedVfs", pciToVfsAmount[accelerator.PCIAddress]).
-					Info("Exposed inventory doesn't match requested one")
-				return true
-			}
-		}
-		return false
-	}
-
-	return isGenerationChanged() || exposedInventoryOutdated() || r.bbDevConfigDaemonIsDead(nc)
+	return results, configurationError
 }
 
 /*****************************************************************************
@@ -473,6 +517,8 @@ func VrbNewNodeConfigReconciler(k8sClient client.Client, drainer DrainAndExecute
 	if VrbsupportedAccelerators, err = utils.LoadDiscoveryConfig(VrbConfigPath); err != nil {
 		return nil, err
 	}
+
+	loadStaleSysfsWriteMarkers(log)
 
 	return &VrbNodeConfigReconciler{
 		Client:              k8sClient,
@@ -958,29 +1004,6 @@ func (r *VrbNodeConfigReconciler) loadCurrentDevicePluginConfig() (map[string]in
 	}
 
 	return config, nil
-}
-
-/*****************************************************************************
- * Method: VrbNodeConfigReconciler::checkIfDeviceUpdateNeeded
- * Description: Determines if a device update is required based on the current
- *		and requested configurations
- ****************************************************************************/
-func (r *VrbNodeConfigReconciler) checkIfDeviceUpdateNeeded(previousConf, currentConf map[string]vrbv1.PhysicalFunctionConfigExt) {
-	// Check for updates in previous configuration
-	for k, prevConfig := range previousConf {
-		if currConfig, exists := currentConf[k]; !exists || !equality.Semantic.DeepEqual(prevConfig, currConfig) {
-			vrbDeviceUpdateRequired[k] = true
-		} else {
-			vrbDeviceUpdateRequired[k] = false
-		}
-	}
-
-	// Check for new entries in current configuration
-	for k := range currentConf {
-		if _, exists := previousConf[k]; !exists {
-			vrbDeviceUpdateRequired[k] = true
-		}
-	}
 }
 
 /*****************************************************************************

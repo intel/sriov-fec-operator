@@ -4,6 +4,7 @@
 package daemon
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,7 +28,7 @@ const (
 
 var (
 	runExecCmd       = execCmd
-	getVFconfigured  = utils.GetVFconfigured
+	getVFconfigured  = readVFconfigured
 	getVFList        = utils.GetVFList
 	workdir          = "/tmp"
 	sysBusPciDevices = "/sys/bus/pci/devices"
@@ -81,7 +82,7 @@ func (n *NodeConfigurator) unbindDeviceFromDriver(pciAddress string) error {
 	}
 	n.Log.WithField("pciAddress", pciAddress).WithField("driver", driverPath).Info("driver to unbound device from")
 	unbindPath := filepath.Join(driverPath, "unbind")
-	err = writeFileWithTimeout(unbindPath, pciAddress)
+	err = writeSysfs(pciAddress, unbindPath, pciAddress)
 	if err != nil {
 		n.Log.WithError(err).WithField("pciAddress", pciAddress).WithField("unbindPath", unbindPath).Error("failed to unbind driver from device")
 	}
@@ -115,14 +116,14 @@ func (n *NodeConfigurator) bindDeviceToDriver(pciAddress, driver string) error {
 
 	driverOverridePath := filepath.Join(sysBusPciDevices, pciAddress, "driver_override")
 	n.Log.WithField("path", driverOverridePath).Info("device's driver_override path")
-	if err := writeFileWithTimeout(driverOverridePath, driver); err != nil {
+	if err := writeSysfs(pciAddress, driverOverridePath, driver); err != nil {
 		n.Log.WithError(err).WithField("path", driverOverridePath).WithField("driver", driver).Error("failed to override driver")
 		return err
 	}
 
 	driverBindPath := filepath.Join(sysBusPciDrivers, driver, "bind")
 	n.Log.WithField("path", driverBindPath).Info("driver bind path")
-	err := writeFileWithTimeout(driverBindPath, pciAddress)
+	err := writeSysfs(pciAddress, driverBindPath, pciAddress)
 	if err != nil {
 		n.Log.WithError(err).WithField("pciAddress", pciAddress).WithField("driverBindPath", driverBindPath).Error("failed to bind driver to device")
 	}
@@ -134,7 +135,9 @@ func (n *NodeConfigurator) configureCommandRegister(pciAddr string) error {
 	// Configures PCI COMMAND register that enables
 	// 0X02 bit - PCI_COMMAND_MEMORY which is required for MMIO in pf-bb-config
 	// 0X04 bit - PCI_COMMAND_MASTER which required for PF to correctly manage VFs
-	cmd := []string{"setpci", "-v", "-s", pciAddr, "COMMAND=06"}
+	// The ":06" mask sets only these two bits. Without it the whole register
+	// would be overwritten, clearing e.g. INTx Disable and SERR# Enable.
+	cmd := []string{"setpci", "-v", "-s", pciAddr, "COMMAND=06:06"}
 	_, err := runExecCmd(cmd, n.Log)
 	if err != nil {
 		n.Log.WithError(err).Error("failed to configure PCI command bridge for card: " + pciAddr)
@@ -144,7 +147,11 @@ func (n *NodeConfigurator) configureCommandRegister(pciAddr string) error {
 }
 
 func (n *NodeConfigurator) changeAmountOfVFs(driver string, pfPCIAddress string, vfsAmount int) error {
-	currentAmount := getVFconfigured(pfPCIAddress)
+	currentAmount, err := getVFconfigured(pfPCIAddress)
+	if err != nil {
+		n.Log.WithError(err).WithField("pf", pfPCIAddress).Error("failed to read current amount of VFs")
+		return fmt.Errorf("failed to read current amount of VFs for PF (%s): %w", pfPCIAddress, err)
+	}
 	if currentAmount == vfsAmount {
 		return nil
 	}
@@ -161,7 +168,7 @@ func (n *NodeConfigurator) changeAmountOfVFs(driver string, pfPCIAddress string,
 			return fmt.Errorf("unknown driver %v", driver)
 		}
 
-		err := writeFileWithTimeout(unbindPath, strconv.Itoa(vfsAmount))
+		err := writeSysfs(pfPCIAddress, unbindPath, strconv.Itoa(vfsAmount))
 		if err != nil {
 			n.Log.WithError(err).WithField("pf", pfPCIAddress).WithField("vfsAmount", vfsAmount).Error("failed to set new amount of VFs for PF")
 			return fmt.Errorf("failed to set new amount of VFs (%d) for PF (%s): %w", vfsAmount, pfPCIAddress, err)
@@ -186,8 +193,8 @@ func (n *NodeConfigurator) flrReset(pfPCIAddress string) error {
 	n.Log.Infof("executing FLR for %s", pfPCIAddress)
 
 	path := filepath.Join(sysBusPciDevices, pfPCIAddress, "reset")
-	if err := writeFileWithTimeout(path, strconv.Itoa(1)); err != nil {
-		return fmt.Errorf("failed to execute Function Level Reset for PF (%s): %s", pfPCIAddress, err)
+	if err := writeSysfs(pfPCIAddress, path, strconv.Itoa(1)); err != nil {
+		return fmt.Errorf("failed to execute Function Level Reset for PF (%s): %w", pfPCIAddress, err)
 	}
 
 	// Add a 1-second delay between PF FLR and starting pf_bb_config
@@ -199,6 +206,10 @@ func (n *NodeConfigurator) flrReset(pfPCIAddress string) error {
 
 func (n *NodeConfigurator) cleanAcceleratorConfig(acc sriovv2.SriovAccelerator) error {
 	n.Log.Infof("cleaning configuration on %s", acc.PCIAddress)
+
+	if err := n.ensurePFCanBeReconfigured(acc.PCIAddress); err != nil {
+		return err
+	}
 
 	if err := n.pfBBConfigController.stopPfBBConfig(acc.PCIAddress); err != nil {
 		return err
@@ -221,11 +232,18 @@ func (n *NodeConfigurator) cleanAcceleratorConfig(acc sriovv2.SriovAccelerator) 
 		return err
 	}
 
+	// the PF is now in a known state
+	staleSysfsWrites.clear(acc.PCIAddress)
+
 	return nil
 }
 
 func (n *NodeConfigurator) VrbcleanAcceleratorConfig(acc vrbv1.SriovAccelerator) error {
 	n.Log.Infof("cleaning configuration on %s", acc.PCIAddress)
+
+	if err := n.ensurePFCanBeReconfigured(acc.PCIAddress); err != nil {
+		return err
+	}
 
 	if err := n.pfBBConfigController.stopPfBBConfig(acc.PCIAddress); err != nil {
 		return err
@@ -248,6 +266,91 @@ func (n *NodeConfigurator) VrbcleanAcceleratorConfig(acc vrbv1.SriovAccelerator)
 		return err
 	}
 
+	// the PF is now in a known state
+	staleSysfsWrites.clear(acc.PCIAddress)
+
+	return nil
+}
+
+// ensurePFCanBeReconfigured checks, before anything on the PF is touched, that
+// tearing it down will not block in the kernel:
+//   - no earlier sysfs write on this PF, one of its VFs, or a node-wide
+//     attribute is still pending (a VF unbind that timed out removes the VF's
+//     "driver" link right away, so the VF looks unbound although the unbind
+//     still waits for the vfio user),
+//   - no VF of the PF is held open through vfio by a userspace driver: its
+//     vfio group cannot be opened (EBUSY), or a process in the host /proc
+//     holds it.
+//
+// Without this, the teardown queues sriov_numvfs and reset writes behind the
+// blocked unbind; the pending reset blocks config access to the upstream
+// bridge and hangs lspci on the node.
+func (n *NodeConfigurator) ensurePFCanBeReconfigured(pfPCIAddress string) error {
+	if p := sysfsWrites.blocking(pfPCIAddress); p != nil {
+		err := &SysfsWriteBlockedError{Path: filepath.Join(sysBusPciDevices, pfPCIAddress), Pending: *p}
+		n.Log.WithError(err).WithField("pf", pfPCIAddress).Error("PF cannot be reconfigured")
+		return err
+	}
+
+	vfs, err := getVFList(pfPCIAddress)
+	if err != nil {
+		n.Log.WithError(err).WithField("pf", pfPCIAddress).Error("failed to get list of VFs")
+		return err
+	}
+	if len(vfs) == 0 {
+		return nil
+	}
+
+	// A VF is in use if its vfio group cannot be opened (EBUSY). That does
+	// not work for VFs that share the PF's group (no ACS): pf_bb_config
+	// holds that group. For those, and to name the holders, look at the
+	// processes in the host /proc if it is mounted.
+	pfGroup := iommuGroupOf(pfPCIAddress)
+	var busy, sharedWithPF []string
+	for _, vf := range vfs {
+		group := iommuGroupOf(vf)
+		switch {
+		case group == "":
+			continue
+		case group == pfGroup:
+			sharedWithPF = append(sharedWithPF, vf)
+		default:
+			inUse, err := vfioGroupInUse(group)
+			if err != nil {
+				return fmt.Errorf("cannot check whether VF %s is in use through vfio group %s: %w", vf, group, err)
+			}
+			if inUse {
+				busy = append(busy, vf)
+			}
+		}
+	}
+
+	users := map[string][]string{}
+	if toScan := append(append([]string{}, busy...), sharedWithPF...); len(toScan) > 0 {
+		found, err := findVfioUsers(toScan)
+		switch {
+		case errors.Is(err, errProcUnavailable):
+			if len(sharedWithPF) > 0 {
+				n.Log.WithError(err).WithField("pf", pfPCIAddress).WithField("vfs", sharedWithPF).
+					Warning("cannot check whether VFs sharing the PF's IOMMU group are in use, mount the host /proc at " + procRoot)
+			}
+		case err != nil:
+			return err
+		default:
+			users = found
+		}
+	}
+	for _, vf := range busy {
+		if len(users[vf]) == 0 {
+			users[vf] = []string{"unknown process"}
+		}
+	}
+
+	if len(users) > 0 {
+		err := &DeviceInUseError{PF: pfPCIAddress, Users: users}
+		n.Log.WithError(err).WithField("pf", pfPCIAddress).Error("PF cannot be reconfigured")
+		return err
+	}
 	return nil
 }
 
@@ -333,6 +436,8 @@ func (n *NodeConfigurator) ApplySpec(nodeConfig sriovv2.SriovFecNodeConfigSpec, 
 					return err
 				}
 			}
+			// not managed by the operator: nothing to reconfigure
+			staleSysfsWrites.clear(acc.PCIAddress)
 
 			continue
 		}
@@ -365,6 +470,8 @@ func (n *NodeConfigurator) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpec,
 					return err
 				}
 			}
+			// not managed by the operator: nothing to reconfigure
+			staleSysfsWrites.clear(acc.PCIAddress)
 
 			continue
 		}
@@ -428,6 +535,35 @@ func (n *NodeConfigurator) configureAccelerator(acc sriovv2.SriovAccelerator, re
 
 	return nil
 
+}
+
+// RestartPfBBConfig starts pf_bb_config again for a PF whose driver and VFs
+// already match the requested configuration, typically after the daemon
+// was restarted. The VFs are not unbound or removed, and the PF is not
+// reset, so workloads using the VFs keep them.
+func (n *NodeConfigurator) RestartPfBBConfig(acc sriovv2.SriovAccelerator, pf *sriovv2.PhysicalFunctionConfigExt) error {
+	n.Log.WithField("pci", acc.PCIAddress).Info("starting pf_bb_config again, without reconfiguring the PF")
+
+	// make sure no instance is left and its socket is gone
+	if err := n.pfBBConfigController.stopPfBBConfig(acc.PCIAddress); err != nil {
+		return err
+	}
+	if pf.BBDevConfig.N3000 != nil {
+		if err := n.configureCommandRegister(pf.PCIAddress); err != nil {
+			return err
+		}
+	}
+	return n.pfBBConfigController.initializePfBBConfig(acc, pf)
+}
+
+// VrbRestartPfBBConfig is RestartPfBBConfig for VRB accelerators.
+func (n *NodeConfigurator) VrbRestartPfBBConfig(acc vrbv1.SriovAccelerator, pf *vrbv1.PhysicalFunctionConfigExt) error {
+	n.Log.WithField("pci", acc.PCIAddress).Info("starting pf_bb_config again, without reconfiguring the PF")
+
+	if err := n.pfBBConfigController.stopPfBBConfig(acc.PCIAddress); err != nil {
+		return err
+	}
+	return n.pfBBConfigController.VrbinitializePfBBConfig(acc, pf)
 }
 
 func (n *NodeConfigurator) VrbconfigureAccelerator(acc vrbv1.SriovAccelerator, requestedConfig *vrbv1.PhysicalFunctionConfigExt) error {

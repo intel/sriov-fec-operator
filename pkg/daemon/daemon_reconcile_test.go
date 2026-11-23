@@ -40,16 +40,6 @@ var _ = Describe("FecNodeConfigReconciler.Reconcile", func() {
 			nodeInventory      *sriovv2.NodeInventory
 		)
 		BeforeEach(func() {
-			/* Reset package-level globals so each test starts from a clean state. */
-			for k := range fecPreviousConfig {
-				delete(fecPreviousConfig, k)
-			}
-			for k := range fecCurrentConfig {
-				delete(fecCurrentConfig, k)
-			}
-			for k := range fecDeviceUpdateRequired {
-				delete(fecDeviceUpdateRequired, k)
-			}
 			getSriovInventory = GetSriovInventory
 			procCmdlineFilePath = "testdata/cmdline_test"
 			sysLockdownFilePath = "testdata/lockdown_none"
@@ -106,15 +96,6 @@ var _ = Describe("FecNodeConfigReconciler.Reconcile", func() {
 		})
 
 		AfterEach(func() {
-			for k := range fecPreviousConfig {
-				delete(fecPreviousConfig, k)
-			}
-			for k := range fecCurrentConfig {
-				delete(fecCurrentConfig, k)
-			}
-			for k := range fecDeviceUpdateRequired {
-				delete(fecDeviceUpdateRequired, k)
-			}
 			getSriovInventory = GetSriovInventory
 			procCmdlineFilePath = "/proc/cmdline"
 			sysLockdownFilePath = "/sys/kernel/security/lockdown"
@@ -185,7 +166,7 @@ var _ = Describe("FecNodeConfigReconciler.Reconcile", func() {
 			Expect(fakeClient.Patch(context.TODO(), sfnc, client.Merge)).ToNot(HaveOccurred())
 
 			// Reconcile 2: spec changed (generation bump) → configureAccelerator called,
-			// VFs created, fecPreviousConfig populated with current spec
+			// VFs created, applied configuration recorded
 			configureCallCount = 0
 			_, err = reconciler.Reconcile(context.TODO(), reconcileRequestes)
 			Expect(err).ToNot(HaveOccurred())
@@ -204,10 +185,9 @@ var _ = Describe("FecNodeConfigReconciler.Reconcile", func() {
 			}
 
 			// Reconcile 3: spec UNCHANGED, VFs missing.
-			// isCardUpdateRequired returns true (exposedVfs=0 != requestedVfs=1).
-			// checkIfDeviceUpdateNeeded sees prev==curr so it clears
-			// fecDeviceUpdateRequired; the hardware mismatch override must
-			// re-set the flag so configureAccelerator is called.
+			// The applied configuration matches the spec, but the device
+			// does not (exposedVfs=0 != requestedVfs=1), so the PF must be
+			// reconfigured.
 			configureCallCount = 0
 			_, err = reconciler.Reconcile(context.TODO(), reconcileRequestes)
 			Expect(err).ToNot(HaveOccurred())
@@ -285,6 +265,14 @@ func (t testConfigurerProto) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpe
 	return t.vrbConfigureNodeFunction(nodeConfig)
 }
 
+func (t testConfigurerProto) RestartPfBBConfig(sriovv2.SriovAccelerator, *sriovv2.PhysicalFunctionConfigExt) error {
+	return nil
+}
+
+func (t testConfigurerProto) VrbRestartPfBBConfig(vrbv1.SriovAccelerator, *vrbv1.PhysicalFunctionConfigExt) error {
+	return nil
+}
+
 /* testGatedConfigurerProto honours the fecDeviceUpdateRequired gate by
  * skipping PCI addresses where the flag is false and only invoking the
  * configure function for those where it is true.  Unlike testConfigurerProto
@@ -314,6 +302,10 @@ func (t testGatedConfigurerProto) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConf
 	return nil
 }
 
+func (t testGatedConfigurerProto) RestartPfBBConfig(sriovv2.SriovAccelerator, *sriovv2.PhysicalFunctionConfigExt) error {
+	return nil
+}
+
 /* testGatedVrbConfigurerProto honours the vrbDeviceUpdateRequired gate by
  * skipping PCI addresses where the flag is false and only invoking the
  * configure function for those where it is true.  Unlike testConfigurerProto
@@ -324,6 +316,10 @@ func (t testGatedConfigurerProto) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConf
  */
 type testGatedVrbConfigurerProto struct {
 	vrbConfigureNodeFunction func(nodeConfig vrbv1.SriovVrbNodeConfigSpec) error
+}
+
+func (t testGatedVrbConfigurerProto) VrbRestartPfBBConfig(vrbv1.SriovAccelerator, *vrbv1.PhysicalFunctionConfigExt) error {
+	return nil
 }
 
 func (t testGatedVrbConfigurerProto) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpec, vrbDeviceUpdateRequired map[string]bool) error {
@@ -356,16 +352,6 @@ var _ = Describe("VrbNodeConfigReconciler.Reconcile", func() {
 			nodeInventory      *vrbv1.NodeInventory
 		)
 		BeforeEach(func() {
-			/* Reset package-level globals so each test starts from a clean state. */
-			for k := range vrbPreviousConfig {
-				delete(vrbPreviousConfig, k)
-			}
-			for k := range vrbCurrentConfig {
-				delete(vrbCurrentConfig, k)
-			}
-			for k := range vrbDeviceUpdateRequired {
-				delete(vrbDeviceUpdateRequired, k)
-			}
 			VrbgetSriovInventory = VrbGetSriovInventory
 			procCmdlineFilePath = "testdata/cmdline_test"
 			sysLockdownFilePath = "testdata/lockdown_none"
@@ -422,15 +408,6 @@ var _ = Describe("VrbNodeConfigReconciler.Reconcile", func() {
 		})
 
 		AfterEach(func() {
-			for k := range vrbPreviousConfig {
-				delete(vrbPreviousConfig, k)
-			}
-			for k := range vrbCurrentConfig {
-				delete(vrbCurrentConfig, k)
-			}
-			for k := range vrbDeviceUpdateRequired {
-				delete(vrbDeviceUpdateRequired, k)
-			}
 			VrbgetSriovInventory = VrbGetSriovInventory
 			procCmdlineFilePath = "/proc/cmdline"
 			sysLockdownFilePath = "/sys/kernel/security/lockdown"
@@ -551,7 +528,7 @@ var _ = Describe("VrbNodeConfigReconciler.Reconcile", func() {
 			Expect(fakeClient.Patch(context.TODO(), svnc, client.Merge)).ToNot(HaveOccurred())
 
 			// Reconcile 2: spec changed (generation bump) → VrbApplySpec called,
-			// VFs created, vrbPreviousConfig populated with current spec
+			// VFs created, applied configuration recorded
 			configureCallCount = 0
 			_, err = reconciler.Reconcile(context.TODO(), reconcileRequestes)
 			Expect(err).ToNot(HaveOccurred())
@@ -570,10 +547,9 @@ var _ = Describe("VrbNodeConfigReconciler.Reconcile", func() {
 			}
 
 			// Reconcile 3: spec UNCHANGED, VFs missing.
-			// isCardUpdateRequired returns true (exposedVfs=0 != requestedVfs=1).
-			// checkIfDeviceUpdateNeeded sees prev==curr so it clears
-			// vrbDeviceUpdateRequired; the hardware mismatch override must
-			// re-set the flag so VrbApplySpec is called.
+			// The applied configuration matches the spec, but the device
+			// does not (exposedVfs=0 != requestedVfs=1), so the PF must be
+			// reconfigured.
 			configureCallCount = 0
 			_, err = reconciler.Reconcile(context.TODO(), reconcileRequestes)
 			Expect(err).ToNot(HaveOccurred())
@@ -781,5 +757,85 @@ var _ = Describe("VrbResourceName", func() {
 			resourceMap := resourceList[0].(map[string]interface{})
 			Expect(resourceMap["resourceName"]).To(Equal("test-resource"))
 		})
+	})
+})
+
+var _ = Describe("configurationFailureReason", func() {
+	It("classifies errors that only go away when the device is released", func() {
+		reason, later := configurationFailureReason(&DeviceInUseError{PF: "0000:07:00.0", Users: map[string][]string{"0000:07:00.1": {"1 (dpdk)"}}})
+		Expect(reason).To(Equal(ConfigurationDeviceInUse))
+		Expect(later).To(BeTrue())
+
+		reason, later = configurationFailureReason(fmt.Errorf("failed to set new amount of VFs: %w", &SysfsWriteTimeoutError{Path: "sriov_numvfs", Data: "0"}))
+		Expect(reason).To(Equal(ConfigurationSysfsWritePending))
+		Expect(later).To(BeTrue())
+
+		reason, later = configurationFailureReason(&SysfsWriteBlockedError{Path: "reset"})
+		Expect(reason).To(Equal(ConfigurationSysfsWritePending))
+		Expect(later).To(BeTrue())
+	})
+
+	It("keeps other errors as Failed with an immediate retry", func() {
+		reason, later := configurationFailureReason(fmt.Errorf("modprobe failed"))
+		Expect(reason).To(Equal(ConfigurationFailed))
+		Expect(later).To(BeFalse())
+	})
+})
+
+var _ = Describe("FecNodeConfigReconciler.Reconcile with a VF in use", func() {
+	It("reports DeviceInUse and retries on the regular resync", func() {
+		scheme := runtime.NewScheme()
+		Expect(sriovv2.AddToScheme(scheme)).To(Succeed())
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		nodeNameRef := types.NamespacedName{Name: "worker", Namespace: "testNamespace"}
+
+		origInventory, origCmdline, origLockdown := getSriovInventory, procCmdlineFilePath, sysLockdownFilePath
+		defer func() {
+			getSriovInventory, procCmdlineFilePath, sysLockdownFilePath = origInventory, origCmdline, origLockdown
+		}()
+		procCmdlineFilePath = "testdata/cmdline_test"
+		sysLockdownFilePath = "testdata/lockdown_none"
+		inventory := &sriovv2.NodeInventory{SriovAccelerators: []sriovv2.SriovAccelerator{
+			{VendorID: "8086", DeviceID: "0d8f", PCIAddress: pciAddress, PFDriver: utils.IgbUio, MaxVFs: 8},
+		}}
+		getSriovInventory = func(*logrus.Logger) (*sriovv2.NodeInventory, error) { return inventory, nil }
+
+		inUse := &DeviceInUseError{PF: pciAddress, Users: map[string][]string{"0000:14:00.2": {"4242 (dpdk-app)"}}}
+		reconciler := FecNodeConfigReconciler{
+			Client:      fakeClient,
+			log:         utils.NewLogger(),
+			nodeNameRef: nodeNameRef,
+			sriovfecconfigurer: testConfigurerProto{configureNodeFunction: func(sriovv2.SriovFecNodeConfigSpec) error {
+				return inUse
+			}},
+			drainerAndExecute: func(configurer func(ctx context.Context) bool, drain bool) error {
+				_ = configurer(context.TODO())
+				return nil
+			},
+			restartDevicePlugin: func() error { return nil },
+		}
+		request := ctrl.Request{NamespacedName: nodeNameRef}
+
+		_, err := reconciler.Reconcile(context.TODO(), request)
+		Expect(err).ToNot(HaveOccurred())
+
+		sfnc := new(sriovv2.SriovFecNodeConfig)
+		Expect(fakeClient.Get(context.TODO(), nodeNameRef, sfnc)).To(Succeed())
+		sfnc.Generation++
+		sfnc.Spec = sriovv2.SriovFecNodeConfigSpec{PhysicalFunctions: []sriovv2.PhysicalFunctionConfigExt{
+			{PCIAddress: pciAddress, PFDriver: utils.IgbUio, VFDriver: utils.IgbUio, VFAmount: 1},
+		}}
+		Expect(fakeClient.Patch(context.TODO(), sfnc, client.Merge)).To(Succeed())
+
+		result, err := reconciler.Reconcile(context.TODO(), request)
+		Expect(err).ToNot(HaveOccurred(), "a VF in use is not a reconcile error")
+		Expect(result.Requeue).To(BeFalse())
+		Expect(result.RequeueAfter).To(Equal(resyncPeriod))
+
+		Expect(fakeClient.Get(context.TODO(), nodeNameRef, sfnc)).To(Succeed())
+		condition := findOrCreateConfigurationStatusCondition(sfnc)
+		Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+		Expect(condition.Reason).To(Equal(string(ConfigurationDeviceInUse)))
+		Expect(condition.Message).To(ContainSubstring("4242 (dpdk-app)"))
 	})
 })

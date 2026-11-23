@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hpcloud/tail"
 	sriovv2 "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
@@ -235,6 +236,14 @@ func (p *pfBBConfigController) runPFConfig(deviceName, cfgFilepath, pciAddress s
 	return nil
 }
 
+var (
+	pfBBConfigStopTimeout      = 10 * time.Second
+	pfBBConfigStopPollInterval = 100 * time.Millisecond
+)
+
+// stopPfBBConfig kills pf_bb_config for the PF and waits until it is gone.
+// pf_bb_config holds the PF's vfio device open, so unbinding the PF while it
+// is still exiting would block in the kernel until it has exited.
 func (p *pfBBConfigController) stopPfBBConfig(pciAddress string) error {
 	_, err := execAndSuppress([]string{
 		"pkill",
@@ -248,6 +257,13 @@ func (p *pfBBConfigController) stopPfBBConfig(pciAddress string) error {
 		}
 		return false
 	})
+	if err != nil {
+		return err
+	}
+
+	if err := p.waitForPfBBConfigExit(pciAddress); err != nil {
+		return err
+	}
 
 	// TODO: Remove workaround
 	// Code below implements workaround problem related with pf_bb_config app. Ticket describing an issue SCSY-190446
@@ -256,10 +272,24 @@ func (p *pfBBConfigController) stopPfBBConfig(pciAddress string) error {
 
 	if err := os.Remove(sockFileToBeDeleted); err != nil {
 		p.log.WithError(err).Infof("cannot remove (%s)) file: %s", sockFileToBeDeleted, err)
-		return nil
 	}
 
-	return err
+	return nil
+}
+
+func (p *pfBBConfigController) waitForPfBBConfigExit(pciAddress string) error {
+	deadline := time.Now().Add(pfBBConfigStopTimeout)
+	for {
+		state := pfBbConfigProcState(p.log, pciAddress)
+		if state == procDead {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("pf_bb_config for %s has not exited within %s after SIGKILL (state: %s); "+
+				"not touching the PF while it may still hold the device", pciAddress, pfBBConfigStopTimeout, state)
+		}
+		time.Sleep(pfBBConfigStopPollInterval)
+	}
 }
 
 func (f *fftUpdater) getFftFilePath(p *pfBBConfigController, pf *sriovv2.FFTLutParam) (string, error) {
@@ -352,7 +382,8 @@ func (f *fftUpdater) VrbupdateFftFile(fft *vrbv1.FFTLutParam) (string, error) {
 
 func logLinkStatus(pciAddr string, log *logrus.Logger) {
 	// Execute the lspci command
-	cmd := exec.Command("lspci", "-vvs", pciAddr)
+	cmd, cancel := newPciConfigCmd("lspci", "-vvs", pciAddr)
+	defer cancel()
 	output, err := cmd.Output()
 	if err != nil {
 		log.WithError(err).WithField("pciAddr", pciAddr).Warning("Error running lspci")

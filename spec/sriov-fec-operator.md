@@ -695,7 +695,9 @@ There are 5 available metrics:
     - VRB2: `5GDL`, `5GUL`, `FFT`, `4GDL`, `4GUL`, `MLD`
 - vf_count - describes number of configured VFs on card
   - `pci_address` - represents unique BDF for PF
-  - `status` - represents current status of SriovFecNodeConfig. Available values: `InProgress`, `Succeeded`, `Failed`, `Ignored`
+  - `status` - represents current status of SriovFecNodeConfig. Available values: `InProgress`, `Succeeded`, `Failed`, `Ignored`,
+    `DeviceInUse` (a VF of the PF to reconfigure is held open through vfio), `SysfsWritePending` (an earlier sysfs write on the
+    device has not completed yet)
 - vf_status - equals to 1 if `status` is `RTE_BBDEV_DEV_CONFIGURED` or `RTE_BBDEV_DEV_ACTIVE` and 0 otherwise
   - `pci_address` - represents unique BDF for VF
   - `status` - represents status as exposed by pf-bb-config. Available values: `RTE_BBDEV_DEV_NOSTATUS`, `RTE_BBDEV_DEV_NOT_SUPPORTED`, `RTE_BBDEV_DEV_RESET`,
