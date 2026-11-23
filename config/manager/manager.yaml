@@ -262,6 +262,11 @@ data:
                 - name: lockdown
                   mountPath: /sys/kernel/security
                   readOnly: true
+                # host procfs, used to detect VFs held open through vfio
+                # before a PF is reconfigured
+                - name: hostproc
+                  mountPath: /host/proc
+                  readOnly: true
                 env:
                   - name: SRIOV_FEC_NAMESPACE
                     valueFrom:
@@ -322,6 +327,9 @@ data:
               - name: lockdown
                 hostPath:
                   path: /sys/kernel/security
+              - name: hostproc
+                hostPath:
+                  path: /proc
 ---
 apiVersion: apps/v1
 kind: Deployment

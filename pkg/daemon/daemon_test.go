@@ -69,8 +69,8 @@ var _ = Describe("FecNodeConfigReconciler", func() {
 			Expect(createFiles(filepath.Join(sysBusPciDrivers, utils.IgbUio), "bind")).To(Succeed())
 			Expect(createFiles(filepath.Join(sysBusPciDrivers, utils.PciPfStubDash), "bind")).To(Succeed())
 
-			getVFconfigured = func(string) int {
-				return 0
+			getVFconfigured = func(string) (int, error) {
+				return 0, nil
 			}
 
 			getVFList = func(string) ([]string, error) {

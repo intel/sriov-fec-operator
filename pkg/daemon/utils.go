@@ -18,7 +18,6 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -63,26 +62,6 @@ func requeueNowWithError(e error) (reconcile.Result, error) {
 // on configured schedule, when err is nil
 func requeueLaterOrNowIfError(e error) (reconcile.Result, error) {
 	return reconcile.Result{RequeueAfter: resyncPeriod}, e
-}
-
-// operator is unable to write to sysfs files if device is currently in use
-// this function is supposed to either write successfully to file or return timeout error
-func writeFileWithTimeout(filename, data string) error {
-	done := make(chan struct{})
-	var err error
-
-	go func() {
-		err = os.WriteFile(filename, []byte(data), os.ModeAppend)
-		done <- struct{}{}
-	}()
-
-	select {
-	case <-done:
-		return err
-	case <-time.After(60 * time.Second):
-		return fmt.Errorf("failed to write to sysfs file. Usually it means that device is in use by other process")
-	}
-
 }
 
 func isHardLink(path string) (bool, error) {

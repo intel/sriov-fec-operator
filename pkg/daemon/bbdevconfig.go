@@ -352,7 +352,8 @@ func (f *fftUpdater) VrbupdateFftFile(fft *vrbv1.FFTLutParam) (string, error) {
 
 func logLinkStatus(pciAddr string, log *logrus.Logger) {
 	// Execute the lspci command
-	cmd := exec.Command("lspci", "-vvs", pciAddr)
+	cmd, cancel := newPciConfigCmd("lspci", "-vvs", pciAddr)
+	defer cancel()
 	output, err := cmd.Output()
 	if err != nil {
 		log.WithError(err).WithField("pciAddr", pciAddr).Warning("Error running lspci")

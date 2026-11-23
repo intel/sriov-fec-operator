@@ -4,8 +4,10 @@
 package daemon
 
 import (
+	"context"
 	"errors"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 )
@@ -23,7 +25,11 @@ func execAndSuppress(args []string, log *logrus.Logger, suppressError func(e err
 		return "", errors.New("cmd is empty")
 	}
 
-	if len(args) == 1 {
+	if pciConfigAccessCmds[filepath.Base(args[0])] {
+		var cancel context.CancelFunc
+		cmd, cancel = newPciConfigCmd(args...)
+		defer cancel()
+	} else if len(args) == 1 {
 		cmd = exec.Command(args[0])
 	} else {
 		cmd = exec.Command(args[0], args[1:]...)

@@ -4,6 +4,7 @@
 package daemon
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,7 +28,7 @@ const (
 
 var (
 	runExecCmd       = execCmd
-	getVFconfigured  = utils.GetVFconfigured
+	getVFconfigured  = readVFconfigured
 	getVFList        = utils.GetVFList
 	workdir          = "/tmp"
 	sysBusPciDevices = "/sys/bus/pci/devices"
@@ -81,7 +82,7 @@ func (n *NodeConfigurator) unbindDeviceFromDriver(pciAddress string) error {
 	}
 	n.Log.WithField("pciAddress", pciAddress).WithField("driver", driverPath).Info("driver to unbound device from")
 	unbindPath := filepath.Join(driverPath, "unbind")
-	err = writeFileWithTimeout(unbindPath, pciAddress)
+	err = writeSysfs(pciAddress, unbindPath, pciAddress)
 	if err != nil {
 		n.Log.WithError(err).WithField("pciAddress", pciAddress).WithField("unbindPath", unbindPath).Error("failed to unbind driver from device")
 	}
@@ -115,14 +116,14 @@ func (n *NodeConfigurator) bindDeviceToDriver(pciAddress, driver string) error {
 
 	driverOverridePath := filepath.Join(sysBusPciDevices, pciAddress, "driver_override")
 	n.Log.WithField("path", driverOverridePath).Info("device's driver_override path")
-	if err := writeFileWithTimeout(driverOverridePath, driver); err != nil {
+	if err := writeSysfs(pciAddress, driverOverridePath, driver); err != nil {
 		n.Log.WithError(err).WithField("path", driverOverridePath).WithField("driver", driver).Error("failed to override driver")
 		return err
 	}
 
 	driverBindPath := filepath.Join(sysBusPciDrivers, driver, "bind")
 	n.Log.WithField("path", driverBindPath).Info("driver bind path")
-	err := writeFileWithTimeout(driverBindPath, pciAddress)
+	err := writeSysfs(pciAddress, driverBindPath, pciAddress)
 	if err != nil {
 		n.Log.WithError(err).WithField("pciAddress", pciAddress).WithField("driverBindPath", driverBindPath).Error("failed to bind driver to device")
 	}
@@ -144,7 +145,11 @@ func (n *NodeConfigurator) configureCommandRegister(pciAddr string) error {
 }
 
 func (n *NodeConfigurator) changeAmountOfVFs(driver string, pfPCIAddress string, vfsAmount int) error {
-	currentAmount := getVFconfigured(pfPCIAddress)
+	currentAmount, err := getVFconfigured(pfPCIAddress)
+	if err != nil {
+		n.Log.WithError(err).WithField("pf", pfPCIAddress).Error("failed to read current amount of VFs")
+		return fmt.Errorf("failed to read current amount of VFs for PF (%s): %w", pfPCIAddress, err)
+	}
 	if currentAmount == vfsAmount {
 		return nil
 	}
@@ -161,7 +166,7 @@ func (n *NodeConfigurator) changeAmountOfVFs(driver string, pfPCIAddress string,
 			return fmt.Errorf("unknown driver %v", driver)
 		}
 
-		err := writeFileWithTimeout(unbindPath, strconv.Itoa(vfsAmount))
+		err := writeSysfs(pfPCIAddress, unbindPath, strconv.Itoa(vfsAmount))
 		if err != nil {
 			n.Log.WithError(err).WithField("pf", pfPCIAddress).WithField("vfsAmount", vfsAmount).Error("failed to set new amount of VFs for PF")
 			return fmt.Errorf("failed to set new amount of VFs (%d) for PF (%s): %w", vfsAmount, pfPCIAddress, err)
@@ -186,8 +191,8 @@ func (n *NodeConfigurator) flrReset(pfPCIAddress string) error {
 	n.Log.Infof("executing FLR for %s", pfPCIAddress)
 
 	path := filepath.Join(sysBusPciDevices, pfPCIAddress, "reset")
-	if err := writeFileWithTimeout(path, strconv.Itoa(1)); err != nil {
-		return fmt.Errorf("failed to execute Function Level Reset for PF (%s): %s", pfPCIAddress, err)
+	if err := writeSysfs(pfPCIAddress, path, strconv.Itoa(1)); err != nil {
+		return fmt.Errorf("failed to execute Function Level Reset for PF (%s): %w", pfPCIAddress, err)
 	}
 
 	// Add a 1-second delay between PF FLR and starting pf_bb_config
@@ -199,6 +204,10 @@ func (n *NodeConfigurator) flrReset(pfPCIAddress string) error {
 
 func (n *NodeConfigurator) cleanAcceleratorConfig(acc sriovv2.SriovAccelerator) error {
 	n.Log.Infof("cleaning configuration on %s", acc.PCIAddress)
+
+	if err := n.ensurePFCanBeReconfigured(acc.PCIAddress); err != nil {
+		return err
+	}
 
 	if err := n.pfBBConfigController.stopPfBBConfig(acc.PCIAddress); err != nil {
 		return err
@@ -227,6 +236,10 @@ func (n *NodeConfigurator) cleanAcceleratorConfig(acc sriovv2.SriovAccelerator) 
 func (n *NodeConfigurator) VrbcleanAcceleratorConfig(acc vrbv1.SriovAccelerator) error {
 	n.Log.Infof("cleaning configuration on %s", acc.PCIAddress)
 
+	if err := n.ensurePFCanBeReconfigured(acc.PCIAddress); err != nil {
+		return err
+	}
+
 	if err := n.pfBBConfigController.stopPfBBConfig(acc.PCIAddress); err != nil {
 		return err
 	}
@@ -248,6 +261,49 @@ func (n *NodeConfigurator) VrbcleanAcceleratorConfig(acc vrbv1.SriovAccelerator)
 		return err
 	}
 
+	return nil
+}
+
+// ensurePFCanBeReconfigured checks, before anything on the PF is touched, that
+// tearing it down will not block in the kernel:
+//   - no earlier sysfs write on this PF, one of its VFs, or a node-wide
+//     attribute is still pending (a VF unbind that timed out removes the VF's
+//     "driver" link right away, so the VF looks unbound although the unbind
+//     still waits for the vfio user),
+//   - no VF of the PF is held open through vfio by a userspace driver.
+//
+// Without this, the teardown queues sriov_numvfs and reset writes behind the
+// blocked unbind; the pending reset blocks config access to the upstream
+// bridge and hangs lspci on the node.
+func (n *NodeConfigurator) ensurePFCanBeReconfigured(pfPCIAddress string) error {
+	if p := sysfsWrites.blocking(pfPCIAddress); p != nil {
+		err := &SysfsWriteBlockedError{Path: filepath.Join(sysBusPciDevices, pfPCIAddress), Pending: *p}
+		n.Log.WithError(err).WithField("pf", pfPCIAddress).Error("PF cannot be reconfigured")
+		return err
+	}
+
+	vfs, err := getVFList(pfPCIAddress)
+	if err != nil {
+		n.Log.WithError(err).WithField("pf", pfPCIAddress).Error("failed to get list of VFs")
+		return err
+	}
+	if len(vfs) == 0 {
+		return nil
+	}
+
+	users, err := findVfioUsers(vfs)
+	if errors.Is(err, errProcUnavailable) {
+		n.Log.WithError(err).WithField("pf", pfPCIAddress).
+			Warning("cannot check whether VFs are in use through vfio, mount the host /proc at " + procRoot)
+		return nil
+	} else if err != nil {
+		return err
+	}
+	if len(users) > 0 {
+		err := &DeviceInUseError{PF: pfPCIAddress, Users: users}
+		n.Log.WithError(err).WithField("pf", pfPCIAddress).Error("PF cannot be reconfigured")
+		return err
+	}
 	return nil
 }
 
