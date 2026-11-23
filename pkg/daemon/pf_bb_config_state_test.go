@@ -5,6 +5,7 @@ package daemon
 
 import (
 	"errors"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -54,4 +55,42 @@ var _ = Describe("pf_bb_config process state", func() {
 		Expect(pfBbConfigProcIsDead(logrus.New(), pci)).To(BeFalse())
 	})
 
+	Describe("waitForPfBBConfigExit", func() {
+		var origTimeout, origInterval time.Duration
+
+		BeforeEach(func() {
+			origTimeout, origInterval = pfBBConfigStopTimeout, pfBBConfigStopPollInterval
+			pfBBConfigStopTimeout = 300 * time.Millisecond
+			pfBBConfigStopPollInterval = 10 * time.Millisecond
+		})
+
+		AfterEach(func() {
+			pfBBConfigStopTimeout, pfBBConfigStopPollInterval = origTimeout, origInterval
+		})
+
+		It("returns once the process is gone", func() {
+			outputs := []string{"1", "1", "0"}
+			runPgrepCount = func(*logrus.Logger, string) (string, error) {
+				out := outputs[0]
+				if len(outputs) > 1 {
+					outputs = outputs[1:]
+				}
+				return out, nil
+			}
+			p := &pfBBConfigController{log: logrus.New()}
+			Expect(p.waitForPfBBConfigExit(pci)).To(Succeed())
+		})
+
+		It("fails if the process does not exit in time", func() {
+			pgrepReturns("1", nil)
+			p := &pfBBConfigController{log: logrus.New()}
+			Expect(p.waitForPfBBConfigExit(pci)).To(MatchError(ContainSubstring("has not exited")))
+		})
+
+		It("fails if the state cannot be determined", func() {
+			pgrepReturns("", errors.New("boom"))
+			p := &pfBBConfigController{log: logrus.New()}
+			Expect(p.waitForPfBBConfigExit(pci)).To(MatchError(ContainSubstring("state: unknown")))
+		})
+	})
 })
