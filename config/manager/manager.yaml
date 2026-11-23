@@ -262,8 +262,8 @@ data:
                 - name: lockdown
                   mountPath: /sys/kernel/security
                   readOnly: true
-                # host procfs, used to detect VFs held open through vfio
-                # before a PF is reconfigured
+                # host procfs, optional: names the processes that hold a VF
+                # through vfio, and covers VFs sharing the PF's IOMMU group
                 - name: hostproc
                   mountPath: /host/proc
                   readOnly: true

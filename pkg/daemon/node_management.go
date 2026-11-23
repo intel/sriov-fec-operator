@@ -278,7 +278,9 @@ func (n *NodeConfigurator) VrbcleanAcceleratorConfig(acc vrbv1.SriovAccelerator)
 //     attribute is still pending (a VF unbind that timed out removes the VF's
 //     "driver" link right away, so the VF looks unbound although the unbind
 //     still waits for the vfio user),
-//   - no VF of the PF is held open through vfio by a userspace driver.
+//   - no VF of the PF is held open through vfio by a userspace driver: its
+//     vfio group cannot be opened (EBUSY), or a process in the host /proc
+//     holds it.
 //
 // Without this, the teardown queues sriov_numvfs and reset writes behind the
 // blocked unbind; the pending reset blocks config access to the upstream
@@ -299,14 +301,51 @@ func (n *NodeConfigurator) ensurePFCanBeReconfigured(pfPCIAddress string) error 
 		return nil
 	}
 
-	users, err := findVfioUsers(vfs)
-	if errors.Is(err, errProcUnavailable) {
-		n.Log.WithError(err).WithField("pf", pfPCIAddress).
-			Warning("cannot check whether VFs are in use through vfio, mount the host /proc at " + procRoot)
-		return nil
-	} else if err != nil {
-		return err
+	// A VF is in use if its vfio group cannot be opened (EBUSY). That does
+	// not work for VFs that share the PF's group (no ACS): pf_bb_config
+	// holds that group. For those, and to name the holders, look at the
+	// processes in the host /proc if it is mounted.
+	pfGroup := iommuGroupOf(pfPCIAddress)
+	var busy, sharedWithPF []string
+	for _, vf := range vfs {
+		group := iommuGroupOf(vf)
+		switch {
+		case group == "":
+			continue
+		case group == pfGroup:
+			sharedWithPF = append(sharedWithPF, vf)
+		default:
+			inUse, err := vfioGroupInUse(group)
+			if err != nil {
+				return fmt.Errorf("cannot check whether VF %s is in use through vfio group %s: %w", vf, group, err)
+			}
+			if inUse {
+				busy = append(busy, vf)
+			}
+		}
 	}
+
+	users := map[string][]string{}
+	if toScan := append(append([]string{}, busy...), sharedWithPF...); len(toScan) > 0 {
+		found, err := findVfioUsers(toScan)
+		switch {
+		case errors.Is(err, errProcUnavailable):
+			if len(sharedWithPF) > 0 {
+				n.Log.WithError(err).WithField("pf", pfPCIAddress).WithField("vfs", sharedWithPF).
+					Warning("cannot check whether VFs sharing the PF's IOMMU group are in use, mount the host /proc at " + procRoot)
+			}
+		case err != nil:
+			return err
+		default:
+			users = found
+		}
+	}
+	for _, vf := range busy {
+		if len(users[vf]) == 0 {
+			users[vf] = []string{"unknown process"}
+		}
+	}
+
 	if len(users) > 0 {
 		err := &DeviceInUseError{PF: pfPCIAddress, Users: users}
 		n.Log.WithError(err).WithField("pf", pfPCIAddress).Error("PF cannot be reconfigured")

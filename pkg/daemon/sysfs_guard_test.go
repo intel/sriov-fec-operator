@@ -152,6 +152,11 @@ var _ = Describe("sysfs guard", func() {
 	Describe("findVfioUsers and ensurePFCanBeReconfigured", func() {
 		const group = "42"
 
+		var (
+			origGroupOpen func(string) error
+			groupOpenErr  error
+		)
+
 		BeforeEach(func() {
 			makeVF()
 			Expect(os.Symlink("../../kernel/iommu_groups/"+group, filepath.Join(sysBusPciDevices, vf, "iommu_group"))).To(Succeed())
@@ -160,6 +165,15 @@ var _ = Describe("sysfs guard", func() {
 			Expect(os.Symlink("/dev/null", filepath.Join(devVfioPath, group))).To(Succeed())
 			Expect(os.MkdirAll(procRoot, 0755)).To(Succeed())
 			getVFList = func(string) ([]string, error) { return []string{vf}, nil }
+
+			// the real group open needs a vfio group node; simulate its result
+			origGroupOpen = vfioGroupOpen
+			groupOpenErr = nil
+			vfioGroupOpen = func(string) error { return groupOpenErr }
+		})
+
+		AfterEach(func() {
+			vfioGroupOpen = origGroupOpen
 		})
 
 		addProcess := func(pid, comm string, fdTargets ...string) {
@@ -171,11 +185,16 @@ var _ = Describe("sysfs guard", func() {
 			}
 		}
 
+		sharePFGroup := func() {
+			Expect(os.Symlink("../../kernel/iommu_groups/"+group, filepath.Join(sysBusPciDevices, pf, "iommu_group"))).To(Succeed())
+		}
+
 		nc := func() *NodeConfigurator {
 			return &NodeConfigurator{Log: logrus.New()}
 		}
 
-		It("finds a process holding the VF's vfio group", func() {
+		It("refuses when the VF's vfio group is busy, and names the holder", func() {
+			groupOpenErr = syscall.EBUSY
 			addProcess("1234", "dpdk-app", "/etc/hostname", filepath.Join(devVfioPath, group))
 			addProcess("99", "other", "/etc/hostname")
 
@@ -189,19 +208,56 @@ var _ = Describe("sysfs guard", func() {
 			Expect(err.Error()).To(ContainSubstring("1234 (dpdk-app)"))
 		})
 
-		It("ignores pf_bb_config, which is stopped as part of the reconfiguration", func() {
-			addProcess("77", "pf_bb_config", filepath.Join(devVfioPath, group))
-			Expect(nc().ensurePFCanBeReconfigured(pf)).To(Succeed())
+		It("refuses when the VF's vfio group is busy even without the host /proc", func() {
+			groupOpenErr = syscall.EBUSY
+			Expect(os.RemoveAll(procRoot)).To(Succeed())
+
+			err := nc().ensurePFCanBeReconfigured(pf)
+			var inUse *DeviceInUseError
+			Expect(errors.As(err, &inUse)).To(BeTrue())
+			Expect(err.Error()).To(ContainSubstring(vf + " by [unknown process]"))
 		})
 
-		It("allows reconfiguration when no process holds the VFs", func() {
+		It("allows reconfiguration when the VF's vfio group is free", func() {
 			addProcess("99", "other", "/etc/hostname")
 			Expect(nc().ensurePFCanBeReconfigured(pf)).To(Succeed())
 		})
 
-		It("skips the vfio check when the host procfs is not mounted", func() {
-			Expect(os.RemoveAll(procRoot)).To(Succeed())
+		It("treats a VF without a vfio group node as not in use", func() {
+			groupOpenErr = os.ErrNotExist
 			Expect(nc().ensurePFCanBeReconfigured(pf)).To(Succeed())
+		})
+
+		It("fails when the vfio group cannot be checked", func() {
+			groupOpenErr = syscall.EACCES
+			Expect(nc().ensurePFCanBeReconfigured(pf)).To(MatchError(ContainSubstring("cannot check whether VF")))
+		})
+
+		Context("when the VF shares the PF's IOMMU group", func() {
+			BeforeEach(func() {
+				sharePFGroup()
+				// pf_bb_config holds the shared group, so the open is no help
+				groupOpenErr = syscall.EBUSY
+			})
+
+			It("ignores pf_bb_config, which is stopped as part of the reconfiguration", func() {
+				addProcess("77", "pf_bb_config", filepath.Join(devVfioPath, group))
+				Expect(nc().ensurePFCanBeReconfigured(pf)).To(Succeed())
+			})
+
+			It("finds another process holding the group", func() {
+				addProcess("77", "pf_bb_config", filepath.Join(devVfioPath, group))
+				addProcess("1234", "dpdk-app", filepath.Join(devVfioPath, group))
+				err := nc().ensurePFCanBeReconfigured(pf)
+				var inUse *DeviceInUseError
+				Expect(errors.As(err, &inUse)).To(BeTrue())
+				Expect(err.Error()).To(ContainSubstring("1234 (dpdk-app)"))
+			})
+
+			It("cannot tell without the host /proc, and does not block", func() {
+				Expect(os.RemoveAll(procRoot)).To(Succeed())
+				Expect(nc().ensurePFCanBeReconfigured(pf)).To(Succeed())
+			})
 		})
 
 		It("refuses reconfiguration while a write on the PF is pending", func() {

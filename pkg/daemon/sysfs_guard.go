@@ -245,6 +245,49 @@ func readVFconfigured(pfPCIAddress string) (int, error) {
 	return n, nil
 }
 
+// vfioGroupOpen opens a vfio group node the way a vfio user does, and
+// closes it again. The open fails with EBUSY while the group is in use,
+// through the group API or through the cdev of one of its devices
+// (vfio_group_fops_open()).
+var vfioGroupOpen = func(path string) error {
+	f, err := os.OpenFile(path, os.O_RDONLY, 0)
+	if err != nil {
+		return err
+	}
+	return f.Close()
+}
+
+// iommuGroupOf returns the IOMMU group number of a PCI device, or "" if it
+// has none.
+func iommuGroupOf(pciAddress string) string {
+	link, err := os.Readlink(filepath.Join(sysBusPciDevices, pciAddress, "iommu_group"))
+	if err != nil {
+		return ""
+	}
+	return filepath.Base(link)
+}
+
+// vfioGroupInUse tells whether a vfio user holds the given IOMMU group. A
+// group without a vfio node (no device of it bound to a vfio driver) is not
+// in use. The check briefly opens the group itself; a vfio user that tries
+// to open it at that very moment gets EBUSY.
+func vfioGroupInUse(group string) (bool, error) {
+	for _, name := range []string{group, "noiommu-" + group} {
+		err := vfioGroupOpen(filepath.Join(devVfioPath, name))
+		switch {
+		case err == nil:
+			return false, nil
+		case errors.Is(err, syscall.EBUSY):
+			return true, nil
+		case errors.Is(err, os.ErrNotExist), errors.Is(err, syscall.ENODEV):
+			continue
+		default:
+			return false, err
+		}
+	}
+	return false, nil
+}
+
 var errProcUnavailable = errors.New("host procfs is not available")
 
 const pfBBConfigComm = "pf_bb_config"
