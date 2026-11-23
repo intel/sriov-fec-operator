@@ -180,7 +180,8 @@ func readVfioToken() (uuid.UUID, error) {
 
 	vfioToken, err := uuid.ParseBytes(vfioTokenBytes)
 	if err != nil {
-		return uuid.UUID{}, fmt.Errorf("provided vfioToken(%s) is not in UUID format: %s", vfioTokenBytes, err)
+		// do not print the token itself: it grants access to the VFs
+		return uuid.UUID{}, fmt.Errorf("provided vfioToken is not in UUID format: %s", err)
 	}
 
 	return vfioToken, nil
