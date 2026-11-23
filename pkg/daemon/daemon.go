@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -44,28 +45,69 @@ type DrainAndExecute func(configurer func(ctx context.Context) bool, drain bool)
 
 type RestartDevicePluginFunction func() error
 
-func pfBbConfigProcIsDead(log *logrus.Logger, pciAddr string) bool {
+type procState int
+
+const (
+	procAlive procState = iota
+	procDead
+	procUnknown
+)
+
+func (s procState) String() string {
+	switch s {
+	case procAlive:
+		return "alive"
+	case procDead:
+		return "dead"
+	}
+	return "unknown"
+}
+
+// runPgrepCount runs "pgrep --count --full <pattern>" and returns its output.
+// pgrep exits with 1 when no process matches; that is not an error here.
+var runPgrepCount = func(log *logrus.Logger, pattern string) (string, error) {
+	return execAndSuppress([]string{"pgrep", "--count", "--full", pattern}, log, func(e error) bool {
+		var ee *exec.ExitError
+		return errors.As(e, &ee) && ee.ExitCode() == 1
+	})
+}
+
+// pfBbConfigProcState tells whether a pf_bb_config process serves pciAddr.
+// It returns procUnknown when that cannot be determined (pgrep failed or
+// printed something unexpected). Callers must not treat procUnknown as dead:
+// a dead pf_bb_config triggers a full reconfiguration of the PF.
+func pfBbConfigProcState(log *logrus.Logger, pciAddr string) procState {
 	defaultLogLevel := log.GetLevel()
 	if defaultLogLevel == logrus.InfoLevel {
 		log.SetLevel(logrus.WarnLevel)
 	}
-	stdout, err := execCmd([]string{
-		"pgrep",
-		"--count",
-		"--full",
-		fmt.Sprintf("pf_bb_config.*%s", pciAddr),
-	}, log)
+	stdout, err := runPgrepCount(log, fmt.Sprintf("pf_bb_config.*%s", pciAddr))
 	log.SetLevel(defaultLogLevel)
 	if err != nil {
-		log.WithError(err).Error("failed to determine status of pf-bb-config daemon")
-		return true
+		log.WithError(err).WithField("pciAddr", pciAddr).Error("failed to determine status of pf-bb-config daemon")
+		return procUnknown
 	}
-	matchingProcCount, err := strconv.Atoi(stdout[0:1]) // Stdout contains characters like '\n', so we are removing them
-	if err != nil {
-		log.WithError(err).Error("failed to convert 'pgrep' output to int")
-		return true
+	count, err := strconv.Atoi(strings.TrimSpace(stdout))
+	if err != nil || count < 0 {
+		log.WithError(err).WithField("pciAddr", pciAddr).WithField("output", stdout).
+			Error("failed to parse 'pgrep' output")
+		return procUnknown
 	}
-	return matchingProcCount == 0
+	if count == 0 {
+		return procDead
+	}
+	return procAlive
+}
+
+// pfBbConfigProcIsDead returns true only when pf_bb_config is known not to
+// run for pciAddr.
+func pfBbConfigProcIsDead(log *logrus.Logger, pciAddr string) bool {
+	state := pfBbConfigProcState(log, pciAddr)
+	if state == procUnknown {
+		log.WithField("pciAddr", pciAddr).
+			Warning("cannot determine whether pf-bb-config is running; not reconfiguring the PF on that basis")
+	}
+	return state == procDead
 }
 
 func isReady(p corev1.Pod) bool {
