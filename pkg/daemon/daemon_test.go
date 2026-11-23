@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -590,77 +591,28 @@ func (r *resultCatcher) Return(toBeReturned ...interface{}) *runExecCmdMock {
 	return r.mock
 }
 
-func FuzzIsCardUpdateRequired(f *testing.F) {
-	icur := FecNodeConfigReconciler{
-		Client:      nil,
-		log:         &logrus.Logger{},
-		nodeNameRef: types.NamespacedName{},
-		drainerAndExecute: func(configurer func(ctx context.Context) bool, drain bool) error {
-			return nil
-		},
-		sriovfecconfigurer: nil,
-		restartDevicePlugin: func() error {
-			return nil
-		},
-	}
-	f.Fuzz(func(t *testing.T, data []byte) {
-		sfnc := sriovv2.SriovFecNodeConfig{
-			TypeMeta:   metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{},
-			Spec:       sriovv2.SriovFecNodeConfigSpec{},
-			Status:     sriovv2.SriovFecNodeConfigStatus{},
+func FuzzPlanPFAction(f *testing.F) {
+	f.Fuzz(func(t *testing.T, inSpec bool, pfDriver, vfDriver string, vfAmount int, hash, applied string,
+		statePFDriver string, vfDrivers string, staleWrite bool, dead bool) {
+		var req *pfRequest
+		if inSpec {
+			req = &pfRequest{pfDriver: pfDriver, vfDriver: vfDriver, vfAmount: vfAmount, hash: hash}
 		}
-
-		detectedInventory := sriovv2.NodeInventory{
-			SriovAccelerators: []sriovv2.SriovAccelerator{},
+		state := pfDeviceState{pfDriver: statePFDriver}
+		if vfDrivers != "" {
+			state.vfDrivers = strings.Split(vfDrivers, ",")
 		}
-
-		fuzz.NewFromGoFuzz(data).Fuzz(&sfnc)
-		fuzz.NewFromGoFuzz(data).Fuzz(&detectedInventory)
-
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("Error: %v", icur)
-			}
-		}()
-		_ = icur.isCardUpdateRequired(&sfnc, &detectedInventory)
-	})
-}
-
-func FuzzVrbIsCardUpdateRequired(f *testing.F) {
-	vicur := VrbNodeConfigReconciler{
-		Client:      nil,
-		log:         &logrus.Logger{},
-		nodeNameRef: types.NamespacedName{},
-		drainerAndExecute: func(configurer func(ctx context.Context) bool, drain bool) error {
-			return nil
-		},
-		vrbconfigurer: nil,
-		restartDevicePlugin: func() error {
-			return nil
-		},
-	}
-	f.Fuzz(func(t *testing.T, data []byte) {
-		svnc := vrbv1.SriovVrbNodeConfig{
-			TypeMeta:   metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{},
-			Spec:       vrbv1.SriovVrbNodeConfigSpec{},
-			Status:     vrbv1.SriovVrbNodeConfigStatus{},
+		proc := procAlive
+		if dead {
+			proc = procDead
 		}
-
-		detectedInventory := vrbv1.NodeInventory{
-			SriovAccelerators: []vrbv1.SriovAccelerator{},
+		action, _ := planPFAction(req, applied, state, staleWrite, func() procState { return proc })
+		if staleWrite && action != pfReconfigure {
+			t.Errorf("a stale write must always lead to a reconfiguration, got %s", action)
 		}
-
-		fuzz.NewFromGoFuzz(data).Fuzz(&svnc)
-		fuzz.NewFromGoFuzz(data).Fuzz(&detectedInventory)
-
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("Error: %v", r)
-			}
-		}()
-		_ = vicur.isCardUpdateRequired(&svnc, &detectedInventory)
+		if action == pfRestartPfBBConfig && (!inSpec || applied != hash) {
+			t.Errorf("pf_bb_config may only be restarted on a PF whose applied configuration matches the spec")
+		}
 	})
 }
 

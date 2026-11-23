@@ -537,6 +537,35 @@ func (n *NodeConfigurator) configureAccelerator(acc sriovv2.SriovAccelerator, re
 
 }
 
+// RestartPfBBConfig starts pf_bb_config again for a PF whose driver and VFs
+// already match the requested configuration, typically after the daemon
+// was restarted. The VFs are not unbound or removed, and the PF is not
+// reset, so workloads using the VFs keep them.
+func (n *NodeConfigurator) RestartPfBBConfig(acc sriovv2.SriovAccelerator, pf *sriovv2.PhysicalFunctionConfigExt) error {
+	n.Log.WithField("pci", acc.PCIAddress).Info("starting pf_bb_config again, without reconfiguring the PF")
+
+	// make sure no instance is left and its socket is gone
+	if err := n.pfBBConfigController.stopPfBBConfig(acc.PCIAddress); err != nil {
+		return err
+	}
+	if pf.BBDevConfig.N3000 != nil {
+		if err := n.configureCommandRegister(pf.PCIAddress); err != nil {
+			return err
+		}
+	}
+	return n.pfBBConfigController.initializePfBBConfig(acc, pf)
+}
+
+// VrbRestartPfBBConfig is RestartPfBBConfig for VRB accelerators.
+func (n *NodeConfigurator) VrbRestartPfBBConfig(acc vrbv1.SriovAccelerator, pf *vrbv1.PhysicalFunctionConfigExt) error {
+	n.Log.WithField("pci", acc.PCIAddress).Info("starting pf_bb_config again, without reconfiguring the PF")
+
+	if err := n.pfBBConfigController.stopPfBBConfig(acc.PCIAddress); err != nil {
+		return err
+	}
+	return n.pfBBConfigController.VrbinitializePfBBConfig(acc, pf)
+}
+
 func (n *NodeConfigurator) VrbconfigureAccelerator(acc vrbv1.SriovAccelerator, requestedConfig *vrbv1.PhysicalFunctionConfigExt) error {
 	n.Log.WithField("requestedConfig", requestedConfig).Info("configuring PF")
 

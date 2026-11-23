@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 
 	"github.com/intel/sriov-fec-operator/pkg/common/utils"
@@ -16,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	fec "github.com/intel/sriov-fec-operator/api/sriovfec/v2"
-	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,12 +26,9 @@ import (
 )
 
 var (
-	FecConfigPath           = "/sriov_config/config/accelerators.json"
-	getSriovInventory       = GetSriovInventory
-	supportedAccelerators   utils.AcceleratorDiscoveryConfig
-	fecPreviousConfig       = make(map[string]fec.PhysicalFunctionConfigExt)
-	fecCurrentConfig        = make(map[string]fec.PhysicalFunctionConfigExt)
-	fecDeviceUpdateRequired = make(map[string]bool)
+	FecConfigPath         = "/sriov_config/config/accelerators.json"
+	getSriovInventory     = GetSriovInventory
+	supportedAccelerators utils.AcceleratorDiscoveryConfig
 )
 
 type FecNodeConfigReconciler struct {
@@ -44,7 +41,10 @@ type FecNodeConfigReconciler struct {
 }
 
 type Configurer interface {
+	// ApplySpec reconfigures the accelerators for which fecDeviceUpdateRequired is true.
 	ApplySpec(nodeConfig fec.SriovFecNodeConfigSpec, fecDeviceUpdateRequired map[string]bool) error
+	// RestartPfBBConfig starts pf_bb_config again for a PF that is otherwise configured.
+	RestartPfBBConfig(acc fec.SriovAccelerator, pf *fec.PhysicalFunctionConfigExt) error
 }
 
 /*****************************************************************************
@@ -81,12 +81,14 @@ func (r *FecNodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request)
 		return requeueLaterOrNowIfError(r.updateStatus(sfnc, metav1.ConditionFalse, ConfigurationFailed, "requested configuration refers to not existing accelerator"))
 	}
 
-	for _, accelerator := range detectedInventory.SriovAccelerators {
-		fecDeviceUpdateRequired[accelerator.PCIAddress] = true
-	}
-
-	if !r.isCardUpdateRequired(sfnc, detectedInventory) {
+	plan := r.planActions(sfnc, detectedInventory)
+	if !plan.anyAction() && !r.isGenerationChanged(sfnc) {
 		r.log.Debug("SriovFec: Nothing to do")
+		if plan.adopted {
+			if err := storeAppliedConfigs(context.Background(), r.Client, sfnc, fecAppliedConfigAnnotation, plan.applied); err != nil {
+				return requeueNowWithError(err)
+			}
+		}
 		return requeueLater()
 	}
 
@@ -94,39 +96,7 @@ func (r *FecNodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request)
 		return requeueNowWithError(err)
 	}
 
-	/*
-	 * checkIfDeviceUpdateNeeded (called inside updateStatus above) compares
-	 * only the Kubernetes spec against the previously-applied spec.  It may
-	 * set fecDeviceUpdateRequired[pci]=false when the spec is unchanged, even
-	 * though VFs are missing from sysfs (e.g. after an external sriov_numvfs
-	 * reset).  Override that decision here: if the hardware state does not
-	 * match the requested state, always force a hardware reconfiguration.
-	 */
-	pciToVfsAmount := map[string]int{}
-	for _, pf := range sfnc.Spec.PhysicalFunctions {
-		pciToVfsAmount[pf.PCIAddress] = pf.VFAmount
-	}
-	for _, acc := range detectedInventory.SriovAccelerators {
-		requested, ok := pciToVfsAmount[acc.PCIAddress]
-		if !ok {
-			/* accelerator not in spec — skip to avoid misleading log */
-			continue
-		}
-		if len(acc.VFs) != requested {
-			r.log.WithField("pciAddress", acc.PCIAddress).
-				WithField("exposedVfs", len(acc.VFs)).
-				WithField("requestedVfs", requested).
-				Info("Hardware VF count mismatch — forcing reconfiguration")
-			fecDeviceUpdateRequired[acc.PCIAddress] = true
-		}
-		if staleSysfsWrites.has(acc.PCIAddress) {
-			r.log.WithField("pciAddress", acc.PCIAddress).
-				Info("sysfs write left unfinished by a previous daemon instance — forcing reconfiguration")
-			fecDeviceUpdateRequired[acc.PCIAddress] = true
-		}
-	}
-
-	if err := r.configureNode(sfnc); err != nil {
+	if err := r.applyPlan(sfnc, plan); err != nil {
 		r.log.WithError(err).Error("error occurred during configuring node")
 		reason, retryLater := configurationFailureReason(err)
 		if retryLater {
@@ -136,6 +106,138 @@ func (r *FecNodeConfigReconciler) Reconcile(_ context.Context, req ctrl.Request)
 	}
 
 	return requeueLaterOrNowIfError(r.updateStatus(sfnc, metav1.ConditionTrue, ConfigurationSucceeded, "Configured successfully"))
+}
+
+// fecPlan is what has to be done with each accelerator of the node.
+type fecPlan struct {
+	actions   map[string]pfAction
+	applied   appliedConfigs
+	adopted   bool // applied was taken from the status, not from a record
+	specByPCI map[string]fec.PhysicalFunctionConfigExt
+	accByPCI  map[string]fec.SriovAccelerator
+}
+
+func (p fecPlan) anyAction() bool {
+	for _, a := range p.actions {
+		if a != pfNoAction {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *FecNodeConfigReconciler) isGenerationChanged(nc *fec.SriovFecNodeConfig) bool {
+	observedGeneration := findOrCreateConfigurationStatusCondition(nc).ObservedGeneration
+	if nc.GetGeneration() != observedGeneration {
+		r.log.WithField("observed", observedGeneration).
+			WithField("requested", nc.GetGeneration()).
+			Info("Observed generation doesn't reflect requested one")
+		return true
+	}
+	return false
+}
+
+// planActions decides, for each accelerator, whether it is left alone, gets
+// pf_bb_config started again, or is reconfigured. See planPFAction.
+func (r *FecNodeConfigReconciler) planActions(nc *fec.SriovFecNodeConfig, inventory *fec.NodeInventory) fecPlan {
+	applied, recordPresent := readAppliedConfigs(nc, fecAppliedConfigAnnotation)
+	plan := fecPlan{
+		actions:   map[string]pfAction{},
+		applied:   applied,
+		specByPCI: map[string]fec.PhysicalFunctionConfigExt{},
+		accByPCI:  map[string]fec.SriovAccelerator{},
+	}
+
+	adopt := adoptCurrentConfiguration(recordPresent, findOrCreateConfigurationStatusCondition(nc), nc.GetGeneration())
+	for _, pf := range nc.Spec.PhysicalFunctions {
+		plan.specByPCI[pf.PCIAddress] = pf
+		if adopt {
+			applied[pf.PCIAddress] = configHash(pf)
+		}
+	}
+	plan.adopted = adopt
+	if adopt && len(nc.Spec.PhysicalFunctions) > 0 {
+		r.log.WithField("generation", nc.GetGeneration()).
+			Info("no record of the applied configuration; taking the configuration reported as applied by the status")
+	}
+
+	for _, acc := range inventory.SriovAccelerators {
+		acc := acc
+		plan.accByPCI[acc.PCIAddress] = acc
+
+		state := pfDeviceState{pfDriver: acc.PFDriver}
+		for _, vf := range acc.VFs {
+			state.vfDrivers = append(state.vfDrivers, vf.Driver)
+		}
+		var req *pfRequest
+		if pf, ok := plan.specByPCI[acc.PCIAddress]; ok {
+			req = &pfRequest{pfDriver: pf.PFDriver, vfDriver: pf.VFDriver, vfAmount: pf.VFAmount, hash: configHash(pf)}
+		}
+
+		action, why := planPFAction(req, applied[acc.PCIAddress], state, staleSysfsWrites.has(acc.PCIAddress),
+			func() procState { return pfBbConfigProcState(r.log, acc.PCIAddress) })
+		plan.actions[acc.PCIAddress] = action
+		if action != pfNoAction {
+			r.log.WithField("pciAddress", acc.PCIAddress).WithField("action", action.String()).Info(why)
+		}
+	}
+	return plan
+}
+
+// applyPlan carries out the plan and records, per PF, the configuration
+// that was applied.
+func (r *FecNodeConfigReconciler) applyPlan(nc *fec.SriovFecNodeConfig, plan fecPlan) error {
+	var firstErr error
+	keepErr := func(err error) {
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	var reconfigure []string
+	for pci, action := range plan.actions {
+		if action == pfReconfigure {
+			reconfigure = append(reconfigure, pci)
+		}
+	}
+	sort.Strings(reconfigure)
+
+	if len(reconfigure) > 0 {
+		results, err := r.configureNode(nc, reconfigure)
+		for pci, perr := range results {
+			pf, inSpec := plan.specByPCI[pci]
+			switch {
+			case perr == nil && inSpec:
+				plan.applied[pci] = configHash(pf)
+			case perr == nil || !refusedBeforeTeardown(perr):
+				// not in the spec any more, or the teardown may have started
+				delete(plan.applied, pci)
+			}
+		}
+		keepErr(err)
+	}
+
+	for pci, action := range plan.actions {
+		if action != pfRestartPfBBConfig {
+			continue
+		}
+		pf := plan.specByPCI[pci]
+		keepErr(r.sriovfecconfigurer.RestartPfBBConfig(plan.accByPCI[pci], &pf))
+	}
+
+	// drop records of PFs that are gone from the node or from the spec
+	for pci := range plan.applied {
+		_, inSpec := plan.specByPCI[pci]
+		_, onNode := plan.accByPCI[pci]
+		if !inSpec || !onNode {
+			delete(plan.applied, pci)
+		}
+	}
+	if err := storeAppliedConfigs(context.Background(), r.Client, nc, fecAppliedConfigAnnotation, plan.applied); err != nil {
+		r.log.WithError(err).Error("failed to record the applied configuration")
+		keepErr(err)
+	}
+	return firstErr
 }
 
 /*****************************************************************************
@@ -227,27 +329,6 @@ func (r *FecNodeConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
  ****************************************************************************/
 func (r *FecNodeConfigReconciler) updateStatus(nc *fec.SriovFecNodeConfig, status metav1.ConditionStatus, reason ConfigurationConditionReason, msg string) error {
 	previousCondition := findOrCreateConfigurationStatusCondition(nc)
-
-	if reason == ConfigurationInProgress {
-		// Clear the current configuration map
-		for key := range fecCurrentConfig {
-			delete(fecCurrentConfig, key)
-		}
-		// Update the current configuration map with the new configuration
-		for _, pf := range nc.Spec.PhysicalFunctions {
-			fecCurrentConfig[pf.PCIAddress] = pf
-		}
-		r.checkIfDeviceUpdateNeeded(fecPreviousConfig, fecCurrentConfig)
-	} else if reason == ConfigurationSucceeded {
-		// Clear the previous configuration map
-		for key := range fecPreviousConfig {
-			delete(fecPreviousConfig, key)
-		}
-		// Update the previous configuration with the current configuration
-		for _, pf := range nc.Spec.PhysicalFunctions {
-			fecPreviousConfig[pf.PCIAddress] = pf
-		}
-	}
 
 	// SriovFecNodeConfig.generation is under K8S management
 	// metav1.Condition.observedGeneration is under this reconciler management.
@@ -341,101 +422,39 @@ func (r *FecNodeConfigReconciler) readNodeConfig(nn types.NamespacedName) (nc *f
  * Description:
  *
  ****************************************************************************/
-func (r *FecNodeConfigReconciler) configureNode(nodeConfig *fec.SriovFecNodeConfig) error {
+func (r *FecNodeConfigReconciler) configureNode(nodeConfig *fec.SriovFecNodeConfig, pciAddresses []string) (map[string]error, error) {
+	results := map[string]error{}
 	var configurationError error
 
+	// one PF at a time, so that the outcome is known for each of them
 	drainFunc := func(ctx context.Context) bool {
-		if err := r.sriovfecconfigurer.ApplySpec(nodeConfig.Spec, fecDeviceUpdateRequired); err != nil {
-			r.log.WithError(err).Error("failed applying new PF/VF configuration")
-			configurationError = err
-			return true
+		applied := false
+		for _, pci := range pciAddresses {
+			err := r.sriovfecconfigurer.ApplySpec(nodeConfig.Spec, map[string]bool{pci: true})
+			results[pci] = err
+			if err != nil {
+				r.log.WithError(err).WithField("pciAddress", pci).Error("failed applying new PF/VF configuration")
+				if configurationError == nil {
+					configurationError = err
+				}
+				continue
+			}
+			applied = true
 		}
 
-		configurationError = r.restartDevicePlugin()
+		if applied {
+			if err := r.restartDevicePlugin(); err != nil && configurationError == nil {
+				configurationError = err
+			}
+		}
 		return true
 	}
 
 	if err := r.drainerAndExecute(drainFunc, !nodeConfig.Spec.DrainSkip); err != nil {
-		return err
+		return results, err
 	}
 
-	return configurationError
-}
-
-/*****************************************************************************
- * Method: bbDevConfigDaemonIsDead:
- * Description:
- *
- ****************************************************************************/
-func (r *FecNodeConfigReconciler) bbDevConfigDaemonIsDead(nc *fec.SriovFecNodeConfig) bool {
-
-	for _, acc := range nc.Spec.PhysicalFunctions {
-		if strings.EqualFold(acc.PFDriver, utils.VfioPci) {
-			if pfBbConfigProcIsDead(r.log, acc.PCIAddress) {
-				r.log.WithField("pciAddress", acc.PCIAddress).
-					Info("pf-bb-config process for card is not running")
-				return true
-			}
-		}
-	}
-	return false
-}
-
-/*****************************************************************************
- * Method: FecNodeConfigReconciler::
- * Description:
- *
- ****************************************************************************/
-func (r *FecNodeConfigReconciler) isCardUpdateRequired(nc *fec.SriovFecNodeConfig, detectedInventory *fec.NodeInventory) bool {
-	pciToVfsAmount := map[string]int{}
-	for _, physicalFunction := range nc.Spec.PhysicalFunctions {
-		pciToVfsAmount[physicalFunction.PCIAddress] = physicalFunction.VFAmount
-	}
-
-	isGenerationChanged := func() bool {
-		observedGeneration := findOrCreateConfigurationStatusCondition(nc).ObservedGeneration
-		if nc.GetGeneration() != observedGeneration {
-			r.log.WithField("observed", observedGeneration).
-				WithField("requested", nc.GetGeneration()).
-				Info("Observed generation doesn't reflect requested one")
-			return true
-		}
-		return false
-	}
-
-	if len(nc.Spec.PhysicalFunctions) == 0 {
-		if isGenerationChanged() {
-			return true
-		}
-		r.log.Debug("Empty SriovFec PF")
-		return false
-	}
-
-	exposedInventoryOutdated := func() bool {
-		for _, accelerator := range detectedInventory.SriovAccelerators {
-			if len(accelerator.VFs) != pciToVfsAmount[accelerator.PCIAddress] {
-				r.log.WithField("pciAddress", accelerator.PCIAddress).
-					WithField("exposedVfs", len(accelerator.VFs)).
-					WithField("requestedVfs", pciToVfsAmount[accelerator.PCIAddress]).
-					Info("Exposed inventory doesn't match requested one")
-				return true
-			}
-		}
-		return false
-	}
-
-	staleSysfsWriteLeft := func() bool {
-		for _, pf := range nc.Spec.PhysicalFunctions {
-			if staleSysfsWrites.has(pf.PCIAddress) {
-				r.log.WithField("pciAddress", pf.PCIAddress).
-					Info("sysfs write left unfinished by a previous daemon instance")
-				return true
-			}
-		}
-		return false
-	}
-
-	return isGenerationChanged() || exposedInventoryOutdated() || staleSysfsWriteLeft() || r.bbDevConfigDaemonIsDead(nc)
+	return results, configurationError
 }
 
 /*****************************************************************************
@@ -564,29 +583,6 @@ func (r *FecNodeConfigReconciler) getPfBbConfVersion(shouldLog bool) string {
 		r.log.Info("pf_bb_config Version is:", out.String())
 	}
 	return out.String()
-}
-
-/*****************************************************************************
- * Method: FecNodeConfigReconciler::checkIfDeviceUpdateNeeded
- * Description: Determines if a device update is required based on the current
- *		and requested configurations
- ****************************************************************************/
-func (r *FecNodeConfigReconciler) checkIfDeviceUpdateNeeded(previousConf, currentConf map[string]fec.PhysicalFunctionConfigExt) {
-	// Check for updates in previous configuration
-	for k, prevConfig := range previousConf {
-		if currConfig, exists := currentConf[k]; !exists || !equality.Semantic.DeepEqual(prevConfig, currConfig) {
-			fecDeviceUpdateRequired[k] = true
-		} else {
-			fecDeviceUpdateRequired[k] = false
-		}
-	}
-
-	// Check for new entries in current configuration
-	for k := range currentConf {
-		if _, exists := previousConf[k]; !exists {
-			fecDeviceUpdateRequired[k] = true
-		}
-	}
 }
 
 /*****************************************************************************

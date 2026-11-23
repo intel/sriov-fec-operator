@@ -40,16 +40,6 @@ var _ = Describe("FecNodeConfigReconciler.Reconcile", func() {
 			nodeInventory      *sriovv2.NodeInventory
 		)
 		BeforeEach(func() {
-			/* Reset package-level globals so each test starts from a clean state. */
-			for k := range fecPreviousConfig {
-				delete(fecPreviousConfig, k)
-			}
-			for k := range fecCurrentConfig {
-				delete(fecCurrentConfig, k)
-			}
-			for k := range fecDeviceUpdateRequired {
-				delete(fecDeviceUpdateRequired, k)
-			}
 			getSriovInventory = GetSriovInventory
 			procCmdlineFilePath = "testdata/cmdline_test"
 			sysLockdownFilePath = "testdata/lockdown_none"
@@ -106,15 +96,6 @@ var _ = Describe("FecNodeConfigReconciler.Reconcile", func() {
 		})
 
 		AfterEach(func() {
-			for k := range fecPreviousConfig {
-				delete(fecPreviousConfig, k)
-			}
-			for k := range fecCurrentConfig {
-				delete(fecCurrentConfig, k)
-			}
-			for k := range fecDeviceUpdateRequired {
-				delete(fecDeviceUpdateRequired, k)
-			}
 			getSriovInventory = GetSriovInventory
 			procCmdlineFilePath = "/proc/cmdline"
 			sysLockdownFilePath = "/sys/kernel/security/lockdown"
@@ -185,7 +166,7 @@ var _ = Describe("FecNodeConfigReconciler.Reconcile", func() {
 			Expect(fakeClient.Patch(context.TODO(), sfnc, client.Merge)).ToNot(HaveOccurred())
 
 			// Reconcile 2: spec changed (generation bump) → configureAccelerator called,
-			// VFs created, fecPreviousConfig populated with current spec
+			// VFs created, applied configuration recorded
 			configureCallCount = 0
 			_, err = reconciler.Reconcile(context.TODO(), reconcileRequestes)
 			Expect(err).ToNot(HaveOccurred())
@@ -204,10 +185,9 @@ var _ = Describe("FecNodeConfigReconciler.Reconcile", func() {
 			}
 
 			// Reconcile 3: spec UNCHANGED, VFs missing.
-			// isCardUpdateRequired returns true (exposedVfs=0 != requestedVfs=1).
-			// checkIfDeviceUpdateNeeded sees prev==curr so it clears
-			// fecDeviceUpdateRequired; the hardware mismatch override must
-			// re-set the flag so configureAccelerator is called.
+			// The applied configuration matches the spec, but the device
+			// does not (exposedVfs=0 != requestedVfs=1), so the PF must be
+			// reconfigured.
 			configureCallCount = 0
 			_, err = reconciler.Reconcile(context.TODO(), reconcileRequestes)
 			Expect(err).ToNot(HaveOccurred())
@@ -285,6 +265,14 @@ func (t testConfigurerProto) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpe
 	return t.vrbConfigureNodeFunction(nodeConfig)
 }
 
+func (t testConfigurerProto) RestartPfBBConfig(sriovv2.SriovAccelerator, *sriovv2.PhysicalFunctionConfigExt) error {
+	return nil
+}
+
+func (t testConfigurerProto) VrbRestartPfBBConfig(vrbv1.SriovAccelerator, *vrbv1.PhysicalFunctionConfigExt) error {
+	return nil
+}
+
 /* testGatedConfigurerProto honours the fecDeviceUpdateRequired gate by
  * skipping PCI addresses where the flag is false and only invoking the
  * configure function for those where it is true.  Unlike testConfigurerProto
@@ -314,6 +302,10 @@ func (t testGatedConfigurerProto) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConf
 	return nil
 }
 
+func (t testGatedConfigurerProto) RestartPfBBConfig(sriovv2.SriovAccelerator, *sriovv2.PhysicalFunctionConfigExt) error {
+	return nil
+}
+
 /* testGatedVrbConfigurerProto honours the vrbDeviceUpdateRequired gate by
  * skipping PCI addresses where the flag is false and only invoking the
  * configure function for those where it is true.  Unlike testConfigurerProto
@@ -324,6 +316,10 @@ func (t testGatedConfigurerProto) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConf
  */
 type testGatedVrbConfigurerProto struct {
 	vrbConfigureNodeFunction func(nodeConfig vrbv1.SriovVrbNodeConfigSpec) error
+}
+
+func (t testGatedVrbConfigurerProto) VrbRestartPfBBConfig(vrbv1.SriovAccelerator, *vrbv1.PhysicalFunctionConfigExt) error {
+	return nil
 }
 
 func (t testGatedVrbConfigurerProto) VrbApplySpec(nodeConfig vrbv1.SriovVrbNodeConfigSpec, vrbDeviceUpdateRequired map[string]bool) error {
@@ -356,16 +352,6 @@ var _ = Describe("VrbNodeConfigReconciler.Reconcile", func() {
 			nodeInventory      *vrbv1.NodeInventory
 		)
 		BeforeEach(func() {
-			/* Reset package-level globals so each test starts from a clean state. */
-			for k := range vrbPreviousConfig {
-				delete(vrbPreviousConfig, k)
-			}
-			for k := range vrbCurrentConfig {
-				delete(vrbCurrentConfig, k)
-			}
-			for k := range vrbDeviceUpdateRequired {
-				delete(vrbDeviceUpdateRequired, k)
-			}
 			VrbgetSriovInventory = VrbGetSriovInventory
 			procCmdlineFilePath = "testdata/cmdline_test"
 			sysLockdownFilePath = "testdata/lockdown_none"
@@ -422,15 +408,6 @@ var _ = Describe("VrbNodeConfigReconciler.Reconcile", func() {
 		})
 
 		AfterEach(func() {
-			for k := range vrbPreviousConfig {
-				delete(vrbPreviousConfig, k)
-			}
-			for k := range vrbCurrentConfig {
-				delete(vrbCurrentConfig, k)
-			}
-			for k := range vrbDeviceUpdateRequired {
-				delete(vrbDeviceUpdateRequired, k)
-			}
 			VrbgetSriovInventory = VrbGetSriovInventory
 			procCmdlineFilePath = "/proc/cmdline"
 			sysLockdownFilePath = "/sys/kernel/security/lockdown"
@@ -551,7 +528,7 @@ var _ = Describe("VrbNodeConfigReconciler.Reconcile", func() {
 			Expect(fakeClient.Patch(context.TODO(), svnc, client.Merge)).ToNot(HaveOccurred())
 
 			// Reconcile 2: spec changed (generation bump) → VrbApplySpec called,
-			// VFs created, vrbPreviousConfig populated with current spec
+			// VFs created, applied configuration recorded
 			configureCallCount = 0
 			_, err = reconciler.Reconcile(context.TODO(), reconcileRequestes)
 			Expect(err).ToNot(HaveOccurred())
@@ -570,10 +547,9 @@ var _ = Describe("VrbNodeConfigReconciler.Reconcile", func() {
 			}
 
 			// Reconcile 3: spec UNCHANGED, VFs missing.
-			// isCardUpdateRequired returns true (exposedVfs=0 != requestedVfs=1).
-			// checkIfDeviceUpdateNeeded sees prev==curr so it clears
-			// vrbDeviceUpdateRequired; the hardware mismatch override must
-			// re-set the flag so VrbApplySpec is called.
+			// The applied configuration matches the spec, but the device
+			// does not (exposedVfs=0 != requestedVfs=1), so the PF must be
+			// reconfigured.
 			configureCallCount = 0
 			_, err = reconciler.Reconcile(context.TODO(), reconcileRequestes)
 			Expect(err).ToNot(HaveOccurred())
