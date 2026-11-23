@@ -135,7 +135,9 @@ func (n *NodeConfigurator) configureCommandRegister(pciAddr string) error {
 	// Configures PCI COMMAND register that enables
 	// 0X02 bit - PCI_COMMAND_MEMORY which is required for MMIO in pf-bb-config
 	// 0X04 bit - PCI_COMMAND_MASTER which required for PF to correctly manage VFs
-	cmd := []string{"setpci", "-v", "-s", pciAddr, "COMMAND=06"}
+	// The ":06" mask sets only these two bits. Without it the whole register
+	// would be overwritten, clearing e.g. INTx Disable and SERR# Enable.
+	cmd := []string{"setpci", "-v", "-s", pciAddr, "COMMAND=06:06"}
 	_, err := runExecCmd(cmd, n.Log)
 	if err != nil {
 		n.Log.WithError(err).Error("failed to configure PCI command bridge for card: " + pciAddr)
