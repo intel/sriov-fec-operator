@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -38,6 +39,7 @@ var (
 	resyncPeriod        = time.Minute
 	procCmdlineFilePath = "/proc/cmdline"
 	sysLockdownFilePath = "/sys/kernel/security/lockdown"
+	sysModuleDir        = "/sys/module"
 	kernelParams        = []string{"intel_iommu=on", "iommu=pt"}
 )
 
@@ -143,7 +145,7 @@ func CreateManager(config *rest.Config, scheme *runtime.Scheme, namespace string
 }
 
 func moduleParameterIsEnabled(moduleName, parameter string) error {
-	value, err := os.ReadFile("/sys/module/" + moduleName + "/parameters/" + parameter)
+	value, err := os.ReadFile(filepath.Join(sysModuleDir, moduleName, "parameters", parameter))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			// module is not loaded - we will automatically append required parameter during modprobe

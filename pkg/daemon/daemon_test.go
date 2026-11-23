@@ -695,3 +695,44 @@ func FuzzVrbValidateNodeConfig(f *testing.F) {
 		_ = validateVrbNodeConfig(nc)
 	})
 }
+
+var _ = Describe("validateNodeConfig", func() {
+	var tmp, origModuleDir, origCmdline, origLockdown string
+
+	BeforeEach(func() {
+		var err error
+		tmp, err = os.MkdirTemp("", "validate-node-config")
+		Expect(err).ToNot(HaveOccurred())
+		origModuleDir, origCmdline, origLockdown = sysModuleDir, procCmdlineFilePath, sysLockdownFilePath
+		sysModuleDir = tmp
+		procCmdlineFilePath = "testdata/cmdline_test"
+		sysLockdownFilePath = "testdata/lockdown_none"
+
+		params := filepath.Join(tmp, utils.VfioPciUnderscore, "parameters")
+		Expect(os.MkdirAll(params, 0755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(params, "enable_sriov"), []byte("Y\n"), 0644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(params, "disable_idle_d3"), []byte("N\n"), 0644)).To(Succeed())
+	})
+
+	AfterEach(func() {
+		sysModuleDir, procCmdlineFilePath, sysLockdownFilePath = origModuleDir, origCmdline, origLockdown
+		Expect(os.RemoveAll(tmp)).To(Succeed())
+	})
+
+	It("checks the vfio-pci parameters of every PF, not only the first one", func() {
+		spec := sriovv2.SriovFecNodeConfigSpec{PhysicalFunctions: []sriovv2.PhysicalFunctionConfigExt{
+			{PCIAddress: "0000:1d:00.0", PFDriver: utils.IgbUio, VFDriver: utils.IgbUio},
+			{PCIAddress: "0000:b8:00.0", PFDriver: utils.VfioPci, VFDriver: utils.VfioPci,
+				BBDevConfig: sriovv2.BBDevConfig{ACC100: &sriovv2.ACC100BBDevConfig{}}},
+		}}
+		Expect(validateNodeConfig(spec)).To(MatchError(ContainSubstring("disable_idle_d3")))
+	})
+
+	It("accepts PFs whose drivers are set up correctly", func() {
+		spec := sriovv2.SriovFecNodeConfigSpec{PhysicalFunctions: []sriovv2.PhysicalFunctionConfigExt{
+			{PCIAddress: "0000:1d:00.0", PFDriver: utils.IgbUio, VFDriver: utils.IgbUio},
+			{PCIAddress: "0000:b8:00.0", PFDriver: utils.VfioPci, VFDriver: utils.VfioPci},
+		}}
+		Expect(validateNodeConfig(spec)).To(Succeed())
+	})
+})

@@ -533,10 +533,13 @@ func validateNodeConfig(nodeConfig fec.SriovFecNodeConfigSpec) error {
 			if !strings.Contains(cmdline, "[none]") {
 				return fmt.Errorf("kernel lockdown is enabled, '%s' driver doesn't supports, use 'vfio-pci'", physFunc.PFDriver)
 			}
-			return nil
 
 		case utils.VfioPci:
-			return validateVfioDriverOptions(physFunc)
+			// check every PF, not only the first one: disable_idle_d3 is
+			// only required for some accelerators
+			if err := validateVfioDriverOptions(physFunc); err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("unknown driver '%s'", physFunc.PFDriver)
 		}
